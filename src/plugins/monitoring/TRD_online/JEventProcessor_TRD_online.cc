@@ -15,12 +15,6 @@ using namespace jana;
 #include <TRD/DTRDStripCluster.h>
 #include <TRD/DTRDPoint.h>
 
-#include <DAQ/DGEMSRSWindowRawData.h>
-#include <TRD/DGEMDigiWindowRawData.h>
-#include <TRD/DGEMHit.h>
-#include <TRD/DGEMStripCluster.h>
-#include <TRD/DGEMPoint.h>
-
 #include <TDirectory.h>
 #include <TH1.h>
 #include <TH2.h>
@@ -44,13 +38,6 @@ static TH1I *hDigiHit_PulseTime[NTRDplanes];
 static TH1I *hDigiHit_Time[NTRDplanes];
 static TH2I *hDigiHit_TimeVsStrip[NTRDplanes];
 static TH2I *hDigiHit_TimeVsPeak[NTRDplanes];
-
-static TH1I *hGEMHit_NHits;
-static TH1I *hGEMHit_Occupancy[NGEMplanes];
-static TH2I *hGEMHit_SampleVsStrip[NGEMplanes];
-static TH2I *hGEMHit_PlaneVsStrip;
-static TH2I *hGEMSRSAmp_Time, *hGEMSRSAmp_Time_Cluster;
-static TH2I *hGEMSRSClusterAmpCorr;
 
 static TH2I *hWireTRDPointAmp_DeltaT, *hGEMTRDPointAmp_DeltaT;
 static TH2I *hGEMSRSPointAmp_DeltaT, *hGEMSRSPointAmp_DeltaT_Good;
@@ -128,49 +115,17 @@ jerror_t JEventProcessor_TRD_online::init(void) {
     }
 
     trdDir->cd();
-    gDirectory->mkdir("GEMHit")->cd();
-    hGEMHit_NHits = new TH1I("GEMHit_NadcHits","GEM ADC hit multiplicity;raw hits;events",10000,0.5,0.5+10000);
-
-    // histograms for each plane
-    for(int i=0; i<NGEMplanes; i++) {
-	    hGEMHit_Occupancy[i] = new TH1I(Form("GEMHit_Occupancy_Plane%d", i),Form("Plane %d: GEM raw data hit occupancy;strip;raw hits / counter",i),NGEMstrips,-0.5,-0.5+NGEMstrips);
-	    hGEMHit_SampleVsStrip[i] = new TH2I(Form("GEMHit_SampleVsStrip_Plane%d", i),Form("Plane %d: GEM ADC time samples vs strip;strip;sample",i),NGEMstrips,-0.5,-0.5+NGEMstrips,NGEMsamples,-0.5,-0.5+NGEMsamples);
-    }
-    hGEMHit_PlaneVsStrip = new TH2I("GEMHit_PlaneVsStrip","GEM ADC plane vs strip;strip;plane",NGEMstrips,-0.5,-0.5+NGEMstrips,NGEMplanes,-0.5,-0.5+NGEMplanes);
 
     trdDir->cd();
     gDirectory->mkdir("Correlations")->cd();
 
-    // TRD plane correlations
-    hWireTRDPointAmp_DeltaT = new TH2I("WireTRDPointAmp_DeltaT", "Wire TRD Point amplitude vs #Delta t; #Delta t (ns); Pulse Amplitude", 100, -100, 100, 100, 0, 4000);
-    hGEMTRDPointAmp_DeltaT = new TH2I("GEMTRDPointAmp_DeltaT", "GEM TRD Point amplitude vs #Delta t; #Delta t (ns); Pulse Amplitude", 100, -100, 100, 100, 0, 4000);
-    hWireTRDPoint_WireStrip = new TH2I("WireTRDPoint_WireStrip", "Wire TRD Point Strip (Y) vx Wire (X); X - Wire # ; Y - Strip #", NTRDwires, -0.5, -0.5+NTRDwires, NTRDwires, -0.5, -0.5+NTRDwires);
-    hGEMTRDPoint_XY = new TH2I("GEMTRDPoint_XY", "GEM TRD Point Y vx X; X (cm); Y (cm)", 100, 0., 10., 100, 0., 10.);
-    hGEMTRDPoint_StripCorr = new TH2I("GEMTRDPoint_StripCorr", "GEM TRD Point Strip (Y) vx (X); X - Strip # ; Y - Strip #", NGEMstrips, -0.5, -0.5+NGEMstrips, NGEMstrips, -0.5, -0.5+NGEMstrips);
+//     // TRD plane correlations
+//     hWireTRDPointAmp_DeltaT = new TH2I("WireTRDPointAmp_DeltaT", "Wire TRD Point amplitude vs #Delta t; #Delta t (ns); Pulse Amplitude", 100, -100, 100, 100, 0, 4000);
+//     hGEMTRDPointAmp_DeltaT = new TH2I("GEMTRDPointAmp_DeltaT", "GEM TRD Point amplitude vs #Delta t; #Delta t (ns); Pulse Amplitude", 100, -100, 100, 100, 0, 4000);
+//     hWireTRDPoint_WireStrip = new TH2I("WireTRDPoint_WireStrip", "Wire TRD Point Strip (Y) vx Wire (X); X - Wire # ; Y - Strip #", NTRDwires, -0.5, -0.5+NTRDwires, NTRDwires, -0.5, -0.5+NTRDwires);
+//     hGEMTRDPoint_XY = new TH2I("GEMTRDPoint_XY", "GEM TRD Point Y vx X; X (cm); Y (cm)", 100, 0., 10., 100, 0., 10.);
+//     hGEMTRDPoint_StripCorr = new TH2I("GEMTRDPoint_StripCorr", "GEM TRD Point Strip (Y) vx (X); X - Strip # ; Y - Strip #", NGEMstrips, -0.5, -0.5+NGEMstrips, NGEMstrips, -0.5, -0.5+NGEMstrips);
 
-    // GEM SRS plane correlations
-    hGEMSRSAmp_Time = new TH2I("GEMSRSAmp_Time", "GEM SRS Hit amplitude vs time; time (ns); Pulse Amplitude", 55, 0, 550, 100, 0, 4000);
-    hGEMSRSAmp_Time_Cluster = new TH2I("GEMSRSAmp_Time_Cluster", "GEM SRS Hit amplitude vs time; time (ns); Pulse Amplitude", 55, 0, 550, 100, 0, 4000);
-    hGEMSRSPointAmp_DeltaT = new TH2I("GEMSRSPointAmp_DeltaT", "GEM SRS Point amplitude vs #Delta t; #Delta t (ns); Pulse Amplitude", 100, -100, 100, 100, 0, 10000);
-    hGEMSRSPointAmp_DeltaT_Good = new TH2I("GEMSRSPointAmp_DeltaT_Good", "GEM SRS Point amplitude vs #Delta t; #Delta t (ns); Pulse Amplitude", 100, -100, 100, 100, 0, 10000);
-    hGEMSRSClusterAmpCorr = new TH2I("GEMSRSClusterAmpCorr", "GEM SRS Cluster amplitude vs Max strip amplitude; Cluster amplitude; Max Strip Amplitude", 100, 0, 10000, 100, 0, 10000);
-    
-    // TRD - GEM (SRS) correlations
-    hWire_GEMTRDX = new TH2I("Wire_GEMTRDX", "GEM TRD X position vs TRD wire # ; TRD wire # ; GEM TRD X (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
-    hWire_GEMTRDXstrip = new TH2I("Wire_GEMTRDXstrip", "GEM TRD X strip vs TRD wire # ; TRD wire # ; GEM TRD X strip #", NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
-    hWire_GEMTRDX_DeltaT = new TH2I("Wire_GEMTRDX_DeltaT", "GEM TRD X Amplitude vs #Delta t ; #Delta t (ns) ; GEM TRD X Amplitude", 500, -500, 500, 100, 0, 10000);
-    hWireTRDX_Time = new TH1I("WireTRDX_Time", "Wire TRD X Time ; t (ns)", 1000, 0, 1000);
-    hGEMTRDX_Time = new TH1I("GEMTRDX_Time", "GEM TRD X Time ; t (ns)", 1000, 0, 1000);
-
-    hStrip_GEMTRDY = new TH2I("Strip_GEMTRDY", "GEM TRD Y position vs TRD strip # ; TRD strip # ; GEM TRD Y (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
-
-    for(int i=0; i<5; i++) {
-	    hWire_GEMSRSXstrip[i] = new TH2I(Form("Wire_GEMSRSXstrip_%d",i), Form("Package %d: GEM SRS X strip vs TRD wire # ; TRD wire # ; GEM SRS X strip #",i), NTRDwires, -0.5, -0.5+NTRDwires, 256, -0.5, -0.5+NGEMstrips);
-	    hStrip_GEMSRSYstrip[i] = new TH2I(Form("Strip_GEMSRSYstrip_%d",i), Form("Package %d GEM SRS Y strip vs TRD strip # ; TRD strip # ; GEM SRS Y stip",i), NTRDwires, -0.5, -0.5+NTRDwires, 256, -0.5, -0.5+NGEMstrips);
-
-	    hWire_GEMSRSX[i] = new TH2I(Form("Wire_GEMSRSX_%d",i), Form("Package %d GEM SRS X position vs TRD wire # ; TRD wire # ; GEM SRS X (cm)",i), NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
-	    hStrip_GEMSRSY[i] = new TH2I(Form("Strip_GEMSRSY_%d",i), Form("Package %d GEM SRS Y position vs TRD strip # ; TRD strip # ; GEM SRS Y (cm)",i), NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
-    }
     
     // back to main dir
     mainDir->cd();
@@ -238,15 +193,6 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
     vector<const DTRDPoint*> points;
     eventLoop->Get(points);
 
-    vector<const DGEMDigiWindowRawData*> windowrawdata;
-    eventLoop->Get(windowrawdata);
-    vector<const DGEMHit*> gem_hits;
-    eventLoop->Get(gem_hits);
-    vector<const DGEMStripCluster*> gem_clusters;
-    eventLoop->Get(gem_clusters);
-    vector<const DGEMPoint*> gem_points;
-    eventLoop->Get(gem_points);
-
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
     japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -271,44 +217,6 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	    hDigiHit_TimeVsPeak[iplane]->Fill(hit->pulse_peak,t_ns);
     }
 
-    ////////////////////////
-    // GEM SRS histograms //
-    ////////////////////////
-
-    if (windowrawdata.size() > 0) trd_num_events->Fill(2);
-    hGEMHit_NHits->Fill(windowrawdata.size());
-
-    for (const auto& window : windowrawdata) {
-	const DGEMSRSWindowRawData* srswindow;
-	window->GetSingle(srswindow);
-	
-	int plane = window->plane;
-	int strip = window->strip;
-	hGEMHit_Occupancy[plane]->Fill(strip);
-	
-	// loop over samples for each channel
-	vector<uint16_t> samples = srswindow->samples;
-	for(uint isample=0; isample<samples.size(); isample++) {
-		hGEMHit_PlaneVsStrip->Fill(1.*strip, 1.*plane, 1.*samples[isample]);
-	}
-
-	uint16_t pedestal = 0; //samples[0];
-	int max_adc_zs = 0;
-	for(uint isample=0; isample<samples.size(); isample++) {
-		int adc_zs = (samples[isample]-pedestal);
-		if(adc_zs > max_adc_zs) 
-			max_adc_zs = adc_zs;
-	}		    
-	
-	// fill all hits in channels with a large signal
-	if(max_adc_zs > 400) {
-		for(uint isample=0; isample<samples.size(); isample++) {
-			int adc_zs = (samples[isample]-pedestal);
-			hGEMHit_SampleVsStrip[plane]->Fill(strip,isample,adc_zs);
-		}
-	}	
-    }
-
     //////////////////////
     // Wire/GEM Summary //
     //////////////////////
@@ -324,130 +232,15 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	    }
     }
 
-    // Wire TRD hits correlation in XY plane (for GEMTRD Y connected to APV/SRS electronics)
-    for (const auto& hit : hits) {
-	    if(hit->plane != 6) continue;
-
-	    for (const auto& gem_hit : gem_hits) {
-		    if(gem_hit->plane != 7) continue;
-		    
-		    hGEMTRDPoint_StripCorr->Fill(hit->strip, gem_hit->strip);
-	    }
-    }
-
-    // check SRS GEM hits in known good region
-    for (const auto& hit : gem_hits) {
-	    hGEMSRSAmp_Time->Fill(hit->t, hit->pulse_height);
-    }
-
-    // SRS GEM cluster time comparison
-    for (const auto& cluster : gem_clusters) {
-      // unused variable	    const DGEMHit *max_hit;
-	    for (const auto& hit : cluster->members) {
-		    //if(hit->plane == 7 && hit->strip > 100 && hit->strip < 130) 
-		    hGEMSRSAmp_Time_Cluster->Fill(hit->t, hit->pulse_height);
-		    //if(!max_hit) max_hit = hit;
-		    //if(hit->pulse_height > max_hit->pulse_height) max_hit = hit;
-	    }
-
-	    // compare max strip to cluster time and position
-	    //hGEMSRSClusterAmpCorr->Fill(cluster->q_tot, max_hit->pulse_height);
-    }
-
     // Wire TRD points correlation
     for (const auto& point : points) {
 	    if(point->detector == 0) { // Wire TRD
 		    hWireTRDPointAmp_DeltaT->Fill(point->t_x - point->t_y, point->dE_amp);
 	    }
-	    if(point->detector == 1) {
-		    hGEMTRDPoint_XY->Fill(point->x, point->y);
-		    hGEMTRDPointAmp_DeltaT->Fill(point->t_x - point->t_y, point->dE_amp);
-	    }
+
     }
 
-    // SRS GEM points correlation
-    for (const auto& point : gem_points) {
-	    hGEMSRSPointAmp_DeltaT->Fill(point->t_x - point->t_y, point->dE_amp);
-	    
-	    vector<const DGEMStripCluster*> gem_clusters;
-	    point->Get(gem_clusters);
-	    for (const auto& cluster : gem_clusters) {
-		    for (const auto& hit : cluster->members) {
-			    if(hit->plane == 7 && hit->strip > 100 && hit->strip < 130) {
-				    hGEMSRSPointAmp_DeltaT_Good->Fill(point->t_x - point->t_y, point->dE_amp);
-				    break;
-			    }
-		    }
-	    }
-    }
 
-    ///////////////////////////
-    // Wire-GEM correlations //
-    ///////////////////////////
-
-    ////////////////////////////////////////
-    // Wire TRD wire # correlation with X //
-    ////////////////////////////////////////
-    for (const auto& hit : hits) {
-	    if(hit->plane != 0 && hit->plane != 4) continue; // only Wire TRD
-	    int wire = hit->strip;
-
-	    // GEM TRD points
-	    for (const auto& point : points) {
-		    if(point->detector == 1)
-			    hWire_GEMTRDX->Fill(wire, point->x);
-	    }
-	    
-	    // GEM TRD hits
-	    for (const auto& gemtrd_hit : hits) {
-		    if(gemtrd_hit->plane != 2 && gemtrd_hit->plane != 6) continue; 
-		    double locDeltaT = gemtrd_hit->t - hit->t;
-		    
-		    hWire_GEMTRDX_DeltaT->Fill(locDeltaT, gemtrd_hit->pulse_height);
-		    hGEMTRDX_Time->Fill(gemtrd_hit->t);
-		    hWireTRDX_Time->Fill(hit->t);
-		    
-		    if(fabs(locDeltaT) < 100.)
-			    hWire_GEMTRDXstrip->Fill(wire, gemtrd_hit->strip);
-	    }
-
-	    // GEM SRS hit
-	    for (const auto& gem_hit : gem_hits) {
-		    if(gem_hit->plane%2 != 0) continue; // skip Y strips
-		    hWire_GEMSRSXstrip[gem_hit->plane/2]->Fill(wire, gem_hit->strip);
-	    }
-
-	    // GEM SRS points
-	    for (const auto& point : gem_points) {
-		    ///if(point->y < 7)
-		    hWire_GEMSRSX[point->detector]->Fill(wire, point->x);
-	    }
-    }
-
-    /////////////////////////////////////////
-    // Wire TRD strip # correlation with Y //
-    /////////////////////////////////////////
-    for (const auto& hit : hits) {
-	    if(hit->plane != 1 && hit->plane != 5) continue; // only Wire TRD stips
-	    int strip = hit->strip;
-
-	    // GEM TRD points
-	    for (const auto& point : points) {
-		    if(point->detector == 1)
-			    hStrip_GEMTRDY->Fill(strip, point->y);
-	    }
-	    
-	    // GEM SRS hit
-	    for (const auto& gem_hit : gem_hits) {
-		    if(gem_hit->plane%2 == 0) continue; // skip X strips
-		    hStrip_GEMSRSYstrip[gem_hit->plane/2]->Fill(strip, gem_hit->strip);
-	    }
-
-	    // GEM SRS points
-	    for (const auto& point : gem_points) {
-		    hStrip_GEMSRSY[point->detector]->Fill(strip, point->y);
-	    }
-    }
 
     japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 

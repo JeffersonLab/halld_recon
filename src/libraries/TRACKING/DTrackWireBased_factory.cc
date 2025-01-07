@@ -55,14 +55,6 @@ bool TRDSortByZincreasing(const DTRDPoint* const &hit1, const DTRDPoint* const &
 }
 
 //------------------
-// GEMSortByZincreasing
-//------------------
-bool GEMSortByZincreasing(const DGEMPoint* const &hit1, const DGEMPoint* const &hit2) {
-
-   return hit1->detector < hit2->detector;
-}
-
-//------------------
 // count_common_members
 //------------------
    template<typename T>

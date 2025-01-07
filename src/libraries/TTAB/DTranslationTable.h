@@ -42,7 +42,6 @@ using namespace jana;
 #include <DAQ/DF1TDCTriggerTime.h>
 #include <DAQ/DCAEN1290TDCHit.h>
 #include <DAQ/DDIRCTDCHit.h>
-#include <DAQ/DGEMSRSWindowRawData.h>
 #include <DAQ/DHELIDigiHit.h>
 
 #include <BCAL/DBCALDigiHit.h>
@@ -72,7 +71,6 @@ using namespace jana;
 #include <TAC/DTACTDCDigiHit.h>
 #include <DIRC/DDIRCTDCDigiHit.h>
 #include <TRD/DTRDDigiHit.h>
-#include <TRD/DGEMDigiWindowRawData.h>
 #include <FMWPC/DFMWPCDigiHit.h>
 #include <FMWPC/DCTOFDigiHit.h>
 #include <FMWPC/DCTOFTDCDigiHit.h>
@@ -106,7 +104,6 @@ using namespace jana;
 		X(DTACTDCDigiHit) \
 		X(DDIRCTDCDigiHit) \
 		X(DTRDDigiHit) \
-		X(DGEMDigiWindowRawData) \
 		X(DCTOFDigiHit) \
  		X(DCTOFTDCDigiHit) \
 		X(DFMWPCDigiHit) \
@@ -589,7 +586,6 @@ class DTranslationTable:public jana::JObject{
                 DFDCCathodeDigiHit* MakeFDCCathodeDigiHit(const FDC_CathodesIndex_t &idx, const Df125FDCPulse *p) const;
                 DTRDDigiHit* MakeTRDDigiHit(const TRDIndex_t &idx, const Df125CDCPulse *p) const;
 		DTRDDigiHit* MakeTRDDigiHit(const TRDIndex_t &idx, const Df125FDCPulse *p) const;
-		DGEMDigiWindowRawData *MakeGEMDigiWindowRawData(const TRDIndex_t &idx, const DGEMSRSWindowRawData *p) const;
 		DFMWPCDigiHit* MakeFMWPCDigiHit(const FMWPCIndex_t &idx, const Df125CDCPulse *p) const;
 
 		// F1TDC

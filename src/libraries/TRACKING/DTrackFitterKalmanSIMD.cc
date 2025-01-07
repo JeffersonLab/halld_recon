@@ -406,8 +406,6 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_HITS",USE_TRD_HITS); 
    USE_TRD_DRIFT_TIMES=true;
    gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_DRIFT_TIMES",USE_TRD_DRIFT_TIMES);
-   USE_GEM_HITS=false;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_GEM_HITS",USE_GEM_HITS);
 
 
    // Flag to enable calculation of alignment derivatives
@@ -803,13 +801,6 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
        got_trd_gem_hits=true;
      }
    }
-   if (USE_GEM_HITS){
-     for(unsigned int i=0; i<gemhits.size(); i++)AddGEMHit(gemhits[i]);
-     if (gemhits.size()>0){
-       //_DBG_ << " Got GEM" << endl;
-       got_trd_gem_hits=true;
-     }
-   }
 
    unsigned int num_good_cdchits=my_cdchits.size();
    unsigned int num_good_fdchits=my_fdchits.size(); 
@@ -1068,33 +1059,6 @@ inline void DTrackFitterKalmanSIMD::GetPosition(DVector3 &pos){
   DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
   pos.SetXYZ(x_+beam_pos.X(),y_+beam_pos.Y(),z_);
 }
-
-// Add GEM points
-void DTrackFitterKalmanSIMD::AddGEMHit(const DGEMPoint *gemhit){
-  DKalmanSIMDFDCHit_t *hit= new DKalmanSIMDFDCHit_t;
-
-  hit->t=gemhit->time;
-  hit->uwire=gemhit->x;
-  hit->vstrip=gemhit->y;
-  // From Justin (12/12/19):
-  // DGEMPoint (GEM2 SRS, plane closest to the DIRC):
-  // sigma_X = sigma_Y = 100 um
-  hit->vvar=0.01*0.01;
-  hit->uvar=hit->vvar;
-  hit->z=gemhit->z;
-  hit->cosa=1.;
-  hit->sina=0.;
-  hit->phiX=0.;
-  hit->phiY=0.;
-  hit->phiZ=0.;
-  hit->nr=0.;
-  hit->nz=0.;
-  hit->status=gem_hit;
-  hit->hit=NULL;
-
-  my_fdchits.push_back(hit);
-}
-
 
 
 // Add TRD points
@@ -9973,12 +9937,7 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   
   // (signed) distance of closest approach to wire
   upred=x*cosa-y*sina;
-  if (hit->status==gem_hit){
-    doca=upred-u;
-  }
-  else{
-    doca=(upred-u)*cosalpha;
-  }
+  doca=(upred-u)*cosalpha;
 
   // Correction for lorentz effect
   double nz=hit->nz;
@@ -9989,7 +9948,6 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   // To transform from (x,y) to (u,v), need to do a rotation:
   //   u = x*cosa-y*sina
   //   v = y*cosa+x*sina
-  if (hit->status!=gem_hit){
     H_T(state_x,1)=sina+cosa*cosalpha*lorentz_factor;	
     H_T(state_y,1)=cosa-sina*cosalpha*lorentz_factor;
     
@@ -10006,13 +9964,6 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
     double factor=doca*tu*cosalpha2;
     H_T(state_ty,0)=sina*factor;
     H_T(state_tx,0)=-cosa*factor; 
-  }
-  else{  
-    H_T(state_x,1)=sina;
-    H_T(state_y,1)=cosa;    
-    H_T(state_x,0)=cosa;
-    H_T(state_y,0)=-sina;
-  }
 }
 
 // Update S and C using all the good adjacent hits in a particular FDC plane
