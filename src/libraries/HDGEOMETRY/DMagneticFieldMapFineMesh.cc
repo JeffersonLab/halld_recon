@@ -27,7 +27,7 @@ DMagneticFieldMapFineMesh::DMagneticFieldMapFineMesh(JApplication *app, int32_t 
 {
 	auto calib_svc = app->GetService<JCalibrationManager>();
 	jcalib = calib_svc->GetJCalibration(runnumber);
-	jresman = calib_svc->GetLargeCalibration(runnumber);
+	jresman = calib_svc->GetResource(runnumber);
 
 	japp->SetDefaultParameter("BFIELD_MAP", namepath);
 	

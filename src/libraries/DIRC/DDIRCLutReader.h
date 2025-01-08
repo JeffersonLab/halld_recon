@@ -9,7 +9,7 @@
 #include <JANA/Compatibility/jerror.h>
 #include <JANA/JApplication.h>
 #include <JANA/Calibrations/JCalibration.h>
-#include <JANA/Calibrations/JLargeCalibration.h>
+#include <JANA/Calibrations/JResource.h>
 
 #include <DIRC/DDIRCGeometry.h>
 
@@ -57,7 +57,7 @@ private:
 
 protected:
 	JCalibration *jcalib;
-	JLargeCalibration *jresman;
+	JResource *jresman;
 };
 
 #endif // _DDIRCLutReader_

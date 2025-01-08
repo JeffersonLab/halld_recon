@@ -34,7 +34,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *app, unsigned int run_number)
 	if(jcalib->GetCalib("/DIRC/LUT/lut_map", lut_map_name)) 
 		jout << "Can't find requested /DIRC/LUT/lut_map in CCDB for this run!" << jendl;
 	else if(lut_map_name.find("map_name") != lut_map_name.end() && lut_map_name["map_name"] != "None" && lut_file.empty()) {
-		jresman = japp->GetService<JCalibrationManager>()->GetLargeCalibration(run_number);
+		jresman = japp->GetService<JCalibrationManager>()->GetResource(run_number);
 		lut_file = jresman->GetResource(lut_map_name["map_name"]);
 	}
 	
@@ -99,7 +99,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *app, unsigned int run_number)
 		if(jcalib->GetCalib("/DIRC/LUT/lutcorr_map", lutcorr_map_name)) 
 		  jout << "Can't find requested /DIRC/LUT/lutcorr_map in CCDB for this run!" << endl;
 		else if(lutcorr_map_name.find("map_name") != lutcorr_map_name.end() && lutcorr_map_name["map_name"] != "None" && lutcorr_file.empty()) {
-                  jresman = japp->GetService<JCalibrationManager>()->GetLargeCalibration(run_number);
+                  jresman = japp->GetService<JCalibrationManager>()->GetResource(run_number);
 		  lutcorr_file = jresman->GetResource(lutcorr_map_name["map_name"]);
 		}
 		if(!lutcorr_file.empty()) {

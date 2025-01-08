@@ -128,8 +128,8 @@ void DCCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 	} else if( profile_file_name.find("map_name") != profile_file_name.end() 
 		&& profile_file_name["map_name"] != "None" ) 
 	{
-	  JLargeCalibration *jresman = calib_man->GetLargeCalibration(runnumber);
-	  ccal_profile_file = jresman->GetResource(profile_file_name["map_name"]);
+	  JResource *res = calib_man->GetResource(runnumber);
+	  ccal_profile_file = res->GetResource(profile_file_name["map_name"]);
 	}
 	
 	if(print_messages)
