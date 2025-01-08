@@ -519,7 +519,7 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 	locEventLoop->Get(locCCALShowers);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	//locEventLoop->Get(locTOFPoints);
 
 	vector<const DSCHit*> locSCHits;
 	locEventLoop->Get(locSCHits);
@@ -1238,14 +1238,16 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 		
 	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
-	
-	  double locStartTime = locTrackIterator->second->t0();
-	  double locStartTimeVariance = 0.0;
-	  DVector3 locProjPos, locProjMom;
 
-	  shared_ptr<const DBCALShowerMatchParams> locBestMatchParams;
-	  if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_BCAL), locBCALShowers, false, locStartTime, locBestMatchParams, &locStartTimeVariance, &locProjPos, &locProjMom))
-	    locBCALTrackDistanceMap[locTrackIterator->second] = std::make_pair(locBestMatchParams, locProjPos.Z());
+	  if (extrapolations[SYS_BCAL].size()>0){
+	    double locStartTime = locTrackIterator->second->t0();
+	    double locStartTimeVariance = 0.0;
+	    DVector3 locProjPos, locProjMom;
+	    
+	    shared_ptr<const DBCALShowerMatchParams> locBestMatchParams;
+	    if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_BCAL), locBCALShowers, false, locStartTime, locBestMatchParams, &locStartTimeVariance, &locProjPos, &locProjMom))
+	      locBCALTrackDistanceMap[locTrackIterator->second] = std::make_pair(locBestMatchParams, locProjPos.Z());
+	  }
 	}
 
 	//TRACK / FCAL CLOSEST MATCHES
@@ -1257,11 +1259,13 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 
 	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
-
-	  double locStartTime = locTrackIterator->second->t0();
-	  shared_ptr<const DFCALShowerMatchParams> locBestMatchParams;
-	  if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_FCAL), locFCALShowers, false, locStartTime, locBestMatchParams))
-	    locFCALTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
+	  
+	  if (extrapolations[SYS_FCAL].size()>0){
+	    double locStartTime = locTrackIterator->second->t0();
+	    shared_ptr<const DFCALShowerMatchParams> locBestMatchParams;
+	    if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_FCAL), locFCALShowers, false, locStartTime, locBestMatchParams))
+	      locFCALTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
+	  }
 	}
 	
 	//TRACK / SC CLOSEST MATCHES
@@ -1274,13 +1278,15 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
 
-	  double locStartTime = locTrackIterator->second->t0();
-	  double locStartTimeVariance = 0.0;
-	  DVector3 locProjPos, locProjMom;
-	  
-	  shared_ptr<const DSCHitMatchParams> locBestMatchParams;
-	  if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_START), locSCHits, locIsTimeBased, false, locStartTime, locBestMatchParams, &locStartTimeVariance, &locProjPos, &locProjMom))
-	    locSCTrackDistanceMap[locTrackIterator->second] = std::make_pair(locBestMatchParams, locProjPos.Z());
+	  if (extrapolations[SYS_START].size()>0){
+	    double locStartTime = locTrackIterator->second->t0();
+	    double locStartTimeVariance = 0.0;
+	    DVector3 locProjPos, locProjMom;
+	    
+	    shared_ptr<const DSCHitMatchParams> locBestMatchParams;
+	    if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_START), locSCHits, locIsTimeBased, false, locStartTime, locBestMatchParams, &locStartTimeVariance, &locProjPos, &locProjMom))
+	      locSCTrackDistanceMap[locTrackIterator->second] = std::make_pair(locBestMatchParams, locProjPos.Z());
+	  }
 	}
 	
 	//TRACK / TOF POINT CLOSEST MATCHES
@@ -1292,11 +1298,13 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  
 	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
-
-	  double locStartTime = locTrackIterator->second->t0();
-	  shared_ptr<const DTOFHitMatchParams> locBestMatchParams;
-	  if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_TOF), locTOFPoints, false, locStartTime, locBestMatchParams))
-	    locTOFPointTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
+	  
+	  if (extrapolations[SYS_TOF].size()>0){
+	    double locStartTime = locTrackIterator->second->t0();
+	    shared_ptr<const DTOFHitMatchParams> locBestMatchParams;
+	    if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_TOF), locTOFPoints, false, locStartTime, locBestMatchParams))
+	      locTOFPointTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
+	  }
 	}
 
 	//TRACK / TOF PADDLE CLOSEST MATCHES
@@ -1311,18 +1319,20 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
 
-	  double locBestDeltaX = 999.9, locBestDeltaY = 999.9, locBestDistance_Vertical = 999.9, locBestDistance_Horizontal = 999.9;
-	  double locStartTime = locParticleID->Calc_PropagatedRFTime(locKinematicData, locEventRFBunch);
-	  
-	  const DTOFPaddleHit* locClosestTOFPaddleHit_Vertical = locParticleID->Get_ClosestTOFPaddleHit_Vertical(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaX, locBestDistance_Vertical);
-	  pair<double, double> locDistancePair_Vertical(locBestDeltaX, locBestDistance_Vertical);
-	  if(locClosestTOFPaddleHit_Vertical != NULL)
-	    locVerticalTOFPaddleTrackDistanceMap[locTrackIterator->second] = pair<const DTOFPaddleHit*, pair<double, double> >(locClosestTOFPaddleHit_Vertical, locDistancePair_Vertical);
-	  
-	  const DTOFPaddleHit* locClosestTOFPaddleHit_Horizontal = locParticleID->Get_ClosestTOFPaddleHit_Horizontal(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaY, locBestDistance_Horizontal);
-	  pair<double, double> locDistancePair_Horizontal(locBestDeltaY, locBestDistance_Horizontal);
-	  if(locClosestTOFPaddleHit_Horizontal != NULL)
-	    locHorizontalTOFPaddleTrackDistanceMap[locTrackIterator->second] = pair<const DTOFPaddleHit*, pair<double, double> >(locClosestTOFPaddleHit_Horizontal, locDistancePair_Horizontal);
+	  if (extrapolations[SYS_TOF].size()>0){
+	    double locBestDeltaX = 999.9, locBestDeltaY = 999.9, locBestDistance_Vertical = 999.9, locBestDistance_Horizontal = 999.9;
+	    double locStartTime = locParticleID->Calc_PropagatedRFTime(locKinematicData, locEventRFBunch);
+	    
+	    const DTOFPaddleHit* locClosestTOFPaddleHit_Vertical = locParticleID->Get_ClosestTOFPaddleHit_Vertical(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaX, locBestDistance_Vertical);
+	    pair<double, double> locDistancePair_Vertical(locBestDeltaX, locBestDistance_Vertical);
+	    if(locClosestTOFPaddleHit_Vertical != NULL)
+	      locVerticalTOFPaddleTrackDistanceMap[locTrackIterator->second] = pair<const DTOFPaddleHit*, pair<double, double> >(locClosestTOFPaddleHit_Vertical, locDistancePair_Vertical);
+	    
+	    const DTOFPaddleHit* locClosestTOFPaddleHit_Horizontal = locParticleID->Get_ClosestTOFPaddleHit_Horizontal(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaY, locBestDistance_Horizontal);
+	    pair<double, double> locDistancePair_Horizontal(locBestDeltaY, locBestDistance_Horizontal);
+	    if(locClosestTOFPaddleHit_Horizontal != NULL)
+	      locHorizontalTOFPaddleTrackDistanceMap[locTrackIterator->second] = pair<const DTOFPaddleHit*, pair<double, double> >(locClosestTOFPaddleHit_Horizontal, locDistancePair_Horizontal);
+	  }
 	}
 
 	//PROJECTED HIT POSITIONS
@@ -1343,40 +1353,48 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	    break; //e.g. REST data: no trajectory
 
 	  //SC
-	  DVector3 locSCIntersection;
-	  bool locProjBarrelFlag = false;
-	  unsigned int locProjectedSCPaddle = locParticleID->PredictSCSector(extrapolations.at(SYS_START), &locSCIntersection, &locProjBarrelFlag);
-	  if(locProjectedSCPaddle != 0)
-	    locProjectedSCPaddleMap[locTrack] = pair<int, bool>(locProjectedSCPaddle, locProjBarrelFlag);
-
+	  if (extrapolations[SYS_START].size()>0){
+	    DVector3 locSCIntersection;
+	    bool locProjBarrelFlag = false;
+	    unsigned int locProjectedSCPaddle = locParticleID->PredictSCSector(extrapolations.at(SYS_START), &locSCIntersection, &locProjBarrelFlag);
+	    if(locProjectedSCPaddle != 0)
+	      locProjectedSCPaddleMap[locTrack] = pair<int, bool>(locProjectedSCPaddle, locProjBarrelFlag);
+	  }
+	    
 	  //TOF
-	  DVector3 locTOFIntersection;
-	  unsigned int locHorizontalBar = 0, locVerticalBar = 0;
-	  if(locParticleID->PredictTOFPaddles(extrapolations.at(SYS_TOF), locHorizontalBar, locVerticalBar, &locTOFIntersection))
-	    {
-	      locProjectedTOF2DPaddlesMap[locTrack] = pair<int, int>(locVerticalBar, locHorizontalBar);
-	      locProjectedTOFXYMap[locTrack] = pair<float, float>(locTOFIntersection.X(), locTOFIntersection.Y());
-	    }
+	  if (extrapolations[SYS_TOF].size()>0){
+	    DVector3 locTOFIntersection;
+	    unsigned int locHorizontalBar = 0, locVerticalBar = 0;
+	    if(locParticleID->PredictTOFPaddles(extrapolations.at(SYS_TOF), locHorizontalBar, locVerticalBar, &locTOFIntersection))
+	      {
+		locProjectedTOF2DPaddlesMap[locTrack] = pair<int, int>(locVerticalBar, locHorizontalBar);
+		locProjectedTOFXYMap[locTrack] = pair<float, float>(locTOFIntersection.X(), locTOFIntersection.Y());
+	      }
+	  }
 	  
 	  //FCAL
-	  DVector3 locFCALIntersection;
-	  unsigned int locRow = 0, locColumn = 0;
-	  if(locParticleID->PredictFCALHit(extrapolations.at(SYS_FCAL), locRow, locColumn, &locFCALIntersection))
-	    {
-	      locProjectedFCALRowColumnMap[locTrack] = pair<int, int>(locColumn, locRow);
-	      locProjectedFCALXYMap[locTrack] = pair<float, float>(locFCALIntersection.X(), locFCALIntersection.Y());
-	    }
+	  if (extrapolations[SYS_FCAL].size()>0){
+	    DVector3 locFCALIntersection;
+	    unsigned int locRow = 0, locColumn = 0;
+	    if(locParticleID->PredictFCALHit(extrapolations.at(SYS_FCAL), locRow, locColumn, &locFCALIntersection))
+	      {
+		locProjectedFCALRowColumnMap[locTrack] = pair<int, int>(locColumn, locRow);
+		locProjectedFCALXYMap[locTrack] = pair<float, float>(locFCALIntersection.X(), locFCALIntersection.Y());
+	      }
+	  }
 	  
 	  //BCAL
-	  DVector3 locBCALIntersection;
-	  unsigned int locModule = 0, locSector = 0;
-	  if(locParticleID->PredictBCALWedge(extrapolations.at(SYS_BCAL), locModule, locSector, &locBCALIntersection))
-	    {
-	      locProjectedBCALModuleSectorMap[locTrack] = pair<float, int>(locBCALIntersection.Z(), locModule);
-	      locProjectedBCALPhiZMap[locTrack] = pair<float, float>(locBCALIntersection.Z(), locBCALIntersection.Phi()*180.0/TMath::Pi());
-	    }
+	  if (extrapolations[SYS_BCAL].size()>0){
+	    DVector3 locBCALIntersection;
+	    unsigned int locModule = 0, locSector = 0;
+	    if(locParticleID->PredictBCALWedge(extrapolations.at(SYS_BCAL), locModule, locSector, &locBCALIntersection))
+	      {
+		locProjectedBCALModuleSectorMap[locTrack] = pair<float, int>(locBCALIntersection.Z(), locModule);
+		locProjectedBCALPhiZMap[locTrack] = pair<float, float>(locBCALIntersection.Z(), locBCALIntersection.Phi()*180.0/TMath::Pi());
+	      }
+	  }
 	}
-	
+	  
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
@@ -3613,7 +3631,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 	locEventLoop->Get(locNeutralShowers);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	//locEventLoop->Get(locTOFPoints);
 
 	vector<const DSCHit*> locSCHits;
 	locEventLoop->Get(locSCHits);
