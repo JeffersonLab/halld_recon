@@ -52,9 +52,6 @@
 	      hist->SetStats(0);
 	      hist->DrawCopy();
 	      hist->Sumw2();
-		//double Epeak = hist->GetBinCenter(hist->GetMaximumBin());
-		//sprintf(str, "Epeak: %3.2f GeV", Epeak);
-		//latex.DrawLatex(10.0, hist->GetMaximum()*0.85, str);
 	    }
 	};
 
@@ -86,7 +83,7 @@
 	//draw asymmeytry
 	locCanvas->cd(6);
 	hist_A->SetTitle("#rho helicity asymmetry");
-	hist_A->Draw();
+	hist_A->Draw("pe");
 
 	TF1 hfit2phi("x2phi","[0]+ ([1]*cos(2*x[0]+[2])+[3]*cos(x[0]+[4]))/(1 + [5]*cos(2*x[0]+[6])+[7]*cos(x[0]+[8]))",-TMath::Pi(),TMath::Pi());
 	hfit2phi.SetParameters(0,0,1,0,0.1,0);
