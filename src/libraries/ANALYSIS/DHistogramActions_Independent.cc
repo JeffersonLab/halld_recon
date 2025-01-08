@@ -519,7 +519,7 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 	locEventLoop->Get(locCCALShowers);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	//locEventLoop->Get(locTOFPoints);
+	locEventLoop->Get(locTOFPoints);
 
 	vector<const DSCHit*> locSCHits;
 	locEventLoop->Get(locSCHits);
@@ -3631,7 +3631,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 	locEventLoop->Get(locNeutralShowers);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	//locEventLoop->Get(locTOFPoints);
+	locEventLoop->Get(locTOFPoints);
 
 	vector<const DSCHit*> locSCHits;
 	locEventLoop->Get(locSCHits);
