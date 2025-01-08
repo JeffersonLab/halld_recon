@@ -13,7 +13,7 @@ using namespace std;
 
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <DANA/DEvent.h>
 
 

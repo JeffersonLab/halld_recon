@@ -7,7 +7,7 @@
 #define _DDIRCLut_
 
 #include <JANA/JObject.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <DANA/DGeometryManager.h>
 #include <PID/DDetectorMatches.h>

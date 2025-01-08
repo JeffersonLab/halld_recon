@@ -28,7 +28,7 @@ using std::string;
 
 #include <DANA/DApplication.h>
 #include <DANA/DGeometryManager.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
 #include <JANA/Calibrations/JCalibrationGeneratorCCDB.h>
 #include <JANA/Compatibility/JGeometryManager.h>

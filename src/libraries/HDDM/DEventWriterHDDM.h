@@ -9,7 +9,7 @@
 
 #include <JANA/JEvent.h>
 #include <JANA/JObject.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <CDC/DCDCHit.h>
 #include <TOF/DTOFHit.h>

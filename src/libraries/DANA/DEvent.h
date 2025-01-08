@@ -8,7 +8,7 @@
 
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "DANA/DStatusBits.h"
 #include "DANA/DGeometryManager.h"

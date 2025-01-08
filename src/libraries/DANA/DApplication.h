@@ -8,7 +8,7 @@
 #ifndef _DApplication_
 #define _DApplication_
 
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <JANA/CLI/JMain.h>
 
 class JApplication;
