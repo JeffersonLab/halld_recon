@@ -9,7 +9,7 @@
 #define _JEventProcessor_CDC_expert_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 
 class JEventProcessor_CDC_expert:public JEventProcessor{

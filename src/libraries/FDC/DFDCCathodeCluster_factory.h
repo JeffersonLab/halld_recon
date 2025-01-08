@@ -9,7 +9,6 @@
 
 #include <JANA/JFactoryT.h>
 #include <JANA/JException.h>
-#include <JANA/Compatibility/JStreamLog.h>
 
 
 #include "DFDCCathodeCluster.h"

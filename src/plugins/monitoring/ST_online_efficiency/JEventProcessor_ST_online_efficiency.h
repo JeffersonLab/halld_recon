@@ -9,7 +9,7 @@
 #define _JEventProcessor_ST_online_efficiency_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 // ST header files
 #include "START_COUNTER/DSCHit.h"
 #include "START_COUNTER/DSCDigiHit.h"

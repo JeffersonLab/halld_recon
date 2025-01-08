@@ -25,7 +25,7 @@ using namespace std;
 
 #include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <HDGEOMETRY/DGeometry.h>
 #include <TRACKING/DTrackCandidate_factory_StraightLine.h>

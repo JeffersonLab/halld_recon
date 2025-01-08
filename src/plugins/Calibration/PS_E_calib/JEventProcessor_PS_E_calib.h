@@ -9,7 +9,7 @@
 #define _JEventProcessor_PS_E_calib_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 class JEventProcessor_PS_E_calib:public JEventProcessor{
 	public:

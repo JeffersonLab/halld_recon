@@ -9,7 +9,7 @@
 #define _JEventProcessor_dedx_tree_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "TRIGGER/DTrigger.h"
 #include "TRACKING/DTrackTimeBased.h"

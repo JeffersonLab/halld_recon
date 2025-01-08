@@ -8,7 +8,7 @@
 #define _JEventProcessor_L1_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 class JEventProcessor_L1_online:public JEventProcessor{
 public:

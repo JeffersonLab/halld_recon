@@ -9,7 +9,7 @@
 #define _JEventProcessor_CDC_dedx_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "TRIGGER/DTrigger.h"
 #include "PID/DVertex.h"

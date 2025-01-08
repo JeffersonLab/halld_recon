@@ -22,7 +22,7 @@ using namespace std;
 #include <TMath.h>
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <JANA/Calibrations/JCalibration.h>
 
 #include <HDGEOMETRY/DGeometry.h>

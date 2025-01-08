@@ -10,7 +10,7 @@
 #include <cstdlib>
 
 #include <JANA/JException.h>
-#include <JANA/Compatibility/JStreamLog.h>
+#include <JANA/JLogger.h>
 
 #include "DESDBProviderMySQL.h"
 

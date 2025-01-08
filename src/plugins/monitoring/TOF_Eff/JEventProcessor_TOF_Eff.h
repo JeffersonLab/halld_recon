@@ -7,7 +7,7 @@
 #define _JEventProcessor_TOF_Eff_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "TH1I.h"
 #include "TH2I.h"

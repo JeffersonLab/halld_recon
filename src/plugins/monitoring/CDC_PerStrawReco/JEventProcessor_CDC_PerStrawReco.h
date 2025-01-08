@@ -12,7 +12,7 @@
 
 #include <TH1F.h>
 #include <TH2F.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 using std::vector;
 

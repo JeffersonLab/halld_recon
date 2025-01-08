@@ -9,7 +9,7 @@
 #define _JEventProcessor_occupancy_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <GlueX.h>
 #include <PAIR_SPECTROMETER/DPSGeometry.h>

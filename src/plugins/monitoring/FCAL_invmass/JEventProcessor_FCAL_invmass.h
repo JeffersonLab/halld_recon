@@ -9,7 +9,7 @@
 #define _DEventProcessor_FCAL_Shower_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <ANALYSIS/DEventWriterROOT.h>
 #include <HDDM/DEventWriterREST.h>

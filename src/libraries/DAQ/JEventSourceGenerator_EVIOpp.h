@@ -8,9 +8,9 @@
 #ifndef _JEventSourceGenerator_EVIOpp_
 #define _JEventSourceGenerator_EVIOpp_
 
-#include <JANA/Compatibility/jerror.h>
 #include <JANA/JEventSourceGenerator.h>
 
+#include <DANA/jerror.h>
 #include <DAQ/HDEVIO.h>
 
 #include "JEventSource_EVIOpp.h"

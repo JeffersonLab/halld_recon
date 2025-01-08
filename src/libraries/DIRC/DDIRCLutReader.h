@@ -6,11 +6,11 @@
 #ifndef _DDIRCLutReader_
 #define _DDIRCLutReader_
 
-#include <JANA/Compatibility/jerror.h>
 #include <JANA/JApplication.h>
 #include <JANA/Calibrations/JCalibration.h>
 #include <JANA/Calibrations/JResource.h>
 
+#include <DANA/jerror.h>
 #include <DIRC/DDIRCGeometry.h>
 
 #include "TROOT.h"

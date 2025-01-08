@@ -7,7 +7,7 @@
 #define _JEventProcessor_cal_high_energy_skim_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include "evio_writer/DEventWriterEVIO.h"
 
 #include <TH1F.h>

@@ -12,7 +12,7 @@
 #include <set>
 
 #include <JANA/JEvent.h>
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 #include <DAQ/Df250WindowRawData.h>
 #include <TAC/DTACHit.h>
 

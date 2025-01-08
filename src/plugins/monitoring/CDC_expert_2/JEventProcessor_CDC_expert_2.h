@@ -9,7 +9,7 @@
 #define _JEventProcessor_CDC_expert_2_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 
 using namespace std;

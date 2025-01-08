@@ -14,7 +14,7 @@
 
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALGeometry.h"
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 
 #include "TH2F.h"
 #include <DMatrixDSym.h>

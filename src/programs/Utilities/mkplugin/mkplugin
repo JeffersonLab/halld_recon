@@ -97,7 +97,7 @@ sub PrintClass()
 \#define _JEventProcessor_${pluginname}_
 
 \#include <JANA/JEventProcessor.h>
-// \#include <JANA/Compatibility/JLockService.h> // Required for accessing services
+// \#include <JANA/Services/JLockService.h> // Required for accessing services
 
 
 class JEventProcessor_${pluginname}:public JEventProcessor{

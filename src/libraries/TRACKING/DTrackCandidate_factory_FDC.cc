@@ -16,7 +16,7 @@ using namespace std;
 #include "DTrackCandidate_factory_FDC.h"
 
 #include <JANA/JEvent.h>
-#include "JANA/Compatibility/JGeometry.h"
+#include "JANA/Geometry/JGeometry.h"
 
 #include "DQuickFit.h"
 #include "HDGEOMETRY/DMagneticFieldMap.h"

@@ -9,7 +9,7 @@
 #define _JEventProcessor_EPICS_dump_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 
 class JEventProcessor_EPICS_dump:public JEventProcessor{

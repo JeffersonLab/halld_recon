@@ -9,7 +9,7 @@
 #define _JEventProcessor_TAGM_clusters_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <TAGGER/DTAGMHit.h>
 
 class JEventProcessor_TAGM_clusters:public JEventProcessor{

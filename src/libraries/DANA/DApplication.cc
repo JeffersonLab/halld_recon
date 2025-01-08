@@ -31,7 +31,7 @@ using std::string;
 #include <JANA/Services/JLockService.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
 #include <JANA/Calibrations/JCalibrationGeneratorCCDB.h>
-#include <JANA/Compatibility/JGeometryManager.h>
+#include <JANA/Geometry/JGeometryManager.h>
 #include <JANA/CLI/JMain.h>
 
 /// The DApplication class adds HALL-D specific event source and factory generators to a JApplication

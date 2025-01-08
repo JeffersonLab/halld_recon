@@ -9,7 +9,6 @@
 #define DFACTORY_DFDCPSEUDO_H
 
 #include <JANA/JFactoryT.h>
-#include <JANA/Compatibility/JStreamLog.h>
 
 #include "DFDCPseudo.h"
 #include "DFDCCathodeCluster.h"

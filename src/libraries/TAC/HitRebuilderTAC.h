@@ -12,8 +12,8 @@
 #include <set>
 #include <stdexcept>
 
-#include <JANA/Compatibility/jerror.h>
 #include <JANA/JFactoryT.h>
+#include <DANA/jerror.h>
 #include <DAQ/Df250WindowRawData.h>
 
 #include "DTACDigiHit.h"

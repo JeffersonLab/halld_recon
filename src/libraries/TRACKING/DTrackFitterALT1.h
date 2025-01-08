@@ -16,7 +16,7 @@
 #include <TH3.h>
 
 #include <JANA/JFactoryT.h>
-#include <JANA/Compatibility/JGeometry.h>
+#include <JANA/Geometry/JGeometry.h>
 #include "HDGEOMETRY/DMagneticFieldMap.h"
 #include "DTrackWireBased.h"
 #include "DReferenceTrajectory.h"

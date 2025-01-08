@@ -13,7 +13,7 @@
 using namespace std;
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <HDGEOMETRY/DGeometry.h>
 
 class JEventProcessor_dumpthrowns:public JEventProcessor{

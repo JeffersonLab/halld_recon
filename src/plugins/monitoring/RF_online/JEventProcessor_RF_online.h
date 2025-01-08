@@ -18,7 +18,7 @@
 #include "TDirectoryFile.h"
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "GlueX.h"
 #include "DAQ/DCODAROCInfo.h"
