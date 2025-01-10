@@ -41,6 +41,10 @@ class JEventProcessor_occupancy_online:public jana::JEventProcessor{
 		TH1I *cdc_num_events;
 		TH2F *cdc_occ_ring[28];
 
+  //------------------------ ECAL -----------------------
+  TH1I *ecal_num_events;
+  TH2F* ecal_occ;
+  
 		//------------------------ FCAL -----------------------
 		TH1I *fcal_num_events;
 		TH2F* fcal_occ;
