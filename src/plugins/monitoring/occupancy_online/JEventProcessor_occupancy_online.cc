@@ -253,7 +253,7 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 	dirc_tdc_pixel_N_occ_led = new TH2I("dirc_tdc_pixel_N_occ_led","DIRC, TDC North (Upper) Pixel Occupancy: LED trigger; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
 	dirc_tdc_pixel_S_occ_led = new TH2I("dirc_tdc_pixel_S_occ_led","DIRC, TDC South (Lower) Pixel Occupancy: LED trigger; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
 	dirc_tdc_pixel_N_occ = new TH2I("dirc_tdc_pixel_N_occ","DIRC, TDC North (Upper) Pixel Occupancy: Non-LED triggers; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
-        dirc_tdc_pixel_S_occ = new TH2I("dirc_tdc_pixel_S_occ","DIRC, TDC South (Lower) Pixel Occupancy; Non-LED triggers; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+        dirc_tdc_pixel_S_occ = new TH2I("dirc_tdc_pixel_S_occ","DIRC, TDC South (Lower) Pixel Occupancy: Non-LED triggers; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
 
 	//------------------------ DigiHits ------------------------
 	#define FillDigiHitMap(A) digihitbinmap[#A]=(double)(digihitbinmap.size());

@@ -4,9 +4,10 @@
 //
 // Guidance: --------------------------------------------
 //
-// DIRC PMT occupancy for non-LED triggers in the North Optical
-// Box (upper panel) and South Optical Box (lower panel). If
-// these are empty then the DIRC may not be reading properly.
+// Upper panel: DIRC PMT occupancy for LED triggers. If this
+// is empty then the DIRC LED is not functioning properly.
+// Lower panel: DIRC PMT occupancy for non-LED triggers. If 
+// this is empty then there may not be any physics triggers.
 //
 // If you have concerns about the plots or any of them look
 // significantly different than the reference, please contact 
@@ -20,8 +21,8 @@
 // End Guidance: ----------------------------------------
 //
 // hnamepath: /occupancy/dirc_num_events
-// hnamepath: /occupancy/dirc_tdc_pixel_N_occ
 // hnamepath: /occupancy/dirc_tdc_pixel_S_occ
+// hnamepath: /occupancy/dirc_tdc_pixel_S_occ_led
 //
 // e-mail: davidl@jlab.org
 // e-mail: tbritton@jlab.org
@@ -35,8 +36,8 @@
 	TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("occupancy");
 	if(dir) dir->cd();
 
-   	TH2I *dirc_tdc_pixel_N_occ = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_N_occ");
-	TH2I *dirc_tdc_pixel_S_occ = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_S_occ");
+	TH2I *dirc_tdc_pixel_S_occ_led = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_S_occ_led");
+   	TH2I *dirc_tdc_pixel_S_occ = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_S_occ");
 	TH1I *dirc_num_events = (TH1I*)gDirectory->FindObjectAny("dirc_num_events");
 
 	double Nevents = 1.0;
@@ -44,7 +45,7 @@
 
 	// Just for testing
 	if(gPad == NULL){
-		TCanvas *c1 = new TCanvas("c1","DIRC Occupancy",600,400);
+		TCanvas *c1 = new TCanvas("c1","DIRC South Occupancy",600,400);
 		c1->cd(0);
 		c1->Draw();
 		c1->Update();
@@ -60,7 +61,7 @@
 	p1->Draw();
 	p1->cd();
 	gStyle->SetOptStat(0);
-	if(dirc_tdc_pixel_N_occ) dirc_tdc_pixel_N_occ->DrawCopy("colz");
+	if(dirc_tdc_pixel_S_occ_led) dirc_tdc_pixel_S_occ_led->DrawCopy("colz");
 
 	c1->cd(0);
 	TPad *p2 = (TPad*)gDirectory->FindObjectAny("dirc_occ_pad2");
@@ -77,8 +78,8 @@
 		if( min_events < 1 ) min_events = 1E4;
 		if( Nevents >= min_events ) {
 			cout << "DIRC Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
-			rs_SavePad("DIRC_occupancy", 0);
-			rs_ResetAllMacroHistos("//DIRC_occupancy");
+			rs_SavePad("DIRC_South_occupancy", 0);
+			rs_ResetAllMacroHistos("//DIRC_South_occupancy");
 		}
 	}
 #endif
