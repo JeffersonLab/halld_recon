@@ -333,7 +333,7 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 	}
 	
 	// Create histogram with bin labels
-	dF1TDC_fADC_tdiff = new TH2D("F1TDC_fADC_tdiff", "F1TDC - fADC Time diff", f1tdc_bin_map.size(), 0.5, 0.5+(double)f1tdc_bin_map.size(), 64, -64.0, 64.0);
+	dF1TDC_fADC_tdiff = new TH2D("F1TDC_fADC_tdiff", "F1TDC & fADC Time diff vs. rocid / slot", f1tdc_bin_map.size(), 0.5, 0.5+(double)f1tdc_bin_map.size(), 64, -64.0, 64.0);
 	dF1TDC_fADC_tdiff->SetStats(0);
 	dF1TDC_fADC_tdiff->SetYTitle("TDC - ADC in ns (or TDC/50 time for FDC)");
 	for(auto p : f1tdc_bin_map){
@@ -341,7 +341,7 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 		int slot  = p.first.second;
 		int jbin  = p.second;
 		char str[256];
-		sprintf(str, "rocid%d slot%d", rocid, slot);
+		sprintf(str, "R %d - S %d", rocid, slot);
 		dF1TDC_fADC_tdiff->GetXaxis()->SetBinLabel(jbin, str);
 	}
 	
