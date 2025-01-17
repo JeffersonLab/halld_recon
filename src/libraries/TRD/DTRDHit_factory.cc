@@ -31,6 +31,12 @@ jerror_t DTRDHit_factory::init(void)
     gPARMS->SetDefaultParameter("TRD:PEAK_THRESHOLD", PEAK_THRESHOLD, 
 			      "Threshold in fADC units for hit amplitudes");
 
+  	LOW_TCUT = -10000.;
+  	HIGH_TCUT = 10000.;
+    gPARMS->SetDefaultParameter("TRD:LOW_TCUT", LOW_TCUT, 
+			      "Throw away hits which come before this time (default: -10000.)");
+    gPARMS->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
+			      "Throw away hits which come after this time (default: 10000.)");
 
 	return NOERROR;
 }
@@ -172,7 +178,8 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	    // Time cut now
 	    double T = (double)digihit->pulse_time * t_scale;
-	    //if(T < 145.) continue;  // pull timing window cuts from CCDB
+	    if( (T < LOW_TCUT) || (T > HIGH_TCUT) )
+	    	continue;
 
 	    // Build hit object
 	    DTRDHit *hit = new DTRDHit;
