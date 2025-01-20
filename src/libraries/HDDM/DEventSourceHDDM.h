@@ -46,6 +46,8 @@ using namespace std;
 #include "ECAL/DECALHit.h"
 #include "CCAL/DCCALTruthShower.h"
 #include "CCAL/DCCALHit.h"
+#include "TRD/DTRDTruthPoint.h"
+#include "TRD/DTRDHit.h"
 #include "TOF/DTOFTruth.h"
 #include "TOF/DTOFHit.h"
 #include "TOF/DTOFHitMC.h"
@@ -154,6 +156,12 @@ class DEventSourceHDDM:public JEventSource
 
       jerror_t Extract_DTPOLHit(hddm_s::HDDM *record, JFactory<DTPOLHit>* factory, string tag);
       jerror_t Extract_DTPOLTruthHit(hddm_s::HDDM *record, JFactory<DTPOLTruthHit>* factory, string tag);
+
+  jerror_t Extract_DTRDTruthPoint(hddm_s::HDDM *record,
+				  JFactory<DTRDTruthPoint>* factory,
+				  string tag);
+  jerror_t Extract_DTRDHit(hddm_s::HDDM *record,
+			   JFactory<DTRDHit> *factory, string tag);
 
       Particle_t IDTrack(float locCharge, float locMass) const;
 
