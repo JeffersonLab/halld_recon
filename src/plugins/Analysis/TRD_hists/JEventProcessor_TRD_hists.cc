@@ -14,6 +14,7 @@ using namespace jana;
 #include <TRD/DTRDHit.h>
 #include <TRD/DTRDStripCluster.h>
 #include <TRD/DTRDPoint.h>
+#include <PID/DChargedTrack.h>
 
 #include <TDirectory.h>
 #include <TH1.h>
@@ -21,17 +22,17 @@ using namespace jana;
 #include <TProfile.h>
 
 // root hist pointers
-const int NTRDplanes = 4;
-const int NTRDstrips = 240;
-const int NTRDwires = 24;
-const int NAPVchannels = 128;
+// fix constants for now
+static const int NTRDplanes = 2;
+static const int NTRD_xstrips = 720;
+static const int NTRD_ystrips = 432;
 
 static TH1I *trd_num_events;
 static TH1I *num_tracks;
 
-static TH2I *hWireTRDPoint_TrackX, *hWireTRDPoint_TrackY;
-static TH2I *hWireTRDPoint_DeltaXY, *hWireTRDPoint_DeltaXY_Pos, *hWireTRDPoint_DeltaXY_Neg;
-static TH1I *hWireTRDPoint_Time;
+static TH2I *hTRDPoint_TrackX, *hTRDPoint_TrackY;
+static TH2I *hTRDPoint_DeltaXY, *hTRDPoint_DeltaXY_Pos, *hTRDPoint_DeltaXY_Neg;
+static TH1I *hTRDPoint_Time, *hTRDMatchedTrack_EP;
 
 //----------------------------------------------------------------------------------
 
@@ -76,12 +77,13 @@ jerror_t JEventProcessor_TRD_hists::init(void) {
     // Straight track histograms...
     gDirectory->mkdir("StraightTracks")->cd();
 
-    hWireTRDPoint_TrackX = new TH2I("WireTRDPoint_TrackX","; Wire TRD X (cm); Extrapolated track X (cm)",200,-55,55,200,-55,55);
-    hWireTRDPoint_TrackY = new TH2I("WireTRDPoint_TrackY","; Wire TRD Y (cm); Extrapolated track Y (cm)",200,-85,-65,200,-85,-65);
-    hWireTRDPoint_DeltaXY = new TH2I("WireTRDPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hWireTRDPoint_DeltaXY_Pos = new TH2I("WireTRDPoint_DeltaXY_Pos","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hWireTRDPoint_DeltaXY_Neg = new TH2I("WireTRDPoint_DeltaXY_Neg","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hWireTRDPoint_Time = new TH1I("WireTRDPoint_Time","; hit time",1000,0,1000);
+    hTRDPoint_TrackX = new TH2I("WireTRDPoint_TrackX","; Wire TRD X (cm); Extrapolated track X (cm)",200,-55,55,200,-55,55);
+    hTRDPoint_TrackY = new TH2I("WireTRDPoint_TrackY","; Wire TRD Y (cm); Extrapolated track Y (cm)",200,-85,-65,200,-85,-65);
+    hTRDPoint_DeltaXY = new TH2I("WireTRDPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
+    hTRDPoint_DeltaXY_Pos = new TH2I("WireTRDPoint_DeltaXY_Pos","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
+    hTRDPoint_DeltaXY_Neg = new TH2I("WireTRDPoint_DeltaXY_Neg","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
+    hTRDPoint_Time = new TH1I("TRDPoint_Time","; hit time",1000,0,1000);
+    hTRDMatchedTrack_EP = new TH1I("TRDMatchedTrack_EP", "; E/p",150,0.,1.5);
 
     // back to main dir
     mainDir->cd();
@@ -94,10 +96,6 @@ jerror_t JEventProcessor_TRD_hists::init(void) {
 
 jerror_t JEventProcessor_TRD_hists::brun(JEventLoop *eventLoop, int32_t runnumber) {
     // This is called whenever the run number changes
-
-    // special conditions for different geometries
-    if(runnumber < 70000) wirePlaneOffset = 0;
-    else wirePlaneOffset = 4;
 
     DApplication* dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
     const DGeometry *geom = dapp->GetDGeometry(runnumber);
@@ -143,17 +141,17 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     }
 */
 
-    vector<const DTRDDigiHit*> digihits;
-    eventLoop->Get(digihits);
-    vector<const DTRDHit*> hits;
-    eventLoop->Get(hits);
-    vector<const DTRDStripCluster*> clusters;
-    eventLoop->Get(clusters);
+     vector<const DTRDDigiHit*> digihits;
+     eventLoop->Get(digihits);
+//     vector<const DTRDHit*> hits;
+//     eventLoop->Get(hits);
+//     vector<const DTRDStripCluster*> clusters;
+//     eventLoop->Get(clusters);
     vector<const DTRDPoint*> points;
     eventLoop->Get(points);
 
     vector<const DTrackWireBased*> straight_tracks;
-    vector<const DTrackTimeBased*> tracks;
+    vector<const DChargedTrack*> tracks;
     if (dIsNoFieldFlag)
 	    eventLoop->Get(straight_tracks, "StraightLine");
     else
@@ -185,20 +183,20 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 
 	    for (const auto& extrapolation : extrapolations) {
 	
-		    // correlate wire TRD with extrapolated tracks
+		    // correlate TRD with extrapolated tracks
 		    for (const auto& point : points) {
 
-			    if(point->detector == 0 && fabs(extrapolation.position.Z() - 548.8) < 5.) { 
+			    if(point->detector == 0 && fabs(extrapolation.position.Z() - 548.8) < 5.) {  // update this based on real geometry
 
-				    hWireTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
-				    hWireTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
+				    hTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
+				    hTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
 				    
 				    double locDeltaX = point->x - extrapolation.position.X();
 				    double locDeltaY = point->y - extrapolation.position.Y();
-				    hWireTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
+				    hTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
 
-				    if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
-					    hWireTRDPoint_Time->Fill(point->time);
+				    if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {   // update matching
+					    hTRDPoint_Time->Fill(point->time);
 					    goodTrack = true;
 				    }
 			    }
@@ -212,30 +210,49 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     /////////////////////////////
 
     for (const auto& track : tracks) {
+    	const DChargedTrackHypothesis* locChargedTrackHypothesis = track->Get_BestTrackingFOM();
+    	// make cuts based on locChargedTrackHypothesis->PID() ?
+    	auto locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
+    	
+	    int locCharge = locChargedTrackHypothesis->charge();
+    	Particle_t locPID = locChargedTrackHypothesis->PID();
+		double locP = locTrackTimeBased->momentum().Mag();
+		double locTheta = locTrackTimeBased->momentum().Theta()*180.0/TMath::Pi();
+    	
+    	auto locFCALShowerMatchParams = locChargedTrackHypothesis->Get_FCALShowerMatchParams();
+    	auto locTOFHitMatchParams = locChargedTrackHypothesis->Get_TOFHitMatchParams();
 
-	    int charge = track->charge();
-	    vector<DTrackFitter::Extrapolation_t>extrapolations=track->extrapolations.at(SYS_TRD);
+	    vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased->extrapolations.at(SYS_TRD);
 	    //cout<<"found straight track with "<<extrapolations.size()<<" extrapolations"<<endl;
 
 	    for (const auto& extrapolation : extrapolations) {
 	
-		    // correlate wire TRD with extrapolated tracks
+		    // correlate TRD points with extrapolated tracks
+		    // this might change to TRD track segments?
 		    for (const auto& point : points) {
 
-			    if(point->detector == 0 && fabs(extrapolation.position.Z() - 548.8) < 5.) { 
+			    if(point->detector == 0 && fabs(extrapolation.position.Z() - 548.8) < 5.) { // update this based on real geometry
 
-				    hWireTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
-				    hWireTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
+				    hTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
+				    hTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
 				    
 				    double locDeltaX = point->x - extrapolation.position.X();
 				    double locDeltaY = point->y - extrapolation.position.Y();
-				    hWireTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
-				    if(charge > 0) hWireTRDPoint_DeltaXY_Pos->Fill(locDeltaX, locDeltaY);
-				    else hWireTRDPoint_DeltaXY_Neg->Fill(locDeltaX, locDeltaY);
+				    hTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
+				    if(locCharge > 0) hTRDPoint_DeltaXY_Pos->Fill(locDeltaX, locDeltaY);
+				    else hTRDPoint_DeltaXY_Neg->Fill(locDeltaX, locDeltaY);
 
-				    if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
-					    hWireTRDPoint_Time->Fill(point->time);
+				    if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {   // update matching
+					    hTRDPoint_Time->Fill(point->time);
 					    goodTrack = true;
+					    
+					    if(locFCALShowerMatchParams != NULL) {
+							const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
+							double locEOverP = locFCALShower->getEnergy()/locP;
+
+							hTRDMatchedTrack_EP->Fill(locEOverP);		    
+					    }
+			
 				    }
 			    }
 		    }
