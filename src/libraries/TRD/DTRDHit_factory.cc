@@ -126,8 +126,12 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     for (unsigned int i=0; i < digihits.size(); i++) {
 	    const DTRDDigiHit *digihit = digihits[i];
 	    
-	    // quote some info on the translation table
-
+		// The translation table has:
+		// ---------------------------------------------------
+		// plane   : 1-2
+		// strip   : 1-720 (plane 1) or 1-432 (plane 2)
+		//
+      
         // Grab the pedestal from the digihit 
         int raw_ped = digihit->pedestal;
 
