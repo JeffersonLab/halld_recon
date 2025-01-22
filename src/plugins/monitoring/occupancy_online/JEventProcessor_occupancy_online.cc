@@ -19,6 +19,7 @@ using namespace jana;
 #include <FDC/DFDCWireDigiHit.h>
 #include <FMWPC/DFMWPCDigiHit.h>
 #include <FCAL/DFCALDigiHit.h>
+#include <ECAL/DECALDigiHit.h>
 #include <PAIR_SPECTROMETER/DPSCDigiHit.h>
 #include <PAIR_SPECTROMETER/DPSCTDCDigiHit.h>
 #include <PAIR_SPECTROMETER/DPSDigiHit.h>
@@ -49,6 +50,7 @@ using namespace jana;
 	X(DFDCWireDigiHit) \
 	X(DFMWPCDigiHit) \
 	X(DFCALDigiHit) \
+	X(DECALDigiHit) \
 	X(DPSCDigiHit) \
 	X(DPSCTDCDigiHit) \
 	X(DPSDigiHit) \
@@ -175,7 +177,11 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 	}
 	cdc_num_events = new TH1I("cdc_num_events", "CDC number of events", 1, 0.0, 1.0);
 	new TH2D("cdc_axes", "CDC Occupancy", 100, -57.0*4.0/3.0, 57.0*4.0/3.0, 100, -57.0, 57.0);
-    
+
+	//------------------------ ECAL -----------------------
+	ecal_occ = new TH2F("ecal_occ", "ECAL Occupancy; column; row", 42, -1.5, 40.5, 42, -1.5, 40.5);
+	ecal_num_events = new TH1I("ecal_num_events", "ECAL number of events", 1, 0.0, 1.0);
+	
 	//------------------------ FCAL -----------------------
 	fcal_occ = new TH2F("fcal_occ", "FCAL Occupancy; column; row", 61, -1.5, 59.5, 61, -1.5, 59.5);
 	fcal_num_events = new TH1I("fcal_num_events", "FCAL number of events", 1, 0.0, 1.0);
@@ -400,6 +406,12 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 		cdc_occ_ring[ring]->SetBinContent(straw, 1, w);
 	}
 
+	//------------------------ ECAL -----------------------
+	ecal_num_events->Fill(0.5);
+	for(size_t loc_i = 0; loc_i < vDECALDigiHit.size(); ++loc_i){
+	  ecal_occ->Fill(vDECALDigiHit[loc_i]->column, vDECALDigiHit[loc_i]->row);
+	}
+	
 	//------------------------ FCAL -----------------------
 	fcal_num_events->Fill(0.5);
 	for(size_t loc_i = 0; loc_i < vDFCALDigiHit.size(); ++loc_i){
