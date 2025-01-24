@@ -2254,8 +2254,8 @@ inline static int PDGtype(Particle_t p)
   case Sigma_1385_Plus:	return 3224;
   case Deuteron: return 1000010020;
   case Triton:   return 1000010030;
-  case He3:			 return 1000020030;
-  case Helium:	 return 1000020040;
+  case He3:      return 1000020030;
+  case Helium:   return 1000020040;
   case Li6:      return 1000030060;
   case Li7:      return 1000030070;
   case Be7:      return 1000040070;
@@ -2383,10 +2383,10 @@ inline static Particle_t PDGtoPType(int locPDG_PID)
   case 3114:			return Sigma_1385_Minus;
   case 3214:			return Sigma_1385_0;
   case 3224:			return Sigma_1385_Plus;
-  case 1000010020:	return Deuteron;
-  case 1000010030:	return Triton;
-  case 1000020030:	return He3;
-  case 1000020040:	return Helium;
+  case 1000010020:  return Deuteron;
+  case 1000010030:  return Triton;
+  case 1000020030:  return He3;
+  case 1000020040:  return Helium;
   case 1000030060:  return Li6;
   case 1000030070:  return Li7;
   case 1000040070:  return Be7;
