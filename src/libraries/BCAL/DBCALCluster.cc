@@ -70,7 +70,7 @@ if( phi() > point->phi() ){
 
   int n = m_points.size();
   if (n==0) {
-      printf("E = %f               \n",m_E);
+      // printf("E = %f               \n",m_E);
       clear();        // don't process cluster if the last point was removed
   } else {
       makeFromPoints();
