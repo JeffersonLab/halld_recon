@@ -139,6 +139,7 @@ void DEventSourceREST::GetEvent(std::shared_ptr<JEvent> event)
 #endif
 
    hddm_r::HDDM *record = new hddm_r::HDDM();
+   hddm_r::threads::ID = 1;
    try{
       while (record->getReconstructedPhysicsEvents().size() == 0) {
          if (! (*fin >> *record)) {
@@ -246,6 +247,7 @@ bool DEventSourceREST::GetObjects(const std::shared_ptr<const JEvent> &event, JF
    }
 
    hddm_r::HDDM *record = const_cast<hddm_r::HDDM*>(event->GetSingleStrict<hddm_r::HDDM>());
+   hddm_r::threads::ID = 1;
    // TODO: NWB: Remove const cast if possible
 
    string dataClassName = factory->GetObjectName();
