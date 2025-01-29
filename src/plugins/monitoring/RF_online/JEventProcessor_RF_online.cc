@@ -238,14 +238,14 @@ void JEventProcessor_RF_online::Init()
 
 }
 
-void JEventProcessor_RF_online::BeginRun(const std::shared_ptr<const JEvent> &locEvent, int32_t runnumber)
+void JEventProcessor_RF_online::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called whenever the run number changes
 
     // TODO: NWB: Excise all uses of brun_was_called and Set_brun_called from codebase
 }
 
-void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &locEvent, uint64_t eventnumber)
+void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	vector<const DCODAROCInfo*> locCODAROCInfos;
 	locEvent->Get(locCODAROCInfos);
