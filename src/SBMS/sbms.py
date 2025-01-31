@@ -7,8 +7,8 @@ from builtins import open
 from builtins import filter
 from builtins import int
 from builtins import str
-from future import standard_library
-standard_library.install_aliases()
+# from future import standard_library
+# standard_library.install_aliases()
 import os
 import subprocess
 import SCons
