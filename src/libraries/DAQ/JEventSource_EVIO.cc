@@ -65,7 +65,7 @@ set<uint32_t> ROCIDS_TO_PARSE;
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 // If EVIO support is not available, define dummy methods
 #ifndef HAVE_EVIO
-JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(source_name){
+JEventSource_EVIO::JEventSource_EVIO(std::string source_name, JApplication* app):JEventSource(source_name){
 	cerr << endl;
 	cerr << "You are trying to use code requiring EVIO when support" << endl;
 	cerr << "for EVIO was not built into this binary. Set your" << endl;
@@ -75,9 +75,9 @@ JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(sourc
 	exit(-1);
 }
          JEventSource_EVIO::~JEventSource_EVIO(){}
-jerror_t JEventSource_EVIO::GetEvent(jana::JEvent &event){return NOERROR;}
-    void JEventSource_EVIO::FreeEvent(jana::JEvent &event){}
-jerror_t JEventSource_EVIO::GetObjects(jana::JEvent &event, jana::JFactory_base *factory){return NOERROR;}
+    void JEventSource_EVIO::GetEvent(std::shared_ptr<JEvent> event) {}
+    void JEventSource_EVIO::FinishEvent(JEvent &event) {};
+    bool JEventSource_EVIO::GetObjects(const std::shared_ptr<const JEvent> &event, JFactory *factory) {return false;}
 jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buf){return NOERROR;}
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
