@@ -95,13 +95,21 @@ void ParseCommandLineArguments(int &narg, char *argv[])
         int nfound=0;
 	for(int i=1;i<narg;i++){
 	  if(argv[i][0] == '-')continue; 
+
+	  // If the argument starts with "ET:" then count it as found,
+	  // without checking if it's an existing file.
+	  if (strncmp(argv[i], "ET:", 3) == 0) {
+	  	nfound++;
+	  	continue;
+	  }else{
+		  // Check if file exists
           if (gSystem->AccessPathName(argv[i])) {
 	      cerr << "File not found: " << argv[i] << endl;
           } else {
 	      nfound++;
           }             
         }
-
+	  }
         if (!nfound) exit(-1); 
 
 }
