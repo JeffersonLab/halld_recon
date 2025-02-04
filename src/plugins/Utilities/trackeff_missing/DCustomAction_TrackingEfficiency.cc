@@ -17,7 +17,7 @@ void DCustomAction_TrackingEfficiency::Initialize(const std::shared_ptr<const JE
 	const DReaction* locReaction = Get_Reaction();
 
 	auto locMissingPIDs = Get_Reaction()->Get_MissingPIDs();
-	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : Unknown;
+	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : UnknownParticle;
 	if(locMissingPIDs.size() != 1)
 		return; //invalid reaction setup
 
@@ -109,7 +109,7 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(const std::shared_ptr<cons
 
 	/*********************************************** MISSING PARTICLE INFO ***********************************************/
 
-	if(dMissingPID == Unknown)
+	if(dMissingPID == UnknownParticle)
 		return true; //invalid reaction setup
 	if(ParticleCharge(dMissingPID) == 0)
 		return true; //NOT SUPPORTED

@@ -26,15 +26,15 @@ namespace DAnalysis
 class DSourceComboInfo;
 class DSourceCombo;
 
-//DSourceComboUse is what the combo is USED for (the decay of Particle_t (if Unknown then is just a grouping)
+//DSourceComboUse is what the combo is USED for (the decay of Particle_t (if UnknownParticle then is just a grouping)
 //signed char: vertex-z bin of the final state (combo contents)
-//bool: true/false if has/doesn't-have missing decay product (is always false if decay pid == Unknown)
-//last pid: Rescattering Target PID (target excluded for 1st step) //is always Unknown if decay pid == Unknown)
-using DSourceComboUse = tuple<Particle_t, signed char, const DSourceComboInfo*, bool, Particle_t>; //e.g. Pi0, zbin, -> 2g, false, Unknown
+//bool: true/false if has/doesn't-have missing decay product (is always false if decay pid == UnknownParticle)
+//last pid: Rescattering Target PID (target excluded for 1st step) //is always UnknownParticle if decay pid == UnknownParticle)
+using DSourceComboUse = tuple<Particle_t, signed char, const DSourceComboInfo*, bool, Particle_t>; //e.g. Pi0, zbin, -> 2g, false, UnknownParticle
 using DSourceCombosByUse_Small = vector<pair<DSourceComboUse, vector<const DSourceCombo*>>>;
 
 //DECLARE NAMESPACE-SCOPE FUNCTIONS
-vector<const JObject*> Get_SourceParticles(const vector<pair<Particle_t, const JObject*>>& locSourceParticles, Particle_t locPID = Unknown);
+vector<const JObject*> Get_SourceParticles(const vector<pair<Particle_t, const JObject*>>& locSourceParticles, Particle_t locPID = UnknownParticle);
 vector<pair<Particle_t, const JObject*>> Get_SourceParticles_ThisVertex(const DSourceCombo* locSourceCombo, Charge_t locCharge = d_AllCharges);
 vector<const DSourceCombo*> Get_SourceCombos_ThisVertex(const DSourceCombo* locSourceCombo);
 vector<pair<DSourceComboUse, vector<const DSourceCombo*>>> Get_SourceCombosAndUses_ThisVertex(const DSourceCombo* locSourceCombo);
@@ -206,7 +206,7 @@ struct DSourceComboChecker_ReusedParticle
 	//returns true if a particle WAS reused
 	bool operator()(const DSourceCombo* locCombo) const
 	{
-		auto locParticles = DAnalysis::Get_SourceParticles(locCombo->Get_SourceParticles(true), Unknown); //all pids
+		auto locParticles = DAnalysis::Get_SourceParticles(locCombo->Get_SourceParticles(true), UnknownParticle); //all pids
 		std::sort(locParticles.begin(), locParticles.end());
 		auto locUniqueIterator = std::unique(locParticles.begin(), locParticles.end());
 		return (locUniqueIterator != locParticles.end());
@@ -371,7 +371,7 @@ inline vector<const JObject*> Get_SourceParticles(const vector<pair<Particle_t, 
 	vector<const JObject*> locOutputParticles;
 	for(const auto& locParticlePair : locSourceParticles)
 	{
-		if((locPID == Unknown) || (locParticlePair.first == locPID))
+		if((locPID == UnknownParticle) || (locParticlePair.first == locPID))
 			locOutputParticles.push_back(locParticlePair.second);
 	}
 	return locOutputParticles;
@@ -542,7 +542,7 @@ inline const JObject* Get_SourceParticle_ThisStep(const DSourceCombo* locSourceC
 
 	for(const auto& locDecayPair : locSourceCombo->Get_FurtherDecayCombos())
 	{
-		if(std::get<0>(locDecayPair.first) != Unknown)
+		if(std::get<0>(locDecayPair.first) != UnknownParticle)
 			continue; //a new step!
 		for(const auto& locDecayCombo : locDecayPair.second)
 		{

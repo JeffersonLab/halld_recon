@@ -421,7 +421,7 @@ shared_ptr<DKinFitChainStep> DKinFitUtils_GlueX::Make_KinFitChainStep(const DRea
 
 	//target particle
 	Particle_t locTargetPID = locReactionStep->Get_TargetPID();
-	if(locTargetPID != Unknown)
+	if(locTargetPID != UnknownParticle)
 	{
 		size_t locTargetInstance = 0;
 		for(size_t loc_i = 0; loc_i < locStepIndex; ++loc_i)
@@ -719,7 +719,7 @@ string DKinFitUtils_GlueX::Get_ConstraintInfo(const DReactionVertexInfo* locReac
 			set<size_t> locP4ConstrainedParticleSteps;
 
 			//check if initial & final states if have non-zero cov errors:
-			if((locP4StepIndex == 0) && (locReactionStep->Get_TargetPID() != Unknown) && dWillBeamHaveErrorsFlag)
+			if((locP4StepIndex == 0) && (locReactionStep->Get_TargetPID() != UnknownParticle) && dWillBeamHaveErrorsFlag)
 				locNonZeroErrorFlag = true; //beam: we're good
 			else if((locP4StepIndex != 0) && (locMassConstraintStrings.find(locP4StepIndex) == locMassConstraintStrings.end()))
 				locNonZeroErrorFlag = true; //decaying particle, but mass not constrained: we're good (unless it's e.g. an omega. ugh.)

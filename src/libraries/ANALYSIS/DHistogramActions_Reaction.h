@@ -300,7 +300,7 @@ class DHistogramAction_InvariantMass : public DAnalysisAction
 			//call with step = 0, PIDs = pi+, pi-, and will histogram rho mass
 		DHistogramAction_InvariantMass(const DReaction* locReaction, size_t locStepIndex, deque<Particle_t> locToIncludePIDs, bool locUseKinFitResultsFlag, unsigned int locNumMassBins, double locMinMass, double locMaxMass, string locActionUniqueString = "", bool locSubtractAccidentals = false) :
 		DAnalysisAction(locReaction, "Hist_InvariantMass", locUseKinFitResultsFlag, locActionUniqueString),
-		dInitialPID(Unknown), dStepIndex(locStepIndex), dToIncludePIDs(locToIncludePIDs),
+		dInitialPID(UnknownParticle), dStepIndex(locStepIndex), dToIncludePIDs(locToIncludePIDs),
 		dNumMassBins(locNumMassBins), dMinMass(locMinMass), dMaxMass(locMaxMass), dNum2DMassBins(locNumMassBins/2), dNum2DBeamEBins(600), dMinBeamE(0.0), dMaxBeamE(12.0), dSubtractAccidentals(locSubtractAccidentals) {}
 
 		void Initialize(const std::shared_ptr<const JEvent>& locEvent);

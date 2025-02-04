@@ -682,7 +682,7 @@ void DAnalysisUtilities::Get_ThrownParticleSteps(const std::shared_ptr<const JEv
 		if(IsResonance(locMCThrowns[loc_i]->PID()))
 			continue; //don't include resonances in DReaction!!
 
-		if(locMCThrowns[loc_i]->PID() == Unknown)
+		if(locMCThrowns[loc_i]->PID() == UnknownParticle)
 			continue; //could be some weird pythia "resonance" like a diquark: just ignore them all
 
 		//initial checks of parent id
@@ -698,7 +698,7 @@ void DAnalysisUtilities::Get_ThrownParticleSteps(const std::shared_ptr<const JEv
 		//initial checks of parent pid
 		Particle_t locParentPID = locIDMap[locParentID]->PID();
 		bool locDoneFlag = false;
-		while(((locParentPID == Unknown) || IsResonance(locParentPID)) && (!locDoneFlag))
+		while(((locParentPID == UnknownParticle) || IsResonance(locParentPID)) && (!locDoneFlag))
 		{
 			//intermediate particle, continue towards the source
 			locParentID = locIDMap[locParentID]->parentid; //parent's parent
@@ -839,7 +839,7 @@ DLorentzVector DAnalysisUtilities::Calc_MissingP4(const DReaction* locReaction, 
 
 	//target particle
 	Particle_t locPID = locReactionStep->Get_TargetPID();
-	if(locPID != Unknown)
+	if(locPID != UnknownParticle)
 	{
 		double locMass = ParticleMass(locPID);
 		locMissingP4 += DLorentzVector(DVector3(0.0, 0.0, 0.0), locMass);
@@ -957,7 +957,7 @@ DLorentzVector DAnalysisUtilities::Calc_FinalStateP4(const DReaction* locReactio
 	if(locStepIndex != 0)
 	{
 		Particle_t locPID = locReactionStep->Get_TargetPID();
-		if(locPID != Unknown)
+		if(locPID != UnknownParticle)
 			locFinalStateP4 -= DLorentzVector(DVector3(0.0, 0.0, 0.0), ParticleMass(locPID));
 	}
 
