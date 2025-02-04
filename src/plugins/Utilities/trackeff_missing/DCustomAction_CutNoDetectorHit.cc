@@ -86,6 +86,7 @@ void DCustomAction_CutNoDetectorHit::Initialize(const std::shared_ptr<const JEve
 		locHistName = "BCALDeltaZVsZ";
 		locHistTitle = locTrackString + string(";Projected BCAL Hit-Z (cm);BCAL / Track #Deltaz (cm)");
 		dHistMap_BCALDeltaZVsZ = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DBCALZBins, 0.0, 450.0, dNum2DDeltaZBins, dMinDeltaZ, dMaxDeltaZ);
+		ChangeTo_BaseDirectory();
 }
 	lockService->RootUnLock(); //RELEASE ROOT LOCK!!
 }

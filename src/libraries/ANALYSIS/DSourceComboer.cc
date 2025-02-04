@@ -695,6 +695,7 @@ DSourceComboer::DSourceComboer(const std::shared_ptr<const JEvent>& locEvent)
 		vector<DetectorSystem_t> locEOverPSystems {SYS_BCAL, SYS_FCAL};
 
 		//get and change to the base (file/global) directory
+		gDirectory->cd("/");
 		TDirectory* locCurrentDir = gDirectory;
 
 		string locDirName = "Independent";
