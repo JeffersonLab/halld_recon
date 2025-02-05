@@ -48,6 +48,8 @@ using namespace jana;
 #include "DDIRCADCHit.h"
 #include "DGEMSRSWindowRawData.h"
 #include "DHELIDigiHit.h"
+#include "DHelicityData.h"
+#include "DHelicityDataTriggerTime.h"
 #include "Df125EmulatorAlgorithm_factory.h"
 #include "Df125EmulatorAlgorithm_factory_v2.h"
 #include "Df250EmulatorAlgorithm_factory.h"
@@ -103,6 +105,8 @@ jerror_t DAQ_init(JEventLoop *loop)
 	loop->AddFactory(new JFactory<DDIRCTDCHit>());
 	loop->AddFactory(new JFactory<DDIRCADCHit>());
 	loop->AddFactory(new JFactory<DGEMSRSWindowRawData>());
+	loop->AddFactory(new JFactory<DHelicityData>());
+	loop->AddFactory(new JFactory<DHelicityDataTriggerTime>());
 	loop->AddFactory(new Df125EmulatorAlgorithm_factory());
 	loop->AddFactory(new Df125EmulatorAlgorithm_factory_v2());
 	loop->AddFactory(new Df250EmulatorAlgorithm_factory());

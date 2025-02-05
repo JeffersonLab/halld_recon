@@ -994,6 +994,11 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 				ParseEventTagBank(iptr, iend_data_block_bank);
 				break;
 
+			case 0xDEC:  // Helicity decoder board, SD 2025-01-28
+				jout << "found Helicity decoder board!  (len = " << data_block_bank_len << ")" << endl;
+                ParseHelicityDecoderBank(rocid, iptr, iend);
+                //Parsef250Bank(rocid, iptr, iend);
+ 				break;
 			case 0:
 			case 1:
 			case 3:
@@ -1344,7 +1349,7 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
 		// Get module type from next word (bits 18-21)
 		uint32_t mod_id = ((*iptr) >> 18) & 0x000F;
 		MODULE_TYPE type = (MODULE_TYPE)mod_id;
-		//cout << "      rocid=" << rocid << "  Encountered module type: " << type << " (=" << DModuleType::GetModule(type).GetName() << ")  word=" << hex << (*iptr) << dec << endl;
+		cout << "      rocid=" << rocid << "  Encountered module type: " << type << " (=" << DModuleType::GetModule(type).GetName() << ")  word=" << hex << (*iptr) << dec << endl;
 
         switch(type){
             case DModuleType::FADC250:
@@ -1373,6 +1378,10 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
                break;
                */
                break;
+               
+            case DModuleType::HELICITY_DECODER:
+                ParseHelicityDecoderBank(rocid, iptr, iend);
+                break;
 
             case DModuleType::UNKNOWN:
             default:
@@ -1386,6 +1395,213 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
         }
 	}
 
+}
+
+//----------------
+// Parsef250Bank
+//----------------
+void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
+{
+	//if(!PARSE_F250){ iptr = &iptr[(*iptr) + 1]; return; }
+
+	auto pe_iter = current_parsed_events.begin();
+	DParsedEvent *pe = NULL;
+	
+	uint32_t slot = 0;
+	uint32_t itrigger = -1;
+	
+	//iptr++; /// DEBUG
+	//iptr++; /// DEBUG
+
+	//uint32_t *istart_pulse_data = iptr;
+
+    // Loop over data words
+    for(; iptr<iend; iptr++){
+
+        // Skip all non-data-type-defining words at this
+        // level. When we do encounter one, the appropriate
+        // case block below should handle parsing all of
+        // the data continuation words and advance the iptr.
+        if(((*iptr>>31) & 0x1) == 0)continue;
+
+        uint32_t data_type = (*iptr>>27) & 0x0F;
+        switch(data_type){
+            case 0: // Block Header
+                slot = (*iptr>>22) & 0x1F;
+                if(VERBOSE>7) cout << "      Helicity Decoder Block Header: slot="<<slot<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+               break;
+            case 1: // Block Trailer
+                pe_iter = current_parsed_events.begin();
+				pe = NULL;
+                if(VERBOSE>7) cout << "      Helicity Decoder Block Trailer"<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
+                break;
+            case 2: // Event Header
+                itrigger = (*iptr>>0) & 0x3FFFFF;
+				pe = *pe_iter++;
+                if(VERBOSE>7) cout << "      Helicity Decoder Event Header: itrigger="<<itrigger<<", rocid="<<rocid<<", slot="<<slot<<")" <<" (0x"<<hex<<*iptr<<dec<<")" <<endl;
+                break;
+            case 3: // Trigger Time
+				{
+					uint64_t t = ((*iptr)&0xFFFFFF)<<0;
+					if(VERBOSE>7) cout << "      Helicity Decoder Trigger time low word="<<(((*iptr)&0xFFFFFF))<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+					iptr++;
+					if(((*iptr>>31) & 0x1) == 0){
+						t += ((*iptr)&0xFFFFFF)<<24; // from word on the street: second trigger time word is optional!!??
+						if(VERBOSE>7) cout << "      Helicity Decoder Trigger time high word="<<(((*iptr)&0xFFFFFF))<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
+					}else{
+						iptr--;
+					}
+					if(VERBOSE>7) cout << "      Helicity Decoder Trigger Time: t="<<t<<endl;
+					if(pe) pe->NEW_DHelicityDataTriggerTime(rocid, slot, itrigger, t);
+				}
+                break;
+            case 8: // Decoder Data
+				{
+ 					// the first word is the header
+					uint32_t header_reserved        = (*iptr>>27);
+					uint32_t header_number_words    = (*iptr>>0 ) & 0x1F;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data Header (0x"<<hex<<*iptr<<dec<<") header reserved=" << header_reserved << " header number words="<<header_number_words <<endl;
+					
+					// sanity checks
+					if(header_reserved != 0x18)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JException("Bad helicity decoder header data", __FILE__, __LINE__);}
+					if(header_number_words != 14)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JException("Bad helicity decoder header payload", __FILE__, __LINE__);}
+
+					iptr++;
+					
+					// Word 1 - Helicity seed
+					uint32_t expected_helicity_state    = (*iptr>>31) & 0x01;
+					uint32_t recovered_helicity_seed    = (*iptr>>0) & 0x3FFFFFFF;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 1(0x"<<hex<<*iptr<<dec<<")  expected_helicity_state="<<expected_helicity_state<<"  recovered_helicity_seed=0x"<<hex<<*iptr<<dec<<recovered_helicity_seed<<endl;
+					iptr++;
+					
+					// Word 2 - Count of falling edge T_STABLE
+					uint32_t falling_edge_tstable_count = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 2(0x"<<hex<<*iptr<<dec<<")  falling_edge_tstable_count="<<falling_edge_tstable_count<<endl;
+					iptr++;
+					
+					// Word 3 - Count of rising edge T_STABLE
+					uint32_t rising_edge_tstable_count = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 3(0x"<<hex<<*iptr<<dec<<")  rising_edge_tstable_count="<<rising_edge_tstable_count<<endl;
+					iptr++;
+					
+					// Word 4 - Count of PATTERN_SYNC
+					uint32_t pattern_sync_count = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 4(0x"<<hex<<*iptr<<dec<<")  pattern_sync_count="<<pattern_sync_count<<endl;
+					iptr++;
+					
+					// Word 5 - Count of PAIR_SYNC
+					uint32_t pair_sync_count = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 5(0x"<<hex<<*iptr<<dec<<")  pair_sync_count="<<pair_sync_count<<endl;
+					iptr++;
+					
+					// Word 6 - Time of trigger from start of T_STABLE interval
+					uint32_t time_from_start_tstable = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 6(0x"<<hex<<*iptr<<dec<<")  time_from_start_tstable="<<time_from_start_tstable<<endl;
+					iptr++;
+					
+					// Word 7 - Time of trigger from end of T_STABLE interval
+					uint32_t time_from_end_tstable = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 7(0x"<<hex<<*iptr<<dec<<")  time_from_end_tstable="<<time_from_end_tstable<<endl;
+					iptr++;
+					
+					// Word 8 - Time duration of last complete T_STABLE interval
+					uint32_t duration_last_tstable = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 8(0x"<<hex<<*iptr<<dec<<")  duration_last_tstable="<<duration_last_tstable<<endl;
+					iptr++;
+					
+					// Word 9 - Time duration of last complete T_SETTLE interval
+					uint32_t duration_last_tsettle = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 9(0x"<<hex<<*iptr<<dec<<")  duration_last_tsettle="<<duration_last_tsettle<<endl;
+					iptr++;
+					
+					// Word 10 - Status at trigger time
+					bool trigger_tstable                       = (*iptr>>0 ) & 0x1;
+					bool trigger_pattern_sync                  = (*iptr>>1 ) & 0x1;
+					bool trigger_pair_sync                     = (*iptr>>2 ) & 0x1;
+					bool trigger_helicity_state                = (*iptr>>3 ) & 0x1;
+					bool trigger_helicity_state_pattern_start  = (*iptr>>4 ) & 0x1;
+					bool trigger_event_polarity                = (*iptr>>5 ) & 0x1;
+					uint32_t trigger_pattern_phase_count       = (*iptr>>8 ) & 0xFF;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 10(0x"<<hex<<*iptr<<dec<<")  trigger_tstable="<<trigger_tstable<<"  trigger_pattern_sync="<<trigger_pattern_sync<<"  trigger_pair_sync="<<trigger_pair_sync<<"  trigger_helicity_state="<<trigger_helicity_state<<endl;
+					iptr++;
+					
+					// Word 11 - Last 32 windows of PATTERN_SYNC
+					uint32_t last_pattern_sync = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 11(0x"<<hex<<*iptr<<dec<<")  last_pattern_sync="<<last_pattern_sync<<endl;
+					iptr++;
+					
+					// Word 12 - Last 32 windows of PAIR_SYNC
+					uint32_t last_pair_sync = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 12(0x"<<hex<<*iptr<<dec<<")  last_pair_sync="<<last_pair_sync<<endl;
+					iptr++;
+					
+					// Word 13 - Last 32 windows of HELICITY_STATE
+					uint32_t last_helicity_state = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 13(0x"<<hex<<*iptr<<dec<<")  last_helicity_state="<<last_helicity_state<<endl;
+					iptr++;
+					
+					// Word 14 - Last 32 values of HELICITY_STATE at PATTERN_SYNC
+					uint32_t last_helicity_state_pattern_sync = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 14(0x"<<hex<<*iptr<<dec<<")  last_helicity_state_pattern_sync="<<last_helicity_state_pattern_sync<<endl;
+							
+					if( pe ) {
+						uint32_t channel=0;  // set this by hand for now?
+						pe->NEW_DHelicityData(rocid, slot, channel, itrigger
+						, expected_helicity_state
+						, recovered_helicity_seed
+						, falling_edge_tstable_count
+						, rising_edge_tstable_count
+						, pattern_sync_count
+						, pair_sync_count
+						, time_from_start_tstable
+						, time_from_end_tstable
+						, duration_last_tstable
+						, duration_last_tsettle
+						, trigger_tstable
+						, trigger_pattern_sync
+						, trigger_pair_sync
+						, trigger_helicity_state
+						, trigger_helicity_state_pattern_start
+						, trigger_event_polarity
+						, trigger_pattern_phase_count
+						, last_pattern_sync
+						, last_pair_sync
+						, last_helicity_state
+						, last_helicity_state_pattern_sync);
+					}
+				
+				}
+                break;
+            case 14: // Data not valid (empty module)
+            case 15: // Filler (non-data) word
+            	if(VERBOSE>7) cout << "      Helicity Decoder Event Trailer, Data not Valid, or Filler word ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+				break;
+			default:
+ 				if(VERBOSE>7) cout << "      Helicity Decoder unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+				jerr << "Helicity Decoder unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
+                // make additional debugging output for special error types
+                if(data_type == 11) {
+                    cout << "          FADC slot mask = "<<" 0x"<<hex<<*(iptr+1)<<dec<<endl;
+                    cout << "          Token status = "<<" 0x"<<hex<<*(iptr+2)<<dec<<endl;
+                    cout << "          Bus error status = "<<" 0x"<<hex<<*(iptr+3)<<dec<<endl;
+                    if(pe) {
+                        cout << "          Associated with event number = "<<pe->event_number<<endl;
+                    }
+                }
+
+// 				if (continue_on_format_error) {  // comment out for now??
+// 					iptr = iend;
+// 					return;
+// 				}
+// 				else
+					//throw JExceptionDataFormat("Unexpected word type in Helicity Decoder block!", __FILE__, __LINE__);
+        }
+    }
+
+    // Chop off filler words
+    for(; iptr<iend; iptr++){
+        if(((*iptr)&0xf8000000) != 0xf8000000) break;
+    }
 }
 
 //----------------
