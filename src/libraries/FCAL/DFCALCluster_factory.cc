@@ -58,7 +58,7 @@ DFCALCluster_factory::DFCALCluster_factory()
 	gPARMS->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
 	gPARMS->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
 	gPARMS->SetDefaultParameter("FCAL:REMOVE_BAD_FCAL_BLOCK",REMOVE_BAD_FCAL_BLOCK,"remove bad fcal block");
-	gPARMS->SetDefaultParameter("FCAL:REMOVE_BAD_ECAL_BLOCK",REMOVE_BAD_FCAL_BLOCK,"remove bad ecal block");
+	gPARMS->SetDefaultParameter("FCAL:REMOVE_BAD_ECAL_BLOCK",REMOVE_BAD_ECAL_BLOCK,"remove bad ecal block");
 
 }
 
@@ -154,8 +154,8 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	    if ( (**hit).E <  1e-6 ) continue;
             if (REMOVE_BAD_ECAL_BLOCK == 1 &&
 	       bad_ecal_blocks_list.size() > 0 &&
-	       //0 <= fcalGeom->channel( 100+(**hit).row, 100+(**hit).column ) && fcalGeom->channel( 100+(**hit).row, 100+(**hit).column ) <= 1599 &&
-	       bad_ecal_blocks_list[fcalGeom->channel( 100+(**hit).row, 100+(**hit).column )] == 1) continue;
+	       2800 <= fcalGeom->channel( 100+(**hit).row, 100+(**hit).column ) && fcalGeom->channel( 100+(**hit).row, 100+(**hit).column ) <= 4399 &&
+	       bad_ecal_blocks_list[fcalGeom->channel( 100+(**hit).row, 100+(**hit).column ) - 2800] == 1) continue;
 	    hits->hit[nhits].id = (**hit).id;
 	    hits->hit[nhits].E = (**hit).E; 
 	    hits->hit[nhits].t = (**hit).t;

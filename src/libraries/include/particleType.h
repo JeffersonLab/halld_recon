@@ -1015,15 +1015,18 @@ inline static char* ShortName(Particle_t locPID)
   case AntiProton:
 	return (char*)"antip";
   case KShort:
-	return (char*)"ks";
+    //return (char*)"ks";
+    return (char*)"K_S0";
   case Eta:
 	return (char*)"eta";
   case Lambda:
-	return (char*)"lamb";
+    //return (char*)"lamb";
+    return (char*)"Lambda0";
   case SigmaPlus:
 	return (char*)"sigp";
   case Sigma0:
-	return (char*)"sig0";
+    //return (char*)"sig0";
+    return (char*)"Sigma0";
   case SigmaMinus:
 	return (char*)"sigm";
   case Xi0:
