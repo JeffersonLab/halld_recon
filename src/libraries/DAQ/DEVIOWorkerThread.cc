@@ -1840,7 +1840,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 
 					if( pe ) {
 						pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
-									, pulse_number        // NPK
+								        , nword-1 //pulse_number instead of NPK
 									, pulse_time          // le_time
 									, quality_factor      // time_quality_bit
 									, overflow_count      // overflow_count
@@ -1956,8 +1956,8 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						}else{
 					
 							pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
-										, pulse_number        // NPK
-										, pulse_time          // le_time
+								                , nword-1 //pulse_number instead of NPK
+									        , pulse_time          // le_time
 										, quality_factor      // time_quality_bit
 										, overflow_count      // overflow_count
 										, pedestal            // pedestal
