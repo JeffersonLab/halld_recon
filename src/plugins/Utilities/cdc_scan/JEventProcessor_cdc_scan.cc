@@ -134,7 +134,8 @@ jerror_t JEventProcessor_cdc_scan::init(void)
   p->Branch("word1",&word1,"word1/i");
   p->Branch("word2",&word2,"word2/i");
 
-  uint32_t time, q, pedestal, amp, integral, overflows, pktime;
+  uint32_t npk, time, q, pedestal, amp, integral, overflows, pktime;
+  p->Branch("npk",&npk,"npk/i");    
   p->Branch("time",&time,"time/i");    
   p->Branch("q",&q,"q/i");    
   p->Branch("pedestal",&pedestal,"pedestal/i");    
@@ -265,7 +266,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   
   
   // Only look at physics triggers
-  
+  /*
   const DTrigger* locTrigger = NULL; 
   loop->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
@@ -273,7 +274,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
     return NOERROR;
   }
-   
+  */   
   vector <const Df125CDCPulse*> cdcpulses;
   loop->Get(cdcpulses);
   uint32_t nc = (uint32_t)cdcpulses.size();
@@ -363,8 +364,9 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
     p->SetBranchAddress("word1",&word1);
     p->SetBranchAddress("word2",&word2);
 
-    uint32_t time, q, pedestal, amp, integral, overflows, pktime;
-    p->SetBranchAddress("time",&time);
+    uint32_t npk, time, q, pedestal, amp, integral, overflows, pktime;
+    p->SetBranchAddress("npk",&npk);
+    p->SetBranchAddress("time",&time);    
     p->SetBranchAddress("q",&q);
     p->SetBranchAddress("pedestal",&pedestal);
     p->SetBranchAddress("amp",&amp);
@@ -383,11 +385,12 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
     p->SetBranchAddress("adc",&adc);
 
     
-    uint32_t m_time=0, m_q=0, m_pedestal=0, m_integral=0, m_amp=0, m_overflows=0, m_pktime=0;
-    int d_time=0, d_q=0, d_pedestal=0, d_integral=0, d_amp=0, d_overflows=0, d_pktime=0;
+    uint32_t m_npk, m_time=0, m_q=0, m_pedestal=0, m_integral=0, m_amp=0, m_overflows=0, m_pktime=0;
+    int d_npk = 0, d_time=0, d_q=0, d_pedestal=0, d_integral=0, d_amp=0, d_overflows=0, d_pktime=0;
     bool diffs=0;
     
     if (EMU) {    
+      p->SetBranchAddress("m_npk",&m_npk);
       p->SetBranchAddress("m_time",&m_time);
       p->SetBranchAddress("m_q",&m_q);
       p->SetBranchAddress("m_overflows",&m_overflows);
@@ -396,6 +399,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
       p->SetBranchAddress("m_amp",&m_amp);
       p->SetBranchAddress("m_pktime",&m_pktime);
 
+      p->SetBranchAddress("d_npk",&d_npk);
       p->SetBranchAddress("d_time", &d_time);
       p->SetBranchAddress("d_q", &d_q);
       p->SetBranchAddress("d_pedestal", &d_pedestal);
@@ -447,6 +451,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   
         word1 = cp->word1;
         word2 = cp->word2;
+	npk = cp->NPK;
         time = cp->le_time;
         pedestal = cp->pedestal;
         integral = cp->integral;
@@ -474,7 +479,8 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
  	  Df125CDCPulse *emu = new Df125CDCPulse();
 
           em->EmulateFirmware(wrd, emu, NULL);
-	
+
+	  m_npk = 0;
           m_time = emu->le_time_emulated;
           m_q = emu->time_quality_bit_emulated;
           m_overflows = emu->overflow_count_emulated;
@@ -488,6 +494,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  uint m_q_binary = (m_q == 0) ? 0 : 1 ;
           d_q = q - m_q_binary;
 
+	  d_npk = 0;//npk - m_npk;
           d_time = time - m_time;
           d_overflows = overflows - m_overflows;
           d_pedestal = pedestal - m_pedestal;
@@ -496,7 +503,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           d_pktime=0;
 
 	  diffs=0;
-          if (d_time || d_q || d_overflows || d_pedestal || d_integral || d_amp) diffs = 1;
+          if (d_npk || d_time || d_q || d_overflows || d_pedestal || d_integral || d_amp) diffs = 1;
 	  
 	}
 	
@@ -584,6 +591,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   
         word1 = fp->word1;
         word2 = fp->word2;
+	npk = fp->NPK;
         time = fp->le_time;
         pedestal = fp->pedestal;
         integral = fp->integral;
@@ -612,6 +620,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 
           em->EmulateFirmware(wrd, NULL, emu);
 
+	  m_npk = 0; //fp->npk;
           m_time = fp->le_time_emulated;
           m_q = fp->time_quality_bit_emulated;
           m_overflows = fp->overflow_count_emulated;
@@ -625,6 +634,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  uint m_q_binary = (m_q == 0) ? 0 : 1 ;
           d_q = q - m_q_binary;
 
+	  d_npk = 0; //npk - d_npk;
           d_time = time - m_time;
           d_overflows = overflows - m_overflows;
           d_pedestal = pedestal - m_pedestal;
