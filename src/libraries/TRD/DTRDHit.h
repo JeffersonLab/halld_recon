@@ -23,10 +23,10 @@ public:
   
 
   void toStrings(vector<pair<string, string> >&items) const {
-    AddString(items, "t", "%1.3f", t);
-    AddString(items, "pulse_height", "%1.3f", pulse_height);
     AddString(items, "plane", "%d", plane);
     AddString(items, "strip", "%d", strip);
+    AddString(items, "t", "%1.3f", t);
+    AddString(items, "pulse_height", "%1.3f", pulse_height);
   }
 };
 
