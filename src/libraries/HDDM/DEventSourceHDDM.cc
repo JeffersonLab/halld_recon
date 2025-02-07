@@ -3306,8 +3306,8 @@ jerror_t DEventSourceHDDM::Extract_DTRDTruthPoint(hddm_s::HDDM *record,
   
    vector<DTRDTruthPoint*> data;
 
-   const hddm_s::TrdTruthPointList &points = record->getTrdTruthPoints();
-   hddm_s::TrdTruthPointList::iterator iter;
+   const hddm_s::GemtrdTruthPointList &points = record->getGemtrdTruthPoints();
+   hddm_s::GemtrdTruthPointList::iterator iter;
    for (iter = points.begin(); iter != points.end(); ++iter) {
       DTRDTruthPoint *trdtruth = new DTRDTruthPoint;
       trdtruth->primary = iter->getPrimary();
@@ -3346,8 +3346,8 @@ jerror_t DEventSourceHDDM::Extract_DTRDHit(hddm_s::HDDM *record,  JFactory<DTRDH
 
    vector<DTRDHit*> data;
 
-   const hddm_s::TrdHitList &points = record->getTrdHits();
-   hddm_s::TrdHitList::iterator iter;
+   const hddm_s::GemtrdHitList &points = record->getGemtrdHits();
+   hddm_s::GemtrdHitList::iterator iter;
    for (iter = points.begin(); iter != points.end(); ++iter) {
       DTRDHit *hit = new DTRDHit;
       hit->plane = iter->getPlane();

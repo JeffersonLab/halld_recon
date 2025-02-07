@@ -131,15 +131,15 @@
         </dircTruthPmtHit>
         <dircPmtHit maxOccurs="unbounded" minOccurs="0" t="float" ch="int"/>
       </DIRC>
-      <TRD minOccurs="0">
-	<trdChamber maxOccurs="unbounded" minOccurs="0" layer="int">
-	  <trdTruthHit q="float" x="float" y="float" t="float" d="float" maxOccurs="unbounded"/>	 
-	  <trdHit plane="int" strip="int" pulse_height="float" t="float" maxOccurs="unbounded"/>
-	</trdChamber>
-	<trdTruthPoint E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
+      <GEMTRD minOccurs="0">
+	<gemtrdChamber maxOccurs="unbounded" minOccurs="0" layer="int">
+	  <gemtrdTruthHit q="float" x="float" y="float" t="float" d="float" maxOccurs="unbounded"/>	 
+	  <gemtrdHit plane="int" strip="int" pulse_height="float" t="float" maxOccurs="unbounded"/>
+	</gemtrdChamber>
+	<gemtrdTruthPoint E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
           <trackID minOccurs="0" itrack="int"/>
-        </trdTruthPoint>
-      </TRD>
+        </gemtrdTruthPoint>
+      </GEMTRD>
       <forwardTOF minOccurs="0">
         <ftofCounter bar="int" maxOccurs="unbounded" minOccurs="0" plane="int">
           <!-- ftof hits are either north / beam-left (end=0) or south / beam-right (end=1)-->
