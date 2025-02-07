@@ -19,6 +19,7 @@ public:
 
   float t;	      // detection time
   float pulse_height; // signal amplitude
+  float pedestal;  // need pedestal for raw data analysis
   //float q;
   
 

@@ -27,7 +27,7 @@ jerror_t DTRDHit_factory::init(void)
     t_scale      = 8.0/10.0;     // 8 ns/count and integer time is in 1/10th of sample
     t_base       = { 0.,  0.};   // ns, per plane
     
-    PEAK_THRESHOLD = 0.;  // fADC units
+    PEAK_THRESHOLD = 600.;  // fADC units
     gPARMS->SetDefaultParameter("TRD:PEAK_THRESHOLD", PEAK_THRESHOLD, 
 			      "Threshold in fADC units for hit amplitudes");
 
@@ -99,8 +99,7 @@ jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 		jerr << "Error loading TRD plane 2 timing offsets (found " << time_offsets[1].size() 
 			 << " entries, expected " << num_x_strips << " entries)" << endl;
 	
-	pulse_peak_threshold = 200;  // also set on command line...
-	// also set time window
+	// also set time window from CCDB
 
     return NOERROR;
 }
@@ -187,9 +186,10 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	    // Build hit object
 	    DTRDHit *hit = new DTRDHit;
-	    hit->pulse_height = pulse_height;
 	    hit->plane = digihit->plane;
 	    hit->strip = digihit->strip;
+	    hit->pulse_height = pulse_height;
+	    hit->pedestal = scaled_ped;
  
 	    // Apply calibration constants
 	    hit->t = T + t_base[digihit->plane-1];

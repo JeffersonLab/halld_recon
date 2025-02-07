@@ -11,15 +11,22 @@
 #include <JANA/JObject.h>
 using namespace jana;
 
-#define HIT_TIME_DIFF_MIN 10.0
+#include <DVector3.h>
+
+#define HIT_TIME_DIFF_MIN 10.0   // update this!
 
 class DTRDStripCluster : public JObject {
  public:
   JOBJECT_PUBLIC(DTRDStripCluster);		/// DANA identifier
   
   vector<const DTRDHit*> members; ///< DTRDHits that make up this cluster
-  int plane;			  ///< WIRE STRIP=1, GEM X=2, GEM Y=3
+  int num_hits;               ///< number of hits (needed for raw analysis)
+  int plane;			      ///< GEM X=1, GEM Y=2 
   float q_tot;		          ///< total energy/charge deposited in the cluster
+		
+  DVector3 pos;
+  DVector3 width;
+  DVector3 length;
 		
   /// Return a sensible string representation of this object
   void toStrings(vector<pair<string,string> > &items)const{

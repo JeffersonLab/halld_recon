@@ -1,7 +1,7 @@
 
 #include "DTRDStripCluster_factory.h"
 
-bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
+static bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
   if (a->plane==b->plane){
     return a->t < b->t;
   }
@@ -15,7 +15,7 @@ bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
 /// their strip (wire or strip) numbers. Typically only used for a single layer
 /// of hits.
 ///
-bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
+static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
 	if(a->strip != b->strip) return a->strip < b->strip;
 	if(a->t       != b->t      ) return a->t < b->t;
 	return a->pulse_height < b->pulse_height;
@@ -28,7 +28,7 @@ bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
 /// significant.
 ///
 
-bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) {
+static bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) {
   if (fabs(a->t-b->t)>HIT_TIME_DIFF_MIN && (a->t < b->t))
     return true;
   return false;
@@ -39,7 +39,7 @@ bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) {
 /// a non-member function passed to std::sort() for sorting DTRDStripCluster pointers
 /// by their gPlane (plane number over all modules, 1-74) attributes.
 ///
-bool DTRDStripCluster_gPlane_cmp(	const DTRDStripCluster* a, 
+static bool DTRDStripCluster_gPlane_cmp(	const DTRDStripCluster* a, 
 					const DTRDStripCluster* b) {
 	return a->plane < b->plane;
 }
@@ -47,7 +47,8 @@ bool DTRDStripCluster_gPlane_cmp(	const DTRDStripCluster* a,
 ///
 /// Initialization
 ///
-jerror_t DTRDStripCluster_factory::init(void){
+jerror_t DTRDStripCluster_factory::init(void)
+{
   TIME_SLICE=200.0; //ns
   gPARMS->SetDefaultParameter("TRD:CLUSTER_TIME_SLICE",TIME_SLICE);
   return NOERROR;	
@@ -58,7 +59,8 @@ jerror_t DTRDStripCluster_factory::init(void){
 /// This (along with DTRDStripCluster_factory::pique()) 
 /// is the place cathode hits are associated into cathode clusters.  
 ///
-jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo) {
+jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo) 
+{
 	vector<const DTRDHit*> allHits;
 	vector<const DTRDHit*> planeHits[2];
 	vector<vector<const DTRDHit*> >thisLayer;
