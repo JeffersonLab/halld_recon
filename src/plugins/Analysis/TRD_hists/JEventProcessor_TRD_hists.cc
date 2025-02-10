@@ -22,17 +22,20 @@ using namespace jana;
 #include <TProfile.h>
 
 // root hist pointers
-// fix constants for now
-static const int NTRDplanes = 2;
-static const int NTRD_xstrips = 720;
-static const int NTRD_ystrips = 432;
 
 static TH1I *trd_num_events;
 static TH1I *num_tracks;
 
-static TH2I *hTRDPoint_TrackX, *hTRDPoint_TrackY;
-static TH2I *hTRDPoint_DeltaXY, *hTRDPoint_DeltaXY_Pos, *hTRDPoint_DeltaXY_Neg;
-static TH1I *hTRDPoint_Time, *hTRDMatchedTrack_EP;
+static TH2I *hTRDPoint_TrackX, *hTRDPoint_TrackY, *hTRDPoint_DeltaXY;
+static TH2I *hTRDPoint_DeltaX_T;
+static TH1I *hTRDPoint_Time;
+
+static TH2I *hTRDPoint_TrackX_EPCut, *hTRDPoint_TrackY_EPCut, *hTRDPoint_DeltaXY_EPCut;
+static TH2I *hTRDPoint_DeltaX_T_EPCut;
+static TH1I *hTRDPoint_Time_EPCut;
+
+static TH1I *hTRDMatchedTrack_EP;
+
 
 //----------------------------------------------------------------------------------
 
@@ -77,13 +80,19 @@ jerror_t JEventProcessor_TRD_hists::init(void) {
     // Straight track histograms...
     gDirectory->mkdir("StraightTracks")->cd();
 
-    hTRDPoint_TrackX = new TH2I("WireTRDPoint_TrackX","; Wire TRD X (cm); Extrapolated track X (cm)",200,-55,55,200,-55,55);
-    hTRDPoint_TrackY = new TH2I("WireTRDPoint_TrackY","; Wire TRD Y (cm); Extrapolated track Y (cm)",200,-85,-65,200,-85,-65);
-    hTRDPoint_DeltaXY = new TH2I("WireTRDPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hTRDPoint_DeltaXY_Pos = new TH2I("WireTRDPoint_DeltaXY_Pos","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hTRDPoint_DeltaXY_Neg = new TH2I("WireTRDPoint_DeltaXY_Neg","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hTRDPoint_Time = new TH1I("TRDPoint_Time","; hit time",1000,0,1000);
-    hTRDMatchedTrack_EP = new TH1I("TRDMatchedTrack_EP", "; E/p",150,0.,1.5);
+
+    // GEM TRD
+    hTRDPoint_TrackX = new TH2I("TRDPoint_TrackX","; GEM TRD X; Extrapolated track X",200,-55,55,200,-55,55);
+    hTRDPoint_TrackY = new TH2I("TRDPoint_TrackY","; GEM TRD Y; Extrapolated track Y",200,-85,-65,200,-85,-65);
+    hTRDPoint_DeltaXY = new TH2I("TRDPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
+    hTRDPoint_DeltaX_T = new TH2I("TRDPoint_DeltaX_T","; #Delta X; hit time",1000,-20,20,1000,0,1000);
+	hTRDPoint_Time = new TH1I("TRDPoint_Time","; hit time",1000,0,1000);
+
+    hTRDPoint_TrackX_EPCut = new TH2I("TRDPoint_TrackX_EPCut","; GEM TRD X; Extrapolated track X",200,-55,55,200,-55,55);
+    hTRDPoint_TrackY_EPCut = new TH2I("TRDPoint_TrackY_EPCut","; GEM TRD Y; Extrapolated track Y",200,-85,-65,200,-85,-65);
+    hTRDPoint_DeltaXY_EPCut = new TH2I("TRDPoint_DeltaXY_EPCut","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
+    hTRDPoint_DeltaX_T_EPCut = new TH2I("TRDPoint_DeltaX_T_EPCut","; #Delta X; hit time",1000,-20,20,1000,0,1000);
+	hTRDPoint_Time_EPCut = new TH1I("TRDPoint_Time_EPCut","; hit time",1000,0,1000);
 
     // back to main dir
     mainDir->cd();
@@ -141,12 +150,6 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     }
 */
 
-     vector<const DTRDDigiHit*> digihits;
-     eventLoop->Get(digihits);
-//     vector<const DTRDHit*> hits;
-//     eventLoop->Get(hits);
-//     vector<const DTRDStripCluster*> clusters;
-//     eventLoop->Get(clusters);
     vector<const DTRDPoint*> points;
     eventLoop->Get(points);
 
@@ -165,10 +168,10 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     ///////////////////////////
-    // TRD DigiHits and Hits //
+    // TRD points //
     ///////////////////////////
 
-    if (digihits.size() > 0) trd_num_events->Fill(1);
+    if (points.size() > 0) trd_num_events->Fill(1);
 
     // check if have good extrapolated track with TRD wire point
     bool goodTrack = false;
@@ -183,26 +186,24 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 
 	    for (const auto& extrapolation : extrapolations) {
 	
-		    // correlate TRD with extrapolated tracks
+		    // correlate  TRD with extrapolated tracks
 		    for (const auto& point : points) {
 
-			    if(point->detector == 0 && fabs(extrapolation.position.Z() - 548.8) < 5.) {  // update this based on real geometry
+				hTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
+				hTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
+				
+				double locDeltaX = point->x - extrapolation.position.X();
+				double locDeltaY = point->y - extrapolation.position.Y();
+				hTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
+				hTRDPoint_DeltaX_T->Fill(locDeltaX, point->time);
 
-				    hTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
-				    hTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
-				    
-				    double locDeltaX = point->x - extrapolation.position.X();
-				    double locDeltaY = point->y - extrapolation.position.Y();
-				    hTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
-
-				    if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {   // update matching
-					    hTRDPoint_Time->Fill(point->time);
-					    goodTrack = true;
-				    }
-			    }
+				if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
+					hTRDPoint_Time->Fill(point->time);
+					goodTrack = true;
+				}
 		    }
-		}
 
+	    }
     }
 
     /////////////////////////////
@@ -222,41 +223,50 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     	auto locFCALShowerMatchParams = locChargedTrackHypothesis->Get_FCALShowerMatchParams();
     	auto locTOFHitMatchParams = locChargedTrackHypothesis->Get_TOFHitMatchParams();
 
+	    int charge = locChargedTrackHypothesis->charge();
 	    vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased->extrapolations.at(SYS_TRD);
 	    //cout<<"found straight track with "<<extrapolations.size()<<" extrapolations"<<endl;
 
 	    for (const auto& extrapolation : extrapolations) {
 	
-		    // correlate TRD points with extrapolated tracks
-		    // this might change to TRD track segments?
+		    // correlate  TRD with extrapolated tracks
 		    for (const auto& point : points) {
 
-			    if(point->detector == 0 && fabs(extrapolation.position.Z() - 548.8) < 5.) { // update this based on real geometry
+				hTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
+				hTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
+				
+				double locDeltaX = point->x - extrapolation.position.X();
+				double locDeltaY = point->y - extrapolation.position.Y();
+				hTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
+				hTRDPoint_DeltaX_T->Fill(locDeltaX, point->time);
 
-				    hTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
-				    hTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
-				    
-				    double locDeltaX = point->x - extrapolation.position.X();
-				    double locDeltaY = point->y - extrapolation.position.Y();
-				    hTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
-				    if(locCharge > 0) hTRDPoint_DeltaXY_Pos->Fill(locDeltaX, locDeltaY);
-				    else hTRDPoint_DeltaXY_Neg->Fill(locDeltaX, locDeltaY);
+				if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
+					hTRDPoint_Time->Fill(point->time);
+					goodTrack = true;
+				}
+				
+				// select electrons
+				if(locFCALShowerMatchParams != NULL) {
+					const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
+					double locEOverP = locFCALShower->getEnergy()/locP;
 
-				    if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {   // update matching
-					    hTRDPoint_Time->Fill(point->time);
-					    goodTrack = true;
-					    
-					    if(locFCALShowerMatchParams != NULL) {
-							const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
-							double locEOverP = locFCALShower->getEnergy()/locP;
+					hTRDMatchedTrack_EP->Fill(locEOverP);		
+					
+					if(locEOverP > 0.9 && locEOverP < 1.1) {
+						hTRDPoint_TrackX_EPCut->Fill(point->x, extrapolation.position.X());
+						hTRDPoint_TrackY_EPCut->Fill(point->y, extrapolation.position.Y());
+						
+						hTRDPoint_DeltaXY_EPCut->Fill(locDeltaX, locDeltaY);
+						hTRDPoint_DeltaX_T_EPCut->Fill(locDeltaX, point->time);
 
-							hTRDMatchedTrack_EP->Fill(locEOverP);		    
-					    }
-			
-				    }
-			    }
+						if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
+							hTRDPoint_Time_EPCut->Fill(point->time);
+						}
+					
+					}
+				}
+
 		    }
-
 	    }
     }
 
@@ -265,23 +275,8 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     ///////////////////////////
 
 //     if(goodTrack) {
-// 	    for (const auto& hit : hits) {
-// 		    if(hit->plane != 0 && hit->plane != 4) continue; // only Wire TRD
-// 		    int wire = hit->strip;
-// 
-// 		    // GEM TRD hits
-// 		    for (const auto& gemtrd_hit : hits) {
-// 			    if(gemtrd_hit->plane != 2 && gemtrd_hit->plane != 6) continue; 
-// 			    double locDeltaT = gemtrd_hit->t - hit->t;
-// 			    
-// 			    hWire_GEMTRDX_DeltaT->Fill(locDeltaT, gemtrd_hit->pulse_height);
-// 			   
-// 			    //if(fabs(locDeltaT) < 20.)
-// 			    hWire_GEMTRDXstrip->Fill(wire, gemtrd_hit->strip);
-// 		    }
-// 	    }
 //     }
-// 
+
     japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
     return NOERROR;

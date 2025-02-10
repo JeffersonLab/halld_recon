@@ -32,14 +32,13 @@ class DTRDPoint_factory : public JFactory<DTRDPoint> {
 		jerror_t brun(JEventLoop *loop, int32_t runnumber);
 		jerror_t erun(void);
 
-		double calcClusterTime(const DTRDStripCluster *clus);
-		double calcClusterPosition(const DTRDStripCluster *clus);
+// 		double calcClusterTime(const DTRDStripCluster *clus);
+// 		double calcClusterPosition(const DTRDStripCluster *clus);
  		
 	private:		
-		double wireX0, stripY0, wireX_pitch, stripY_pitch;
-		double wire_time_max;
-		double gemX0, gemY0, gem_pitch;
-		double gem_time_max, gem_dE_max;
+  		double TIME_DIFF_MAX;
+//   		double DIST_DIFF_MAX;
+
 		vector<double>dTRDz;
 
 };

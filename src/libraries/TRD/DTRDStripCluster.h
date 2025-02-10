@@ -23,8 +23,9 @@ class DTRDStripCluster : public JObject {
   int num_hits;               ///< number of hits (needed for raw analysis)
   int plane;			      ///< GEM X=1, GEM Y=2 
   float q_tot;		          ///< total energy/charge deposited in the cluster
+  double t_avg;               ///< average time for hits in cluster
 		
-  DVector3 pos;
+  DVector3 pos;               /// center of cluster
   DVector3 width;
   DVector3 length;
 		
@@ -33,6 +34,10 @@ class DTRDStripCluster : public JObject {
     AddString(items, "Nmembers", "%d", members.size());
     AddString(items, "plane", "%d", plane);
     AddString(items, "q_tot", "%f", q_tot);
+    AddString(items, "t_avg", "%f", t_avg);
+    AddString(items, "x", "%f", pos.x());
+    AddString(items, "y", "%f", pos.y());
+    AddString(items, "z", "%f", pos.z());
   }
 };
 

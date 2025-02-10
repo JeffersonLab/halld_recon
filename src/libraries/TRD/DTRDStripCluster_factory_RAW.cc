@@ -308,11 +308,11 @@ jerror_t DTRDStripCluster_factory_RAW::evnt(JEventLoop *eventLoop, uint64_t even
 	// Apply quality cuts before we save the clusters
 	for (int k=0; k<clusters.size(); k++) {
 	  //-------------  Cluster Filter -----------------
-	  //if (clusters[k]->num_hits>= MinClustSize && zStart < clusters[k]->pos.z() && clusters[k]->pos.z() < zEnd 
-	  //		&& clusters[k]->width.z()>MinClustWidth )
+	  if (clusters[k]->num_hits>= MinClustSize && zStart < clusters[k]->pos.z() && clusters[k]->pos.z() < zEnd 
+	  		&& clusters[k]->width.z()>MinClustWidth )
 		_data.push_back(clusters[k]);
-// 			  else 
-// 			     delete clusters[k];
+ 	  else 
+		delete clusters[k];
 
 	}
 

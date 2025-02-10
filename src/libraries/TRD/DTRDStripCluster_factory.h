@@ -30,7 +30,9 @@ class DTRDStripCluster_factory:public JFactory<DTRDStripCluster> {
 		/// create DTRDStripClusters
 		/// by grouping together hits with consecutive strip numbers.
 		///
-		void pique(vector<const DTRDHit*>& h);
+		void cluster(vector<const DTRDHit*>& h);
+		
+		double StripToPosition(int iplane, const DTRDHit *hit);
 			
 	protected:
 		///
@@ -41,8 +43,18 @@ class DTRDStripCluster_factory:public JFactory<DTRDStripCluster> {
 		///
 		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);	
 		jerror_t init(void);
+
 	private:
-		double TIME_SLICE;
+		int MINIMUM_HITS_FOR_CLUSTERING;
+		double CLUSTERING_THRESHOLD;
+		int MinClustSize;
+		double MinClustWidth;
+		double MinClustLength;
+		double zStart;
+		double zEnd;
+
+		const int NUM_X_PLANES = 720;
+		const int NUM_Y_PLANES = 432;
 };
 
 #endif // DFACTORY_DTRDSTRIPCLUSTER_H

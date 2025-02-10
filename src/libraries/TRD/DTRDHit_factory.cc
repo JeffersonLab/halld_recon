@@ -195,7 +195,7 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    hit->t = T + t_base[digihit->plane-1];
 	    //hit->t = hit->t + t_base[plane-1] - time_offsets[plane-1][strip-1];
 
-		//hit->q = a_scale * hit->pulse_height;
+		hit->q = a_scale * hit->pulse_height;  // probably need to set this more sensibly
 
 	    hit->AddAssociatedObject(digihit);
 	    _data.push_back(hit);
