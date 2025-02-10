@@ -1266,17 +1266,17 @@ bool DEventSourceHDDM::Extract_DMCThrown(hddm_s::HDDM *record,
          const Particle_t pTypeFromPdgType = PDGtoPType(mcthrown->pdgtype);
          if (mcthrown->type != (int)pTypeFromPdgType) {
             // GEANT type and PDG type information are inconsistent
-            if ((mcthrown->type == 0) and (pTypeFromPdgType != Unknown)) {
-               // Workaround for cases where `type` is 0, i.e. Unknown, but the `pgdtype` is valid
+            if ((mcthrown->type == 0) and (pTypeFromPdgType != UnknownParticle)) {
+               // Workaround for cases where `type` is 0, i.e. UnknownParticle, but the `pgdtype` is valid
                // This may happen, for example, when EvtGen is used to decay particles
                // Assume that the PDG type info is correct and set the GEANT type accordingly
                mcthrown->type = (int)pTypeFromPdgType;
-            } else if ((pTypeFromPdgType == Unknown) and (PDGtype((Particle_t)mcthrown->type) != 0)) {
-               // Workaround for cases where the `pgdtype` is Unknown, but `type` is not Unknown
+            } else if ((pTypeFromPdgType == UnknownParticle) and (PDGtype((Particle_t)mcthrown->type) != 0)) {
+               // Workaround for cases where the `pgdtype` is UnknownParticle, but `type` is not UnknownParticle
                // Assume that the GEANT type info is correct and set the PDG type accordingly
                mcthrown->pdgtype = PDGtype((Particle_t)mcthrown->type);
             } else {
-               // Both types inconsistent but also not Unknown; not clear which is correct
+               // Both types inconsistent but also not UnknownParticle; not clear which is correct
                jerr << std::endl
                     << "WARNING: type mismatch for MC-thrown particle with myid = " << mcthrown->myid
                     << ": GEANT type = " << mcthrown->type
@@ -2897,7 +2897,7 @@ Particle_t DEventSourceHDDM::IDTrack(float locCharge, float locMass) const
       if (fabs(locMass - ParticleMass(Gamma)) < locMassTolerance) return Gamma;
       if (fabs(locMass - ParticleMass(Neutron)) < locMassTolerance) return Neutron;
    }
-   return Particle_t::Unknown;
+   return UnknownParticle;
 }
 
 //------------------

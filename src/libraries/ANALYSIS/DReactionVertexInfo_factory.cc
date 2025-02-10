@@ -149,7 +149,7 @@ void DReactionVertexInfo_factory::Group_VertexParticles(DReactionStepVertexInfo*
 			}
 
 			//beam 2
-			if(locStep->Get_SecondBeamPID() != Unknown)
+			if(locStep->Get_SecondBeamPID() != UnknownParticle)
 			{
 				if(locStep->Get_IsBeamMissingFlag())
 				{
@@ -170,7 +170,7 @@ void DReactionVertexInfo_factory::Group_VertexParticles(DReactionStepVertexInfo*
 			locDecayingParticles.emplace_back(locStepIndex, DReactionStep::Get_ParticleIndex_Initial());
 
 		//target
-		if(locStep->Get_TargetPID() != Unknown) //target
+		if(locStep->Get_TargetPID() != UnknownParticle) //target
 		{
 			locNoConstrainParticles_Fit.emplace_back(locStepIndex, DReactionStep::Get_ParticleIndex_Target());
 			locNoConstrainParticles_Recon.emplace_back(locStepIndex, DReactionStep::Get_ParticleIndex_Target());

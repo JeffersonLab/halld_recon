@@ -505,7 +505,7 @@ void DSourceComboVertexer::Construct_DecayingParticle_InvariantMass(const DReact
 		//only create kinematic data for detached PIDs
 		auto locDecayPID = std::get<0>(locSourceComboUse);
 		if(!IsDetachedVertex(locDecayPID))
-			continue; //either not detached (we don't care!), or is Unknown (missing decay product: can't compute)
+			continue; //either not detached (we don't care!), or is UnknownParticle (missing decay product: can't compute)
 
 		if(dDebugLevel >= 10)
 			cout << "detached decaying pid = " << locDecayPID << endl;
@@ -520,7 +520,7 @@ void DSourceComboVertexer::Construct_DecayingParticle_InvariantMass(const DReact
 		}
 
 		//create a new one
-		auto locP4 = dSourceComboP4Handler->Calc_P4_NoMassiveNeutrals(nullptr, locVertexCombo, locVertex, std::get<1>(locSourceComboUse), nullptr, DSourceComboUse(Unknown, 0, nullptr, false, Unknown), 1, false);
+		auto locP4 = dSourceComboP4Handler->Calc_P4_NoMassiveNeutrals(nullptr, locVertexCombo, locVertex, std::get<1>(locSourceComboUse), nullptr, DSourceComboUse(UnknownParticle, 0, nullptr, false, UnknownParticle), 1, false);
 		auto locKinematicData = dResourcePool_KinematicData.Get_Resource();
 		locKinematicData->Reset();
 		locKinematicData->Set_Members(locDecayPID, locP4.Vect(), locVertex, 0.0);
@@ -736,7 +736,7 @@ void DSourceComboVertexer::Calc_TimeOffsets(const DReactionVertexInfo* locReacti
 
 		//compute and save result
 		auto locVertexZBin = Get_VertexZBin_NoBeam(false, locActiveVertexCombo, false); //2nd false: if true, then we're on the charged stage and we can't calc the time offset: wouldn't be here anyway
-		auto locP4 = dSourceComboP4Handler->Calc_P4_NoMassiveNeutrals(nullptr, locActiveVertexCombo, locVertex, locVertexZBin, nullptr, DSourceComboUse(Unknown, 0, nullptr, false, Unknown), 1, false);
+		auto locP4 = dSourceComboP4Handler->Calc_P4_NoMassiveNeutrals(nullptr, locActiveVertexCombo, locVertex, locVertexZBin, nullptr, DSourceComboUse(UnknownParticle, 0, nullptr, false, UnknownParticle), 1, false);
 		auto locTimeOffset = locPathLength/(locP4.Beta()*SPEED_OF_LIGHT) + locParentTimeOffset;
 
 		if(dDebugLevel >= 10)

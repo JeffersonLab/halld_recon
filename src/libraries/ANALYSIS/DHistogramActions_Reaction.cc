@@ -380,7 +380,7 @@ void DHistogramAction_PID::Initialize(const std::shared_ptr<const JEvent>& locEv
 				for(size_t loc_j = 0; loc_j < dThrownPIDs.size(); ++loc_j)
 				{
 					locPID2 = dThrownPIDs[loc_j];
-					if((ParticleCharge(locPID2) != ParticleCharge(locPID)) && (locPID2 != Unknown))
+					if((ParticleCharge(locPID2) != ParticleCharge(locPID)) && (locPID2 != UnknownParticle))
 						continue;
 					locParticleName2 = ParticleType(locPID2);
 					locParticleROOTName2 = ParticleName_ROOT(locPID2);
@@ -711,7 +711,7 @@ void DHistogramAction_PID::Fill_ChargedHists(const DChargedTrackHypothesis* locC
 			dHistMap_dEdXFOMVsP[locPID][SYS_FDC]->Fill(locP, locdEdXFOM);
 		}
 
-		pair<Particle_t, Particle_t> locPIDPair(locPID, Unknown); //default unless matched
+		pair<Particle_t, Particle_t> locPIDPair(locPID, UnknownParticle); //default unless matched
 		if(locMCThrown != NULL) //else bogus track (not matched to any thrown tracks)
 			locPIDPair.second = (Particle_t)(locMCThrown->type); //matched
 		if(dHistMap_PIDFOMForTruePID.find(locPIDPair) != dHistMap_PIDFOMForTruePID.end()) //else hist not created or PID is weird
@@ -761,7 +761,7 @@ void DHistogramAction_PID::Fill_NeutralHists(const DNeutralParticleHypothesis* l
 		dHistMap_TimePullVsP[locPID][locSystem]->Fill(locP, locTimePull);
 		dHistMap_TimeFOMVsP[locPID][locSystem]->Fill(locP, locNeutralParticleHypothesis->Get_FOM());
 
-		pair<Particle_t, Particle_t> locPIDPair(locPID, Unknown); //default unless matched
+		pair<Particle_t, Particle_t> locPIDPair(locPID, UnknownParticle); //default unless matched
 		if(locMCThrown != NULL) //else bogus track (not matched to any thrown tracks)
 			locPIDPair.second = (Particle_t)(locMCThrown->type); //matched
 		if(dHistMap_PIDFOMForTruePID.find(locPIDPair) != dHistMap_PIDFOMForTruePID.end()) //else hist not created or PID is weird
@@ -1120,7 +1120,7 @@ void DHistogramAction_ParticleComboKinematics::Initialize(const std::shared_ptr<
 					locPIDs.insert(locPIDs.begin(), locInitialPID);
 
 				Particle_t locMissingPID = locReactionStep->Get_MissingPID();
-				if(locMissingPID != Unknown)
+				if(locMissingPID != UnknownParticle)
 				{
 					locPIDs.push_back(locMissingPID);
 					locLastPIDMissingFlag = true;
@@ -1450,7 +1450,7 @@ void DHistogramAction_InvariantMass::Initialize(const std::shared_ptr<const JEve
 	Run_Update(locEvent);
 
 	string locParticleNamesForHist = "";
-	if(dInitialPID != Unknown)
+	if(dInitialPID != UnknownParticle)
 	{
 		auto locChainPIDs = DAnalysis::Get_ChainPIDs(Get_Reaction(), dInitialPID, !Get_UseKinFitResultsFlag(), true);
 		locParticleNamesForHist = DAnalysis::Convert_PIDsToROOTName(locChainPIDs);
@@ -1512,7 +1512,7 @@ bool DHistogramAction_InvariantMass::Perform_Action(const std::shared_ptr<const 
 	for(size_t loc_i = 0; loc_i < locParticleCombo->Get_NumParticleComboSteps(); ++loc_i)
 	{
 		const DReactionStep* locReactionStep = Get_Reaction()->Get_ReactionStep(loc_i);
-		if((dInitialPID != Unknown) && (locReactionStep->Get_InitialPID() != dInitialPID))
+		if((dInitialPID != UnknownParticle) && (locReactionStep->Get_InitialPID() != dInitialPID))
 			continue;
 		if((dStepIndex != -1) && (int(loc_i) != dStepIndex))
 			continue;

@@ -175,8 +175,8 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	dPIDTimingCuts_TF1Params[Gamma][SYS_FCAL] = {2.5};
 	dPIDTimingCuts_TF1Params[Gamma][SYS_CCAL] = {10.0};
 
-	//Unknown: initial RF selection for photons (at beginning of event, prior to vertex) //can be separate cut function
-	dPIDTimingCuts_TF1Params.emplace(Unknown, dPIDTimingCuts_TF1Params[Gamma]);
+	//UnknownParticle: initial RF selection for photons (at beginning of event, prior to vertex) //can be separate cut function
+	dPIDTimingCuts_TF1Params.emplace(UnknownParticle, dPIDTimingCuts_TF1Params[Gamma]);
 
 	//Electrons
 	dPIDTimingCuts_TF1Params[Electron][SYS_BCAL] = {1.0};
@@ -421,7 +421,7 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(const std::shared_ptr<const JEv
 
 	vector<DetectorSystem_t> locTimingSystems_Charged {SYS_TOF, SYS_BCAL, SYS_FCAL, SYS_START};
 	vector<DetectorSystem_t> locTimingSystems_Neutral {SYS_BCAL, SYS_FCAL, SYS_CCAL};
-	vector<Particle_t> locPIDs {Unknown, Gamma, Electron, Positron, MuonPlus, MuonMinus, PiPlus, PiMinus, KPlus, KMinus, Proton, AntiProton};
+	vector<Particle_t> locPIDs {UnknownParticle, Gamma, Electron, Positron, MuonPlus, MuonMinus, PiPlus, PiMinus, KPlus, KMinus, Proton, AntiProton};
 
 	//CREATE HISTOGRAMS
 	japp->GetService<JLockService>()->RootWriteLock(); //to prevent undefined behavior due to directory changes, etc.
@@ -449,7 +449,7 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(const std::shared_ptr<const JEv
 
 		for(auto locPID : locPIDs)
 		{
-			auto locPIDString = string((locPID != Unknown) ? ParticleType(locPID) : "Photons_PreVertex");
+			auto locPIDString = string((locPID != UnknownParticle) ? ParticleType(locPID) : "Photons_PreVertex");
 
 			locDirName = locPIDString;
 			locDirectoryFile = static_cast<TDirectoryFile*>(gDirectory->GetDirectory(locDirName.c_str()));
@@ -466,21 +466,21 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(const std::shared_ptr<const JEv
 					auto locHist = gDirectory->Get(locHistName.c_str());
 					if(locHist == nullptr)
 					{
-						auto locHistTitle = string((locPID != Unknown) ? ParticleName_ROOT(locPID) : "Photons_PreVertex");
+						auto locHistTitle = string((locPID != UnknownParticle) ? ParticleName_ROOT(locPID) : "Photons_PreVertex");
 						locHistTitle += string(" Candidates, ") + string(SystemName(locSystem)) + string(";p (GeV/c);#Deltat_{Particle - All RFs}");
 						dHistMap_RFDeltaTVsP_AllRFs[locPID][locSystem] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 1400, -7.0, 7.0);
 					}
 					else
 						dHistMap_RFDeltaTVsP_AllRFs[locPID][locSystem] = static_cast<TH2*>(locHist);
 				}
-				if(locPID == Unknown)
+				if(locPID == UnknownParticle)
 					continue;
 
 				auto locHistName = string("Best_RFDeltaTVsP_") + string(SystemName(locSystem));
 				auto locHist = gDirectory->Get(locHistName.c_str());
 				if(locHist == nullptr)
 				{
-					auto locHistTitle = string((locPID != Unknown) ? ParticleName_ROOT(locPID) : "Photons_PreVertex");
+					auto locHistTitle = string((locPID != UnknownParticle) ? ParticleName_ROOT(locPID) : "Photons_PreVertex");
 					locHistTitle += string(" Candidates, ") + string(SystemName(locSystem)) + string(";p (GeV/c);#Deltat_{Particle - Best RF}");
 					dHistMap_RFDeltaTVsP_BestRF[locPID][locSystem] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 1400, -7.0, 7.0);
 				}
@@ -637,7 +637,7 @@ void DSourceComboTimeHandler::Calc_PhotonBeamBunchShifts(const DNeutralShower* l
 	auto locVertexTime = locKinematicData->time();
 	if(dDebugLevel >= 10)
 		cout << "eval time shifts for shower, system, zbin: " << locNeutralShower << ", " << SystemName(locSystem) << ", " << int(locZBin) << endl;
-	auto locRFShifts = Calc_BeamBunchShifts(locVertexTime, locRFTime, locDeltaTCut, true, Unknown, locSystem, locNeutralShower->dEnergy);
+	auto locRFShifts = Calc_BeamBunchShifts(locVertexTime, locRFTime, locDeltaTCut, true, UnknownParticle, locSystem, locNeutralShower->dEnergy);
 
 	auto locJObject = static_cast<const JObject*>(locNeutralShower);
 	if(locSystem == SYS_FCAL)
@@ -1073,7 +1073,7 @@ int DSourceComboTimeHandler::Select_RFBunch_Full(const DReactionVertexInfo* locR
 	auto locIsPrimaryProductionVertex = locReactionVertexInfo->Get_StepVertexInfo(0)->Get_ProductionVertexFlag();
 	if(dDebugLevel >= 10)
 		cout << "primary vertex z: " << locPrimaryVertexZ << endl;
-	map<int, map<Particle_t, map<DetectorSystem_t, vector<pair<float, float>>>>> locRFDeltaTsForHisting; //first float is p, 2nd is delta-t //PID Unknown: photons prior to vertex selection
+	map<int, map<Particle_t, map<DetectorSystem_t, vector<pair<float, float>>>>> locRFDeltaTsForHisting; //first float is p, 2nd is delta-t //PID UnknownParticle: photons prior to vertex selection
 	for(const auto& locStepVertexInfo : locReactionVertexInfo->Get_StepVertexInfos())
 	{
 		if(dDebugLevel >= 10)
@@ -1491,7 +1491,7 @@ bool DSourceComboTimeHandler::Cut_PhotonPID(const DNeutralShower* locNeutralShow
 {
 	//get delta-t cut
 	auto locSystem = locNeutralShower->dDetectorSystem;
-	auto locPID = locTargetCenterFlag ? Unknown : Gamma;
+	auto locPID = locTargetCenterFlag ? UnknownParticle : Gamma;
 	auto locCutFunc = Get_TimeCutFunction(locPID, locSystem);
 	if(locCutFunc == nullptr)
 		return true;

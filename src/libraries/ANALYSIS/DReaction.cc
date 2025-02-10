@@ -223,14 +223,14 @@ vector<size_t> Get_DefinedParticleStepIndex(const DReaction* locReaction)
 		auto locReactionStep = locReaction->Get_ReactionStep(loc_i);
 
 		//check for open-ended-decaying particle
-		if((loc_i == 0) && (locReactionStep->Get_TargetPID() == Unknown))
+		if((loc_i == 0) && (locReactionStep->Get_TargetPID() == UnknownParticle))
 		{
 			locDefinedParticleStepIndices.push_back(loc_i);
 			continue;
 		}
 
 		//check for missing particle
-		if(locReactionStep->Get_IsInclusiveFlag() || (locReactionStep->Get_MissingPID() != Unknown))
+		if(locReactionStep->Get_IsInclusiveFlag() || (locReactionStep->Get_MissingPID() != UnknownParticle))
 		{
 			locDefinedParticleStepIndices.push_back(loc_i);
 			continue;

@@ -78,7 +78,7 @@ DReaction* DReaction_factory_Thrown::Build_ThrownReaction(const std::shared_ptr<
 		{
 			locReactionStep = Get_ReactionStepResource();
 			locReactionStep->Set_InitialParticleID(locThrownSteps[loc_i].first->PID());
-			locReactionStep->Set_TargetParticleID(Unknown); //default (disabled)
+			locReactionStep->Set_TargetParticleID(UnknownParticle); //default (disabled)
 		}
 		for(size_t loc_j = 0; loc_j < locThrownSteps[loc_i].second.size(); ++loc_j)
 			locReactionStep->Add_FinalParticleID(locThrownSteps[loc_i].second[loc_j]->PID());

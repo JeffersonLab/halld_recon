@@ -236,7 +236,7 @@ void JEventProcessor_FCAL_Hadronic_Eff::Process(const std::shared_ptr<const JEve
 		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
 		//TRACK
-		Particle_t locPID = (locChargedTrackHypothesis->t1_detector() == SYS_TOF) ? locChargedTrackHypothesis->PID() : Unknown;
+		Particle_t locPID = (locChargedTrackHypothesis->t1_detector() == SYS_TOF) ? locChargedTrackHypothesis->PID() : UnknownParticle;
 		dTreeFillData.Fill_Single<Int_t>("PID_PDG", PDGtype(locPID));
 		dTreeFillData.Fill_Single<Float_t>("TrackVertexZ", locChargedTrackHypothesis->position().Z());
 		dTreeFillData.Fill_Single<UInt_t>("TrackCDCRings", locTrackTimeBased->dCDCRings);
