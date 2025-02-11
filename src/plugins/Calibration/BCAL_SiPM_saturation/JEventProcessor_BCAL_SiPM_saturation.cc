@@ -18,6 +18,7 @@
 // #include "BCAL/DBCALGeometry.h"
 #include "BCAL/DBCALShower.h"
 #include "DANA/DStatusBits.h"
+#include "DANA/DEvent.h"
 // #include "PID/DChargedTrack.h"
 // #include "PID/DEventRFBunch.h"
 // #include "PID/DDetectorMatches.h"
@@ -25,16 +26,15 @@
 // #include "PID/DVertex.h"
 // #include "TRACKING/DTrackTimeBased.h"
 // #include "TRIGGER/DL1Trigger.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_BCAL_SiPM_saturation());
+	app->Add(new JEventProcessor_BCAL_SiPM_saturation());
 }
 } // "C"
 
@@ -44,10 +44,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_BCAL_SiPM_saturation::JEventProcessor_BCAL_SiPM_saturation()
 {
-  	VERBOSE = 0;
-	if(gPARMS){
-		gPARMS->SetDefaultParameter("BCAL_SiPM_saturation:VERBOSE", VERBOSE, "Verbosity level");
-	}
+	SetTypeName("JEventProcessor_BCAL_SiPM_saturation");
 }
 
 //------------------
@@ -59,12 +56,15 @@ JEventProcessor_BCAL_SiPM_saturation::~JEventProcessor_BCAL_SiPM_saturation()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_SiPM_saturation::init(void)
+void JEventProcessor_BCAL_SiPM_saturation::Init()
 {
+	// This is called once at program startup. 
+	VERBOSE = 0;
+	auto app = GetApplication();
+	app->SetDefaultParameter("BCAL_SiPM_saturation:VERBOSE", VERBOSE, "Verbosity level");
 	Int_t nbins=100;
-
 
 	// This is called once at program startup. 
 	gDirectory->mkdir("BCAL_SiPM_saturation");
@@ -112,19 +112,18 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::init(void)
 
 	gDirectory->cd("..");
 
-
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_SiPM_saturation::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_BCAL_SiPM_saturation::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
 
     attenuation_parameters.clear();
-    eventLoop->GetCalib("/BCAL/attenuation_parameters", attenuation_parameters);
+    DEvent::GetCalib(event, "/BCAL/attenuation_parameters", attenuation_parameters);
     /*int channel = 0;
        for (int module=1; module<=48; module++) {
            for (int layer=1; layer<=4; layer++) {
@@ -138,28 +137,27 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::brun(JEventLoop *eventLoop, int32
                channel++;
            }
 	   }*/
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_BCAL_SiPM_saturation::Process(const std::shared_ptr<const JEvent>& event)
 {
- 
+
+auto lockService = DEvent::GetLockService(event);
   // If not Physics event call BCAL showers to initialize parameters
-  if (!loop->GetJEvent().GetStatusBit(kSTATUS_PHYSICS_EVENT)) {
+  if (!DEvent::GetStatusBit(event, kSTATUS_PHYSICS_EVENT)) {
   	vector<const DBCALShower*> BCALShowers;
-  	loop->Get(BCALShowers);
+  	event->Get(BCALShowers);
   }
 
   // Check to see if this is a physics event
-  if (loop->GetJEvent().GetStatusBit(kSTATUS_PHYSICS_EVENT)) {
+  if (DEvent::GetStatusBit(event, kSTATUS_PHYSICS_EVENT)) {
 
   // Check if thrown information is available
   vector<const DMCThrown*> MCThrowns;
-  loop->Get(MCThrowns);
+  event->Get(MCThrowns);
   unsigned int NumThrown=MCThrowns.size();
   double Ethrown=0;
   double thetathrown=0;
@@ -175,7 +173,7 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 
     // Get vector of neutral showers in event
   	vector<const DNeutralShower*> NeutralShowers;
-  	loop->Get(NeutralShowers);
+  	event->Get(NeutralShowers);
 
     unsigned int NumShowers=NeutralShowers.size();
     float Eshower = 0;
@@ -215,7 +213,7 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 		locNeutralShower->Get(Points);
         uint Ncell = Points.size();
         
-    	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
 		// Fill histogram for showers
 		dHistEthrown->Fill(Ethrown);
@@ -229,7 +227,7 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 	
         dHistNCell->Fill(Ncell);
 
-    	japp->RootUnLock(); //RELEASE ROOT LOCK
+    	lockService->RootUnLock(); //RELEASE ROOT LOCK
 
 
         for (unsigned int j = 0; j < Ncell; j++){
@@ -265,13 +263,13 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 			if (VERBOSE>=3) cout << " VERBOSE >=3" << " t=" << t << " z=" << z << endl;
 
 
-    		japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    		lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	
 			// Fill 1D histograms
 			dHistLayer->Fill(layer);
 			dHistEpoint->Fill(Ept);
 
-	    	japp->RootUnLock(); //RELEASE ROOT LOCK
+	    	lockService->RootUnLock(); //RELEASE ROOT LOCK
 
 			// cout << " Point: Ept=" << Ept << endl;
 			float upHit=0;
@@ -307,7 +305,7 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 			}
 
 
-    		japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    		lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
             // Fill 1D histograms
 			if (layer == 1) {
@@ -330,7 +328,7 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 			  cout << " ***Illegal layer=" << layer << endl;
 			}
 
-	    	japp->RootUnLock(); //RELEASE ROOT LOCK
+	    	lockService->RootUnLock(); //RELEASE ROOT LOCK
 
 	     }
 
@@ -355,26 +353,23 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
     }
   }
   }
-    return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_SiPM_saturation::erun(void)
+void JEventProcessor_BCAL_SiPM_saturation::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_SiPM_saturation::fini(void)
+void JEventProcessor_BCAL_SiPM_saturation::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

@@ -17,9 +17,7 @@
 #include <map>
 
 
-#include <JANA/JApplication.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
 
 #ifdef HAVE_EVIO
 #include <evioFileChannel.hxx>
@@ -39,7 +37,6 @@
 #include <PAIR_SPECTROMETER/DPSCHit.h>
 
 using namespace std;
-using namespace jana;
 #ifdef HAVE_EVIO
 using namespace evio;
 
@@ -58,20 +55,20 @@ typedef const cscVal &cscRef;
 //----------------------------------------------------------------------------
 
 
-class JEventProcessor_rawevent : public jana::JEventProcessor {
+class JEventProcessor_rawevent : public JEventProcessor {
 
 	public:
 		JEventProcessor_rawevent();
 		~JEventProcessor_rawevent();
-		const char* className(void){return "JEventProcessor_rawevent";}
 
 
 	private:
-		jerror_t init(void);
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-		jerror_t erun(void);
-		jerror_t fini(void);
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+
 
 #ifdef HAVE_EVIO
 

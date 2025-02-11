@@ -7,6 +7,7 @@
 //******************************************************************************
 
 #include "DFDCCathodeCluster_factory.h"
+#include <JANA/JEvent.h>
 
 bool DFDCHit_cmp(const DFDCHit* a, const DFDCHit* b) {
   if (a->gLayer==b->gLayer){
@@ -79,10 +80,10 @@ DFDCCathodeCluster_factory::~DFDCCathodeCluster_factory() {
 ///
 /// Initialization
 ///
-jerror_t DFDCCathodeCluster_factory::init(void){
+void DFDCCathodeCluster_factory::Init(){
+  auto app = GetApplication();
   TIME_SLICE=100.0; //ns,  Changed from 10->100 4/7/16 SJT
-  gPARMS->SetDefaultParameter("FDC:CLUSTER_TIME_SLICE",TIME_SLICE);
-  return NOERROR;	
+  app->SetDefaultParameter("FDC:CLUSTER_TIME_SLICE",TIME_SLICE);
 }
 
 ///
@@ -90,14 +91,14 @@ jerror_t DFDCCathodeCluster_factory::init(void){
 /// This (along with DFDCCathodeCluster_factory::pique()) 
 /// is the place cathode hits are associated into cathode clusters.  
 ///
-jerror_t DFDCCathodeCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo) {
+void DFDCCathodeCluster_factory::Process(const std::shared_ptr<const JEvent>& event) {
   vector<const DFDCHit*> allHits;
   vector<const DFDCHit*> uHits;
   vector<const DFDCHit*> vHits;
   vector<vector<const DFDCHit*> >thisLayer;
   
   try {
-    eventLoop->Get(allHits);
+    event->Get(allHits);
 
     if (allHits.size()>0) {
       // Sort hits by layer number and by time
@@ -189,7 +190,7 @@ jerror_t DFDCCathodeCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventN
       }
       
       // Ensure that the data are still in order of Z position.
-      std::sort(_data.begin(), _data.end(), DFDCCathodeCluster_gPlane_cmp);
+      std::sort(mData.begin(), mData.end(), DFDCCathodeCluster_gPlane_cmp);
     }
   }
   catch (JException d) {
@@ -198,9 +199,7 @@ jerror_t DFDCCathodeCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventN
   catch (...) {
 		cerr << "exception caught in DFDCCathodeCluster_factory" << endl;
   }
-  
-  return NOERROR;	
-}			
+}
 
 //-----------------------------
 // pique
@@ -237,7 +236,7 @@ void DFDCCathodeCluster_factory::pique(vector<const DFDCHit*>& H)
 			newCluster->q_tot += H[i]->q;
 			newCluster->members.push_back(H[i]);
 		}
-		_data.push_back(newCluster);
+		Insert(newCluster);
 		
 		istart = iend-1;
 	}

@@ -362,24 +362,24 @@ DBCALCluster::makeFromPoints(){
   if( m_phi < 0 ) m_phi += 2*TMath::Pi();
 }
 
-void 
-DBCALCluster::toStrings( vector< pair < string, string > > &items) const {
+void
+DBCALCluster::Summarize(JObjectSummary& summary) const {
 
-  AddString(items, "r", "%5.2f", m_rho * sin( m_theta ) );
-  AddString(items, "phi", "%5.2f", m_phi );
-//  AddString(items, "dphi", "%5.2f", m_sig_phi );
-  AddString(items, "z", "%5.2f", m_rho * cos( m_theta ) + m_z_target_center );
-  AddString(items, "theta", "%5.2f", m_theta);
-//  AddString(items, "dtheta", "%5.2f", m_sig_theta);
-  AddString(items, "t", "%5.2f", m_t );
-  AddString(items, "E", "%5.2f", m_E );
-  AddString(items, "E_preshower", "%5.2f", m_E_preshower );
-  AddString(items, "E_L2", "%5.2f", m_E_L2 );
-  AddString(items, "E_L3", "%5.2f", m_E_L3 );
-  AddString(items, "E_L4", "%5.2f", m_E_L4 );
-  AddString(items, "N_cell", "%i", m_points.size() );
-  AddString(items, "charge", "%i", charge );
-  AddString(items, "t_rms", "%5.2f", m_t_rms );  
+  summary.add(m_rho * sin( m_theta ) , "r", "%5.2f");
+  summary.add(m_phi , "phi", "%5.2f");
+//  summary.add(m_sig_phi , "dphi", "%5.2f");
+  summary.add(m_rho * cos( m_theta ) + m_z_target_center , "z", "%5.2f");
+  summary.add(m_theta, "theta", "%5.2f");
+//  summary.add(m_sig_theta, "dtheta", "%5.2f");
+  summary.add(m_t , "t", "%5.2f");
+  summary.add(m_E , "E", "%5.2f");
+  summary.add(m_E_preshower , "E_preshower", "%5.2f");
+  summary.add(m_E_L2 , "E_L2", "%5.2f");
+  summary.add(m_E_L3 , "E_L3", "%5.2f");
+  summary.add(m_E_L4 , "E_L4", "%5.2f");
+  summary.add(m_points.size() , "N_cell", "%i");
+  summary.add(charge , "charge", "%i");
+  summary.add(m_t_rms , "t_rms", "%5.2f");  
 
 }
 

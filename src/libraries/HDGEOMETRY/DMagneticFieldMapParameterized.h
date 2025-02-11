@@ -8,23 +8,21 @@
 #ifndef _DMagneticFieldMapParameterized_
 #define _DMagneticFieldMapParameterized_
 
-#include <JANA/jerror.h>
-
 #include <string>
 using std::string;
 
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
+#include <JANA/Calibrations/JCalibration.h>
 
 #include <DMatrix.h>
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 
 class DMagneticFieldMapParameterized:public DMagneticFieldMap{
 	public:
-		DMagneticFieldMapParameterized(jana::JApplication *japp, string namepath = "Magnets/Solenoid/solenoid_1500_poisson_20090814_01_params");
-		DMagneticFieldMapParameterized(jana::JCalibration *jcalib, string namepath = "Magnets/Solenoid/solenoid_1500_poisson_20090814_01_params");
+		DMagneticFieldMapParameterized(JApplication *japp, string namepath = "Magnets/Solenoid/solenoid_1500_poisson_20090814_01_params");
+		DMagneticFieldMapParameterized(JCalibration *jcalib, string namepath = "Magnets/Solenoid/solenoid_1500_poisson_20090814_01_params");
 		virtual ~DMagneticFieldMapParameterized();
-		void Init(jana::JCalibration *jcalib, string namepath);
+		void Init(JCalibration *jcalib, string namepath);
 
 		void GetField(const DVector3 &pos,DVector3 &Bout) const;
 		virtual void GetField(double x, double y, double z, double &Bx, double &By, double &Bz, int method=0) const;
@@ -50,7 +48,7 @@ class DMagneticFieldMapParameterized:public DMagneticFieldMap{
 						 double &dBzdy,
 						 double &dBzdz) const;
 	protected:
-		jana::JCalibration *jcalib;
+		JCalibration *jcalib;
 		
 		class Dsection{
 			public:

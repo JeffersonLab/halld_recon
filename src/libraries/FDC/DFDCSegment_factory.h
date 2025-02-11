@@ -5,9 +5,9 @@
 #ifndef DFACTORY_DFDCSEGMENT_H
 #define DFACTORY_DFDCSEGMENT_H
 
-#include "JANA/JFactory.h"
-#include "JANA/JException.h"
-#include "JANA/JStreamLog.h"
+#include <JANA/JFactoryT.h>
+#include <JANA/JException.h>
+#include <JANA/Compatibility/JStreamLog.h>
 
 #include "DFDCSegment.h"
 #include "DFDCPseudo.h"
@@ -32,7 +32,7 @@
 /// class DFDCSegment_factory: definition for a JFactory that
 /// produces space points from pseudopoints.
 /// 
-class DFDCSegment_factory : public JFactory<DFDCSegment> {
+class DFDCSegment_factory : public JFactoryT<DFDCSegment> {
  public:
 		
   ///
@@ -75,16 +75,16 @@ class DFDCSegment_factory : public JFactory<DFDCSegment> {
 
 	protected:
 		///
-		/// DFDCSegment_factory::brun():
+		/// DFDCSegment_factory::BeginRun
 		///
-		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
 
 		///
-		/// DFDCSegment_factory::evnt():
+		/// DFDCSegment_factory::Process
 		/// this is the place that finds track segments and  
 		/// converts pseudopoints into space points.
 		///
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);
+		void Process(const std::shared_ptr<const JEvent>& event) override;
 
 	private:
 		JStreamLog* _log;

@@ -13,8 +13,6 @@
 using namespace std;
 
 #include <JANA/JApplication.h>
-#include <JANA/JParameterManager.h>
-using namespace jana;
 
 #include <DVector3.h>
 
@@ -24,7 +22,7 @@ using namespace jana;
 DMagneticFieldMapSpoiled::DMagneticFieldMapSpoiled(JApplication *japp, unsigned int run_number, string namepath)
 {
 	bfield = new DMagneticFieldMapCalibDB(japp, run_number, namepath);
-	
+	app = japp;
 	initialized = false;
 }
 
@@ -58,17 +56,12 @@ void DMagneticFieldMapSpoiled::Init(void)
 	z_amp = 0.0;
 	z_omega = M_PI/(20.0);
 
-	if(!gPARMS){
-		_DBG_<<"gPARMS==NULL!"<<endl;
-		return;
-	}
-	
-	gPARMS->SetDefaultParameter("BFIELD:PHI_AMP",   phi_amp);
-	gPARMS->SetDefaultParameter("BFIELD:PHI_OMEGA", phi_omega);
-	gPARMS->SetDefaultParameter("BFIELD:R_AMP",     r_amp);
-	gPARMS->SetDefaultParameter("BFIELD:R_OMEGA",   r_omega);
-	gPARMS->SetDefaultParameter("BFIELD:Z_AMP",     z_amp);
-	gPARMS->SetDefaultParameter("BFIELD:Z_OMEGA",   z_omega);
+	app->SetDefaultParameter("BFIELD:PHI_AMP",   phi_amp);
+	app->SetDefaultParameter("BFIELD:PHI_OMEGA", phi_omega);
+	app->SetDefaultParameter("BFIELD:R_AMP",     r_amp);
+	app->SetDefaultParameter("BFIELD:R_OMEGA",   r_omega);
+	app->SetDefaultParameter("BFIELD:Z_AMP",     z_amp);
+	app->SetDefaultParameter("BFIELD:Z_OMEGA",   z_omega);
 	
 	initialized=true;
 }

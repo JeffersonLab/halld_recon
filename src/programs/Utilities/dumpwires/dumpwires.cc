@@ -18,13 +18,15 @@ void Usage(JApplication &app);
 //-----------
 int main(int narg, char *argv[])
 {
-	// Instantiate an DApplication object
-	DApplication app(narg, argv);
 
+	// Instantiate an DApplication object
+	DApplication dapp(narg, argv);
+	auto app = dapp.GetJApp();
 	//if(narg<=1)Usage(app);
 
-	app.Init();
-	DGeometry *dgeom = app.GetDGeometry(1);
+	japp->Initialize();
+
+	DGeometry *dgeom = app->GetService<DGeometryManager>()->GetDGeometry(1);
 	if(!dgeom){
 		jerr << "Couldn't get DGeometry pointer!!" << endl;
 		return -1;
@@ -113,7 +115,7 @@ void Usage(JApplication &app)
 	cout<<"Usage:"<<endl;
 	cout<<"    hd_ana [options] source1 source2 source3 ..."<<endl;
 	cout<<endl;
-	app.Usage();
+	jana::PrintUsage();
 	cout<<endl;
 	
 	exit(0);

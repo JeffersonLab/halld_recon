@@ -7,14 +7,14 @@
 
 #include "DCustomAction_CutExtraPi0.h"
 
-void DCustomAction_CutExtraPi0::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_CutExtraPi0::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		// Optional: Useful utility functions.
-		Run_Update(locEventLoop);
+		Run_Update(locEvent);
 
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
@@ -25,13 +25,13 @@ void DCustomAction_CutExtraPi0::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_CutExtraPi0::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_CutExtraPi0::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<const DNeutralParticle*> locUnusedNeutralParticles;
-	dAnalysisUtilities->Get_UnusedNeutralParticles(locEventLoop, locParticleCombo, locUnusedNeutralParticles);
+	dAnalysisUtilities->Get_UnusedNeutralParticles(locEvent, locParticleCombo, locUnusedNeutralParticles);
 
 	bool locPassesCutFlag = true;
 	vector<double> locInvariantMasses; //collect them all, then fill at once (MUCH fewer locks)

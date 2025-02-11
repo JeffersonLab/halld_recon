@@ -13,7 +13,7 @@
 #include <utility>
 using namespace std;
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "TTAB/DTranslationTable.h"
 #include "DBCALHit.h"
 
@@ -21,18 +21,9 @@ using namespace std;
 typedef pair<double,double> cell_calib_t;  
 typedef vector<cell_calib_t>  bcal_digi_constants_t;
 
-class DBCALHit_factory:public jana::JFactory<DBCALHit>{
+class DBCALHit_factory:public JFactoryT<DBCALHit>{
 	public:
-		DBCALHit_factory(){
-		  PRINTCALIBRATION = false;
-		  VERBOSE = 0;
-		  CHECK_FADC_ERRORS = false;
-		  if(gPARMS){
-			gPARMS->SetDefaultParameter("BCALHIT:PRINTCALIBRATION", PRINTCALIBRATION, "Print the calibration parameters.");
-			gPARMS->SetDefaultParameter("BCALHIT:VERBOSE", VERBOSE, "Set level of verbosity.");
-			//gPARMS->SetDefaultParameter("BCAL:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
-		  }
-		};
+		DBCALHit_factory(){};
 		~DBCALHit_factory(){};
 
 		bool PRINTCALIBRATION;
@@ -76,11 +67,11 @@ class DBCALHit_factory:public jana::JFactory<DBCALHit>{
 		//			  const int in_rocid, const int in_slot, const int in_channel) const;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 		
 		void FillCalibTable( bcal_digi_constants_t &table, 
 				     const vector<double> &raw_table);

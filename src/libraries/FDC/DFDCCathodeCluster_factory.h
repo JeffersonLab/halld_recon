@@ -7,10 +7,10 @@
 #ifndef DFACTORY_DFDCCATHODECLUSTER_H
 #define DFACTORY_DFDCCATHODECLUSTER_H
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JException.h>
-#include <JANA/JStreamLog.h>
-using namespace jana;
+#include <JANA/Compatibility/JStreamLog.h>
+
 
 #include "DFDCCathodeCluster.h"
 #include "DFDCHit.h"
@@ -24,7 +24,7 @@ using namespace jana;
 /// class DFDCCathodeCluster_factory: 
 /// defines a JFactory for producing groups of cathode strips that form a cluster
 ///  
-class DFDCCathodeCluster_factory : public JFactory<DFDCCathodeCluster> {
+class DFDCCathodeCluster_factory : public JFactoryT<DFDCCathodeCluster> {
 	public:
 		///
 		/// DFDCCathodeCluster_factory::DFDCCathodeCluster_factory():
@@ -53,8 +53,8 @@ class DFDCCathodeCluster_factory : public JFactory<DFDCCathodeCluster> {
 		/// is the place cathode hits are associated into cathode clusters. This function 
 		/// should eventually be modified to do more sophisticated peak finding. 
 		///
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);	
-		jerror_t init(void);
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void Init() override;
 	private:
 		JStreamLog* _log;
 		double TIME_SLICE;

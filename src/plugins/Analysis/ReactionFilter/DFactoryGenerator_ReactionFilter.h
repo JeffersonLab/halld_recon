@@ -8,21 +8,19 @@
 #ifndef _DFactoryGenerator_ReactionFilter_
 #define _DFactoryGenerator_ReactionFilter_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_ReactionFilter.h"
 
-class DFactoryGenerator_ReactionFilter : public jana::JFactoryGenerator
+class DFactoryGenerator_ReactionFilter : public JFactoryGenerator
 {
 	public:
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DFactoryGenerator_ReactionFilter";}
 		
-		jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
+		void GenerateFactories(JFactorySet* fs)
 		{
-			locEventLoop->AddFactory(new DReaction_factory_ReactionFilter());
-			return NOERROR;
+			fs->Add(new DReaction_factory_ReactionFilter());
 		}
 };
 

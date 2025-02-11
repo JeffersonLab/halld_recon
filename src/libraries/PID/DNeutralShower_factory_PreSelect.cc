@@ -6,11 +6,12 @@
 //
 
 #include "DNeutralShower_factory_PreSelect.h"
+#include <JANA/JEvent.h>
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DNeutralShower_factory_PreSelect::init(void)
+void DNeutralShower_factory_PreSelect::Init()
 {
 	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
 	//This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.  
@@ -26,32 +27,31 @@ jerror_t DNeutralShower_factory_PreSelect::init(void)
 	dMinFCALShowerQuality = 0.;
 	
 	dFCALInnerRingCut = true;
-	
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DNeutralShower_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DNeutralShower_factory_PreSelect::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	gPARMS->SetDefaultParameter("PRESELECT:MIN_FCAL_E", dMinFCALE);
-	gPARMS->SetDefaultParameter("PRESELECT:MIN_BCAL_E", dMinBCALE);
-	gPARMS->SetDefaultParameter("PRESELECT:MIN_CCAL_E", dMinCCALE);
-	gPARMS->SetDefaultParameter("PRESELECT:MIN_BCAL_NCELL", dMinBCALNcell);
-	gPARMS->SetDefaultParameter("PRESELECT:MIN_FCAL_R", dMaxFCALR);
-	gPARMS->SetDefaultParameter("PRESELECT:MIN_BCAL_Z", dMaxBCALZ);
-	gPARMS->SetDefaultParameter("PRESELECT:FCAL_INNER_CUT", dFCALInnerRingCut);
-	gPARMS->SetDefaultParameter("PRESELECT:MIN_BCAL_SHOWER_QUALITY", dMinBCALShowerQuality);
-	gPARMS->SetDefaultParameter("PRESELECT:MIN_FCAL_SHOWER_QUALITY", dMinFCALShowerQuality);
+	auto app = GetApplication();
+	app->SetDefaultParameter("PRESELECT:MIN_FCAL_E", dMinFCALE);
+	app->SetDefaultParameter("PRESELECT:MIN_BCAL_E", dMinBCALE);
+	app->SetDefaultParameter("PRESELECT:MIN_CCAL_E", dMinCCALE);
+	app->SetDefaultParameter("PRESELECT:MIN_BCAL_NCELL", dMinBCALNcell);
+	app->SetDefaultParameter("PRESELECT:MIN_FCAL_R", dMaxFCALR);
+	app->SetDefaultParameter("PRESELECT:MIN_BCAL_Z", dMaxBCALZ);
+	app->SetDefaultParameter("PRESELECT:FCAL_INNER_CUT", dFCALInnerRingCut);
+	app->SetDefaultParameter("PRESELECT:MIN_BCAL_SHOWER_QUALITY", dMinBCALShowerQuality);
+	app->SetDefaultParameter("PRESELECT:MIN_FCAL_SHOWER_QUALITY", dMinFCALShowerQuality);
 
 	// get FCAL Geometry object
 	vector< const DFCALGeometry * > fcalGeomVec;
-	locEventLoop->Get( fcalGeomVec );
+	event->Get( fcalGeomVec );
 
 	if( fcalGeomVec.size() != 1 ){
 		cerr << "Could not load FCAL Geometry!" << endl;
-		return RESOURCE_UNAVAILABLE;
+		return; //RESOURCE_UNAVAILABLE; //TODO: Verify
 	}
   	dFCALGeometry = fcalGeomVec[0];		
 
@@ -91,21 +91,19 @@ jerror_t DNeutralShower_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, 
 	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 29, 31 ) );
 	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 30, 31 ) );
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DNeutralShower_factory_PreSelect::Process(const std::shared_ptr<const JEvent>& event)
 {
 	//Clear objects from last event
-	_data.clear();
+	mData.clear();
 
 	//Get original objects
 	vector<const DNeutralShower*> locNeutralShowers;
-	locEventLoop->Get(locNeutralShowers);
+	event->Get(locNeutralShowers);
 
 	//Cut on shower energy, BCAL cells, fiducial regions
 	for(size_t loc_i = 0; loc_i < locNeutralShowers.size(); ++loc_i)
@@ -148,7 +146,7 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 				continue;
 
 			const DBCALShower* locBCALShower = NULL;
-			locNeutralShowers[loc_i]->GetSingleT(locBCALShower);
+			locNeutralShowers[loc_i]->GetSingle(locBCALShower);
 			if(locBCALShower->N_cell < dMinBCALNcell)
 				continue;
 		  }
@@ -166,24 +164,20 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 			//	continue;
 		  }
 
-		_data.push_back(const_cast<DNeutralShower*>(locNeutralShowers[loc_i]));
+		mData.push_back(const_cast<DNeutralShower*>(locNeutralShowers[loc_i]));
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DNeutralShower_factory_PreSelect::erun(void)
+void DNeutralShower_factory_PreSelect::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DNeutralShower_factory_PreSelect::fini(void)
+void DNeutralShower_factory_PreSelect::Finish()
 {
-	return NOERROR;
 }

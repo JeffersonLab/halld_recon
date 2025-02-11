@@ -18,9 +18,8 @@
 #define _DSCTDCDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DSCTDCDigiHit:public jana::JObject{
+class DSCTDCDigiHit:public JObject{
  public:
   JOBJECT_PUBLIC(DSCTDCDigiHit);
   
@@ -30,11 +29,11 @@ class DSCTDCDigiHit:public jana::JObject{
   
   // This method is used primarily for pretty printing
   // the second argument to AddString is printf style format
-  /// \fn   void toStrings(vector<pair<string,string> > &items)const
+  /// \fn   void Summarize(JObjectSummary& summary)const
   /// print method used by hd_dump to list all Start Counter raw TDC hits
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "sector", "%d", sector);
-    AddString(items, "time", "%d", time);
+  void Summarize(JObjectSummary& summary)const{
+    summary.add(sector, "sector", "%d");
+    summary.add(time, "time", "%d");
   }
   
 };

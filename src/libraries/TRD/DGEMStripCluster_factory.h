@@ -5,7 +5,7 @@
 #ifndef DFACTORY_DGEMSTRIPCLUSTER_H
 #define DFACTORY_DGEMSTRIPCLUSTER_H
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 using namespace std;
 
 #include "DGEMStripCluster.h"
@@ -19,9 +19,9 @@ using namespace std;
 /// class DGEMStripCluster_factory: 
 /// defines a JFactory for producing groups of cathode strips that form a cluster
 ///  
-class DGEMStripCluster_factory:public JFactory<DGEMStripCluster> {
+class DGEMStripCluster_factory:public JFactoryT<DGEMStripCluster> {
 	public:
-	        DGEMStripCluster_factory(){};
+		DGEMStripCluster_factory(){};
 		~DGEMStripCluster_factory(){};
 		
 		///
@@ -39,8 +39,8 @@ class DGEMStripCluster_factory:public JFactory<DGEMStripCluster> {
 		/// is the place cathode hits are associated into cathode clusters. This function 
 		/// should eventually be modified to do more sophisticated peak finding. 
 		///
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);	
-		jerror_t init(void);
+		void Process(const std::shared_ptr<const JEvent>& event) override;	
+		void Init() override;
 	private:
 		double TIME_SLICE;
 };

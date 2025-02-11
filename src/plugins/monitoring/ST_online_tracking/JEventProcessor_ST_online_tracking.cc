@@ -6,11 +6,10 @@
 //
 // $Id$
 #include "JEventProcessor_ST_online_tracking.h"
-using namespace jana;
 using namespace std;
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 // ROOT header files
 #include <TDirectory.h>
 #include <TH1.h>
@@ -48,7 +47,7 @@ static TH2I *h2_dedx_P_mag_negtv;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_ST_online_tracking());
+	app->Add(new JEventProcessor_ST_online_tracking());
 }
 } // "C"
 
@@ -58,7 +57,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_ST_online_tracking::JEventProcessor_ST_online_tracking()
 {
-
+	SetTypeName("JEventProcessor_ST_online_tracking");
 }
 
 //------------------
@@ -70,18 +69,21 @@ JEventProcessor_ST_online_tracking::~JEventProcessor_ST_online_tracking()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_ST_online_tracking::init(void)
+void JEventProcessor_ST_online_tracking::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 	//
+
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 
   // Create root folder for ST and cd to it, store main dir
   TDirectory *main = gDirectory;
@@ -105,68 +107,65 @@ jerror_t JEventProcessor_ST_online_tracking::init(void)
   //     phi_sec[i][0] = (6.0 + 12.0*double(i)) - 4.0;
   //     phi_sec[i][1] = (6.0 + 12.0*double(i)) + 4.0;
   //   }
-  return NOERROR;
 }
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_ST_online_tracking::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_ST_online_tracking::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_ST_online_tracking::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void JEventProcessor_ST_online_tracking::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
   vector<const DSCDigiHit*>       st_adc_digi_hits;
   vector<const DParticleID*>      pid_algorithm;
   vector<const DSCHit*>           st_hits;
 
   const DTrigger* locTrigger = NULL; 
-  eventLoop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
+    return;
 
   // Get the particleID object for each run
   vector<const DParticleID *> locParticleID_algos;
-  eventLoop->Get(locParticleID_algos);
+  event->Get(locParticleID_algos);
   if(locParticleID_algos.size() < 1)
     {
       _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      return;
     }
   const DParticleID* locParticleID = locParticleID_algos[0];
 
-  eventLoop->Get(st_adc_digi_hits);
-  eventLoop->Get(pid_algorithm);
-  eventLoop->Get(st_hits);
+  event->Get(st_adc_digi_hits);
+  event->Get(pid_algorithm);
+  event->Get(st_hits);
   vector<DVector3> sc_track_position;
   vector<const DChargedTrack*> chargedTrackVector;
-  eventLoop->Get(chargedTrackVector);
+  event->Get(chargedTrackVector);
   // Grab the associated detector matches object
   const DDetectorMatches* locDetectorMatches = NULL;
-  eventLoop->GetSingle(locDetectorMatches);
+  event->GetSingle(locDetectorMatches);
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
   sc_track_position.clear();
  
@@ -266,29 +265,25 @@ jerror_t JEventProcessor_ST_online_tracking::evnt(JEventLoop *eventLoop, uint64_
       h2_y_vs_x->Fill(sc_track_position[i].x(),sc_track_position[i].y());
     }
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-  return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_ST_online_tracking::erun(void)
+void JEventProcessor_ST_online_tracking::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_ST_online_tracking::fini(void)
+void JEventProcessor_ST_online_tracking::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 
 

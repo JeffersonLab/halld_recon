@@ -17,7 +17,6 @@
 
 
 using namespace std;
-using namespace jana;
 
 
 // for random numbers
@@ -42,7 +41,7 @@ static TH2I * rocdata;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_EVNT_online());
+    app->Add(new JEventProcessor_EVNT_online());
   }
 }
 
@@ -63,7 +62,7 @@ JEventProcessor_EVNT_online::~JEventProcessor_EVNT_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_EVNT_online::init(void) {
+void JEventProcessor_EVNT_online::Init() {
 
   // create root folder for evnt and cd to it, store main dir
   TDirectory *main = gDirectory;
@@ -78,23 +77,23 @@ jerror_t JEventProcessor_EVNT_online::init(void) {
   // back to main dir
   main->cd();
 
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_EVNT_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_EVNT_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
   // This is called whenever the run number changes
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_EVNT_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_EVNT_online::Process(const std::shared_ptr<const JEvent>& event) {
 
   int nword,ntot;
   // uint32_t *buff;
@@ -102,7 +101,7 @@ jerror_t JEventProcessor_EVNT_online::evnt(JEventLoop *eventLoop, uint64_t event
 
 
   // Get pointer to JEventSource base class
-  JEvent &jevent = eventLoop->GetJEvent();
+  JEvent &jevent = event->GetJEvent();
   JEventSource *source = jevent.GetJEventSource();
   
   // Cast source to type JEventSource_EVIO. You could use a
@@ -124,7 +123,7 @@ jerror_t JEventProcessor_EVNT_online::evnt(JEventLoop *eventLoop, uint64_t event
     // loop over data banks and hist bank sizes, etc.
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
     ntot=0;
     for(auto bank : *bankList.get()) {
       nword=bank->getSize();
@@ -132,42 +131,42 @@ jerror_t JEventProcessor_EVNT_online::evnt(JEventLoop *eventLoop, uint64_t event
       ntot+=nword;
     }
     evntdata->Fill(ntot);
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
   }
   
   
   // fake data for the moment...
-  // japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  // lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
   // ntot=0;
   // for(auto roc=1; roc<=60; roc++) {
   //   nword = 25+normal_dist(generator);
   //   rochist->Fill(roc,nword);
   //   ntot+=nword;
   // }
-  // evntsize->Fill(ntot);
-  // japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  // Processsize->Fill(ntot);
+  // lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_EVNT_online::erun(void) {
+void JEventProcessor_EVNT_online::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_EVNT_online::fini(void) {
+void JEventProcessor_EVNT_online::Finish() {
   // Called before program exit after event processing is finished.
-  return NOERROR;
+  return;
 }
 
 

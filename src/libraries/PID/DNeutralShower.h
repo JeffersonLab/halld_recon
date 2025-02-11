@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "JANA/JObject.h"
+#include "DANA/DObjectID.h"
 
 #include "GlueX.h"
 #include "DLorentzVector.h"
@@ -21,11 +22,12 @@
 
 using namespace std;
 
-class DNeutralShower : public jana::JObject
+class DNeutralShower : public JObject
 {
  public:
   JOBJECT_PUBLIC(DNeutralShower);
 
+  oid_t id = reinterpret_cast<oid_t>(this);
   oid_t dShowerID;
   DetectorSystem_t dDetectorSystem;
 
@@ -49,12 +51,12 @@ class DNeutralShower : public jana::JObject
   
   const JObject* dBCALFCALShower; //is either DBCALShower or DFCALShower: dynamic_cast as appropriate (based on dDetectorSystem)
 
-  void toStrings(vector<pair<string,string> > &items) const{
-    AddString(items, "E", "%3.5f", dEnergy);
-    AddString(items, "x", "%3.2f", dSpacetimeVertex.X());
-    AddString(items, "y", "%3.2f", dSpacetimeVertex.Y());
-    AddString(items, "z", "%3.2f", dSpacetimeVertex.Z());
-    AddString(items, "t", "%3.2f", dSpacetimeVertex.T());
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(dEnergy, "E", "%3.5f");
+    summary.add(dSpacetimeVertex.X(), "x", "%3.2f");
+    summary.add(dSpacetimeVertex.Y(), "y", "%3.2f");
+    summary.add(dSpacetimeVertex.Z(), "z", "%3.2f");
+    summary.add(dSpacetimeVertex.T(), "t", "%3.2f");
   }
 };
 

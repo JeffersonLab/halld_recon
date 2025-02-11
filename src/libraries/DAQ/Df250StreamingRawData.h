@@ -22,17 +22,16 @@ class Df250StreamingRawData:public DDAQAddress{
 	public:
 		JOBJECT_PUBLIC(Df250StreamingRawData);
 		
-		vector<uint16_t> samples;   // from Streaming Raw Data words 2-N (each word contains 2 samples)
+		std::vector<uint16_t> samples;   // from Streaming Raw Data words 2-N (each word contains 2 samples)
 		bool invalid_samples;       // true if any sample's "not valid" bit set
 		bool overflow;              // true if any sample's "overflow" bit set
 
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "Nsamples", "%d", samples.size());
-			AddString(items, "invalid_samples", "%d", invalid_samples);
-			AddString(items, "overflow", "%d", overflow);
+
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(samples.size(), "Nsamples", "%d");
+			summary.add(invalid_samples, NAME_OF(invalid_samples), "%d");
+			summary.add(overflow, NAME_OF(overflow), "%d");
 		}
 
 };

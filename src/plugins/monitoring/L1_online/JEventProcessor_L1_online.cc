@@ -8,10 +8,7 @@
 #include "JEventProcessor_L1_online.h"
 
 using namespace std;
-using namespace jana;
 
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 #include <TDirectory.h>
 #include <TH1.h>
 #include <TH2.h>
@@ -84,7 +81,7 @@ static TProfile *hrate_bit[8];
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_L1_online());
+        app->Add(new JEventProcessor_L1_online());
 
     }
 } // "C"
@@ -95,7 +92,7 @@ extern "C"{
 //------------------
 JEventProcessor_L1_online::JEventProcessor_L1_online()
 {
-
+	SetTypeName("JEventProcessor_L1_online");
 }
 
 //------------------
@@ -107,10 +104,12 @@ JEventProcessor_L1_online::~JEventProcessor_L1_online()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_L1_online::init(void)
+void JEventProcessor_L1_online::Init()
 {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
    
     const int bin_time    = 100;
     const int bin_fcal_1d = 500;
@@ -190,17 +189,15 @@ jerror_t JEventProcessor_L1_online::init(void)
     //    hfcal_row_col  = new TH2F("fcal_row_col","fcal_row_col", 60, 0.5, 60.5, 60, 0.5, 60.5);
 
     mainDir->cd();
-
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_L1_online::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_L1_online::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+  auto runnumber = event->GetRunNumber();
 
-  
   // FCAL constants - will be retrieved from the RCDB
   
   fcal_cell_thr  =  64;
@@ -220,17 +217,15 @@ jerror_t JEventProcessor_L1_online::brun(JEventLoop *eventLoop, int32_t runnumbe
   }
   
   run_number = runnumber;
-  
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_L1_online::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void JEventProcessor_L1_online::Process(const std::shared_ptr<const JEvent>& event) {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
-  // loop->Get(...) to get reconstructed objects (and thereby activating the
+  // event->Get(...) to get reconstructed objects (and thereby activating the
   // reconstruction algorithm) should be done outside of any mutex lock
   // since multiple threads may call this method at the same time.
   
@@ -268,13 +263,13 @@ jerror_t JEventProcessor_L1_online::evnt(JEventLoop *loop, uint64_t eventnumber)
       vector<const DTAGHDigiHit*> tagh_hits;
 
 
-      loop->Get(l1trig);
-      loop->Get(bcal_hits);
-      loop->Get(fcal_hits);
+      event->Get(l1trig);
+      event->Get(bcal_hits);
+      event->Get(fcal_hits);
 
-      loop->Get(st_hits);
+      event->Get(st_hits);
 
-      loop->Get(tagh_hits);
+      event->Get(tagh_hits);
 
 
      
@@ -426,7 +421,7 @@ jerror_t JEventProcessor_L1_online::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 
       // FILL HISTOGRAMS
-      japp->RootFillLock(this);    //ACQUIRE ROOT FILL LOCK
+      lockService->RootWriteLock();    //ACQUIRE ROOT FILL LOCK
 
 
       if( l1trig.size() > 0 ){
@@ -530,28 +525,24 @@ jerror_t JEventProcessor_L1_online::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 
 
-      japp->RootFillUnLock(this);   //RELEASE ROOT FILL LOCK
-      
-      return NOERROR;
+      lockService->RootUnLock();   //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_L1_online::erun(void)
+void JEventProcessor_L1_online::EndRun()
 {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_L1_online::fini(void)
+void JEventProcessor_L1_online::Finish()
 {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 

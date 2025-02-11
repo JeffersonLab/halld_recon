@@ -12,14 +12,10 @@
 #include <math.h>
 
 #include "JEventProcessor_etapi0_skim.h"
-using namespace jana;
 
 // Routine used to create our JEventProcessor
-#include "JANA/JApplication.h"
 #include <TLorentzVector.h>
 #include "TMath.h"
-#include "JANA/JApplication.h"
-#include "DANA/DApplication.h"
 #include "FCAL/DFCALShower.h"
 #include "BCAL/DBCALShower.h"
 #include "CCAL/DCCALShower.h"
@@ -45,7 +41,7 @@ using namespace jana;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_etapi0_skim());
+    app->Add(new JEventProcessor_etapi0_skim());
   }
 } // "C"
 
@@ -55,34 +51,7 @@ extern "C"{
 //------------------
 JEventProcessor_etapi0_skim::JEventProcessor_etapi0_skim()
 {
-
-  WRITE_EVIO = 1;
-  WRITE_HDDM = 0;
-
-  gPARMS->SetDefaultParameter( "ETAPI0_SKIM:WRITE_EVIO", WRITE_EVIO );
-  gPARMS->SetDefaultParameter( "ETAPI0_SKIM:WRITE_HDDM", WRITE_HDDM );
-
-  /*
-  MIN_MASS   = 0.03; // GeV
-  MAX_MASS   = 0.30; // GeV
-  MIN_E      =  1.0; // GeV (photon energy cut)
-  MIN_R      =   20; // cm  (cluster distance to beam line)
-  MAX_DT     =   10; // ns  (cluster time diff. cut)
-  MAX_ETOT   =   12; // GeV (max total FCAL energy)
-  MIN_BLOCKS =    2; // minumum blocks per cluster
-
-  WRITE_ROOT = 0;
-  WRITE_EVIO = 1;
-
-  gPARMS->SetDefaultParameter( "ETAPI0_SKIM:MIN_MASS", MIN_MASS );
-  gPARMS->SetDefaultParameter( "ETAPI0_SKIM:MAX_MASS", MAX_MASS );
-  gPARMS->SetDefaultParameter( "ETAPI0_SKIM:MIN_E", MIN_E );                
-  gPARMS->SetDefaultParameter( "ETAPI0_SKIM:MIN_R", MIN_R );
-  gPARMS->SetDefaultParameter( "ETAPI0_SKIM:MAX_DT", MAX_DT );
-  gPARMS->SetDefaultParameter( "ETAPI0_SKIM:MAX_ETOT", MAX_ETOT );
-  gPARMS->SetDefaultParameter( "ETAPI0_SKIM:MIN_BLOCKS", MIN_BLOCKS );
-  gPARMS->SetDefaultParameter( "ETAPI0_SKIM:WRITE_ROOT", WRITE_ROOT );
-  */
+  SetTypeName("JEventProcessor_etapi0_skim");
 }
 
 //------------------
@@ -90,15 +59,44 @@ JEventProcessor_etapi0_skim::JEventProcessor_etapi0_skim()
 //------------------
 JEventProcessor_etapi0_skim::~JEventProcessor_etapi0_skim()
 {
-
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_etapi0_skim::init(void)
+void JEventProcessor_etapi0_skim::Init()
 {
-  num_epics_events = 0;
+	auto app = GetApplication();
+	// lockService = app->GetService<JLockService>();
+
+	WRITE_EVIO = 1;
+	WRITE_HDDM = 0;
+
+	app->SetDefaultParameter( "ETAPI0_SKIM:WRITE_EVIO", WRITE_EVIO );
+	app->SetDefaultParameter( "ETAPI0_SKIM:WRITE_HDDM", WRITE_HDDM );
+
+	/*
+	MIN_MASS   = 0.03; // GeV
+	MAX_MASS   = 0.30; // GeV
+	MIN_E      =  1.0; // GeV (photon energy cut)
+	MIN_R      =   20; // cm  (cluster distance to beam line)
+	MAX_DT     =   10; // ns  (cluster time diff. cut)
+	MAX_ETOT   =   12; // GeV (max total FCAL energy)
+	MIN_BLOCKS =    2; // minumum blocks per cluster
+
+	WRITE_ROOT = 0;
+	WRITE_EVIO = 1;
+
+	app->SetDefaultParameter( "ETAPI0_SKIM:MIN_MASS", MIN_MASS );
+	app->SetDefaultParameter( "ETAPI0_SKIM:MAX_MASS", MAX_MASS );
+	app->SetDefaultParameter( "ETAPI0_SKIM:MIN_E", MIN_E );
+	app->SetDefaultParameter( "ETAPI0_SKIM:MIN_R", MIN_R );
+	app->SetDefaultParameter( "ETAPI0_SKIM:MAX_DT", MAX_DT );
+	app->SetDefaultParameter( "ETAPI0_SKIM:MAX_ETOT", MAX_ETOT );
+	app->SetDefaultParameter( "ETAPI0_SKIM:MIN_BLOCKS", MIN_BLOCKS );
+	app->SetDefaultParameter( "ETAPI0_SKIM:WRITE_ROOT", WRITE_ROOT );
+	*/
+	num_epics_events = 0;
 /*
   if( ! ( WRITE_ROOT || WRITE_EVIO ) ){
 
@@ -108,7 +106,7 @@ jerror_t JEventProcessor_etapi0_skim::init(void)
 
   if( WRITE_ROOT ){
 
-    japp->RootWriteLock();
+    lockService->RootWriteLock();
 
     m_tree = new TTree( "cluster", "Cluster Tree for Pi0 Calibration" );
     m_tree->Branch( "nClus", &m_nClus, "nClus/I" );
@@ -121,43 +119,37 @@ jerror_t JEventProcessor_etapi0_skim::init(void)
     m_tree->Branch( "chan", m_chan, "chan[nHit]/I" );
     m_tree->Branch( "e", m_e, "e[nHit]/F" );
 
-    japp->RootUnLock();
+    lockService->RootUnLock();
   }
 */
     
   combi4  = new Combination (4);
   combi5  = new Combination (5);
-  
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_etapi0_skim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_etapi0_skim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  DGeometry* dgeom = NULL;
-  DApplication* dapp = dynamic_cast< DApplication* >(eventLoop->GetJApplication());
-  if (dapp) dgeom = dapp->GetDGeometry(runnumber);
+  DGeometry* dgeom = GetDGeometry(event);
   if (dgeom) {
     dgeom->GetTargetZ(m_targetZ);
   } else {
     cerr << "No geometry accessbile to ccal_timing monitoring plugin." << endl;
-    return RESOURCE_UNAVAILABLE;
+    return; // RESOURCE_UNAVAILABLE;
   }	
-  jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+  JCalibration *jcalib = GetJCalibration(event);
   std::map<string, float> beam_spot;
   jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   m_beamSpotX = beam_spot.at("x");
   m_beamSpotY = beam_spot.at("y");
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_etapi0_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_etapi0_skim::Process(const std::shared_ptr<const JEvent>& event)
 {
  
   vector< const DFCALShower* > locFCALShowers;
@@ -168,38 +160,38 @@ jerror_t JEventProcessor_etapi0_skim::evnt(JEventLoop *loop, uint64_t eventnumbe
   vector< const DBeamPhoton* > locBeamPhotons;
   vector< const DSCHit* > locSCHit;
 
-  loop->Get(locFCALShowers);
-  loop->Get(locBCALShowers);
-  loop->Get(locCCALShowers);
-  loop->Get(kinfitVertex);
-  loop->Get(tof_points);
-  loop->Get(locBeamPhotons);
-  loop->Get(locSCHit);
+  event->Get(locFCALShowers);
+  event->Get(locBCALShowers);
+  event->Get(locCCALShowers);
+  event->Get(kinfitVertex);
+  event->Get(tof_points);
+  event->Get(locBeamPhotons);
+  event->Get(locSCHit);
   
   vector<const DTrackCandidate*> locTrackCandidate;
-  loop->Get(locTrackCandidate);
+  event->Get(locTrackCandidate);
 
   vector< const DTrackTimeBased* > locTrackTimeBased;
-  loop->Get(locTrackTimeBased);
+  event->Get(locTrackTimeBased);
 
   vector < const DFCALShower * > matchedShowers;
   
   const DEventWriterEVIO* locEventWriterEVIO = NULL;
-  loop->GetSingle(locEventWriterEVIO);
+  event->GetSingle(locEventWriterEVIO);
 
   // always write out BOR events
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
+  if(GetStatusBit(event, kSTATUS_BOR_EVENT)) {
       //jout << "Found BOR!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "etapi0_skim" );
-      return NOERROR;
+      locEventWriterEVIO->Write_EVIOEvent( event, "etapi0_skim" );
+      return;
   }
 
   // write out the first few EPICS events to save run number & other meta info
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
+  if(GetStatusBit(event, kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
       //jout << "Found EPICS!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "etapi0_skim" );
+      locEventWriterEVIO->Write_EVIOEvent( event, "etapi0_skim" );
       num_epics_events++;
-      return NOERROR;
+      return;
   }
 
   
@@ -243,7 +235,7 @@ jerror_t JEventProcessor_etapi0_skim::evnt(JEventLoop *loop, uint64_t eventnumbe
   }
   
   vector<const DEventRFBunch*> locEventRFBunches;
-  loop->Get(locEventRFBunches);
+  event->Get(locEventRFBunches);
   if(locEventRFBunches.size() > 0) {
     locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches[0]));
   }
@@ -324,38 +316,33 @@ jerror_t JEventProcessor_etapi0_skim::evnt(JEventLoop *loop, uint64_t eventnumbe
     //cout <<"etapi0_skim"<<endl;
     if( WRITE_EVIO ){
       //locEventWriterEVIO->Write_EVIOEvent( loop, "etapi0_skim", locObjectsToSave );
-      locEventWriterEVIO->Write_EVIOEvent( loop, "etapi0_skim");
+      locEventWriterEVIO->Write_EVIOEvent( event, "etapi0_skim");
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
-      loop->Get(locEventWriterHDDMVector);
-      locEventWriterHDDMVector[0]->Write_HDDMEvent(loop, ""); 
+      event->Get(locEventWriterHDDMVector);
+      locEventWriterHDDMVector[0]->Write_HDDMEvent(event, "");
     }
     
  }
- 
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_etapi0_skim::erun(void)
+void JEventProcessor_etapi0_skim::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
 // Fin
 //------------------
-jerror_t JEventProcessor_etapi0_skim::fini(void)
+void JEventProcessor_etapi0_skim::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 
 

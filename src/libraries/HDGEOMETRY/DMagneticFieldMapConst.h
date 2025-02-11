@@ -8,8 +8,6 @@
 #ifndef _DMagneticFieldMapConst_
 #define _DMagneticFieldMapConst_
 
-#include <JANA/jerror.h>
-
 #include "DMagneticFieldMap.h"
 
 #include <vector>
@@ -18,8 +16,7 @@ using std::vector;
 using std::string;
 
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-using namespace jana;
+#include <JANA/Calibrations/JCalibration.h>
 
 class DMagneticFieldMapConst:public DMagneticFieldMap{
 	public:

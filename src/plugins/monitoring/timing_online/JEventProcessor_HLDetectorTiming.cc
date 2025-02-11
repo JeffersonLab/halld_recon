@@ -6,12 +6,12 @@
 //
 
 #include "JEventProcessor_HLDetectorTiming.h"
-using namespace jana;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
+#include "DANA/DEvent.h"
 #include "PID/DChargedTrack.h"
 #include "PID/DEventRFBunch.h"
 #include "TTAB/DTTabUtilities.h"
@@ -24,8 +24,8 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_HLDetectorTiming());
-    app->AddFactoryGenerator(new DFactoryGenerator_p2pi()); //register the factory generator
+    app->Add(new JEventProcessor_HLDetectorTiming());
+    app->Add(new DFactoryGenerator_p2pi()); //register the factory generator
 }
 } // "C"
 
@@ -92,7 +92,7 @@ static int Get_FDCTDC_crate_slot(int mod, string &act_crate, int &act_slot){ //e
 //------------------
 JEventProcessor_HLDetectorTiming::JEventProcessor_HLDetectorTiming()
 {
-
+	SetTypeName("JEventProcessor_HLDetectorTiming");
 }
 
 //------------------
@@ -104,10 +104,13 @@ JEventProcessor_HLDetectorTiming::~JEventProcessor_HLDetectorTiming()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_HLDetectorTiming::init(void)
+void JEventProcessor_HLDetectorTiming::Init()
 {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
+
     BEAM_CURRENT = 50; // Assume that there is beam until first EPICs event. Set from EPICS evio data, can override on command line
 
     fBeamEventCounter = 0;
@@ -124,18 +127,18 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
 
     USE_RF_BUNCH = 1;
 
-    if(gPARMS){
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_ROUGH_TIMING", DO_ROUGH_TIMING, "Set to > 0 to do rough timing of all detectors");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_CDC_TIMING", DO_CDC_TIMING, "Set to > 0 to do CDC Per channel Alignment");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_TDC_ADC_ALIGN", DO_TDC_ADC_ALIGN, "Set to > 0 to do TDC/ADC alignment of SC,TOF,TAGM,TAGH");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_TRACK_BASED", DO_TRACK_BASED, "Set to > 0 to do Track Based timing corrections");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_HIGH_RESOLUTION", DO_HIGH_RESOLUTION, "Set to > 0 to increase the resolution of the track Based timing corrections");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_VERIFY", DO_VERIFY, "Set to > 0 to verify timing with current constants");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:REQUIRE_BEAM", REQUIRE_BEAM, "Set to 0 to skip beam current check");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:BEAM_EVENTS_TO_KEEP", BEAM_EVENTS_TO_KEEP, "Set to the number of beam on events to use");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_OPTIONAL", DO_OPTIONAL, "Set to >0 to enable optional histograms ");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_REACTION", DO_REACTION, "Set to >0 to run DReaction");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:USE_RF_BUNCH", USE_RF_BUNCH, "Set to 0 to disable use of 2 vote RF Bunch");
+    if(app){
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_ROUGH_TIMING", DO_ROUGH_TIMING, "Set to > 0 to do rough timing of all detectors");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_CDC_TIMING", DO_CDC_TIMING, "Set to > 0 to do CDC Per channel Alignment");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_TDC_ADC_ALIGN", DO_TDC_ADC_ALIGN, "Set to > 0 to do TDC/ADC alignment of SC,TOF,TAGM,TAGH");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_TRACK_BASED", DO_TRACK_BASED, "Set to > 0 to do Track Based timing corrections");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_HIGH_RESOLUTION", DO_HIGH_RESOLUTION, "Set to > 0 to increase the resolution of the track Based timing corrections");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_VERIFY", DO_VERIFY, "Set to > 0 to verify timing with current constants");
+        app->SetDefaultParameter("HLDETECTORTIMING:REQUIRE_BEAM", REQUIRE_BEAM, "Set to 0 to skip beam current check");
+        app->SetDefaultParameter("HLDETECTORTIMING:BEAM_EVENTS_TO_KEEP", BEAM_EVENTS_TO_KEEP, "Set to the number of beam on events to use");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_OPTIONAL", DO_OPTIONAL, "Set to >0 to enable optional histograms ");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_REACTION", DO_REACTION, "Set to >0 to run DReaction");
+        app->SetDefaultParameter("HLDETECTORTIMING:USE_RF_BUNCH", USE_RF_BUNCH, "Set to 0 to disable use of 2 vote RF Bunch");
     }
 
     // Would like the code with no arguments to simply verify the current status of the calibration
@@ -167,40 +170,35 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
     }
 
     NBINS_RF_COMPARE = 200; MIN_RF_COMPARE = -2.2; MAX_RF_COMPARE = 2.2;
-
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_HLDetectorTiming::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_HLDetectorTiming::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // This is called whenever the run number changes
-    DApplication* app = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-    DGeometry* geom = app->GetDGeometry(runnumber);
+    DGeometry* geom = GetDGeometry(event);
     geom->GetTargetZ(Z_TARGET);
-
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEvent>& event)
 {
     // select events with physics events, i.e., not LED and other front panel triggers
     const DTrigger* locTrigger = NULL; 
-    loop->GetSingle(locTrigger); 
+    event->GetSingle(locTrigger); 
     if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
-      return NOERROR;
+      return;
 
     // Get the particleID object for each run
     vector<const DParticleID *> locParticleID_algos;
-    loop->Get(locParticleID_algos);
+    event->Get(locParticleID_algos);
     if(locParticleID_algos.size()<1){
         _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-        return RESOURCE_UNAVAILABLE;
+        return;
     }
     // next line commented out, unsued variable, suppress warnings
     //    auto locParticleID = locParticleID_algos[0];
@@ -208,13 +206,13 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     // We want to be use some of the tools available in the RFTime factory 
     // Specifivally steping the RF back to a chosen time
     // another unused variable
-    //    auto locRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
+    //    auto locRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime"));
 
 
 #if 1
     // Get the EPICs events and update beam current. Skip event if current too low (<10 nA).
     vector<const DEPICSvalue *> epicsValues;
-    loop->Get(epicsValues);
+    event->Get(epicsValues);
     for(unsigned int j = 0; j < epicsValues.size(); j++){
         const DEPICSvalue *thisValue = epicsValues[j];
         if (strcmp((thisValue->name).c_str(), "IBCAD00CRCUR6") == 0){
@@ -235,7 +233,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                 0, "Beam On Events (0 = no beam, 1 = beam > 10nA)",
                 2, -0.5, 1.5);
         if (REQUIRE_BEAM){
-            return NOERROR; // Skip events where we can't verify the beam current
+            return; // Skip events where we can't verify the beam current
         }
     }
     else{
@@ -248,7 +246,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     if (fBeamEventCounter >= BEAM_EVENTS_TO_KEEP) { // Able to specify beam ON events instead of just events
         cout<< "Maximum number of Beam Events reached" << endl;
         japp->Quit();
-        return NOERROR;
+        return;
     }
 #endif
 
@@ -263,19 +261,19 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     vector<const DTAGHHit *> taghHitVector;
     vector<const DTPOLHit *> tpolHitVector;
 
-    loop->Get(cdcHitVector);
-    loop->Get(fdcHitVector);
-    loop->Get(scHitVector);
-    loop->Get(bcalUnifiedHitVector);
-    loop->Get(tofHitVector);
-    loop->Get(fcalHitVector);
-    loop->Get(tagmHitVector, "Calib");
-    loop->Get(taghHitVector, "Calib");
-    loop->Get(tpolHitVector);
+    event->Get(cdcHitVector);
+    event->Get(fdcHitVector);
+    event->Get(scHitVector);
+    event->Get(bcalUnifiedHitVector);
+    event->Get(tofHitVector);
+    event->Get(fcalHitVector);
+    event->Get(tagmHitVector, "Calib");
+    event->Get(taghHitVector, "Calib");
+    event->Get(tpolHitVector);
 
     // TTabUtilities object used for RF time conversion
     const DTTabUtilities* locTTabUtilities = NULL;
-    loop->GetSingle(locTTabUtilities);
+    event->GetSingle(locTTabUtilities);
     unsigned int i = 0;
     int nBins = 2000;
     float xMin = -500, xMax = 1500;
@@ -416,7 +414,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
 	// extract the FCAL Geometry
 	vector<const DFCALGeometry*> fcalGeomVect;
-	loop->Get( fcalGeomVect );
+	event->Get( fcalGeomVect );
 	if (fcalGeomVect.size() < 1){
 	  cout << "FCAL Geometry not available?" << endl;
 	  return OBJECT_NOT_AVAILABLE;
@@ -615,9 +613,9 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     float nBinsE = 160, EMin = 3.0, EMax = 12.0;
 
     const DEventRFBunch *thisRFBunch = NULL;
-    loop->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
+    event->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
 
-    if (thisRFBunch->dNumParticleVotes < 2) return NOERROR;
+    if (thisRFBunch->dNumParticleVotes < 2) return;
 
     // Loop over TAGM hits
     for (unsigned int j = 0 ; j < tagmHitVector.size(); j++){
@@ -712,13 +710,13 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     }
 
 
-    if (!DO_TRACK_BASED && !DO_VERIFY ) return NOERROR; // Before this stage we aren't really ready yet, so just return
+    if (!DO_TRACK_BASED && !DO_VERIFY ) return; // Before this stage we aren't really ready yet, so just return
 
     // Try using the detector matches
     // Loop over the charged tracks
 
     vector<const DChargedTrack *> chargedTrackVector;
-    loop->Get(chargedTrackVector);
+    event->Get(chargedTrackVector);
 
     for (i = 0; i < chargedTrackVector.size(); i++){
 
@@ -886,7 +884,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     if (DO_REACTION){
        // Trigger the analysis
        vector<const DAnalysisResults*> locAnalysisResultsVector;
-       loop->Get(locAnalysisResultsVector);
+       event->Get(locAnalysisResultsVector);
        // Get the time from the results and fill histograms
        deque<const DParticleCombo*> locPassedParticleCombos;
        locAnalysisResultsVector[0]->Get_PassedParticleCombos(locPassedParticleCombos);
@@ -936,14 +934,13 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
        }
     }
 #endif
-    return NOERROR;
 }
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_HLDetectorTiming::erun(void)
+void JEventProcessor_HLDetectorTiming::EndRun()
 {
    // This is called whenever the run number changes, before it is
    // changed to give you a chance to clean up before processing
@@ -966,20 +963,16 @@ jerror_t JEventProcessor_HLDetectorTiming::erun(void)
     fdc_time_module_hist->LabelsOption("v");
   }
   
-
-   return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_HLDetectorTiming::fini(void)
+void JEventProcessor_HLDetectorTiming::Finish()
 {
    // Called before program exit after event processing is finished.
    //Here is where we do the fits to the data to see if we have a reasonable alignment
    SortDirectories(); //Defined in HistogramTools.h
-
-   return NOERROR;
 }
 
 int JEventProcessor_HLDetectorTiming::GetCCDBIndexTOF(const DTOFHit *thisHit){

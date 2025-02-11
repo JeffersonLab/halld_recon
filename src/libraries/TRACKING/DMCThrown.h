@@ -8,29 +8,28 @@
 #ifndef _DMCThrown_
 #define _DMCThrown_
 
-#include "JANA/JObject.h"
-#include "JANA/JFactory.h"
-
+#include <JANA/JObject.h>
+#include <DANA/DObjectID.h>
 #include "PID/DKinematicData.h"
 
 class DMCThrown:public DKinematicData{
 	public:
 		JOBJECT_PUBLIC(DMCThrown);
-		
+
+		oid_t id = reinterpret_cast<oid_t>(this);
 		int type;			///< GEANT particle ID
 		int pdgtype;		///< PDG particle type (not used by GEANT)
 		int myid;			///< id of this particle from original generator
 		int parentid;		///< id of parent of this particle from original generator
 		int mech;			///< production mechanism of this partcle (generator specific)
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			DKinematicData::toStrings(items);
-			AddString(items, "pdgtype", "%d", pdgtype);
-			AddString(items, "myid", "%d", myid);
-			AddString(items, "parentid", "%d", parentid);
-			AddString(items, "mech", "%d", mech);
+		void Summarize(JObjectSummary& summary) const override {
+			DKinematicData::Summarize(summary);
+			summary.add(pdgtype, NAME_OF(pdgtype), "%d");
+			summary.add(myid, NAME_OF(myid), "%d");
+			summary.add(parentid, NAME_OF(parentid), "%d");
+			summary.add(mech, NAME_OF(mech), "%d");
 		}
-
 };
 
 #endif // _DMCThrown_

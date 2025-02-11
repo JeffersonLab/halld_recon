@@ -17,7 +17,7 @@
 
 using namespace std;
 
-class DEventRFBunch : public jana::JObject
+class DEventRFBunch : public JObject
 {
 	public:
 		JOBJECT_PUBLIC(DEventRFBunch);
@@ -31,12 +31,11 @@ class DEventRFBunch : public jana::JObject
 		double dTimeVariance;
 		unsigned int dNumParticleVotes; //e.g. will trust time much more if 2+ rather than "1" or "0"
 
-		void toStrings(vector<pair<string,string> > &items) const
-		{
-			AddString(items, "Source System", "%s", SystemName(dTimeSource));
-			AddString(items, "t", "%3.5f", dTime);
-			AddString(items, "var_t", "%3.2f", dTimeVariance);
-			AddString(items, "#tracks", "%i", dNumParticleVotes);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(SystemName(dTimeSource), "Source System", "%s");
+			summary.add(dTime, "t", "%3.5f");
+			summary.add(dTimeVariance, "var_t", "%3.2f");
+			summary.add(dNumParticleVotes, "#tracks", "%i");
 		}
 };
 

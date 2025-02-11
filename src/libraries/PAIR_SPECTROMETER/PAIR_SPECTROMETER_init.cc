@@ -1,7 +1,5 @@
 // $Id$
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
 
 #include "DPSDigiHit.h"
 #include "DPSHit_factory.h"
@@ -15,22 +13,22 @@ using namespace jana;
 #include "DPSPair_factory.h"
 #include "DLumi_factory.h"
 
+#include <JANA/JFactorySet.h>
 
-jerror_t PAIR_SPECTROMETER_init(JEventLoop *loop)
+
+void PAIR_SPECTROMETER_init(JFactorySet* factorySet)
 {
   /// Create and register Pair Spectrometer data factories
-  loop->AddFactory(new DPSGeometry_factory());
-  loop->AddFactory(new JFactory<DPSDigiHit>());
-  loop->AddFactory(new DPSHit_factory());
-  loop->AddFactory(new JFactory<DPSCDigiHit>());
-  loop->AddFactory(new JFactory<DPSCTDCDigiHit>());
-  loop->AddFactory(new DPSCHit_factory());
-  loop->AddFactory(new JFactory<DPSCHit>("TRUTH"));
-  loop->AddFactory(new JFactory<DPSCTruthHit>());
-  loop->AddFactory(new JFactory<DPSTruthHit>());
-  loop->AddFactory(new DPSCPair_factory());
-  loop->AddFactory(new DPSPair_factory());
-  loop->AddFactory(new DLumi_factory());
-
-  return NOERROR;
+  factorySet->Add(new DPSGeometry_factory());
+  factorySet->Add(new JFactoryT<DPSDigiHit>());
+  factorySet->Add(new DPSHit_factory());
+  factorySet->Add(new JFactoryT<DPSCDigiHit>());
+  factorySet->Add(new JFactoryT<DPSCTDCDigiHit>());
+  factorySet->Add(new DPSCHit_factory());
+  factorySet->Add(new JFactoryT<DPSCHit>("TRUTH"));
+  factorySet->Add(new JFactoryT<DPSCTruthHit>());
+  factorySet->Add(new JFactoryT<DPSTruthHit>());
+  factorySet->Add(new DPSCPair_factory());
+  factorySet->Add(new DPSPair_factory());
+  factorySet->Add(new DLumi_factory());
 }

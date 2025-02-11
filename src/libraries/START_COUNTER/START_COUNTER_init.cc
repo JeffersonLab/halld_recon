@@ -1,21 +1,18 @@
 // $Id: CDC_init.cc 2151 2006-10-23 18:01:37Z davidl $
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
-
-#include "DSCTruthHit.h"
-#include "DSCDigiHit.h"
 #include "DSCHit_factory.h"
 #include "DSCTDCDigiHit.h"
+#include "DSCTruthHit.h"
 
-jerror_t START_COUNTER_init(JEventLoop *loop)
+#include <JANA/JFactorySet.h>
+#include <JANA/JFactoryT.h>
+
+void START_COUNTER_init(JFactorySet *factorySet)
 {
 	/// Create and register Start Counter data factories
-	loop->AddFactory(new JFactory<DSCDigiHit>());
-	loop->AddFactory(new JFactory<DSCTDCDigiHit>());
-	loop->AddFactory(new DSCHit_factory());
-	loop->AddFactory(new JFactory<DSCHit>("TRUTH"));
-	loop->AddFactory(new JFactory<DSCTruthHit>());
-
-	return NOERROR;
+	factorySet->Add(new JFactoryT<DSCDigiHit>());
+	factorySet->Add(new JFactoryT<DSCTDCDigiHit>());
+	factorySet->Add(new DSCHit_factory());
+	factorySet->Add(new JFactoryT<DSCHit>("TRUTH"));
+	factorySet->Add(new JFactoryT<DSCTruthHit>());
 }

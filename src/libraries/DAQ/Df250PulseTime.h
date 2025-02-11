@@ -34,14 +34,14 @@ class Df250PulseTime:public DDAQAddress{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "pulse_number", "%d", pulse_number);
-			AddString(items, "quality_factor", "%d", quality_factor);
-            AddString(items, "quality_factor_emulated", "%d", quality_factor_emulated);
-			AddString(items, "time", "%d", time);
-            AddString(items, "time_emulated", "%d", time_emulated);
-			AddString(items, "emulated", "%d", emulated);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(pulse_number, NAME_OF(pulse_number), "%d");
+			summary.add(quality_factor, NAME_OF(quality_factor), "%d");
+            summary.add(quality_factor_emulated, NAME_OF(quality_factor_emulated), "%d");
+			summary.add(time, NAME_OF(time), "%d");
+            summary.add(time_emulated, NAME_OF(time_emulated), "%d");
+			summary.add(emulated, NAME_OF(emulated), "%d");
 		}
 };
 

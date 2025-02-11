@@ -12,7 +12,6 @@
 #include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 #include <PAIR_SPECTROMETER/DPSDigiHit.h>
 #include <PAIR_SPECTROMETER/DPSHit.h>
@@ -78,7 +77,7 @@ static TH2I *hDigiHit_TimeVsQF_cut[Narms];
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_PS_online());
+        app->Add(new JEventProcessor_PS_online());
     }
 }
 
@@ -87,6 +86,7 @@ extern "C"{
 
 
 JEventProcessor_PS_online::JEventProcessor_PS_online() {
+	SetTypeName("JEventProcessor_PS_online");
 }
 
 
@@ -99,7 +99,9 @@ JEventProcessor_PS_online::~JEventProcessor_PS_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_PS_online::init(void) {
+void JEventProcessor_PS_online::Init() {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
     // create root folder for ps and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
@@ -167,21 +169,19 @@ jerror_t JEventProcessor_PS_online::init(void) {
     }
     // back to main dir
     mainDir->cd();
-
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_PS_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_PS_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
 
     // extract the PS geometry
     vector<const DPSGeometry*> psGeomVect;
-    eventLoop->Get(psGeomVect);
-    if (psGeomVect.size() == 0) return OBJECT_NOT_AVAILABLE;
+    event->Get(psGeomVect);
+    if (psGeomVect.size() == 0) throw JException("Missing DPSGeometry object");
     const DPSGeometry& psGeom = *(psGeomVect[0]);
 
     // Get photon energy bin lows for variable-width energy binning
@@ -198,7 +198,7 @@ jerror_t JEventProcessor_PS_online::brun(JEventLoop *eventLoop, int32_t runnumbe
     cols[Ncols] = 0.5 + Ncols;
 
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     // Set variable-width energy bins if histogram is empty
     for (int i = 0; i < Narms; i++) {
@@ -206,16 +206,14 @@ jerror_t JEventProcessor_PS_online::brun(JEventLoop *eventLoop, int32_t runnumbe
         if (hHit_EnergyVsColumn[i]->GetEntries() == 0) hHit_EnergyVsColumn[i]->SetBins(Ncols,cols,Ncols,Elows[i]);
     }
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-    return NOERROR;
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_PS_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_PS_online::Process(const std::shared_ptr<const JEvent>& event) {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
     // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -224,13 +222,13 @@ jerror_t JEventProcessor_PS_online::evnt(JEventLoop *eventLoop, uint64_t eventnu
 
     // get data for PS
     vector<const DPSDigiHit*> digihits;
-    eventLoop->Get(digihits); 
+    event->Get(digihits); 
     vector<const DPSHit*> hits;
-    eventLoop->Get(hits);
+    event->Get(hits);
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     if (digihits.size() > 0) ps_num_events->Fill(1);
 
@@ -294,29 +292,26 @@ jerror_t JEventProcessor_PS_online::evnt(JEventLoop *eventLoop, uint64_t eventnu
     }
     hHit_NHitsVsArm->Fill(0.,NHits[0]); hHit_NHitsVsArm->Fill(1.,NHits[1]);
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_PS_online::erun(void) {
+void JEventProcessor_PS_online::EndRun() {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_PS_online::fini(void) {
+void JEventProcessor_PS_online::Finish() {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 
 

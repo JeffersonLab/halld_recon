@@ -25,7 +25,10 @@
 #include <TFitResultPtr.h>
 #include <TCanvas.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include <DAQ/Df250WindowRawData.h>
 
 #include "DTACDigiHit.h"
@@ -33,6 +36,11 @@
 #include "DTACHit.h"
 
 #include <TAC/HitRebuilderTAC.h>
+
+using std::vector;
+using std::string;
+using std::map;
+using std::pair;
 
 template<typename F>
 class HitRebuilderByFit: public HitRebuilderTAC {
@@ -44,10 +52,10 @@ protected:
 	double decayTime = 2.6;
 	TF1* fitFun = nullptr;
 public:
-	HitRebuilderByFit( jana::JEventLoop* eventLoop) :
-			HitRebuilderTAC(eventLoop) {
+	HitRebuilderByFit( const std::shared_ptr<const JEvent>& event) :
+			HitRebuilderTAC(event) {
 
-		HitRebuilderByFit::readCCDB( eventLoop );
+		HitRebuilderByFit::readCCDB( event );
 		// Create ROOT function for the fit using the functor
 		std::string funName = this->getTagString() + ":fitFun";
 		fitFun = new TF1(funName.c_str(), waveFunction, 5, 70, 5);
@@ -72,7 +80,7 @@ public:
 			delete fitFun;
 	}
 
-	jerror_t readCCDB(jana::JEventLoop *eventLoop);
+	jerror_t readCCDB(const std::shared_ptr<const JEvent>& event);
 
 	virtual double getTimeFromRawData(const vector<uint16_t>& samples) override;
 
@@ -106,32 +114,36 @@ public:
 };
 
 template<typename F>
-inline jerror_t HitRebuilderByFit<F>::readCCDB(jana::JEventLoop* eventLoop) {
+inline jerror_t HitRebuilderByFit<F>::readCCDB(const std::shared_ptr<const JEvent>& event) {
 	std::cout << "In HitRebuilderByFit::readCCDB() , reading calibration constants" << std::endl;
+
+	auto run_number = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
 
 	// First re-read the constants for the base class. This is not a virtual method since it is
 	// usually being called from the constructor.
-	HitRebuilderTAC::readCCDB( eventLoop );
+	HitRebuilderTAC::readCCDB( event );
 
 	// a_pedestals (pedestals)
-	if (eventLoop->GetCalib("/TAC/pedestals", adcPedestal))
-		jout << "Error loading /TAC/pedestals !" << std::endl;
+	if (calibration->Get("/TAC/pedestals", adcPedestal))
+		jout << "Error loading /TAC/pedestals !" << jendl;
 
 
 	map<string, double> pulseShapeParameter;
-	if (eventLoop->GetCalib("/TAC/pulse_shape", pulseShapeParameter))
-		jout << "Error loading /TAC/pulse_shape !" << std::endl;
+	if (calibration->Get("/TAC/pulse_shape", pulseShapeParameter))
+		jout << "Error loading /TAC/pulse_shape !" << jendl;
 
 	// riseTime (riseTime)
 	if (pulseShapeParameter.find("riseTime") != pulseShapeParameter.end())
 		riseTime = pulseShapeParameter["riseTime"];
 	else
-		jerr << "Unable to get riseTime from /TAC/pulse_shape !" << std::endl;
+		jerr << "Unable to get riseTime from /TAC/pulse_shape !" << jendl;
 	// decayTime (decayTime)
 	if (pulseShapeParameter.find("decayTime") != pulseShapeParameter.end())
 		decayTime = pulseShapeParameter["decayTime"];
 	else
-		jerr << "Unable to get decayTime from /TAC/pulse_shape !" << std::endl;
+		jerr << "Unable to get decayTime from /TAC/pulse_shape !" << jendl;
 
 
 	std::cout << "riseTime is " << riseTime << " , decayTime is " << decayTime <<

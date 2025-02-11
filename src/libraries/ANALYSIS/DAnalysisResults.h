@@ -9,7 +9,6 @@
 #include "ANALYSIS/DParticleCombo.h"
 
 using namespace std;
-using namespace jana;
 
 class DAnalysisResults : public JObject
 {

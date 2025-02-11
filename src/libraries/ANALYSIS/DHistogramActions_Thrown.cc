@@ -1,7 +1,7 @@
 #include "ANALYSIS/DHistogramActions.h"
 
 
-void DHistogramAction_ParticleComboGenReconComparison::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_ParticleComboGenReconComparison::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	if(Get_UseKinFitResultsFlag() && (Get_Reaction()->Get_KinFitType() == d_NoFit))
 	{
@@ -9,10 +9,10 @@ void DHistogramAction_ParticleComboGenReconComparison::Initialize(JEventLoop* lo
 		return; //no fit performed, but kinfit data requested!!
 	}
 	
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	vector<const DParticleID*> locParticleIDs;
-	locEventLoop->Get(locParticleIDs);
+	locEvent->Get(locParticleIDs);
 
 	string locHistName, locHistTitle, locStepName, locStepROOTName, locParticleName, locParticleROOTName;
 	Particle_t locPID;
@@ -59,7 +59,7 @@ void DHistogramAction_ParticleComboGenReconComparison::Initialize(JEventLoop* lo
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -324,17 +324,16 @@ void DHistogramAction_ParticleComboGenReconComparison::Initialize(JEventLoop* lo
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_ParticleComboGenReconComparison::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_ParticleComboGenReconComparison::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry *locGeometry = DEvent::GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetZCenter);
 }
 
-bool DHistogramAction_ParticleComboGenReconComparison::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_ParticleComboGenReconComparison::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	if(Get_UseKinFitResultsFlag() && (Get_Reaction()->Get_KinFitType() == d_NoFit))
 	{
@@ -343,23 +342,23 @@ bool DHistogramAction_ParticleComboGenReconComparison::Perform_Action(JEventLoop
 	}
 
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 	if(locMCThrowns.empty())
 		return true; //e.g. non-simulated event
 
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons, "MCGEN");
+	locEvent->Get(locBeamPhotons, "MCGEN");
 	const DBeamPhoton* locThrownBeamPhoton = locBeamPhotons.empty() ? NULL : locBeamPhotons[0];
 
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 	if(locMCThrownMatchingVector.empty())
 		return true;
 	const DMCThrownMatching* locMCThrownMatching = locMCThrownMatchingVector[0];
 
 	const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
 	const DEventRFBunch* locThrownEventRFBunch = NULL;
-	locEventLoop->GetSingle(locThrownEventRFBunch, "Thrown");
+	locEvent->GetSingle(locThrownEventRFBunch, "Thrown");
 
 	//RF time difference
 	double locRFTime = locEventRFBunch->dTime;
@@ -665,14 +664,14 @@ void DHistogramAction_ParticleComboGenReconComparison::Fill_NeutralHists(const D
 	Unlock_Action();
 }
 
-void DHistogramAction_ThrownParticleKinematics::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_ThrownParticleKinematics::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle, locParticleName, locParticleROOTName;
 	Particle_t locPID;
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -765,14 +764,14 @@ void DHistogramAction_ThrownParticleKinematics::Initialize(JEventLoop* locEventL
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DHistogramAction_ThrownParticleKinematics::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_ThrownParticleKinematics::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<const DMCThrown*> locMCThrowns, locMCThrowns_Decaying;
-	locEventLoop->Get(locMCThrowns, "FinalState");
-	locEventLoop->Get(locMCThrowns_Decaying, "Decaying");
+	locEvent->Get(locMCThrowns, "FinalState");
+	locEvent->Get(locMCThrowns_Decaying, "Decaying");
 	locMCThrowns.insert(locMCThrowns.begin(), locMCThrowns_Decaying.begin(), locMCThrowns_Decaying.end());
 	if(locMCThrowns.empty())
 		return true; //e.g. non-simulated event
@@ -784,10 +783,10 @@ bool DHistogramAction_ThrownParticleKinematics::Perform_Action(JEventLoop* locEv
 	const DMCThrown* locMCThrown;
 
 	vector<const DBeamPhoton*> locMCGENBeamPhotons;
-	locEventLoop->Get(locMCGENBeamPhotons, "MCGEN");
+	locEvent->Get(locMCGENBeamPhotons, "MCGEN");
 
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons, "TRUTH");
+	locEvent->Get(locBeamPhotons, "TRUTH");
 
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
@@ -838,16 +837,16 @@ bool DHistogramAction_ThrownParticleKinematics::Perform_Action(JEventLoop* locEv
 	return true;
 }
 
-void DHistogramAction_ReconnedThrownKinematics::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_ReconnedThrownKinematics::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle, locParticleName, locParticleROOTName;
 	Particle_t locPID;
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 
 		CreateAndChangeTo_ActionDirectory();
@@ -930,21 +929,21 @@ void DHistogramAction_ReconnedThrownKinematics::Initialize(JEventLoop* locEventL
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_ReconnedThrownKinematics::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_ReconnedThrownKinematics::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
 	const DAnalysisUtilities* locAnalysisUtilities = NULL;
-	locEventLoop->GetSingle(locAnalysisUtilities);
+	locEvent->GetSingle(locAnalysisUtilities);
 	dAnalysisUtilities = locAnalysisUtilities;
 }
 
-bool DHistogramAction_ReconnedThrownKinematics::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_ReconnedThrownKinematics::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<const DMCThrown*> locMCThrowns, locMCThrowns_Decaying;
-	locEventLoop->Get(locMCThrowns, "FinalState");
-	locEventLoop->Get(locMCThrowns_Decaying, "Decaying");
+	locEvent->Get(locMCThrowns, "FinalState");
+	locEvent->Get(locMCThrowns_Decaying, "Decaying");
 	locMCThrowns.insert(locMCThrowns.begin(), locMCThrowns_Decaying.begin(), locMCThrowns_Decaying.end());
 	if(locMCThrowns.empty())
 		return true; //e.g. non-simulated event
@@ -953,10 +952,10 @@ bool DHistogramAction_ReconnedThrownKinematics::Perform_Action(JEventLoop* locEv
 		return true; //else double-counting!
 
 	const DMCThrownMatching* locMCThrownMatching = NULL;
-	locEventLoop->GetSingle(locMCThrownMatching);
+	locEvent->GetSingle(locMCThrownMatching);
 
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons);
+	locEvent->Get(locBeamPhotons);
 
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
@@ -1020,16 +1019,16 @@ bool DHistogramAction_ReconnedThrownKinematics::Perform_Action(JEventLoop* locEv
 	return true;
 }
 
-void DHistogramAction_GenReconTrackComparison::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_GenReconTrackComparison::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle, locParticleName, locParticleROOTName;
 	Particle_t locPID;
 	
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -1250,20 +1249,19 @@ void DHistogramAction_GenReconTrackComparison::Initialize(JEventLoop* locEventLo
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_GenReconTrackComparison::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_GenReconTrackComparison::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry *locGeometry = DEvent::GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetZCenter);
 }
 
-bool DHistogramAction_GenReconTrackComparison::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_GenReconTrackComparison::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 	if(locMCThrowns.empty())
 		return true; //e.g. non-simulated event
 
@@ -1275,17 +1273,17 @@ bool DHistogramAction_GenReconTrackComparison::Perform_Action(JEventLoop* locEve
 	double locThrownP, locThrownTheta, locDeltaT;
 
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 	if(locMCThrownMatchingVector.empty())
 		return true;
 	const DMCThrownMatching* locMCThrownMatching = locMCThrownMatchingVector[0];
 
 	const DEventRFBunch* locThrownEventRFBunch = NULL;
-	locEventLoop->GetSingle(locThrownEventRFBunch, "Thrown");
+	locEvent->GetSingle(locThrownEventRFBunch, "Thrown");
 
 	//RF time difference
 	vector<const DEventRFBunch*> locEventRFBunches;
-	locEventLoop->Get(locEventRFBunches);
+	locEvent->Get(locEventRFBunches);
 	const DEventRFBunch* locEventRFBunch = locEventRFBunches[0];
 	double locRFTime = locEventRFBunch->dTime;
 	double locRFDeltaT = locRFTime - locThrownEventRFBunch->dTime;
@@ -1506,7 +1504,7 @@ bool DHistogramAction_GenReconTrackComparison::Perform_Action(JEventLoop* locEve
 	return true;
 }
 
-void DHistogramAction_TruePID::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_TruePID::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locStepName, locStepROOTName, locHistTitle, locHistName, locParticleName, locParticleROOTName;
 
@@ -1516,11 +1514,11 @@ void DHistogramAction_TruePID::Initialize(JEventLoop* locEventLoop)
 	dHistDeque_PVsTheta_CorrectID.resize(locNumSteps);
 	dHistDeque_PVsTheta_IncorrectID.resize(locNumSteps);
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -1574,20 +1572,20 @@ void DHistogramAction_TruePID::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_TruePID::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_TruePID::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
 	const DAnalysisUtilities* locAnalysisUtilities = NULL;
-	locEventLoop->GetSingle(locAnalysisUtilities);
+	locEvent->GetSingle(locAnalysisUtilities);
 	dAnalysisUtilities = locAnalysisUtilities;
 }
 
-bool DHistogramAction_TruePID::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_TruePID::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 	if(locMCThrownMatchingVector.empty())
 		return true;
 	const DMCThrownMatching* locMCThrownMatching = locMCThrownMatchingVector[0];

@@ -14,7 +14,6 @@
 
 #include "DFDCHit.h"
 #include <JANA/JObject.h>
-using namespace jana;
 
 #define HIT_TIME_DIFF_MIN 10.0
 
@@ -29,12 +28,12 @@ class DFDCCathodeCluster : public JObject {
   float q_tot;		   ///< total energy/charge deposited in the cluster
 		
   /// Return a sensible string representation of this object
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "Nmembers", "%d", members.size());
-    AddString(items, "plane", "%d", plane);
-    AddString(items, "gLayer", "%d", gLayer); 
-    AddString(items, "gPlane", "%d", gPlane);
-    AddString(items, "q_tot", "%f", q_tot);
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(members.size(), "Nmembers", "%d");
+    summary.add(plane, "plane", "%d");
+    summary.add(gLayer, "gLayer", "%d"); 
+    summary.add(gPlane, "gPlane", "%d");
+    summary.add(q_tot, "q_tot", "%f");
   }
 };
 

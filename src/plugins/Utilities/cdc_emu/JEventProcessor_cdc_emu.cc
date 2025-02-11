@@ -32,7 +32,7 @@ static Int_t roc28h[19][72];
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_cdc_emu());
+	app->Add(new JEventProcessor_cdc_emu());
 }
 } // "C"
 
@@ -44,7 +44,7 @@ thread_local DTreeFillData JEventProcessor_cdc_emu::dTreeFillData;
 //------------------
 JEventProcessor_cdc_emu::JEventProcessor_cdc_emu()
 {
-
+	SetTypeName("JEventProcessor_cdc_emu");
 }
 
 //------------------
@@ -56,10 +56,11 @@ JEventProcessor_cdc_emu::~JEventProcessor_cdc_emu()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_cdc_emu::init(void)
+void JEventProcessor_cdc_emu::Init()
 {
+  auto app = GetApplication();
 
   
   DIFFS_ONLY = 0;
@@ -137,15 +138,12 @@ jerror_t JEventProcessor_cdc_emu::init(void)
 
 
 
-  return NOERROR;
-
-
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_cdc_emu::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_cdc_emu::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
 
@@ -365,13 +363,13 @@ jerror_t JEventProcessor_cdc_emu::brun(JEventLoop *eventLoop, int32_t runnumber)
 
 
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_cdc_emu::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_cdc_emu::Process(const std::shared_ptr<const JEvent>& event)
 {
 
   // Only look at physics triggers
@@ -390,7 +388,7 @@ jerror_t JEventProcessor_cdc_emu::evnt(JEventLoop *loop, uint64_t eventnumber)
   // ULong64_t timestamp = 0;
   // uint64_t avg_timestamp = 0;
 
-  // loop->Get(info);
+  // event->Get(info);
 
   // if (info.size() != 0) {
   //   //    printf("found eventinfo \n");
@@ -402,11 +400,11 @@ jerror_t JEventProcessor_cdc_emu::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   // get raw data for cdc
   vector<const DCDCDigiHit*> digihits;
-  loop->Get(digihits);
+  event->Get(digihits);
   uint32_t nd = (uint32_t)digihits.size();
 
   vector<const Df125WindowRawData*> wrdvector;
-  loop->Get(wrdvector);
+  event->Get(wrdvector);
   uint32_t nw = (uint32_t)wrdvector.size();
 
   uint32_t nhits = nd;  
@@ -515,7 +513,7 @@ jerror_t JEventProcessor_cdc_emu::evnt(JEventLoop *loop, uint64_t eventnumber)
   
     Int_t i,j;
 
-    eventnum = (ULong64_t)eventnumber;
+    eventnum = (ULong64_t) event->GetEventNumber();
 
     uint32_t id = 0;
 
@@ -926,31 +924,26 @@ jerror_t JEventProcessor_cdc_emu::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   }  // if (nhits)
 
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_cdc_emu::erun(void)
+void JEventProcessor_cdc_emu::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_cdc_emu::fini(void)
+void JEventProcessor_cdc_emu::Finish()
 {
 	// Called before program exit after event processing is finished.
 
         delete dTreeInterface; //saves trees to file, closes file
 
-
-	return NOERROR;
 }
 

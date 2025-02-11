@@ -10,7 +10,7 @@ using namespace std;
 
 #include "DEventProcessor_ccal_display.h"
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <CCAL/DCCALDigiHit.h>
 
 #include <DAQ/Df250PulseIntegral.h>
@@ -24,15 +24,15 @@ using namespace std;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_ccal_display());
+	app->Add(new DEventProcessor_ccal_display());
 }
 } // "C"
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_ccal_display::init(void)
+void DEventProcessor_ccal_display::Init()
 {
   	
   gStyle->SetOptStat(0);
@@ -87,22 +87,19 @@ jerror_t DEventProcessor_ccal_display::init(void)
       
     }
   }
-  
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_ccal_display::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_ccal_display::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_ccal_display::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_ccal_display::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 
@@ -111,14 +108,14 @@ jerror_t DEventProcessor_ccal_display::evnt(JEventLoop *loop, uint64_t eventnumb
 	int draw_cosmic = 1;
 
 
-	cout << " Event number = " << eventnumber  <<  endl;
+	cout << " Event number = " << event->GetEventNumber()  <<  endl;
        
 
-	loop->Get(ccal_digihits);
+	event->Get(ccal_digihits);
 
 	cout << " Number of hits = " << ccal_digihits.size() <<  endl;
 
-	japp->RootWriteLock();
+	DEvent::GetLockService(event)->RootWriteLock();
 
         for(unsigned int ii = 0; ii < ccal_digihits.size(); ii++){
           const DCCALDigiHit *ccal_hit = ccal_digihits[ii];          
@@ -162,8 +159,8 @@ jerror_t DEventProcessor_ccal_display::evnt(JEventLoop *loop, uint64_t eventnumb
 	      ccal_wave[ii]->Reset();
 	    }
 
-	    japp->RootUnLock();		
-	    return NOERROR;
+	    DEvent::GetLockService(event)->RootUnLock();
+	    return;
 	  }
 	}
 
@@ -194,26 +191,22 @@ jerror_t DEventProcessor_ccal_display::evnt(JEventLoop *loop, uint64_t eventnumb
 	}
 	
 
-	japp->RootUnLock();
-	       
-	return NOERROR;
+	DEvent::GetLockService(event)->RootUnLock();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_ccal_display::erun(void)
+void DEventProcessor_ccal_display::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_ccal_display::fini(void)
+void DEventProcessor_ccal_display::Finish()
 {
-	return NOERROR;
 }
 

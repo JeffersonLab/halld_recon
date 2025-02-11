@@ -4,21 +4,18 @@
 #ifndef DFACTORY_DGEMPOINT_H
 #define DFACTORY_DGEMPOINT_H
 
-#include <JANA/JFactory.h>
-#include <JANA/JObject.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
 #include "DGEMPoint.h"
-#include "HDGEOMETRY/DGeometry.h"
 
 ///
 /// class DGEMPoint_factory: definition for a JFactory that
 /// produces points from wire hits and GEM strips
 /// 
-class DGEMPoint_factory : public JFactory<DGEMPoint> {
+class DGEMPoint_factory : public JFactoryT<DGEMPoint> {
 	public:
 		
-	        DGEMPoint_factory(){};
+	    DGEMPoint_factory(){};
 		~DGEMPoint_factory(){};					
 
 	protected:
@@ -27,10 +24,10 @@ class DGEMPoint_factory : public JFactory<DGEMPoint> {
 		/// this is the place that wire hits and GEM strip clusters 
 		/// are organized into points.
 		///
-		jerror_t init(void);
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);
-		jerror_t brun(JEventLoop *loop, int32_t runnumber);
-		jerror_t erun(void);
+		void Init() override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
 
 		double calcClusterTime(const DGEMStripCluster *clus);
 		double calcClusterPosition(const DGEMStripCluster *clus);
@@ -40,7 +37,7 @@ class DGEMPoint_factory : public JFactory<DGEMPoint> {
 		double wire_time_max;
 		double gemX0, gemY0, gem_pitch;
 		double gem_time_max, gem_dE_max;
-		vector<double>dTRDz;
+		std::vector<double>dTRDz;
 
 };
 

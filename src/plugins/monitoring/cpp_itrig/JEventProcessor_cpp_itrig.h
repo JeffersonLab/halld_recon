@@ -12,7 +12,7 @@
 
 
 
-class JEventProcessor_cpp_itrig:public jana::JEventProcessor{
+class JEventProcessor_cpp_itrig:public JEventProcessor{
 	public:
 		JEventProcessor_cpp_itrig();
 		~JEventProcessor_cpp_itrig();
@@ -21,15 +21,15 @@ class JEventProcessor_cpp_itrig:public jana::JEventProcessor{
 		//                TTree *cdctree;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+        
+		bool MAKE_TREE;
 
-                bool MAKE_TREE;
-
-                int rocmap[81];   // which bin to use for each roc in the histogram, to make the histogram compact, not gappy
+        int rocmap[81];   // which bin to use for each roc in the histogram, to make the histogram compact, not gappy
 };
 
 #endif // _JEventProcessor_cpp_itrig_

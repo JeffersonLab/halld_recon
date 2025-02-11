@@ -14,7 +14,8 @@ using namespace evio;
 
 #include "DMagneticFieldMapFineMesh.h"
 
-#include "JANA/JException.h"
+#include <JANA/JException.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 
 #include <DAQ/HDEVIO.h>
 
@@ -22,13 +23,13 @@ using namespace evio;
 //---------------------------------
 // DMagneticFieldMapFineMesh    (Constructor)
 //---------------------------------
-DMagneticFieldMapFineMesh::DMagneticFieldMapFineMesh(JApplication *japp, int32_t runnumber, string namepath)
+DMagneticFieldMapFineMesh::DMagneticFieldMapFineMesh(JApplication *app, int32_t runnumber, string namepath)
 {
-	jcalib = japp->GetJCalibration(runnumber);
-	jresman = japp->GetJResourceManager(runnumber);
+	auto calib_svc = app->GetService<JCalibrationManager>();
+	jcalib = calib_svc->GetJCalibration(runnumber);
+	jresman = calib_svc->GetLargeCalibration(runnumber);
 
-	JParameterManager *jparms = japp->GetJParameterManager();
-	jparms->SetDefaultParameter("BFIELD_MAP", namepath);
+	japp->SetDefaultParameter("BFIELD_MAP", namepath);
 	
 	int Npoints = ReadMap(namepath, runnumber); 
 	if(Npoints==0){
@@ -71,11 +72,11 @@ int DMagneticFieldMapFineMesh::ReadMap(string namepath, int32_t runnumber, strin
   // built into a run-dependent geometry framework, but for now
   // we do it this way. 
   if(!jcalib){
-    jerr << "ERROR: jcalib pointer is NULL in DMagneticFieldMapFineMesh::ReadMap() !" << endl;
+    jerr << "ERROR: jcalib pointer is NULL in DMagneticFieldMapFineMesh::ReadMap() !" << jendl;
     return 0;
   }
   
-  jout<<"Reading Magnetic field map from "<<namepath<<" ..."<<endl;
+  jout<<"Reading Magnetic field map from "<<namepath<<" ..."<<jendl;
   vector< vector<float> > Bmap;
   
   // Newer maps are stored as resources while older maps were stored
@@ -1041,7 +1042,7 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 	// Open EVIO file
 	HDEVIO hdevio(evioFileName, false);
 	if(!hdevio.is_open){
-		jerr << " Unable to open fine-mesh B-field file!" << endl;
+		jerr << " Unable to open fine-mesh B-field file!" << jendl;
 		return;
 	}
 
@@ -1058,8 +1059,8 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 		hdevio.readNoFileBuff(buff, buff_size);
 	}
 	if(hdevio.err_code != HDEVIO::HDEVIO_OK){
-		jerr << " Problem reading fine-mesh B-field" << endl;
-		jerr << hdevio.err_mess.str() << endl;
+		jerr << " Problem reading fine-mesh B-field" << jendl;
+		jerr << hdevio.err_mess.str() << jendl;
 		delete[] buff;
 		return;
 	}
@@ -1071,7 +1072,7 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 
 	// First bank has tag=2, num=0 and length 6 data words
 	if(iptr[0] != 6+1){
-		jerr << " Bad length for minmaxdelta bank!" <<endl;
+		jerr << " Bad length for minmaxdelta bank!" <<jendl;
 		_exit(-1);
 	}
 	float *minmaxdelta = (float*)&iptr[2];
@@ -1099,7 +1100,7 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 		uint32_t N = iptr[0] - 1;
 		iptr = &iptr[N+2];
 		if(iptr > iend){
-			jerr << " Bad format of fine mesh B-field file!" << endl;
+			jerr << " Bad format of fine mesh B-field file!" << jendl;
 			_exit(-1);
 		}
 		

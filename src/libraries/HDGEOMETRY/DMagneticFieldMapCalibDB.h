@@ -8,7 +8,6 @@
 #ifndef _DMagneticFieldMapCalibDB_
 #define _DMagneticFieldMapCalibDB_
 
-#include <JANA/jerror.h>
 
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 
@@ -18,8 +17,7 @@ using std::vector;
 using std::string;
 
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-using namespace jana;
+#include <JANA/Calibrations/JCalibration.h>
 
 class DMagneticFieldMapCalibDB:public DMagneticFieldMap{
 	public:

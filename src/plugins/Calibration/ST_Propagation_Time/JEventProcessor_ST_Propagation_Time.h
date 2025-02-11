@@ -9,6 +9,7 @@
 #define _JEventProcessor_ST_Propagation_Time_
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Compatibility/JLockService.h>
 // ROOT header files
 #include <TMath.h>
 #include <TDirectory.h>
@@ -44,18 +45,19 @@
 #include <TTAB/DTranslationTable.h>
 //
 const Int_t NCHANNELS = 30;
-class JEventProcessor_ST_Propagation_Time:public jana::JEventProcessor{
+class JEventProcessor_ST_Propagation_Time:public JEventProcessor{
 	public:
 		JEventProcessor_ST_Propagation_Time();
 		~JEventProcessor_ST_Propagation_Time();
-		const char* className(void){return "JEventProcessor_ST_Propagation_Time";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+		std::shared_ptr<JLockService> lockService;
+
 		// Define constants
 		const DParticleID* dParticleID;
 		DRFTime_factory *dRFTimeFactory;

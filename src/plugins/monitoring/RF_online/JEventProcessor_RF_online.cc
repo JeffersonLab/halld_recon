@@ -12,14 +12,17 @@ extern "C"
 	void InitPlugin(JApplication *app)
 	{
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_RF_online());
+		app->Add(new JEventProcessor_RF_online());
 	}
 }
 
 //DOCUMENTATION: https://halldweb.jlab.org/wiki/index.php/RF_Calibration
 
-jerror_t JEventProcessor_RF_online::init(void)
+void JEventProcessor_RF_online::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();  // TODO: NWB: Why does the linter think this is dead code?
+
 	//This constant should be fixed for the lifetime of GlueX.  If it ever changes, move it into the CCDB.
 	dRFSignalPeriod = 1000.0/499.0; //2.004008016
 	double locDeltaTRangeMax = 2.2;
@@ -233,39 +236,30 @@ jerror_t JEventProcessor_RF_online::init(void)
 
 	gDirectory->cd(".."); //END (get back to base folder)
 
-	return NOERROR;
 }
 
-jerror_t JEventProcessor_RF_online::brun(JEventLoop* locEventLoop, int32_t runnumber)
+void JEventProcessor_RF_online::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called whenever the run number changes
 
-        // make sure that the factory brun() is being called (which is not necessarily true if this plugin is being run by itself)
-	auto dRFTimeFactory = static_cast<DRFTime_factory*>(locEventLoop->GetFactory("DRFTime"));
-        if(!dRFTimeFactory->brun_was_called())
-	{
-	    dRFTimeFactory->brun(locEventLoop, locEventLoop->GetJEvent().GetRunNumber());
-	    dRFTimeFactory->Set_brun_called();
-	}
-
-	return NOERROR;
+    // TODO: NWB: Excise all uses of brun_was_called and Set_brun_called from codebase
 }
 
-jerror_t JEventProcessor_RF_online::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
+void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	vector<const DCODAROCInfo*> locCODAROCInfos;
-	locEventLoop->Get(locCODAROCInfos);
+	locEvent->Get(locCODAROCInfos);
 
 	const DTTabUtilities* locTTabUtilities = NULL;
-	locEventLoop->GetSingle(locTTabUtilities);
+	locEvent->GetSingle(locTTabUtilities);
 
 	vector<const DRFTDCDigiTime*> locRFTDCDigiTimes;
-	locEventLoop->Get(locRFTDCDigiTimes);
+	locEvent->Get(locRFTDCDigiTimes);
 
 	vector<const DTAGHHit*> locTAGHHits;
-	locEventLoop->Get(locTAGHHits);
+	locEvent->Get(locTAGHHits);
 
-	auto dRFTimeFactory = static_cast<DRFTime_factory*>(locEventLoop->GetFactory("DRFTime"));
+	auto dRFTimeFactory = static_cast<DRFTime_factory*>(locEvent->GetFactory("DRFTime", ""));
 
 	//Convert TDCs to Times
 	//Use std::set: times are NOT necessarily in order (for high-resolution mode, times interleaved between different internal channels)
@@ -350,7 +344,7 @@ jerror_t JEventProcessor_RF_online::evnt(JEventLoop* locEventLoop, uint64_t even
 */
 
 	//MAKE/FILL ROC HISTOGRAMS
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//roc info consistency:
 			//compare roc infos: delta-t of each to avg-t-exlcuding-itself //separate histograms for each delta
@@ -377,11 +371,11 @@ jerror_t JEventProcessor_RF_online::evnt(JEventLoop* locEventLoop, uint64_t even
 			dHistMap_ROCInfoDeltaT[locROCID]->Fill(locDeltaT);
 		}
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	lockService->RootUnLock(); //RELEASE ROOT LOCK!!
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	{
 		// Event count used by RootSpy->RSAI so it knows how many events have been seen.
 		rf_itself_num_events->Fill(0.5);
@@ -566,21 +560,17 @@ jerror_t JEventProcessor_RF_online::evnt(JEventLoop* locEventLoop, uint64_t even
 			}
 		}
 	}
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
-jerror_t JEventProcessor_RF_online::erun(void)
+void JEventProcessor_RF_online::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
-jerror_t JEventProcessor_RF_online::fini(void)
+void JEventProcessor_RF_online::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }

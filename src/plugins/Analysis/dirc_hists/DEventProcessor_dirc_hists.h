@@ -9,14 +9,11 @@
 #include <vector>
 using namespace std;
 
-#include <JANA/JFactory.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 #include <JANA/JApplication.h>
-#include <DANA/DApplication.h>
 #include <HDGEOMETRY/DGeometry.h>
 
-using namespace jana;
 
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DMCTrackHit.h>
@@ -48,11 +45,14 @@ public:
   pthread_mutex_t mutex;
 
 private:
-  jerror_t init(void);
-  jerror_t brun(jana::JEventLoop *loop, int32_t runnumber);
-  jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);
-  jerror_t erun(void);
-  jerror_t fini(void); // called after last event
+
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
+
+  std::shared_ptr<JLockService> lockService;
 
   TH2I* hDiffBar[DDIRCGeometry::kBars];
   TH1I* hNphCBar[DDIRCGeometry::kBars];

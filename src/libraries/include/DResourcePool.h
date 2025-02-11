@@ -152,7 +152,7 @@ template <typename DType> class DResourcePool : public std::enable_shared_from_t
 		alignas(Get_CacheLineSize()) size_t dDebugLevel = 0;
 		alignas(Get_CacheLineSize()) size_t dGetBatchSize = 100;
 		alignas(Get_CacheLineSize()) size_t dNumToAllocateAtOnce = 20;
-		alignas(Get_CacheLineSize()) size_t dMaxLocalPoolSize = 2000;
+		alignas(Get_CacheLineSize()) size_t dMaxLocalPoolSize = 0;
 		alignas(Get_CacheLineSize()) vector<DType*> dResourcePool_Local;
 
 		//static class members have external linkage: same instance shared between every translation unit (would be globally, put only private access)
@@ -199,12 +199,12 @@ template <typename DType> atomic<size_t> DResourcePool<DType>::dObjectCounter{0}
 //CONSTRUCTORS
 template <typename DType> DResourcePool<DType>::DResourcePool(size_t locGetBatchSize, size_t locNumToAllocateAtOnce, size_t locMaxLocalPoolSize, size_t locMaxSharedPoolSize, size_t locDebugLevel) : DResourcePool()
 {
-	Set_ControlParams(locGetBatchSize, locNumToAllocateAtOnce, locMaxLocalPoolSize, locMaxSharedPoolSize, locDebugLevel);
+	Set_ControlParams(locGetBatchSize, locNumToAllocateAtOnce, 0,  locMaxSharedPoolSize, locDebugLevel);
 }
 
 template <typename DType> DResourcePool<DType>::DResourcePool(size_t locGetBatchSize, size_t locNumToAllocateAtOnce, size_t locMaxLocalPoolSize) : DResourcePool()
 {
-	Set_ControlParams(locGetBatchSize, locNumToAllocateAtOnce, locMaxLocalPoolSize);
+	Set_ControlParams(locGetBatchSize, locNumToAllocateAtOnce, 0);
 }
 
 template <typename DType> DResourcePool<DType>::DResourcePool(void)

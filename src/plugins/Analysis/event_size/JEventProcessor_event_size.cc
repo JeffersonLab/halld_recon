@@ -6,10 +6,9 @@
 //
 
 #include "JEventProcessor_event_size.h"
-using namespace jana;
 
 // From level1_trigger plugin
-#include <level1_trigger/DTrigger.h>
+#include "../level1_trigger/DTrigger.h"
 
 #include <PID/DBeamPhoton.h>
 #include <BCAL/DBCALHit.h>
@@ -27,7 +26,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_event_size());
+	app->Add(new JEventProcessor_event_size());
 }
 } // "C"
 
@@ -37,7 +36,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_event_size::JEventProcessor_event_size()
 {
-
+	SetTypeName("JEventProcessor_event_size");
 }
 
 //------------------
@@ -49,9 +48,9 @@ JEventProcessor_event_size::~JEventProcessor_event_size()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_event_size::init(void)
+void JEventProcessor_event_size::Init()
 {
 	evt_tree = new TTree("event","Event Size info");
 	evt = new Event();
@@ -99,22 +98,24 @@ jerror_t JEventProcessor_event_size::init(void)
 	toffset_tagger = 25.0;  // ns (lead time before trigger)
 	twindow_tagger = 125.0; // ns (full window width)
 
-	gPARMS->SetDefaultParameter("EVENTSIZE:toffset_bcal", toffset_bcal, "Time offset used to determine BCAL event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:twindow_bcal", twindow_bcal, "Time window used to determine BCAL event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:toffset_fcal", toffset_fcal, "Time offset used to determine FCAL event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:twindow_fcal", twindow_fcal, "Time window used to determine FCAL event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:toffset_ccal", toffset_ccal, "Time offset used to determine CCAL event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:twindow_ccal", twindow_ccal, "Time window used to determine CCAL event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:toffset_cdc", toffset_cdc, "Time offset used to determine CDC event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:twindow_cdc", twindow_cdc, "Time window used to determine CDC event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:toffset_fdc", toffset_fdc, "Time offset used to determine FDC event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:twindow_fdc", twindow_fdc, "Time window used to determine FDC event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:toffset_tof", toffset_tof, "Time offset used to determine TOF event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:twindow_tof", twindow_tof, "Time window used to determine TOF event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:toffset_sc", toffset_sc, "Time offset used to determine Start Counter event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:twindow_sc", twindow_sc, "Time window used to determine Start Counter event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:toffset_tagger", toffset_tagger, "Time offset used to determine TAGGER event size");
-	gPARMS->SetDefaultParameter("EVENTSIZE:twindow_tagger", twindow_tagger, "Time window used to determine TAGGER event size");
+	auto app = GetApplication();
+
+	app->SetDefaultParameter("EVENTSIZE:toffset_bcal", toffset_bcal, "Time offset used to determine BCAL event size");
+	app->SetDefaultParameter("EVENTSIZE:twindow_bcal", twindow_bcal, "Time window used to determine BCAL event size");
+	app->SetDefaultParameter("EVENTSIZE:toffset_fcal", toffset_fcal, "Time offset used to determine FCAL event size");
+	app->SetDefaultParameter("EVENTSIZE:twindow_fcal", twindow_fcal, "Time window used to determine FCAL event size");
+	app->SetDefaultParameter("EVENTSIZE:toffset_ccal", toffset_ccal, "Time offset used to determine CCAL event size");
+	app->SetDefaultParameter("EVENTSIZE:twindow_ccal", twindow_ccal, "Time window used to determine CCAL event size");
+	app->SetDefaultParameter("EVENTSIZE:toffset_cdc", toffset_cdc, "Time offset used to determine CDC event size");
+	app->SetDefaultParameter("EVENTSIZE:twindow_cdc", twindow_cdc, "Time window used to determine CDC event size");
+	app->SetDefaultParameter("EVENTSIZE:toffset_fdc", toffset_fdc, "Time offset used to determine FDC event size");
+	app->SetDefaultParameter("EVENTSIZE:twindow_fdc", twindow_fdc, "Time window used to determine FDC event size");
+	app->SetDefaultParameter("EVENTSIZE:toffset_tof", toffset_tof, "Time offset used to determine TOF event size");
+	app->SetDefaultParameter("EVENTSIZE:twindow_tof", twindow_tof, "Time window used to determine TOF event size");
+	app->SetDefaultParameter("EVENTSIZE:toffset_sc", toffset_sc, "Time offset used to determine Start Counter event size");
+	app->SetDefaultParameter("EVENTSIZE:twindow_sc", twindow_sc, "Time window used to determine Start Counter event size");
+	app->SetDefaultParameter("EVENTSIZE:toffset_tagger", toffset_tagger, "Time offset used to determine TAGGER event size");
+	app->SetDefaultParameter("EVENTSIZE:twindow_tagger", twindow_tagger, "Time window used to determine TAGGER event size");
 
 	// Calculate limits from offset and window width
 	tmin_bcal   = -toffset_bcal;
@@ -133,38 +134,35 @@ jerror_t JEventProcessor_event_size::init(void)
 	tmax_sc     = tmin_sc + twindow_sc;
 	tmin_tagger = -toffset_tagger;
 	tmax_tagger = tmin_tagger + twindow_tagger;
-	
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_event_size::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_event_size::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	const DBCALGeometry *dBCALGeom = BCALGeomVec[0];
 
 	dBCALMid = dBCALGeom->GetBCAL_middle_cell();  // THIS IS PROBABLY WRONG!!!
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_event_size::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_event_size::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Ignore events with no Level 1 trigger info
 	const DTrigger *trig=NULL;
 	try{
-		loop->GetSingle(trig);
+		event->GetSingle(trig);
 	}catch(...){
-		return NOERROR;
+		return;
 	};
 
 	// Get hit data objects
@@ -179,16 +177,16 @@ jerror_t JEventProcessor_event_size::evnt(JEventLoop *loop, uint64_t eventnumber
 	vector<const DTAGMHit*> tagmhits;
 	vector<const DTAGHHit*> taghhits;
 	
-	loop->Get(beamphotons);
-	loop->Get(bcalhits);
-	loop->Get(fcalhits);
-	loop->Get(ccalhits);
-	loop->Get(cdchits);
-	loop->Get(fdchits);
-	loop->Get(tofhits);
-	loop->Get(schits);
-	loop->Get(tagmhits);
-	loop->Get(taghhits);
+	event->Get(beamphotons);
+	event->Get(bcalhits);
+	event->Get(fcalhits);
+	event->Get(ccalhits);
+	event->Get(cdchits);
+	event->Get(fdchits);
+	event->Get(tofhits);
+	event->Get(schits);
+	event->Get(tagmhits);
+	event->Get(taghhits);
 	
 	// Count inner and outer BCAL hits
 	unsigned int Nbcalhits_inner = 0;
@@ -207,7 +205,7 @@ jerror_t JEventProcessor_event_size::evnt(JEventLoop *loop, uint64_t eventnumber
 	}
 	
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	// Count FCAL hits
 	unsigned int Nfcalhits = 0;
@@ -357,28 +355,24 @@ jerror_t JEventProcessor_event_size::evnt(JEventLoop *loop, uint64_t eventnumber
 	// Fill event tree
 	evt_tree->Fill();
 	
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-	
-	return NOERROR;
+	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_event_size::erun(void)
+void JEventProcessor_event_size::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_event_size::fini(void)
+void JEventProcessor_event_size::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

@@ -300,13 +300,13 @@ void DHoughFind::Add(const DHoughFind* hough)
 	same_configuration &= hough->ymax==ymax;
 
 	if(!same_configuration){
-		_DBG_<<"WARNING: trying to add 2 DHoughFind objects with different dimensions!"<<endl;
-		_DBG_<<"Nbinsx="<<Nbinsx<<":"<<hough->Nbinsx
+		jerr<<"WARNING: trying to add 2 DHoughFind objects with different dimensions!"<<jendl;
+		jerr<<"Nbinsx="<<Nbinsx<<":"<<hough->Nbinsx
 				<<" Nbinsy="<<Nbinsy<<":"<<hough->Nbinsy
 				<<" xmin="<<xmin<<":"<<hough->xmin
 				<<" ymin="<<ymin<<":"<<hough->ymin
 				<<" xmax="<<xmax<<":"<<hough->xmax
-				<<" ymax="<<ymax<<":"<<hough->ymax;
+				<<" ymax="<<ymax<<":"<<hough->ymax << jendl;
 		return;
 	}
 

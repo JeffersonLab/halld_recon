@@ -18,12 +18,11 @@ using namespace std;
 #define MaxTrCand 35
 #define MaxTrFit 60
 
-class DEventProcessor_trackanal:public jana::JEventProcessor{
+class DEventProcessor_trackanal:public JEventProcessor{
  public:
   DEventProcessor_trackanal();
   ~DEventProcessor_trackanal();
-  const char* className(void){return "DEventProcessor_trackanal";}
-  
+
   TTree *TrackTree;
   TFile *ROOTFile;
   
@@ -52,12 +51,13 @@ class DEventProcessor_trackanal:public jana::JEventProcessor{
   Float_t ptypes[MaxTrFit*MaxTrFit];    // for each track candidate the chamber hits for each particle type
     
  private:
-  jerror_t init(void);	
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-  jerror_t erun(void);
-  jerror_t fini(void);
-  
+    void Init() override;
+    void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+    void Process(const std::shared_ptr<const JEvent>& event) override;
+    void EndRun() override;
+    void Finish() override;
+
+
   
   pthread_mutex_t mutex;
   
