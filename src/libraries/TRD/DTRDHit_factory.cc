@@ -125,6 +125,11 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     for (unsigned int i=0; i < digihits.size(); i++) {
 	    const DTRDDigiHit *digihit = digihits[i];
 	    
+	    // initial firmware version generated a bunch of junk hits with pulse_time=179
+	    // explicitly reject these
+	    if(digihit->pulse_time == 179)
+	    	continue;
+	    
 		// The translation table has:
 		// ---------------------------------------------------
 		// plane   : 1-2
