@@ -486,6 +486,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double dECALz,dECALzBack,dECALsize;
   vector<double>dFMWPCz_vec;
   vector<double>dTRDz_vec;
+  double dGEMTRDz;
 
   // Mass hypothesis
   double MASS,mass2;
