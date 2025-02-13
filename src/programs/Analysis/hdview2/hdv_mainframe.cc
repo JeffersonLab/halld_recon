@@ -97,6 +97,7 @@ static double GEMTRDy=0.;
 static double GEMTRD_zwidth=0.;
 static double GEMTRD_xwidth=0.;
 static double GEMTRD_ywidth=0.;
+static bool got_GEMTRD=false;
 
 static DFCALGeometry *fcalgeom = NULL;
 static DTOFGeometry *tofgeom = NULL;
@@ -140,13 +141,15 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   dgeom->GetCTOFPositions(CTOF_pos);
 
   // GEMTRD positions and dimensions
-  dgeom->GetGEMTRDz(GEMTRDz);
-  vector<double>gemtrd_xvec,gemtrd_yvec;
-  dgeom->GetGEMTRDxy_vec(gemtrd_xvec,gemtrd_yvec);
-  GEMTRDx=gemtrd_xvec[0];
-  GEMTRDy=gemtrd_yvec[0];
-  dgeom->GetGEMTRDsize(GEMTRD_xwidth,GEMTRD_ywidth,GEMTRD_zwidth);
-  
+  if (dgeom->GetGEMTRDz(GEMTRDz)==true){
+    vector<double>gemtrd_xvec,gemtrd_yvec;
+    dgeom->GetGEMTRDxy_vec(gemtrd_xvec,gemtrd_yvec);
+    GEMTRDx=gemtrd_xvec[0];
+    GEMTRDy=gemtrd_yvec[0];
+    dgeom->GetGEMTRDsize(GEMTRD_xwidth,GEMTRD_ywidth,GEMTRD_zwidth);
+    got_GEMTRD=true;
+  }
+    
   UInt_t MainWidth = w;
   
   // First, define all of the of the graphics objects. Below that, make all
@@ -1481,15 +1484,17 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		}
 	}
 	// ----- GEMTRD -----
-	TBox *gemtrd1x=new TBox(GEMTRDz-GEMTRD_zwidth,GEMTRDx-0.5*GEMTRD_xwidth,
-				GEMTRDz,GEMTRDx+0.5*GEMTRD_xwidth);
-	gemtrd1x->SetFillColor(42);
-	graphics_sideA.push_back(gemtrd1x);
-	TBox *gemtrd1y=new TBox(GEMTRDz-GEMTRD_zwidth,GEMTRDy-0.5*GEMTRD_ywidth,
-				GEMTRDz,GEMTRDy+0.5*GEMTRD_ywidth);
-	gemtrd1y->SetFillColor(42);
-	graphics_sideB.push_back(gemtrd1y);
-	
+	if (got_GEMTRD){
+	  TBox *gemtrd1x=new TBox(GEMTRDz-GEMTRD_zwidth,GEMTRDx-0.5*GEMTRD_xwidth,
+				  GEMTRDz,GEMTRDx+0.5*GEMTRD_xwidth);
+	  gemtrd1x->SetFillColor(42);
+	  graphics_sideA.push_back(gemtrd1x);
+	  TBox *gemtrd1y=new TBox(GEMTRDz-GEMTRD_zwidth,GEMTRDy-0.5*GEMTRD_ywidth,
+				  GEMTRDz,GEMTRDy+0.5*GEMTRD_ywidth);
+	  gemtrd1y->SetFillColor(42);
+	  graphics_sideB.push_back(gemtrd1y);
+	}
+	  
 	//============== End A
 	{
 	endviewB->GetCanvas()->cd(0);
