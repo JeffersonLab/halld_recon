@@ -948,7 +948,8 @@ void DCCALShower_factory::main_island(vector<int> &ia, vector<int> &id, vector<g
 	//-------------------- Prepare gammas for final processing --------------------//
 	
 	// convert position to units of cm:
-	
+	const double xsize=2.09;
+	const double ysize=2.09;
 	for(int ig = 0; ig < nadcgam; ig++) {
 		gammas[ig].energy /= 10000.;
 		gammas[ig].x  = (static_cast<double>(MCOL+1)-2.*gammas[ig].x)*xsize/2.;
@@ -1759,6 +1760,8 @@ void DCCALShower_factory::gamma_hyc(int nadc, vector<int> ia, vector<int> id, do
 	double ee, xx, yy;             // 
 	double d2, xm2, xm2cut;        // 
 	double chir, chil, chiu, chid; //
+	const double ysize=2.09;
+	const double xsize=2.09;
 	
 	dxy     = 0.05;
 	stepmin = 0.002;
