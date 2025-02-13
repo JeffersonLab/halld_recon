@@ -2174,6 +2174,69 @@ bool DGeometry::GetDIRCZ(double &z_dirc) const
 }
 
 //---------------------------------
+// GetGEMTRDz
+//---------------------------------
+bool DGeometry::GetGEMTRDz(double &z_gemtrd) const
+{
+  z_gemtrd=9999.;
+  vector<double> origin;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+  bool good = Get("//section/composition/posXYZ[@volume='GEMTRD']/@X_Y_Z",origin);
+  jgeom->SetVerbose(1);   // reenable error messages
+
+  if(!good){
+    _DBG_<<"Unable to retrieve GEMTRD position."<<endl;
+    return false;
+  }
+ 
+  z_gemtrd=origin[2];
+  
+  return true;
+}
+
+//---------------------------------
+// GetGEMTRDxy_vec
+//---------------------------------
+bool DGeometry::GetGEMTRDxy_vec(vector<double>&xvec, vector<double>&yvec) const
+{
+  vector<double> TRDorigin;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+  bool good = Get("//section/composition/posXYZ[@volume='GEMTRD']/@X_Y_Z",TRDorigin);
+  jgeom->SetVerbose(1);   // reenable error messages
+
+  if(!good){
+    _DBG_<<"Unable to retrieve GEMTRD position."<<endl;
+    return false;
+  }
+  vector<double>TRDModulePos;
+  Get("//posXYZ[@volume='gemTRDmodule']/@X_Y_Z/layer[@value='1']", TRDModulePos);
+  xvec.push_back(TRDorigin[0]+TRDModulePos[0]);
+  yvec.push_back(TRDorigin[1]+TRDModulePos[1]);
+  
+  return true;
+}
+
+//---------------------------------
+// GetGEMTRDsize
+//---------------------------------
+
+bool DGeometry::GetGEMTRDsize(double &xsize,double &ysize, double &zsize) const
+{
+  vector<double> TRDdimensions;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+  bool good = Get("//box[@name='GTSV']/@X_Y_Z",TRDdimensions);
+  jgeom->SetVerbose(1);   // reenable error messages
+
+  if (good){
+    xsize=TRDdimensions[0];
+    ysize=TRDdimensions[1];
+    zsize=TRDdimensions[2];
+  }
+  return false;
+}
+
+
+//---------------------------------
 // GetTRDZ
 //---------------------------------
 bool DGeometry::GetTRDZ(vector<double> &z_trd) const
@@ -2709,7 +2772,6 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
       posvec.clear();
       dirvec.clear();
     }
-    
   }
   return got_sc;
 }
