@@ -19,7 +19,8 @@ public:
 
   float t;	      // detection time
   float pulse_height; // signal amplitude
-  //float q;
+  float pedestal;  // need pedestal for raw data analysis
+  float q;
   
 
   void toStrings(vector<pair<string, string> >&items) const {
@@ -27,6 +28,7 @@ public:
     AddString(items, "strip", "%d", strip);
     AddString(items, "t", "%1.3f", t);
     AddString(items, "pulse_height", "%1.3f", pulse_height);
+    AddString(items, "q", "%1.3f", q);
   }
 };
 

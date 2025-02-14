@@ -41,8 +41,6 @@ bool static DTrackHitSelector_fdchit_cmp(pair<double,const DFDCPseudo *>a,
 }
 bool static DTrackHitSelector_trdhit_cmp(pair<double,const DTRDPoint *>a,
 				      pair<double,const DTRDPoint *>b){
-  if (a.second->detector!=b.second->detector) 
-    return (a.second->detector>b.second->detector);
   return (a.first>b.first);
 }
 
@@ -147,7 +145,6 @@ void DTrackHitSelectorALT2::GetTRDHits(const vector<DTrackFitter::Extrapolation_
     DVector3 pos=extrapolations[k].position;
     for (unsigned int j=0;j<trdhits_in.size();j++){  
       const DTRDPoint *hit=trdhits_in[j];
-      if (int(k)==hit->detector){
 	double dx=hit->x-pos.X();
 	double dy=hit->y-pos.Y();
 	double varx=1.,vary=1.;
@@ -159,21 +156,13 @@ void DTrackHitSelectorALT2::GetTRDHits(const vector<DTrackFitter::Extrapolation_
 	  myhit.first=probability;
 	  myhit.second=hit;
 	  trdhits_tmp.push_back(myhit);
-	}
       }
     }
   }
   // Order according to layer number and probability,then put the hits in the 
   // output list with the following algorithm:  put hits with the highest 
-  // probability in a given layer in the output list. 
+  // probability in a given layer in the output list. -- NOTE - no longer using multiple "layers"
   sort(trdhits_tmp.begin(),trdhits_tmp.end(),DTrackHitSelector_trdhit_cmp);
-  int old_layer=1000;
-  for (unsigned int i=0;i<trdhits_tmp.size();i++){
-    if (trdhits_tmp[i].second->detector!=old_layer){
-      trdhits_out.push_back(trdhits_tmp[i].second);   
-    }
-    old_layer=trdhits_tmp[i].second->detector;
-  }
 }
 
 //---------------------------------

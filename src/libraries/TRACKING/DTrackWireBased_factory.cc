@@ -51,7 +51,7 @@ bool FDCSortByZincreasing(const DFDCPseudo* const &hit1, const DFDCPseudo* const
 //------------------
 bool TRDSortByZincreasing(const DTRDPoint* const &hit1, const DTRDPoint* const &hit2) {
 
-   return hit1->detector < hit2->detector;
+   return hit1->z < hit2->z;
 }
 
 //------------------

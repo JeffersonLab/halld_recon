@@ -1810,6 +1810,10 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						cout << "      FADC125 FDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
 					}
 
+				    // Word 2 should be present for each peak found (a total of pulse_number times)
+
+				    for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
+					
 					// Word 2:
 					++iptr;
 					if(iptr>=iend){
@@ -1836,7 +1840,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 
 					if( pe ) {
 						pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
-									, pulse_number        // NPK
+								        , nword-1 //pulse_number instead of NPK
 									, pulse_time          // le_time
 									, quality_factor      // time_quality_bit
 									, overflow_count      // overflow_count
@@ -1850,6 +1854,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 									, nsamples_integral   // nsamples_integral
 									, false);             // emulated
 					}
+				    } // end of collection of multiple peak data
 				}
                 break;
 
@@ -1895,6 +1900,10 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						cout << "      FADC125 FDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
 					}
 
+				    // Word 2 should be present for each peak found (a total of pulse_number times)
+					
+				    for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
+					
 					// Word 2:
 					++iptr;
 					if(iptr>=iend){
@@ -1947,8 +1956,8 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						}else{
 					
 							pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
-										, pulse_number        // NPK
-										, pulse_time          // le_time
+								                , nword-1 //pulse_number instead of NPK
+									        , pulse_time          // le_time
 										, quality_factor      // time_quality_bit
 										, overflow_count      // overflow_count
 										, pedestal            // pedestal
@@ -1961,7 +1970,9 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 										, nsamples_integral   // nsamples_integral
 										, false);             // emulated
 						}
+					  
 					}
+				    } // end of collection of multiple peak data
 				}
                 break;
 

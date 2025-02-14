@@ -29,6 +29,9 @@ class DTRDHit_factory:public jana::JFactory<DTRDHit>{
 		array<double,2> t_base;
 		
 		double PEAK_THRESHOLD;
+  		double LOW_TCUT;
+  		double HIGH_TCUT;
+
 
 		// calibration constants stored in channel format
 		vector<trd_digi_constants_t> time_offsets;

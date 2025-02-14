@@ -27,10 +27,16 @@ jerror_t DTRDHit_factory::init(void)
     t_scale      = 8.0/10.0;     // 8 ns/count and integer time is in 1/10th of sample
     t_base       = { 0.,  0.};   // ns, per plane
     
-    PEAK_THRESHOLD = 0.;  // fADC units
+    PEAK_THRESHOLD = 600.;  // fADC units
     gPARMS->SetDefaultParameter("TRD:PEAK_THRESHOLD", PEAK_THRESHOLD, 
 			      "Threshold in fADC units for hit amplitudes");
 
+  	LOW_TCUT = -10000.;
+  	HIGH_TCUT = 10000.;
+    gPARMS->SetDefaultParameter("TRD:LOW_TCUT", LOW_TCUT, 
+			      "Throw away hits which come before this time (default: -10000.)");
+    gPARMS->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
+			      "Throw away hits which come after this time (default: 10000.)");
 
 	return NOERROR;
 }
@@ -93,8 +99,7 @@ jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 		jerr << "Error loading TRD plane 2 timing offsets (found " << time_offsets[1].size() 
 			 << " entries, expected " << num_x_strips << " entries)" << endl;
 	
-	pulse_peak_threshold = 200;  // also set on command line...
-	// also set time window
+	// also set time window from CCDB
 
     return NOERROR;
 }
@@ -120,8 +125,17 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     for (unsigned int i=0; i < digihits.size(); i++) {
 	    const DTRDDigiHit *digihit = digihits[i];
 	    
-	    // quote some info on the translation table
-
+	    // initial firmware version generated a bunch of junk hits with pulse_time=179
+	    // explicitly reject these
+	    if(digihit->pulse_time == 179)
+	    	continue;
+	    
+		// The translation table has:
+		// ---------------------------------------------------
+		// plane   : 1-2
+		// strip   : 1-720 (plane 1) or 1-432 (plane 2)
+		//
+      
         // Grab the pedestal from the digihit 
         int raw_ped = digihit->pedestal;
 
@@ -172,19 +186,21 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	    // Time cut now
 	    double T = (double)digihit->pulse_time * t_scale;
-	    //if(T < 145.) continue;  // pull timing window cuts from CCDB
+	    if( (T < LOW_TCUT) || (T > HIGH_TCUT) )
+	    	continue;
 
 	    // Build hit object
 	    DTRDHit *hit = new DTRDHit;
-	    hit->pulse_height = pulse_height;
 	    hit->plane = digihit->plane;
 	    hit->strip = digihit->strip;
+	    hit->pulse_height = pulse_height;
+	    hit->pedestal = scaled_ped;
  
 	    // Apply calibration constants
 	    hit->t = T + t_base[digihit->plane-1];
 	    //hit->t = hit->t + t_base[plane-1] - time_offsets[plane-1][strip-1];
 
-		//hit->q = a_scale * hit->pulse_height;
+		hit->q = a_scale * hit->pulse_height;  // probably need to set this more sensibly
 
 	    hit->AddAssociatedObject(digihit);
 	    _data.push_back(hit);

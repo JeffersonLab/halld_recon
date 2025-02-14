@@ -1,9 +1,10 @@
 //********************************************************************
 // DTRDStripCluster_factory.h: modeled after DFDCCathodeCluster_factory
+// version that analyzes the raw data
 //********************************************************************
 
-#ifndef DFACTORY_DTRDSTRIPCLUSTER_H
-#define DFACTORY_DTRDSTRIPCLUSTER_H
+#ifndef DFACTORY_DTRDSTRIPCLUSTER_RAW_H
+#define DFACTORY_DTRDSTRIPCLUSTER_RAW_H
 
 #include <JANA/JFactory.h>
 using namespace std;
@@ -12,39 +13,45 @@ using namespace std;
 #include "DTRDHit.h"
 
 #include <algorithm>
+#include <vector>
 #include <map>
 #include <cmath>
 
 ///
-/// class DTRDStripCluster_factory: 
+/// class DTRDStripCluster_factory_RAW: 
 /// defines a JFactory for producing groups of cathode strips that form a cluster
 ///  
-class DTRDStripCluster_factory:public JFactory<DTRDStripCluster> {
+class DTRDStripCluster_factory_RAW:public JFactory<DTRDStripCluster> {
 	public:
-	        DTRDStripCluster_factory(){};
-		~DTRDStripCluster_factory(){};
+	    DTRDStripCluster_factory_RAW(){};
+		~DTRDStripCluster_factory_RAW(){};
+		const char* Tag(void){return "RAW";}
 		
 		///
-		/// DTRDStripCluster_factory::pique():
+		/// DTRDStripCluster_factory_RAW::pique():
 		/// takes a single layer's worth of cathode hits and attempts to 
 		/// create DTRDStripClusters
 		/// by grouping together hits with consecutive strip numbers.
 		///
-		void cluster(vector<const DTRDHit*>& h);
-		
-		double StripToPosition(int iplane, const DTRDHit *hit);
+		//void pique(vector<const DTRDHit*>& h);
 			
 	protected:
 		///
-		/// DTRDStripCluster_factory::evnt():
+		/// DTRDStripCluster_factory_RAW::evnt():
 		/// This (along with DTRDStripCluster_factory::pique()) 
 		/// is the place cathode hits are associated into cathode clusters. This function 
 		/// should eventually be modified to do more sophisticated peak finding. 
 		///
 		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);	
 		jerror_t init(void);
-
 	private:
+		//double TIME_SLICE;
+
+		// hit detection algorithm parameters, in ADC units
+		int TimeWindowStart;
+		int TimeMin;
+		int TimeMax;
+		int THRESHOLD;
 		int MINIMUM_HITS_FOR_CLUSTERING;
 		double CLUSTERING_THRESHOLD;
 		int MinClustSize;
@@ -52,10 +59,14 @@ class DTRDStripCluster_factory:public JFactory<DTRDStripCluster> {
 		double MinClustLength;
 		double zStart;
 		double zEnd;
-
+		
+		
+		const int MAX_ADC_SAMPLES = 100;
 		const int NUM_X_PLANES = 720;
 		const int NUM_Y_PLANES = 432;
+		
+		vector< vector< vector<double> > >   pulse_data;
 };
 
-#endif // DFACTORY_DTRDSTRIPCLUSTER_H
+#endif // DFACTORY_DTRDSTRIPCLUSTER_RAW_H
 
