@@ -31,6 +31,7 @@
 #include "FMWPC/DFMWPCHit.h"
 #include "HDDM/DEventHitStatistics.h"
 #include "RF/DRFTime.h"
+#include "DAQ/DBeamHelicity.h"
 
 using namespace std;
 using namespace jana;

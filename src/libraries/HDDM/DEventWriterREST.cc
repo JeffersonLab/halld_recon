@@ -136,6 +136,9 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DTrigger*> locTriggers;
 	locEventLoop->Get(locTriggers);
 
+	std::vector<const DBeamHelicity*> locBeamHelicities;
+	locEventLoop->Get(locBeamHelicities);
+
 	//Check to see if there are any objects to write out.  If so, don't write out an empty event
 	bool locOutputDataPresentFlag = false;
 	if((!reactions.empty()) || (!locBeamPhotons.empty()) || (!tracks.empty()))
@@ -621,6 +624,27 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		hddm_r::TriggerEnergySumsList triggerEnergySum = trigger().addTriggerEnergySumses(1);
 		triggerEnergySum().setBCALEnergySum(locTriggers[i]->Get_GTP_BCALEnergy());
 		triggerEnergySum().setFCALEnergySum(locTriggers[i]->Get_GTP_FCALEnergy());
+
+	}
+	
+	// push any DBeamHelicity objects to the output record
+	if(locBeamHelicities.size() == 0) {
+		// write out data with helicity == zero if there's no object
+		hddm_r::ElectronBeamList electronBeam = res().addElectronBeams(1);
+		electronBeam().setHelicity(0);
+		electronBeam().setFlags(0);
+	
+	}
+	for (size_t i=0; i < locBeamHelicities.size(); ++i)
+	{
+		hddm_r::ElectronBeamList electronBeam = res().addElectronBeams(1);
+		electronBeam().setHelicity(locBeamHelicities[i]->helicity);
+		int flags = locBeamHelicities[i]->pattern_sync 
+					| (locBeamHelicities[i]->t_settle << 1)
+					| (locBeamHelicities[i]->pair_sync << 2)
+					| (locBeamHelicities[i]->ihwp << 3)
+					| (locBeamHelicities[i]->beam_on << 4);
+		electronBeam().setFlags(flags);
 
 	}
 

@@ -1045,6 +1045,52 @@ jerror_t DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactory<DTrig
 }
 
 //-----------------------
+// Extract_DBeamHelicity
+//-----------------------
+jerror_t DEventSourceREST::Extract_DBeamHelicity(hddm_r::HDDM *record, JFactory<DBeamHelicity>* factory)
+{
+	/// Copies the data from the trigger hddm record. This is
+	/// call from JEventSourceREST::GetObjects. If factory is NULL, this
+	/// returns OBJECT_NOT_AVAILABLE immediately.
+
+	if (factory==NULL)
+		return OBJECT_NOT_AVAILABLE;
+	string tag = (factory->Tag())? factory->Tag() : "";
+
+	vector<DBeamHelicity*> data;
+
+	// loop over the electron beam info records
+	const hddm_r::ElectronBeamList &ebeams = record->getElectronBeams();
+	hddm_r::ElectronBeamList::iterator iter;
+	for (iter = ebeams.begin(); iter != ebeams.end(); ++iter)
+	{
+ 		if (iter->getJtag() != tag)
+ 			continue;
+
+		// don't make an object if there's no beam helicity
+		if(iter->getHelicity() == 0)  continue;
+
+		DBeamHelicity *locBeamHelicity = new DBeamHelicity();
+		locBeamHelicity->helicity = iter->getHelicity();
+
+		locBeamHelicity->pattern_sync = (iter->getFlags())&0x01;
+		locBeamHelicity->t_settle = (iter->getFlags()>>1)&0x01;
+		locBeamHelicity->pair_sync = (iter->getFlags()>>2)&0x01;
+		locBeamHelicity->ihwp = (iter->getFlags()>>3)&0x01;
+		locBeamHelicity->beam_on = (iter->getFlags()>>4)&0x01;
+				
+		data.push_back(locBeamHelicity);
+	}
+
+	// Copy into factory
+	factory->CopyTo(data);
+
+	return NOERROR;
+}
+
+
+
+//-----------------------
 // Extract_DFCALShower
 //-----------------------
 jerror_t DEventSourceREST::Extract_DFCALShower(hddm_r::HDDM *record,
