@@ -7,37 +7,36 @@
 
 #include "DEventRFBunch_factory_Thrown.h"
 #include <deque>
+#include <JANA/JEvent.h>
 
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventRFBunch_factory_Thrown::init(void)
+void DEventRFBunch_factory_Thrown::Init()
 {
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventRFBunch_factory_Thrown::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DEventRFBunch_factory_Thrown::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventRFBunch_factory_Thrown::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DEventRFBunch_factory_Thrown::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	event->Get(locMCThrowns);
 	if(locMCThrowns.empty())
-		return NOERROR; //not a MC event!
+		return; //not a MC event!
 
 	vector<const DRFTime*> locRFTimes;
-	locEventLoop->Get(locRFTimes, "TRUTH");
+	event->Get(locRFTimes, "TRUTH");
 	if(locRFTimes.empty())
 	{
 		DEventRFBunch *locEventRFBunch = new DEventRFBunch;
@@ -45,8 +44,8 @@ jerror_t DEventRFBunch_factory_Thrown::evnt(jana::JEventLoop *locEventLoop, uint
 		locEventRFBunch->dTimeVariance = numeric_limits<double>::quiet_NaN();
 		locEventRFBunch->dNumParticleVotes = 0;
 		locEventRFBunch->dTimeSource = SYS_NULL;
-		_data.push_back(locEventRFBunch);
-		return NOERROR;
+		Insert(locEventRFBunch);
+		return;
 	}
 
 	DEventRFBunch *locEventRFBunch = new DEventRFBunch;
@@ -54,24 +53,20 @@ jerror_t DEventRFBunch_factory_Thrown::evnt(jana::JEventLoop *locEventLoop, uint
 	locEventRFBunch->dTimeVariance = 0.0;
 	locEventRFBunch->dNumParticleVotes = 0;
 	locEventRFBunch->dTimeSource = SYS_RF;
-	_data.push_back(locEventRFBunch);
-
-	return NOERROR;
+	Insert(locEventRFBunch);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventRFBunch_factory_Thrown::erun(void)
+void DEventRFBunch_factory_Thrown::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventRFBunch_factory_Thrown::fini(void)
+void DEventRFBunch_factory_Thrown::Finish()
 {
-	return NOERROR;
 }
 

@@ -7,7 +7,6 @@
 
 
 #include "JEventProcessor_L3BDTtree.h"
-using namespace jana;
 
 #include <TMath.h>
 
@@ -15,11 +14,11 @@ using namespace jana;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_L3BDTtree());
+	app->Add(new JEventProcessor_L3BDTtree());
 }
 } // "C"
 
@@ -31,7 +30,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_L3BDTtree::JEventProcessor_L3BDTtree()
 {
-
+	SetTypeName("JEventProcessor_L3BDTtree");
 }
 
 //------------------
@@ -43,10 +42,13 @@ JEventProcessor_L3BDTtree::~JEventProcessor_L3BDTtree()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_L3BDTtree::init(void)
+void JEventProcessor_L3BDTtree::Init()
 {
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
 	// Create Tree
 	l3tree = new TTree("l3tree", "L3 tree for BDT");
@@ -58,27 +60,24 @@ jerror_t JEventProcessor_L3BDTtree::init(void)
 	// Add branches for all sorted float types
 	#define AddBranch(A) l3tree->Branch(#A, &bdt.A, #A "/F");
 	MyDerivedTypes(AddBranch)
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_L3BDTtree::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_L3BDTtree::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_L3BDTtree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_L3BDTtree::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 	// Get all JANA objects of interest
-	#define GetObjs(A) vector<const A*> v##A; loop->Get(v##A);
+	#define GetObjs(A) vector<const A*> v##A; event->Get(v##A);
 	MyTypes(GetObjs)
 	
 	// Trigger
@@ -210,7 +209,7 @@ jerror_t JEventProcessor_L3BDTtree::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	// Get ROOT lock
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 	
 	// Copy all object counts
 	#define CopyNobjs(A) bdt.N##A = (Float_t)v##A.size();
@@ -284,35 +283,28 @@ jerror_t JEventProcessor_L3BDTtree::evnt(JEventLoop *loop, uint64_t eventnumber)
 	l3tree->Fill();
 
 	// Release ROOT lock
-	japp->RootUnLock();
+	lockService->RootUnLock();
 
 	//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_L3BDTtree::erun(void)
+void JEventProcessor_L3BDTtree::EndRun()
 {
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 	l3tree->FlushBaskets();
-	japp->RootUnLock();
-
-	return NOERROR;
+	lockService->RootUnLock();
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_L3BDTtree::fini(void)
+void JEventProcessor_L3BDTtree::Finish()
 {
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 	l3tree->FlushBaskets();
-	japp->RootUnLock();
-		
-	return NOERROR;
+	lockService->RootUnLock();
 }
 

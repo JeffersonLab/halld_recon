@@ -6,7 +6,7 @@
  * like the number of paddles, planes, paddle widths ect. ... 
  */
 
-#include <DTOFGeometry.h>
+#include "DTOFGeometry.h"
 #include <map>
 #include <vector>
 
@@ -29,11 +29,11 @@ DTOFGeometry::DTOFGeometry(const DGeometry* locGeometry) {
 	
 	// load more geometry parameters 
 	if(!locGeometry->GetTOFPaddlePerpPositions(YPOS, YWIDTH))
-		jerr << "Problem loading TOF Geometry!" << endl;
+		jerr << "Problem loading TOF Geometry!" << jendl;
 
 	map<string,double> paddle_params;
 	if(!locGeometry->GetTOFPaddleParameters(paddle_params))
-		jerr << "Problem loading TOF Geometry!" << endl;
+		jerr << "Problem loading TOF Geometry!" << jendl;
 	else {
 		NLONGBARS = paddle_params["NLONGBARS"];
 		NSHORTBARS = paddle_params["NSHORTBARS"];

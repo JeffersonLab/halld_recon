@@ -1,6 +1,8 @@
 
 #include "DTRDStripCluster_factory.h"
 
+#include <JANA/JEvent.h>
+
 bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
   if (a->plane==b->plane){
     return a->t < b->t;
@@ -47,10 +49,10 @@ bool DTRDStripCluster_gPlane_cmp(	const DTRDStripCluster* a,
 ///
 /// Initialization
 ///
-jerror_t DTRDStripCluster_factory::init(void){
+void DTRDStripCluster_factory::Init(){
   TIME_SLICE=200.0; //ns
-  gPARMS->SetDefaultParameter("TRD:CLUSTER_TIME_SLICE",TIME_SLICE);
-  return NOERROR;	
+  auto app = GetApplication();
+  app->SetDefaultParameter("TRD:CLUSTER_TIME_SLICE",TIME_SLICE);
 }
 
 ///
@@ -58,17 +60,17 @@ jerror_t DTRDStripCluster_factory::init(void){
 /// This (along with DTRDStripCluster_factory::pique()) 
 /// is the place cathode hits are associated into cathode clusters.  
 ///
-jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo) {
+void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& event) {
 	vector<const DTRDHit*> allHits;
 	vector<const DTRDHit*> planeHits[3];
 	vector<vector<const DTRDHit*> >thisLayer;
 	
-	eventLoop->Get(allHits);
+	event->Get(allHits);
 	
 	if (allHits.size()>0) {
 		// Sort hits by layer number and by time
 		sort(allHits.begin(),allHits.end(),DTRDHit_cmp);
-		
+
 		// Sift through all hits and select out X and Y hits.
 		for (vector<const DTRDHit*>::iterator i = allHits.begin(); i != allHits.end(); ++i){
 			if ((*i)->plane == 0 || (*i)->plane == 4) continue;
@@ -122,11 +124,9 @@ jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo)
 		}
 
 		// Ensure that the data are still in order of planes.
-		std::sort(_data.begin(), _data.end(), DTRDStripCluster_gPlane_cmp);
+		std::sort(mData.begin(), mData.end(), DTRDStripCluster_gPlane_cmp);
 	}
-	
-	return NOERROR;	
-}			
+}
 
 //-----------------------------
 // pique
@@ -161,7 +161,7 @@ void DTRDStripCluster_factory::pique(vector<const DTRDHit*>& H)
 			newCluster->q_tot += H[i]->pulse_height;
 			newCluster->members.push_back(H[i]);
 		}
-		_data.push_back(newCluster);
+		Insert(newCluster);
 		
 		istart = iend-1;
 	}

@@ -9,10 +9,9 @@
 #define _DPSPair_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 #include "DPSHit.h"
 
-class DPSPair:public jana::JObject{
+class DPSPair: public JObject{
  public:
   JOBJECT_PUBLIC(DPSPair);
 
@@ -69,22 +68,22 @@ class DPSPair:public jana::JObject{
   }
 
 
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "column_lhit", "%d", ee.first->column);
-    AddString(items, "column_rhit", "%d", ee.second->column);
-    AddString(items, "E_pair", "%f", ee.first->E+ee.second->E);
-    AddString(items, "E_lhit", "%f", ee.first->E);
-    AddString(items, "E_rhit", "%f", ee.second->E);
-    AddString(items, "t_lhit", "%f", ee.first->t);
-    AddString(items, "t_rhit", "%f", ee.second->t);
-    AddString(items, "integral_lhit", "%f", ee.first->integral);
-    AddString(items, "integral_rhit", "%f", ee.second->integral);
-    AddString(items, "pulse_peak_lhit", "%f", ee.first->pulse_peak);
-    AddString(items, "pulse_peak_rhit", "%f", ee.second->pulse_peak);
-    AddString(items, "t_tile_lhit", "%f", ee.first->t_tile);
-    AddString(items, "t_tile_rhit", "%f", ee.second->t_tile);
-    AddString(items, "ntiles_lhit", "%d", ee.first->ntiles);
-    AddString(items, "ntiles_rhit", "%d", ee.second->ntiles);
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(ee.first->column, "column_lhit", "%d");
+    summary.add(ee.second->column, "column_rhit", "%d");
+    summary.add(ee.first->E+ee.second->E, "E_pair", "%f");
+    summary.add(ee.first->E, "E_lhit", "%f");
+    summary.add(ee.second->E, "E_rhit", "%f");
+    summary.add(ee.first->t, "t_lhit", "%f");
+    summary.add(ee.second->t, "t_rhit", "%f");
+    summary.add(ee.first->integral, "integral_lhit", "%f");
+    summary.add(ee.second->integral, "integral_rhit", "%f");
+    summary.add(ee.first->pulse_peak, "pulse_peak_lhit", "%f");
+    summary.add(ee.second->pulse_peak, "pulse_peak_rhit", "%f");
+    summary.add(ee.first->t_tile, "t_tile_lhit", "%f");
+    summary.add(ee.second->t_tile, "t_tile_rhit", "%f");
+    summary.add(ee.first->ntiles, "ntiles_lhit", "%d");
+    summary.add(ee.second->ntiles, "ntiles_rhit", "%d");
   }
 
 

@@ -9,7 +9,8 @@
 #define _JEventProcessor_st_tw_corr_auto_
 
 #include <JANA/JEventProcessor.h>
-using namespace jana;
+#include <JANA/Compatibility/JLockService.h>
+
 using namespace std;
 using std::vector;
 using std::string;
@@ -32,18 +33,19 @@ using std::string;
 // ******************* DAQ libraries******************************
 #include <DAQ/Df250PulsePedestal.h>
 
-class JEventProcessor_st_tw_corr_auto:public jana::JEventProcessor{
+class JEventProcessor_st_tw_corr_auto:public JEventProcessor{
 	public:
 		JEventProcessor_st_tw_corr_auto();
 		~JEventProcessor_st_tw_corr_auto();
-		const char* className(void){return "JEventProcessor_st_tw_corr_auto";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::shared_ptr<JLockService> lockService;
 
         
         // ***************** define constants*************************

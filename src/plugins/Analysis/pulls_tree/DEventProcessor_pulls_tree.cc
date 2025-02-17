@@ -11,7 +11,6 @@
 #include <TRACKING/DMCThrown.h>
 
 #include "DEventProcessor_pulls_tree.h"
-using namespace jana;
 
 
 // Routine used to create our DEventProcessor
@@ -19,7 +18,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_pulls_tree());
+	app->Add(new DEventProcessor_pulls_tree());
 }
 } // "C"
 
@@ -29,8 +28,8 @@ void InitPlugin(JApplication *app){
 //------------------
 DEventProcessor_pulls_tree::DEventProcessor_pulls_tree()
 {
+	SetTypeName("DEventProcessor_pulls_tree");
 	pthread_mutex_init(&mutex, NULL);
-
 	fitter = NULL;
 }
 
@@ -43,9 +42,9 @@ DEventProcessor_pulls_tree::~DEventProcessor_pulls_tree()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_pulls_tree::init(void)
+void DEventProcessor_pulls_tree::Init()
 {
 	pullWB_ptr = &pullWB;
 	pullTB_ptr = &pullTB;
@@ -55,41 +54,37 @@ jerror_t DEventProcessor_pulls_tree::init(void)
 
 	pullsTB = new TTree("pullsTB","Time-based hits");
 	pullsTB->Branch("W","pull_t",&pullTB_ptr);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_pulls_tree::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_pulls_tree::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	RECALCULATE_CHISQ = false;
 	
-	gPARMS->SetDefaultParameter("RECALCULATE_CHISQ", RECALCULATE_CHISQ, "Recalculate Chisq, Ndof, and pulls based on track parameters and hits rather than use what's recorded in track objects");
-
-	return NOERROR;
+	app->SetDefaultParameter("RECALCULATE_CHISQ", RECALCULATE_CHISQ, "Recalculate Chisq, Ndof, and pulls based on track parameters and hits rather than use what's recorded in track objects");
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_pulls_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_pulls_tree::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DChargedTrack*> tracks;
 	const DMCThrown * thrown_single=NULL;
 	fitter=NULL;
 
 	try{
-		loop->Get(tracks);
-		loop->GetSingle(thrown_single);
-		loop->GetSingle(fitter, "ALT1"); // use ALT1 as the stand-alone chisq calculator
+		event->Get(tracks);
+		event->GetSingle(thrown_single);
+		event->GetSingle(fitter, "ALT1"); // use ALT1 as the stand-alone chisq calculator
 	}catch(...){
-		//return NOERROR;
+		//return;
 	}
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	
 	for(unsigned int i=0; i<tracks.size(); i++){
 
@@ -166,29 +161,26 @@ jerror_t DEventProcessor_pulls_tree::evnt(JEventLoop *loop, uint64_t eventnumber
 		}
 	}
 	
-	japp->RootUnLock(); //RELEASE ROOT LOCK
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_pulls_tree::erun(void)
+void DEventProcessor_pulls_tree::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_pulls_tree::fini(void)
+void DEventProcessor_pulls_tree::Finish()
 {
 	// Called at very end. This will be called only once
-
-	return NOERROR;
 }
 
 //------------------

@@ -13,13 +13,15 @@ using namespace std;
 #include "DMatrix.h"
 #include "DFDCPseudo_factory_WIRESONLY.h"
 
+#include <JANA/JEvent.h>
+
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DFDCPseudo_factory_WIRESONLY::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DFDCPseudo_factory_WIRESONLY::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DFDCIntersection*> fdcintersections;
-	loop->Get(fdcintersections);
+	event->Get(fdcintersections);
 
 	for(unsigned int i=0; i<fdcintersections.size(); i++){
 		const DFDCIntersection *fdcintersection = fdcintersections[i];
@@ -29,8 +31,6 @@ jerror_t DFDCPseudo_factory_WIRESONLY::evnt(JEventLoop *loop, uint64_t eventnumb
 		MakePseudo(fdcintersection->hit2, fdcintersection->wire2, fdcintersection->pos);
 		
 	}
-
-	return NOERROR;
 }
 
 //------------------
@@ -71,6 +71,6 @@ void DFDCPseudo_factory_WIRESONLY::MakePseudo(const DFDCHit *hit, const DFDCWire
 	pseudo->covxy=RotCov(1,0);
 	pseudo->covyy=RotCov(1,1);
 
-	_data.push_back(pseudo);
+	Insert(pseudo);
 }
 

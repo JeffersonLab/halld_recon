@@ -10,37 +10,36 @@
 #include <iomanip>
 using namespace std;
 
+#include <JANA/JEvent.h>
 #include <TROOT.h>
 #include <TMath.h>
 #include "DVertex_factory_THROWN.h"
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DVertex_factory_THROWN::init(void)
+void DVertex_factory_THROWN::Init()
 {
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DVertex_factory_THROWN::brun(jana::JEventLoop *loop, int32_t runnumber)
+void DVertex_factory_THROWN::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DVertex_factory_THROWN::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DVertex_factory_THROWN::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DMCThrown*> locThrownTracks;
-	loop->Get(locThrownTracks);
+	event->Get(locThrownTracks);
 
 	if(locThrownTracks.size() == 0)
-		return RESOURCE_UNAVAILABLE;
+		return; // RESOURCE_UNAVAILABLE;
 
 	DVertex* locVertex = new DVertex;
 	locVertex->dKinFitNDF = 0;
@@ -48,24 +47,20 @@ jerror_t DVertex_factory_THROWN::evnt(JEventLoop *loop, uint64_t eventnumber)
 	locVertex->dSpacetimeVertex.SetVect(locThrownTracks[0]->position());
 	locVertex->dSpacetimeVertex.SetT(locThrownTracks[0]->time());
 	
-	_data.push_back(locVertex);	
-
-	return NOERROR;
+	Insert(locVertex);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DVertex_factory_THROWN::erun(void)
+void DVertex_factory_THROWN::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DVertex_factory_THROWN::fini(void)
+void DVertex_factory_THROWN::Finish()
 {
-	return NOERROR;
 }
 

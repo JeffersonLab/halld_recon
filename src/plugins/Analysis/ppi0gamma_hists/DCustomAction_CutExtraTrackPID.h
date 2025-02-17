@@ -11,7 +11,7 @@
 #include <string>
 #include <iostream>
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "JANA/JApplication.h"
 
 #include "ANALYSIS/DAnalysisAction.h"
@@ -21,7 +21,6 @@
 #include "ANALYSIS/DCutActions.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_CutExtraTrackPID : public DAnalysisAction
 {
@@ -31,10 +30,10 @@ class DCustomAction_CutExtraTrackPID : public DAnalysisAction
 		DAnalysisAction(locReaction, "Custom_CutExtraTrackPID", false, locActionUniqueString), 
 		dExtraTrackTargetPID(locExtraTrackTargetPID) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop) {
-			locEventLoop->GetSingle(dAnalysisUtilities);
-			ddEdxCutAction->Run_Update(locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) {
+			locEvent->GetSingle(dAnalysisUtilities);
+			ddEdxCutAction->Run_Update(locEvent);
 		}
 
 	private:
@@ -43,7 +42,7 @@ class DCustomAction_CutExtraTrackPID : public DAnalysisAction
 		map<DetectorSystem_t, double> dPIDCuts;
 		DCutAction_dEdx* ddEdxCutAction;
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		// Optional: Useful utility functions.
 		const DAnalysisUtilities* dAnalysisUtilities;

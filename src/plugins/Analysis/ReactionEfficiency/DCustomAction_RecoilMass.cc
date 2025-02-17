@@ -7,7 +7,7 @@
 
 #include "DCustomAction_RecoilMass.h"
 
-void DCustomAction_RecoilMass::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_RecoilMass::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Optional: Create histograms and/or modify member variables.
 	//Create any histograms/trees/etc. within a ROOT lock. 
@@ -16,16 +16,16 @@ void DCustomAction_RecoilMass::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 		dHistRecoilMass = GetOrCreate_Histogram<TH1F>("HistRecoilMass", "HistRecoilMass", 100, 0.0, 2.0);
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_RecoilMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_RecoilMass::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {       
 	// get beam, target and final state recoil particle to subtract
 	const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(0);

@@ -14,10 +14,7 @@
 #include <pthread.h>
 
 #include <JANA/JEventSource.h>
-#include <JANA/jerror.h>
-#include <JANA/JCalibration.h>
-#include <JANA/JCalibrationCCDB.h>
-#include <JANA/JCalibrationGeneratorCCDB.h>
+#include <JANA/Calibrations/JCalibrationGeneratorCCDB.h>
 
 #include "hddm_r.hpp"
 
@@ -37,7 +34,7 @@
 #include <FMWPC/DCTOFPoint.h>
 #include <FMWPC/DFMWPCHit.h>
 #include <TRIGGER/DTrigger.h>
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <RF/DRFTime.h>
 #include <DIRC/DDIRCPmtHit.h>
 #include <DIRC/DDIRCTruthBarHit.h>
@@ -58,60 +55,54 @@
 class DEventSourceREST:public JEventSource
 {
  public:
-   DEventSourceREST(const char* source_name);
-   virtual ~DEventSourceREST();		
-   virtual const char* className(void) {
-      return DEventSourceREST::static_className();
-   }
-   static const char* static_className(void) {
-      return "DEventSourceREST";
-   }
+   DEventSourceREST(std::string source_name, JApplication* app);
+   virtual ~DEventSourceREST();
 
-   jerror_t GetEvent(JEvent &event);
-   void FreeEvent(JEvent &event);
-   jerror_t GetObjects(JEvent &event, JFactory_base *factory);
+		void GetEvent(std::shared_ptr<JEvent> event) override;
+		bool GetObjects(const std::shared_ptr<const JEvent> &event, JFactory *factory) override;
+		void FinishEvent(JEvent &event) override;
 		
-   jerror_t Extract_DMCReaction(hddm_r::HDDM *record,
-                    JFactory<DMCReaction> *factory, JEventLoop* locEventLoop);
-   jerror_t Extract_DRFTime(hddm_r::HDDM *record,
-                    JFactory<DRFTime> *factory, JEventLoop* locEventLoop);
-   jerror_t Extract_DBeamPhoton(hddm_r::HDDM *record,
-                    JFactory<DBeamPhoton> *factory,
-                    JEventLoop *eventLoop);
-   jerror_t Extract_DMCThrown(hddm_r::HDDM *record,
-                    JFactory<DMCThrown> *factory);
-   jerror_t Extract_DSCHit(hddm_r::HDDM *record,
-                    JFactory<DSCHit>* factory);
-   jerror_t Extract_DTOFPoint(hddm_r::HDDM *record,
-                    JFactory<DTOFPoint>* factory); 
-   jerror_t Extract_DCTOFPoint(hddm_r::HDDM *record,
-                    JFactory<DCTOFPoint>* factory);
-   jerror_t Extract_DFCALShower(hddm_r::HDDM *record,
-                    JFactory<DFCALShower>* factory);
-   jerror_t Extract_DBCALShower(hddm_r::HDDM *record,
-                    JFactory<DBCALShower>* factory);
-   jerror_t Extract_DCCALShower(hddm_r::HDDM *record,
-                    JFactory<DCCALShower>* factory);
-   jerror_t Extract_DTrackTimeBased(hddm_r::HDDM *record,
-                    JFactory<DTrackTimeBased>* factory, JEventLoop* locEventLoop);
-   jerror_t Extract_DTrigger(hddm_r::HDDM *record,
-                    JFactory<DTrigger>* factory);
-   jerror_t Extract_DBeamHelicity(hddm_r::HDDM *record,
+   bool Extract_DMCReaction(hddm_r::HDDM *record,
+                    JFactoryT<DMCReaction> *factory, const std::shared_ptr<const JEvent>& locEvent);
+   bool Extract_DRFTime(hddm_r::HDDM *record,
+                    JFactoryT<DRFTime> *factory, const std::shared_ptr<const JEvent>& locEvent);
+   bool Extract_DBeamPhoton(hddm_r::HDDM *record,
+                    JFactoryT<DBeamPhoton> *factory,
+                    const std::shared_ptr<const JEvent>& locEvent);
+   bool Extract_DMCThrown(hddm_r::HDDM *record,
+                    JFactoryT<DMCThrown> *factory);
+   bool Extract_DSCHit(hddm_r::HDDM *record,
+                    JFactoryT<DSCHit>* factory);
+   bool Extract_DTOFPoint(hddm_r::HDDM *record,
+                    JFactoryT<DTOFPoint>* factory); 
+   bool Extract_DCTOFPoint(hddm_r::HDDM *record,
+                    JFactoryT<DCTOFPoint>* factory);
+   bool Extract_DFCALShower(hddm_r::HDDM *record,
+                    JFactoryT<DFCALShower>* factory);
+   bool Extract_DBCALShower(hddm_r::HDDM *record,
+                    JFactoryT<DBCALShower>* factory);
+   bool Extract_DCCALShower(hddm_r::HDDM *record,
+                    JFactoryT<DCCALShower>* factory);
+   bool Extract_DTrackTimeBased(hddm_r::HDDM *record,
+                    JFactoryT<DTrackTimeBased>* factory, const std::shared_ptr<const JEvent>& locEvent);
+   bool Extract_DTrigger(hddm_r::HDDM *record,
+                    JFactoryT<DTrigger>* factory);
+   bool Extract_DBeamHelicity(hddm_r::HDDM *record,
                     JFactory<DBeamHelicity>* factory);
-   jerror_t Extract_DDetectorMatches(JEventLoop* locEventLoop, hddm_r::HDDM *record,
-                    JFactory<DDetectorMatches>* factory);
+   bool Extract_DDetectorMatches(const std::shared_ptr<const JEvent>& locEvent, hddm_r::HDDM *record,
+                    JFactoryT<DDetectorMatches>* factory);
 #if 0
-   jerror_t Extract_DRFTime(hddm_r::HDDM *record,
-                    JFactory<DRFTime>* factory);
+   bool Extract_DRFTime(hddm_r::HDDM *record,
+                    JFactoryT<DRFTime>* factory);
 #endif
-   jerror_t Extract_DDIRCPmtHit(hddm_r::HDDM *record,
-                    JFactory<DDIRCPmtHit>* factory, JEventLoop* locEventLoop);
-   jerror_t Extract_DFMWPCHit(hddm_r::HDDM *record,
-                    JFactory<DFMWPCHit>* factory, JEventLoop* locEventLoop);
-   jerror_t Extract_DFCALHit(hddm_r::HDDM *record,
-                    JFactory<DFCALHit>* factory, JEventLoop* locEventLoop);
-   jerror_t Extract_DEventHitStatistics(hddm_r::HDDM *record,
-                    JFactory<DEventHitStatistics> *factory);
+   bool Extract_DDIRCPmtHit(hddm_r::HDDM *record,
+                    JFactoryT<DDIRCPmtHit>* factory, const std::shared_ptr<const JEvent>& locEvent);
+   bool Extract_DFMWPCHit(hddm_r::HDDM *record,
+   JFactoryT<DFMWPCHit>* factory, const std::shared_ptr<const JEvent>& locEvent);
+   bool Extract_DFCALHit(hddm_r::HDDM *record,
+   JFactoryT<DFCALHit>* factory, const std::shared_ptr<const JEvent>& locEvent);
+   bool Extract_DEventHitStatistics(hddm_r::HDDM *record,
+                    JFactoryT<DEventHitStatistics> *factory);
 
    void Get7x7ErrorMatrix(double mass, const double vec[5], const TMatrixFSym* C5x5, TMatrixFSym* loc7x7ErrorMatrix);
  private:
@@ -155,6 +146,8 @@ class DEventSourceREST:public JEventSource
 	map<unsigned int, double [TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1]> dTAGMFiberQualities;
 	
 	
+
+   	std::mutex readMutex;
 
 };
 

@@ -14,10 +14,9 @@
 #include <TH2.h>
 #include <TH3.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 
@@ -47,11 +46,11 @@ class DEventProcessor_radlen_hists:public JEventProcessor{
 		radstep *rstep_ptr;
 
 	private:
-		jerror_t init(void);	///< Invoked via DEventProcessor virtual method
-		jerror_t brun(JEventLoop *loop, int32_t runnumber);         ///< Invoked via DEventProcessor virtual method
-		jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via DEventProcessor virtual method
-		jerror_t erun(void);					///< Invoked via DEventProcessor virtual method
-		jerror_t fini(void);					///< Invoked via DEventProcessor virtual method
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 
 		void GapIntegration(TH1F *hin, TH1F *hout);

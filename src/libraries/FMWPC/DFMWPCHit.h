@@ -8,9 +8,8 @@
 #ifndef _DFMWPCHit_
 #define _DFMWPCHit_
 
-#include <JANA/jerror.h>
+#include <JANA/JObject.h>
 
-using namespace jana;
 
 class DFMWPCHit:public JObject{
 	public:
@@ -24,14 +23,14 @@ class DFMWPCHit:public JObject{
 		int QF;      // quality factor
 		float ped;   // pedestal
 
-		void toStrings(vector<pair<string, string> >&items) const {
-			AddString(items, "layer", "%d", layer);
-			AddString(items, "wire", "%d", wire);
-			AddString(items, "q",      "%10.2f",  q);
-			AddString(items, "amp",    "%10.2f", amp);
-			AddString(items, "t", "%3.3f", t);
-			AddString(items, "QF", "%d", QF);
-			AddString(items, "ped", "%10.2f", ped);
+		void Summarize(JObjectSummary& summary) const {
+			summary.add(layer, "layer", "%d");
+			summary.add(wire, "wire", "%d");
+			summary.add(q, "q",      "%10.2f");
+			summary.add(amp, "amp",    "%10.2f");
+			summary.add(t, "t", "%3.3f");
+			summary.add(QF, "QF", "%d");
+			summary.add(ped, "ped", "%10.2f");
 		}
 
 };

@@ -9,7 +9,6 @@
 using namespace std;
 
 #include "JEventProcessor_DAQTreeBCAL.h"
-using namespace jana;
 
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
@@ -17,15 +16,15 @@ using namespace jana;
 #include <DAQ/Df250WindowRawData.h>
 #include <DAQ/Df250PulseData.h>
 #include <DAQ/DF1TDCHit.h>
+#include <DANA/DEvent.h>
 
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_DAQTreeBCAL());
+	app->Add(new JEventProcessor_DAQTreeBCAL());
 }
 } // "C"
 
@@ -35,7 +34,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_DAQTreeBCAL::JEventProcessor_DAQTreeBCAL()
 {
-
+	SetTypeName("JEventProcessor_DAQTreeBCAL");
 }
 
 //------------------
@@ -47,9 +46,9 @@ JEventProcessor_DAQTreeBCAL::~JEventProcessor_DAQTreeBCAL()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_DAQTreeBCAL::init(void)
+void JEventProcessor_DAQTreeBCAL::Init()
 {
 	BCALdigi = new TTree("BCALdigi","DBCALDigiHit objects (w/ waveform samples) for each channel and event");
 	BCALdigi->Branch("channelnum",&channelnum,"channelnum/i");
@@ -87,37 +86,33 @@ jerror_t JEventProcessor_DAQTreeBCAL::init(void)
 	BCALTDCdigi->Branch("sector",&sector,"sector/i");
 	BCALTDCdigi->Branch("end",&end,"end/i");
 
-
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_DAQTreeBCAL::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_DAQTreeBCAL::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_DAQTreeBCAL::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_DAQTreeBCAL::Process(const std::shared_ptr<const JEvent>& event)
 {
-	eventnum = eventnumber;
+	eventnum = event->GetEventNumber();
 
 	// Get the DBCALDigiHit objects
 	vector<const DBCALDigiHit*> bcaldigihits;
-	loop->Get(bcaldigihits);
+	event->Get(bcaldigihits);
 
 	// Get the DBCALTDCDigiHit objects
 	vector<const DBCALTDCDigiHit*> bcaltdcdigihits;
-	loop->Get(bcaltdcdigihits);
+	event->Get(bcaltdcdigihits);
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	// Loop over DBCALDigiHit objects
 	for(unsigned int i=0; i< bcaldigihits.size(); i++){
@@ -208,28 +203,24 @@ jerror_t JEventProcessor_DAQTreeBCAL::evnt(JEventLoop *loop, uint64_t eventnumbe
 		BCALTDCdigi->Fill();
 	}
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_DAQTreeBCAL::erun(void)
+void JEventProcessor_DAQTreeBCAL::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_DAQTreeBCAL::fini(void)
+void JEventProcessor_DAQTreeBCAL::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

@@ -13,13 +13,14 @@
 #include "TMath.h"
 
 #include <JANA/JObject.h>
+#include <DANA/DObjectID.h>
 
 #include <particleType.h>
 #include <PID/DChargedTrackHypothesis.h>
 
 using namespace std;
 
-class DChargedTrack : public jana::JObject
+class DChargedTrack : public JObject
 {
 	public:
 		JOBJECT_PUBLIC(DChargedTrack);
@@ -34,9 +35,8 @@ class DChargedTrack : public jana::JObject
 		const DChargedTrackHypothesis* Get_BestFOM(void) const;
 		const DChargedTrackHypothesis* Get_BestTrackingFOM(void) const;
 
-		void toStrings(vector<pair<string,string> > &items) const
-		{
-			AddString(items, "Nhypotheses", "%d", dChargedTrackHypotheses.size());
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(dChargedTrackHypotheses.size(), "Nhypotheses", "%d");
 		}
 };
 

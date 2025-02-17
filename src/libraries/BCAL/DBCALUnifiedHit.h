@@ -6,10 +6,8 @@
 #include "BCAL/DBCALGeometry.h"
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
-class DBCALUnifiedHit : public JObject{
+class DBCALUnifiedHit : public JObject {
 
 //One DBCALUnifiedHit is created for each DBCALHit. When available, TDC hits
 //are also incorporated. The class provides energy in GeV rather than ADC
@@ -35,15 +33,15 @@ class DBCALUnifiedHit : public JObject{
 		
 		int cellId;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "module", "%d", module);
-			AddString(items, "layer", "%d", layer);
-			AddString(items, "sector", "%d", sector);
-			AddString(items, "end", "%s", end==0 ? "upstream":"downstream" );
-			AddString(items, "E(GeV)", "%2.3f", E);
-			AddString(items, "t(ns)", "%4.2f", t);
-			AddString(items, "t_ADC(ns)", "%4.2f", t_ADC);
-			AddString(items, "t_TDC(ns)", "%4.2f", t_TDC);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(module, "module", "%d");
+			summary.add(layer, "layer", "%d");
+			summary.add(sector, "sector", "%d");
+			summary.add(end==0 ? "upstream":"downstream" , "end", "%s");
+			summary.add(E, "E(GeV)", "%2.3f");
+			summary.add(t, "t(ns)", "%4.2f");
+			summary.add(t_ADC, "t_ADC(ns)", "%4.2f");
+			summary.add(t_TDC, "t_TDC(ns)", "%4.2f");
 		}
 };
 

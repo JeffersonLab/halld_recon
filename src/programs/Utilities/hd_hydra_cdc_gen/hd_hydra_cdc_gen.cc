@@ -54,7 +54,6 @@
 #include <DANA/DApplication.h>
 #include <RSAI_KO/CDC_pins.h>
 using namespace std;
-using namespace jana;
 
 #include <TH1.h>
 #include <TROOT.h>
@@ -81,15 +80,15 @@ class JEventSourceDummy:public JEventSource{
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "JEventSourceDummy";}
 
-		jerror_t GetEvent(JEvent &event){ return NOERROR; }
-		jerror_t GetObjects(JEvent &event, JFactory_base *factory){ return NOERROR; }
+		void GetEvent(std::shared_ptr<JEvent> event){ return; }
+		bool GetObjects(std::shared_ptr<JEvent>&, JFactory *factory){ return false; }
 };
 class JEventSourceDummyGenerator:public JEventSourceGenerator{
 	public:
-		const char* className(void){return static_className();}
-		static const char* static_className(void){return "JEventSourceDummyGenerator";}
-		
-		const char* Description(void){ return "dummy"; }
+		std::string GetType() const override {
+                    return "JEventSourceDummyGenerator";
+                }
+		std::string GetDescription() const override { return "dummy"; }
 		double CheckOpenable(string source){ return 1.0; }
 		JEventSource* MakeJEventSource(string source){return new JEventSourceDummy(source.c_str());}
 		
@@ -117,13 +116,13 @@ ofstream *ofs_log = nullptr; // for writing log of where each image file came fr
 
                      int main(int narg, char *argv[]);
                     void Usage(JApplication &app);
-std::vector<std::string> GetRootFilenames(void);
+std::vector<std::string> GetRootFilenames(JApplication* app);
       std::vector<TH1*>  GetCDCHists(std::string &fname);
       std::vector<TH1*>  MakeCDC_KO_hists(std::vector<TH1*> &cdc_hists, board_eff_t &board_efficiency);
 						  void FreeHists( std::vector<TH1*> &hists);
-						  void InitilizeRootInterpreter(JApplication *app);
-						  void RunCDC_occupancy_macro(void);
-						  void ExecuteMacro(TDirectory *f, string macro);
+						  void InitilizeRootInterpreter(JApplication* app);
+						  void RunCDC_occupancy_macro(JApplication* app);
+						  void ExecuteMacro(JApplication* app, TDirectory *f, string macro);
 
 //-----------
 // main
@@ -131,25 +130,24 @@ std::vector<std::string> GetRootFilenames(void);
 int main(int narg, char *argv[])
 {
 	// Instantiate an event loop object
-	DApplication app(narg, argv);
+	JApplication app;
 
 	//if(narg<=1)Usage(app);
-	
+
 	// Add a dummy event source to avoid annoying complaints from JANA
-	app.AddEventSourceGenerator(new JEventSourceDummyGenerator());
-	app.AddEventSource("Dummy");
-	
+	app.Add(new JEventSourceDummy("dummy"));
+
 	// Add occupancy_online plugin so we have access to RootSPy macros
 	app.AddPlugin("occupancy_online");
 
 	// Initialize JANA
-	app.Init();
-	gPARMS->SetDefaultParameter( "RSAI:OUTPUT_DIR", OUTPUT_DIR, "Directory to write image files to.");
-	gPARMS->SetDefaultParameter( "RSAI:MIN_EVENTS_RSAI", MIN_EVENTS_RSAI, "Baseline min. number of events before macro emits image. (Individual macros may scale or ignore this).");
-	gPARMS->SetDefaultParameter( "RSAI:MIN_CDC_BIN_CONTENT", MIN_CDC_BIN_CONTENT, "Minimum value a CDC occupancy histogram bin should have after efficiency is applied. This allows an efficiency of zero without the bin being empty and therefore white.");
+	app.SetDefaultParameter( "RSAI:OUTPUT_DIR", OUTPUT_DIR, "Directory to write image files to.");
+	app.SetDefaultParameter( "RSAI:MIN_EVENTS_RSAI", MIN_EVENTS_RSAI, "Baseline min. number of events before macro emits image. (Individual macros may scale or ignore this).");
+	app.SetDefaultParameter( "RSAI:MIN_CDC_BIN_CONTENT", MIN_CDC_BIN_CONTENT, "Minimum value a CDC occupancy histogram bin should have after efficiency is applied. This allows an efficiency of zero without the bin being empty and therefore white.");
+        app.Initialize();
 
 	// Read in list of root files to use as histogram source
-	auto fnames = GetRootFilenames();
+	auto fnames = GetRootFilenames(&app);
 
 	// Determine the list of board inefficiencies
 	vector<board_eff_t> board_efficiencies;
@@ -181,7 +179,7 @@ int main(int narg, char *argv[])
 		for( auto board_eff_set : board_efficiencies ){
 			auto hists_KO = MakeCDC_KO_hists(hists_orig, board_eff_set);
 			
-			RunCDC_occupancy_macro();
+			RunCDC_occupancy_macro(&app);
 
 			FreeHists( hists_KO );
 		}
@@ -209,7 +207,7 @@ void Usage(JApplication &app)
 	cout<<"Usage:"<<endl;
 	cout<<"    hydra_cdc [options] source1 source2 source3 ..."<<endl;
 	cout<<endl;
-	app.Usage();
+        jana::PrintUsage();
 	cout<<endl;
 	
 	exit(0);
@@ -218,12 +216,12 @@ void Usage(JApplication &app)
 //-----------
 // GetRootFilenames
 //-----------
-std::vector<std::string> GetRootFilenames(void)
+std::vector<std::string> GetRootFilenames(JApplication* app)
 {
 	std::vector<std::string> fnames;
 
 	string ROOT_FILELIST = "root_files.txt";
-	gPARMS->SetDefaultParameter("ROOT_FILELIST", ROOT_FILELIST, "Name of text file containing the list of ROOT files to be used to read histograms from.");
+	app->SetDefaultParameter("ROOT_FILELIST", ROOT_FILELIST, "Name of text file containing the list of ROOT files to be used to read histograms from.");
 	ifstream ifs(ROOT_FILELIST);
 	if( !ifs.is_open() ){
 		jerr << "Unable to open \"" << ROOT_FILELIST << "\"!!" << endl;
@@ -353,7 +351,7 @@ void FreeHists( std::vector<TH1*> &hists)
 //----------------------------------------------------------------
 void InitilizeRootInterpreter(JApplication *app)
 {
-	japp->RootWriteLock();
+	app->GetService<JLockService>()->RootWriteLock();
 	// Create TCanvas, but set ROOT to batch mode so that it doesn't actually open a window.
 	gROOT->SetBatch(kTRUE);
 	c1 = new TCanvas("c1", "A Canvas", 1600, 1200);
@@ -371,7 +369,7 @@ void InitilizeRootInterpreter(JApplication *app)
 	gROOT->ProcessLine("extern void rs_SavePad(const string fname, int ipad);");
 	gROOT->ProcessLine("void InsertSeriesData(string sdata){}"); // disable insertion of time series data for RSAI
 	gROOT->ProcessLine("void InsertSeriesMassFit(string ptype, double mass, double width, double mass_err, double width_err, double unix_time=0.0){}"); // (same as previous)
-	japp->RootUnLock();
+	app->GetService<JLockService>()->RootUnLock();
 
 	// Set flag so macros will NOT automatically reset histograms after
 	// a successful fit. This flag is used by RSTimeSeries
@@ -402,7 +400,7 @@ void InitilizeRootInterpreter(JApplication *app)
 //----------------------------------------------------------------
 // RunCDC_occupancy_macro
 //----------------------------------------------------------------
-void RunCDC_occupancy_macro(void)
+void RunCDC_occupancy_macro(JApplication* app)
 {
 
 	auto base_root_dir = gDirectory;
@@ -427,7 +425,7 @@ void RunCDC_occupancy_macro(void)
 
 		c1->cd();
 		c1->Clear();
-		ExecuteMacro(base_root_dir, macroString);
+		ExecuteMacro(app, base_root_dir, macroString);
 
 		// Due to some long standing bug in TPad, the SaveAs method does not work
 		// properly and we are advised to use only TCanvas::SaveAs. See:
@@ -526,10 +524,10 @@ void RunCDC_occupancy_macro(void)
 //-------------------
 // ExecuteMacro
 //-------------------
-void ExecuteMacro(TDirectory *f, string macro)
+void ExecuteMacro(JApplication* app, TDirectory *f, string macro)
 {
 	// Lock ROOT
-	japp->RootWriteLock();
+        app->GetService<JLockService>()->RootWriteLock();
 
 	TDirectory *savedir = gDirectory;
 	f->cd();	
@@ -566,7 +564,7 @@ void ExecuteMacro(TDirectory *f, string macro)
 	savedir->cd();
 
 	// Unlock ROOT
-	japp->RootUnLock();
+	app->GetService<JLockService>()->RootUnLock();
 
 }
 

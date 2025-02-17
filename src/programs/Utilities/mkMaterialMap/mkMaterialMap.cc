@@ -16,8 +16,8 @@ using namespace std;
 #include <TFile.h>
 #include <TH2D.h>
 
-void ParseCommandLineArguments(int narg, char *argv[], JApplication &app);
-void Usage(JApplication &app);
+void ParseCommandLineArguments(int narg, char *argv[]);
+void Usage();
 
 
 class Material{
@@ -69,11 +69,9 @@ string mkstr(const T &val, unsigned int width)
 int main(int narg, char *argv[])
 {
 	DApplication *dapp = new DApplication(narg, argv);
-
-	ParseCommandLineArguments(narg, argv, *dapp);
-
-
-	DRootGeom *g = new DRootGeom(dapp);
+	auto app = dapp->GetJApp();
+	ParseCommandLineArguments(narg, argv);
+	DRootGeom *g = new DRootGeom(app);
 
 	// Fill average materials table
 	cout<<"Filling material table ..."; cout.flush();
@@ -258,14 +256,14 @@ int main(int narg, char *argv[])
 //-----------
 // ParseCommandLineArguments
 //-----------
-void ParseCommandLineArguments(int narg, char *argv[], JApplication &app)
+void ParseCommandLineArguments(int narg, char *argv[])
 {
 
 	for(int i=1; i<narg; i++){
 		string arg = argv[i];
 		string arg2 = ((i+1)<narg) ? argv[i+1]:"";
 		if(arg=="-h"){
-			Usage(app);
+			Usage();
 			exit(0);
 		}
 		else if(arg=="-Nr"   ){   Nr = atoi(arg2.c_str());	i++;}
@@ -291,7 +289,7 @@ void ParseCommandLineArguments(int narg, char *argv[], JApplication &app)
 //-----------
 // Usage
 //-----------
-void Usage(JApplication &app)
+void Usage()
 {
 	cout<<endl;
 	cout<<"Usage:"<<endl;
@@ -307,7 +305,7 @@ void Usage(JApplication &app)
 	cout<<"  -n_z #    Set number of sampling points in z (def:"<<n_r<<")"<<endl;
 	cout<<"  -n_phi #  Set number of sampling points in phi (def:"<<n_phi<<")"<<endl;
 	cout<<endl;
-	app.Usage();
+	jana::PrintUsage();
 	
 	exit(0);
 }

@@ -9,12 +9,13 @@ using namespace std;
 
 #include <termios.h>
 
+#include <JANA/CLI/JMain.h>
 #include "MyProcessor.h"
 #include "DANA/DApplication.h"
 
-void PrintFactoryList(DApplication *app);
+void PrintFactoryList(JApplication *app);
 void ParseCommandLineArguments(int &narg, char *argv[]);
-void Usage(void);
+void Usage();
 
 bool LIST_FACTORIES = false;
 bool SPARSIFY_SUMMARY = true;
@@ -28,17 +29,16 @@ int main(int narg, char *argv[])
 	// Parse the command line
 	ParseCommandLineArguments(narg, argv);
 
-	// Instantiate our event processor
-	MyProcessor myproc;
+	auto options = jana::ParseCommandLineOptions(narg, argv);
+	DApplication dapp(narg, argv);
+	JApplication* app = dapp.GetJApp();
 
-	// Instantiate an event loop object
-	DApplication *app = new DApplication(narg, argv);
-	
 	// Set tag prefix for JANA streams to empty
 	jout.SetTag("");
 	
 	// If LIST_FACTORIES is set, print all factories and exit
 	if(LIST_FACTORIES){
+		// TODO: This should be in JANA, not here
 		PrintFactoryList(app);
 		return 0;
 	}
@@ -61,31 +61,34 @@ int main(int narg, char *argv[])
 			cout << "-- * Enabling EVIO file mapping and sparse readout" << endl;
 			cout << "-- * Automatically invoking -f and -s options" << endl;
 			cout << endl;
-			gPARMS->SetParameter("EVIO:SPARSE_READ", true);
-			gPARMS->SetParameter("EVIO:EVENT_MASK", string("EPICS"));
+			app->SetParameterValue("EVIO:SPARSE_READ", true);
+			app->SetParameterValue("EVIO:EVENT_MASK", string("EPICS"));
 			PRINT_SUMMARY_HEADER = false;
 			SKIP_BORING_EVENTS = 1;
 		}
 	}
 
-	// Run though all events, calling our event processor's methods
-	app->SetShowTicker(0);
-	app->monitor_heartbeat = false;
-	app->Run(&myproc);
-	
+	app->SetTicker(false); // Disable ticker
+        app->SetTimeoutEnabled(false);
+
+	app->Add(new MyProcessor);
+
+	// Run JANA
+	auto exitCode = jana::Execute(app, options);
 	delete app;
 
-	return 0;
+	if( exitCode ) cerr << "Exit code: " << exitCode << endl;
+	return exitCode;
 }
 
 //-----------
 // PrintFactoryList
 //-----------
-void PrintFactoryList(DApplication *app)
+void PrintFactoryList(JApplication *app)
 {
 	// When we get here, the Run() method hasn't been
 	// called so the JEventLoop objects haven't
-	// been created yet and cansequently the factory objects
+	// been created yet and consequently the factory objects
 	// don't yet exist. Since we want the "list factories"
 	// option to work even without an input file, we need
 	// to first make the factories before we can list them.
@@ -94,27 +97,28 @@ void PrintFactoryList(DApplication *app)
 	// register itself with the DApplication and the factories
 	// will be made, even ones from plugins passed on the command
 	// line.
-	app->Init();
-	JEventLoop *loop = new JEventLoop(app);
-	
+	// TODO: This should be in JANA, not here
+	app->Initialize();
+
 	// Print header
 	cout<<endl;
 	cout<<"  Factory List"<<endl;
 	cout<<"-------------------------"<<endl;
-	
-	// Get list of factories from the JEventLoop and loop over them
+
+
+	// Get list of factories and print out the data type and tags
 	// Printing out the data types and tags.
-	vector<JFactory_base*> factories = loop->GetFactories();
-	vector<JFactory_base*>::iterator iter = factories.begin();
-	for(; iter!=factories.end(); iter++){
-		cout<<" "<<(*iter)->GetDataClassName();
-		if(strlen((*iter)->Tag()) !=0){
-			cout<<" : "<<(*iter)->Tag();
+	auto factory_summaries = app->GetComponentSummary().factories;
+	for (const auto &factory_summary : factory_summaries) {
+		cout << " " << factory_summary.object_name;
+		if(factory_summary.factory_tag != "") {
+			cout << " : " << factory_summary.factory_tag;
 		}
-		cout<<endl;
+		cout << endl;
 	}
+
 	cout<<endl;
-	cout<<" "<<factories.size()<<" factories registered"<<endl;
+	cout<<" "<<factory_summaries.size()<<" factories registered"<<endl;
 	cout<<endl;
 }
 
@@ -172,7 +176,7 @@ void ParseCommandLineArguments(int &narg, char *argv[])
 				PRINT_SUMMARY_ALL    = true;
 				PRINT_SUMMARY_HEADER = true;
 				break;
-			case 'b':
+			case 'B':
 				PRINT_STATUS_BITS = true;
 				break;
 			case 'e':
@@ -190,10 +194,8 @@ void ParseCommandLineArguments(int &narg, char *argv[])
 //-----------
 // Usage
 //-----------
-void Usage(void)
+void Usage()
 {
-	DApplication dapp(0,NULL);
-
 	cout<<"Usage:"<<endl;
 	cout<<"       hd_dump [options] source1 source2 ..."<<endl;
 	cout<<endl;
@@ -214,12 +216,11 @@ void Usage(void)
 	cout<<"   -c        Print summary header lisiting for select factories."<<endl;
 	cout<<"   -V        Print summary header lisiting for all factories."<<endl;
 	cout<<"             (warning: this activates every single factory!)"<<endl;
-	cout<<"   -b        Print event status bits"<<endl;
+	cout<<"   -B        Print event status bits"<<endl;
 	cout<<"   -e        Don't allow automatic EVIO sparse readout for EPICS data"<<endl;
 	cout<<endl;
 
-	dapp.Usage();
-
+	jana::PrintUsage();
 	exit(0);
 }
 

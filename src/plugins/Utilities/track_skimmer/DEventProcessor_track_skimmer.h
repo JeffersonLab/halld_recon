@@ -12,7 +12,7 @@
 #include <fstream>
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JApplication.h>
+#include <JANA/Compatibility/JLockService.h>
 
 #include <ANALYSIS/DEventWriterROOT.h>
 #include <HDDM/DEventWriterREST.h>
@@ -22,22 +22,25 @@
 
 #include <TRIGGER/DTrigger.h>
 
-using namespace jana;
 using namespace std;
 
-class DEventProcessor_track_skimmer : public jana::JEventProcessor
+class DEventProcessor_track_skimmer : public JEventProcessor
 {
 	public:
-		const char* className(void){return "DEventProcessor_track_skimmer";}
+		DEventProcessor_track_skimmer() {
+			SetTypeName("DEventProcessor_track_skimmer");
+		}
+		~DEventProcessor_track_skimmer() override = default;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop* locEventLoop, int locRunNumber);	///< Called every time a new run number is detected.
-		jerror_t evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber);	///< Called every event.
-		jerror_t erun(void);						///< Called every time run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+		std::shared_ptr<JLockService> lockService;
 
-		int Get_FileNumber(JEventLoop* locEventLoop) const;
+		int Get_FileNumber(const std::shared_ptr<const JEvent>& locEvent) const;
 
 		map<string, ofstream*> dIDXAStreamMap;
 };

@@ -7,38 +7,36 @@
 
 #include "DMCThrown_factory_FinalState.h"
 
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DMCThrown_factory_FinalState::init(void)
+void DMCThrown_factory_FinalState::Init()
 {
 	SetFactoryFlag(NOT_OBJECT_OWNER);
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DMCThrown_factory_FinalState::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DMCThrown_factory_FinalState::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
-	return NOERROR;
+	event->GetSingle(dAnalysisUtilities);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DMCThrown_factory_FinalState::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DMCThrown_factory_FinalState::Process(const std::shared_ptr<const JEvent>& event)
 {
-	_data.clear();
+	mData.clear();
 
 	deque<pair<const DMCThrown*, deque<const DMCThrown*> > > locThrownSteps;
-	dAnalysisUtilities->Get_ThrownParticleSteps(locEventLoop, locThrownSteps);
+	dAnalysisUtilities->Get_ThrownParticleSteps(event, locThrownSteps);
 
 	if(locThrownSteps.empty())
-		return NOERROR;
+		return;
 
 	for(size_t loc_i = 0; loc_i < locThrownSteps.size(); ++loc_i)
 	{
@@ -46,27 +44,23 @@ jerror_t DMCThrown_factory_FinalState::evnt(jana::JEventLoop *locEventLoop, uint
 		for(size_t loc_j = 0; loc_j < locParticles.size(); ++loc_j)
 		{
 			if(Is_FinalStateParticle(locParticles[loc_j]->PID()))
-				_data.push_back(const_cast<DMCThrown*>(locParticles[loc_j]));
+				mData.push_back(const_cast<DMCThrown*>(locParticles[loc_j]));
 		}
 	}
-
-	return NOERROR;
 }
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DMCThrown_factory_FinalState::erun(void)
+void DMCThrown_factory_FinalState::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DMCThrown_factory_FinalState::fini(void)
+void DMCThrown_factory_FinalState::Finish()
 {
-	return NOERROR;
 }
 

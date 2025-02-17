@@ -7,7 +7,6 @@
 #ifndef DFDCGEOMETRY_H
 #define DFDCGEOMETRY_H
 
-#include "HDGEOMETRY/DGeometry.h"
 
 #define FDC_NUM_LAYERS			24
 #define FDC_NUM_PLANES                  72

@@ -8,8 +8,6 @@
 #define DDIRCTRUTHPMTHIT_H_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
 class DDIRCTruthPmtHit: public JObject {
 
@@ -26,19 +24,19 @@ public:
   int refl;	   // number of reflection in the optical box
   bool bbrefl;     // reflected off far end mirror of bar box
   int track;       // index of the MC track
-  
-  void toStrings(vector<pair<string, string> >&items) const {
-    AddString(items, "x", "%1.3f", x);
-    AddString(items, "y", "%1.3f", y);
-    AddString(items, "z", "%1.3f", z);
-    AddString(items, "t", "%1.3f", t);
-    AddString(items, "t_fixed", "%1.3f", t_fixed);
-    AddString(items, "E", "%1.3f", E);
-    AddString(items, "ch", "%d", ch);
-    AddString(items, "key_bar", "%d", key_bar);
-    AddString(items, "path", "%ld", path);
-    AddString(items, "refl", "%d", refl);
-    AddString(items, "bbrefl", "%d", bbrefl ? 1 : 0);
+
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(x, "x", "%1.3f");
+    summary.add(y, "y", "%1.3f");
+    summary.add(z, "z", "%1.3f");
+    summary.add(t, "t", "%1.3f");
+    summary.add(t_fixed, "t_fixed", "%1.3f");
+    summary.add(E, "E", "%1.3f");
+    summary.add(ch, "ch", "%d");
+    summary.add(key_bar, "key_bar", "%d");
+    summary.add(path, "path", "%ld");
+    summary.add(refl, "refl", "%d");
+    summary.add(bbrefl ? 1 : 0, "bbrefl", "%d");
   }
 };
 

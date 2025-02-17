@@ -9,9 +9,8 @@
 #define _DFDCWireDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DFDCWireDigiHit:public jana::JObject{
+class DFDCWireDigiHit:public JObject{
 	public:
 		JOBJECT_PUBLIC(DFDCWireDigiHit);
 		
@@ -20,13 +19,11 @@ class DFDCWireDigiHit:public jana::JObject{
 		uint32_t wire;
 		uint32_t time;
 		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "package", "%d", package);
-			AddString(items, "chamber", "%d", chamber);
-			AddString(items, "wire", "%d", wire);
-			AddString(items, "time", "%d", time);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(package, NAME_OF(package), "%d");
+			summary.add(chamber, NAME_OF(chamber), "%d");
+			summary.add(wire, NAME_OF(wire), "%d");
+			summary.add(time, NAME_OF(time), "%d");
 		}
 		
 };

@@ -16,18 +16,19 @@ using namespace std;
 #define TOF_SIGMA 0.080   // TOF resolution in ns
 
 #include <TROOT.h>
-
+#include <DANA/DEvent.h>
 #include "DTrackTimeBased_factory.h"
 #include <TRACKING/DTrackWireBased.h>
 #include <TRACKING/DReferenceTrajectory.h>
 #include <TRACKING/DTrackFitter.h>
 #include <TRACKING/DTrackHitSelector.h>
 #include <TRACKING/DMCTrackHit.h>
+#include <DANA/DObjectID.h>
 #include <SplitString.h>
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include <deque>
 
-using namespace jana;
+
 
 // Routine for sorting start times
 bool DTrackTimeBased_T0_cmp(DTrackTimeBased::DStartTime_t a,
@@ -67,10 +68,12 @@ static unsigned int count_common_members(vector<T> &a, vector<T> &b)
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrackTimeBased_factory::init(void)
+void DTrackTimeBased_factory::Init()
 {
+	auto app = GetApplication();
+
 	fitter = NULL;
 
 	DEBUG_HISTS = false;
@@ -78,14 +81,14 @@ jerror_t DTrackTimeBased_factory::init(void)
 	DEBUG_LEVEL = 0;
 
 	USE_HITS_FROM_WIREBASED_FIT=false;
-	gPARMS->SetDefaultParameter("TRKFIT:USE_HITS_FROM_WIREBASED_FIT",
+	app->SetDefaultParameter("TRKFIT:USE_HITS_FROM_WIREBASED_FIT",
 			      USE_HITS_FROM_WIREBASED_FIT);
 	INSERT_MISSING_HYPOTHESES=true;
-	gPARMS->SetDefaultParameter("TRKFIT:INSERT_MISSING_HYPOTHESES",
+	app->SetDefaultParameter("TRKFIT:INSERT_MISSING_HYPOTHESES",
 				    INSERT_MISSING_HYPOTHESES);
 
-	gPARMS->SetDefaultParameter("TRKFIT:DEBUG_HISTS",DEBUG_HISTS);
-	gPARMS->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",DEBUG_LEVEL);
+	app->SetDefaultParameter("TRKFIT:DEBUG_HISTS",DEBUG_HISTS);
+	app->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",DEBUG_LEVEL);
 	
 	vector<int> hypotheses;
 	hypotheses.push_back(Positron);
@@ -106,7 +109,7 @@ jerror_t DTrackTimeBased_factory::init(void)
 	}
 
 	string HYPOTHESES = locMassStream.str();
-	gPARMS->SetDefaultParameter("TRKFIT:HYPOTHESES", HYPOTHESES);
+	app->SetDefaultParameter("TRKFIT:HYPOTHESES", HYPOTHESES);
 
 	// Parse MASS_HYPOTHESES strings to make list of masses to try
 	hypotheses.clear();
@@ -124,23 +127,23 @@ jerror_t DTrackTimeBased_factory::init(void)
 	if(mass_hypotheses_positive.empty()){
 		static once_flag pwarn_flag;
 		call_once(pwarn_flag, [](){
-			jout << endl;
-			jout << "############# WARNING !! ################ " <<endl;
-			jout << "There are no mass hypotheses for positive tracks!" << endl;
-			jout << "Be SURE this is what you really want!" << endl;
-			jout << "######################################### " <<endl;
-			jout << endl;
+			jout << jendl;
+			jout << "############# WARNING !! ################ " <<jendl;
+			jout << "There are no mass hypotheses for positive tracks!" << jendl;
+			jout << "Be SURE this is what you really want!" << jendl;
+			jout << "######################################### " <<jendl;
+			jout << jendl;
 		});
 	}
 	if(mass_hypotheses_negative.empty()){
 		static once_flag nwarn_flag;
 		call_once(nwarn_flag, [](){
-			jout << endl;
-			jout << "############# WARNING !! ################ " <<endl;
-			jout << "There are no mass hypotheses for negative tracks!" << endl;
-			jout << "Be SURE this is what you really want!" << endl;
-			jout << "######################################### " <<endl;
-			jout << endl;
+			jout << jendl;
+			jout << "############# WARNING !! ################ " <<jendl;
+			jout << "There are no mass hypotheses for negative tracks!" << jendl;
+			jout << "Be SURE this is what you really want!" << jendl;
+			jout << "######################################### " <<jendl;
+			jout << jendl;
 		});
 	}
 
@@ -149,40 +152,46 @@ jerror_t DTrackTimeBased_factory::init(void)
 
 	// Forces correct particle id (when available)
 	PID_FORCE_TRUTH = false;
-	gPARMS->SetDefaultParameter("TRKFIT:PID_FORCE_TRUTH", PID_FORCE_TRUTH);
+	app->SetDefaultParameter("TRKFIT:PID_FORCE_TRUTH", PID_FORCE_TRUTH);
 
 	USE_SC_TIME=true;
-	gPARMS->SetDefaultParameter("TRKFIT:USE_SC_TIME",USE_SC_TIME);
+	app->SetDefaultParameter("TRKFIT:USE_SC_TIME",USE_SC_TIME);
 
 	USE_TOF_TIME=true;
-	gPARMS->SetDefaultParameter("TRKFIT:USE_TOF_TIME",USE_TOF_TIME);
+	app->SetDefaultParameter("TRKFIT:USE_TOF_TIME",USE_TOF_TIME);
 
 	USE_FCAL_TIME=true;
-	gPARMS->SetDefaultParameter("TRKFIT:USE_FCAL_TIME",USE_FCAL_TIME);
+	app->SetDefaultParameter("TRKFIT:USE_FCAL_TIME",USE_FCAL_TIME);
 	
 	USE_BCAL_TIME=true;
-	gPARMS->SetDefaultParameter("TRKFIT:USE_BCAL_TIME",USE_BCAL_TIME);
+	app->SetDefaultParameter("TRKFIT:USE_BCAL_TIME",USE_BCAL_TIME);
        
-    SAVE_TRUNCATED_DEDX = false;
-    gPARMS->SetDefaultParameter("TRK:SAVE_TRUNCATED_DEDX",SAVE_TRUNCATED_DEDX);
+  SAVE_TRUNCATED_DEDX = false;
+  app->SetDefaultParameter("TRK:SAVE_TRUNCATED_DEDX",SAVE_TRUNCATED_DEDX);
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
+void DTrackTimeBased_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+  auto event_number = event->GetEventNumber();
+  auto run_number = event->GetRunNumber();
+  auto app = GetApplication();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto root_lock = app->GetService<JLockService>();
+
   // Get the geometry
-  DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
-  geom = dapp->GetDGeometry(runnumber);
+  geom = geo_manager->GetDGeometry(run_number);
+
    // Check for magnetic field
-  dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dapp->GetBfield(runnumber)) != NULL);
+  dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(geo_manager->GetBfield(run_number)) != NULL);
 
   if(dIsNoFieldFlag){
     //Setting this flag makes it so that JANA does not delete the objects in 
-    //_data.  This factory will manage this memory.
+    //mData.  This factory will manage this memory.
     //This is all of these pointers are just copied from the "StraightLine" 
     //factory, and should not be re-deleted.
     SetFactoryFlag(NOT_OBJECT_OWNER);
@@ -193,10 +202,10 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
 
   // Get pointer to TrackFitter object that actually fits a track
   vector<const DTrackFitter *> fitters;
-  loop->Get(fitters);
+  event->Get(fitters);
   if(fitters.size()<1){
     _DBG_<<"Unable to get a DTrackFitter object! NO Charged track fitting will be done!"<<endl;
-    return RESOURCE_UNAVAILABLE;
+    return; // RESOURCE_UNAVAILABLE;
   }
   
   // Drop the const qualifier from the DTrackFitter pointer (I'm surely going to hell for this!)
@@ -205,15 +214,15 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
   // Warn user if something happened that caused us NOT to get a fitter object pointer
   if(!fitter){
     _DBG_<<"Unable to get a DTrackFitter object! NO Charged track fitting will be done!"<<endl;
-    return RESOURCE_UNAVAILABLE;
+    return; // RESOURCE_UNAVAILABLE;
   }
 	
   // Get the particle ID algorithms
   vector<const DParticleID *> pid_algorithms;
-  loop->Get(pid_algorithms);
+  event->Get(pid_algorithms);
   if(pid_algorithms.size()<1){
     _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-    return RESOURCE_UNAVAILABLE;
+    return;  // RESOURCE_UNAVAILABLE;
   }
 
   pid_algorithm = pid_algorithms[0];
@@ -221,7 +230,7 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
   // Warn user if something happened that caused us NOT to get a pid_algorithm object pointer
   if(!pid_algorithm){
     _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-    return RESOURCE_UNAVAILABLE;
+    return; // RESOURCE_UNAVAILABLE;
   }
 
   // Get z positions of fdc wire planes
@@ -243,8 +252,8 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
   
   
 	if(DEBUG_HISTS){
-		dapp->Lock();
-		
+		root_lock->RootWriteLock();
+
 		// Histograms may already exist. (Another thread may have created them)
 		// Try and get pointers to the existing ones.
 		fom_chi2_trk = (TH1F*)gROOT->FindObject("fom_chi2_trk");
@@ -263,11 +272,10 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
 						       "vertex time source vs. time",
 						 300,-50,50,9,-0.5,8.5);
 
-		dapp->Unlock();
-
+		root_lock->RootUnLock();
 	}
 
-	JCalibration *jcalib = dapp->GetJCalibration(runnumber);
+	JCalibration *jcalib = DEvent::GetJCalibration(event);
 	map<string, double> targetparms;
 	if (jcalib->Get("TARGET/target_parms",targetparms)==false){
 	  TARGET_Z = targetparms["TARGET_Z_POSITION"];
@@ -277,117 +285,117 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
 	}
 	
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackTimeBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrackTimeBased_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   // Save event number to help with debugging
-  myevt=eventnumber;
-  if(!fitter)return NOERROR;
+  myevt=event->GetEventNumber();
+  if(!fitter)return;
 
   if(dIsNoFieldFlag){
     //Clear previous objects: 
     //JANA doesn't do it because NOT_OBJECT_OWNER was set
     //It DID delete them though, in the "StraightLine" factory
-    _data.clear();
+    mData.clear();
      
     vector<const DTrackTimeBased*> locTimeBasedTracks;
-    loop->Get(locTimeBasedTracks, "StraightLine");
+    event->Get(locTimeBasedTracks, "StraightLine");
     for(size_t loc_i = 0; loc_i < locTimeBasedTracks.size(); ++loc_i)
-      _data.push_back(const_cast<DTrackTimeBased*>(locTimeBasedTracks[loc_i]));
-    return NOERROR;
+      mData.push_back(const_cast<DTrackTimeBased*>(locTimeBasedTracks[loc_i]));
+    return;
   }
 
   // Get candidates and hits
   vector<const DTrackWireBased*> tracks;
-  loop->Get(tracks);
-  if (tracks.size()==0) return NOERROR;
+  event->Get(tracks);
+  if (tracks.size()==0) return;
  
   // get start counter hits
   vector<const DSCHit*>sc_hits;
   if (USE_SC_TIME){
-    loop->Get(sc_hits);
+    event->Get(sc_hits);
   }
   
   // Get TOF points
   vector<const DTOFPoint*> tof_points;
   if (USE_TOF_TIME){
-    loop->Get(tof_points);
+    event->Get(tof_points);
   }
 
   // Get BCAL and FCAL showers
   vector<const DBCALShower*>bcal_showers;
   if (USE_BCAL_TIME){
-    loop->Get(bcal_showers);
+    event->Get(bcal_showers);
   }
   vector<const DFCALShower*>fcal_showers;
   vector<const DFCALHit*>fcal_hits; // for fallback to single hits in FCAL
   if (USE_FCAL_TIME){
-    loop->Get(fcal_hits);
-    loop->Get(fcal_showers);
+    event->Get(fcal_hits);
+    event->Get(fcal_showers);
   }
   
   vector<const DMCThrown*> mcthrowns;
-  loop->Get(mcthrowns, "FinalState");
+  event->Get(mcthrowns, "FinalState");
    
   // Loop over candidates
   for(unsigned int i=0; i<tracks.size(); i++){
     const DTrackWireBased *track = tracks[i];
 
-    unsigned int num=_data.size();
+    unsigned int num=mData.size();
 
     // Create vector of start times from various sources
     vector<DTrackTimeBased::DStartTime_t>start_times;
     CreateStartTimeList(track,sc_hits,tof_points,bcal_showers,fcal_showers,fcal_hits,start_times);
 	
     // Fit the track
-    DoFit(track,start_times,loop,track->mass());
+    DoFit(track,start_times,event,track->mass());
   
     //_DBG_<< "eventnumber:   " << eventnumber << endl;
-    if (PID_FORCE_TRUTH && _data.size()>num) {
+    if (PID_FORCE_TRUTH && mData.size()>num) {
       // Add figure-of-merit based on difference between thrown and reconstructed momentum 
       // if more than half of the track's hits match MC truth hits and also (charge,mass)
       // match; add FOM=0 otherwise	  
-      _data[_data.size()-1]->FOM=GetTruthMatchingFOM(i,_data[_data.size()-1],
+      mData[mData.size()-1]->FOM=GetTruthMatchingFOM(i,mData[mData.size()-1],
 						     mcthrowns);
     }
-  } // loop over track candidates
+  } // event over track candidates
 
   // Filter out duplicate tracks
   FilterDuplicates();
 
   // Fill in track data for missing hypotheses 
   if (INSERT_MISSING_HYPOTHESES){
-    InsertMissingHypotheses(loop);
+    InsertMissingHypotheses(event);
   }
 
   // Set MC Hit-matching information
-  for(size_t loc_i = 0; loc_i < _data.size(); ++loc_i)
+  for(size_t loc_i = 0; loc_i < mData.size(); ++loc_i)
   {
     if(!mcthrowns.empty())
     {
       double hitFraction;
-      int thrownIndex = GetThrownIndex(mcthrowns, (DKinematicData*)_data[loc_i], hitFraction);
-      _data[loc_i]->dMCThrownMatchMyID = thrownIndex;
-      _data[loc_i]->dNumHitsMatchedToThrown = int(hitFraction * float(Get_NumTrackHits(_data[loc_i])) + 0.01); // + 0.01 so that it rounds down properly
+      int thrownIndex = GetThrownIndex(mcthrowns, (DKinematicData*)mData[loc_i], hitFraction);
+      mData[loc_i]->dMCThrownMatchMyID = thrownIndex;
+      mData[loc_i]->dNumHitsMatchedToThrown = int(hitFraction * float(Get_NumTrackHits(mData[loc_i])) + 0.01); // + 0.01 so that it rounds down properly
     }
     else
     {
-      _data[loc_i]->dMCThrownMatchMyID = -1;
-      _data[loc_i]->dNumHitsMatchedToThrown = 0;
+      mData[loc_i]->dMCThrownMatchMyID = -1;
+      mData[loc_i]->dNumHitsMatchedToThrown = 0;
     }
   }
 
   // figure out the number of expected hits for this track based on the final fit
-  for (size_t j=0; j<_data.size();j++){
+  for (size_t j=0; j<mData.size();j++){
     set<const DCDCWire *> expected_hit_straws;
     set<int> expected_hit_fdc_planes;
     
-    vector<DTrackFitter::Extrapolation_t>cdc_extraps=_data[j]->extrapolations.at(SYS_CDC);
+    vector<DTrackFitter::Extrapolation_t>cdc_extraps=mData[j]->extrapolations.at(SYS_CDC);
     for(uint i=0; i<cdc_extraps.size(); i++) {
       // figure out the radial position of the point to see which ring it's in
       DVector3 track_pos=cdc_extraps[i].position;
@@ -422,7 +430,7 @@ jerror_t DTrackTimeBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       expected_hit_straws.insert(cdcwires[ring][best_straw]);
     }
     
-    vector<DTrackFitter::Extrapolation_t>fdc_extraps=_data[j]->extrapolations.at(SYS_FDC);
+    vector<DTrackFitter::Extrapolation_t>fdc_extraps=mData[j]->extrapolations.at(SYS_FDC);
     for(uint i=0; i<fdc_extraps.size(); i++) {
       // check to make sure that the track goes through the sensitive region of the FDC
       // assume one hit per plane
@@ -441,27 +449,25 @@ jerror_t DTrackTimeBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       }
     }
     
-    _data[j]->potential_cdc_hits_on_track = expected_hit_straws.size();
-    _data[j]->potential_fdc_hits_on_track = expected_hit_fdc_planes.size();
+    mData[j]->potential_cdc_hits_on_track = expected_hit_straws.size();
+    mData[j]->potential_fdc_hits_on_track = expected_hit_fdc_planes.size();
   }
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrackTimeBased_factory::erun(void)
+void DTrackTimeBased_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTrackTimeBased_factory::fini(void)
+void DTrackTimeBased_factory::Finish()
 {
-	return NOERROR;
 }
 
 //------------------
@@ -472,7 +478,7 @@ void DTrackTimeBased_factory::FilterDuplicates(void)
 	/// Look through all current DTrackTimeBased objects and remove any
 	/// that have most of their hits in common with another track
 	
-	if(_data.size()==0)return;
+	if(mData.size()==0)return;
 
 	if(DEBUG_LEVEL>2)_DBG_<<"Looking for clones of time-based tracks ..."<<endl;
 	// We want to remove duplicate tracks corresponding to actual particles,
@@ -489,28 +495,25 @@ void DTrackTimeBased_factory::FilterDuplicates(void)
 	// mass hypothesis, the opposite may be true.
 	vector<unsigned int> candidates_to_keep;
 	vector<unsigned int> candidates_to_delete;
-	for(unsigned int i=0; i<_data.size()-1; i++){
-		DTrackTimeBased *dtrack1 = _data[i];
+	for(unsigned int i=0; i<mData.size()-1; i++){
+		DTrackTimeBased *dtrack1 = mData[i];
 
-		vector<const DCDCTrackHit*> cdchits1;
-		vector<const DFDCPseudo*> fdchits1;
-		dtrack1->Get(cdchits1);
-		dtrack1->Get(fdchits1);
+		vector<const DCDCTrackHit*> cdchits1 = dtrack1->Get<DCDCTrackHit>();
+		vector<const DFDCPseudo*> fdchits1 = dtrack1->Get<DFDCPseudo>();
+
 		// Total number of hits in this candidate
 		unsigned int num_cdc1=cdchits1.size();
 		unsigned int num_fdc1=fdchits1.size();
 		unsigned int total1 = num_cdc1+num_fdc1;
 
-		JObject::oid_t cand1=dtrack1->candidateid;
-		for(unsigned int j=i+1; j<_data.size(); j++){
-			DTrackTimeBased *dtrack2 = _data[j];
+		oid_t cand1=dtrack1->candidateid;
+		for(unsigned int j=i+1; j<mData.size(); j++){
+			DTrackTimeBased *dtrack2 = mData[j];
 			if (dtrack2->candidateid==cand1) continue;
 	
-			vector<const DCDCTrackHit*> cdchits2;
-			vector<const DFDCPseudo*> fdchits2;
-			dtrack2->Get(cdchits2);
-			dtrack2->Get(fdchits2);
-			
+			vector<const DCDCTrackHit*> cdchits2 = dtrack2->Get<DCDCTrackHit>();
+			vector<const DFDCPseudo*> fdchits2 = dtrack2->Get<DFDCPseudo>();
+
 			// Total number of hits in this candidate
 			unsigned int num_cdc2=cdchits2.size();
 			unsigned int num_fdc2=fdchits2.size();
@@ -588,12 +591,12 @@ void DTrackTimeBased_factory::FilterDuplicates(void)
 
 	// Copy pointers that we want to keep to a new container and delete
 	// the clone objects
-	vector<DTrackTimeBased*> new_data;
-	sort(_data.begin(),_data.end(),DTrackTimeBased_cmp);
-	for (unsigned int i=0;i<_data.size();i++){
+	vector<DTrackTimeBased*> newmData;
+	sort(mData.begin(),mData.end(),DTrackTimeBased_cmp);
+	for (unsigned int i=0;i<mData.size();i++){
 	  bool keep_track=true;
 	  for (unsigned int j=0;j<candidates_to_delete.size();j++){
-	    if (_data[i]->candidateid==candidates_to_delete[j]){
+	    if (mData[i]->candidateid==candidates_to_delete[j]){
 	      keep_track=false;
 	      if(DEBUG_LEVEL>1){
 		_DBG_<<"Deleting clone time-based fitted result "<<i
@@ -603,11 +606,11 @@ void DTrackTimeBased_factory::FilterDuplicates(void)
 	    }
 	  }
 	  if (keep_track){
-	    new_data.push_back(_data[i]);
+	    newmData.push_back(mData[i]);
 	  }
-	  else delete _data[i];
+	  else delete mData[i];
 	}
-	_data = new_data;
+	mData = newmData;
 }
 
 // Returns a FOM based on difference between thrown and reconstructed momentum if track matches MC truth information, 
@@ -670,10 +673,8 @@ int DTrackTimeBased_factory::GetThrownIndex(vector<const DMCThrown*>& locMCThrow
 {
 	// The DKinematicData object should be a DTrackCandidate, DTrackWireBased, or DParticle which
 	// has associated objects for the hits
-	vector<const DCDCTrackHit*> cdctrackhits;
-	kd->Get(cdctrackhits);
-	vector<const DFDCPseudo*> fdcpseudos;
-	kd->Get(fdcpseudos);
+	vector<const DCDCTrackHit*> cdctrackhits = kd->Get<DCDCTrackHit>();
+	vector<const DFDCPseudo*> fdcpseudos = kd->Get<DFDCPseudo>();
 
 	int locTotalNumHits = cdctrackhits.size() + fdcpseudos.size();
 	if(locTotalNumHits == 0)
@@ -683,7 +684,7 @@ int DTrackTimeBased_factory::GetThrownIndex(vector<const DMCThrown*>& locMCThrow
 	}
 
 	// The track number is buried in the truth hit objects of type DMCTrackHit. These should be 
-	// associated objects for the individual hit objects. We need to loop through them and
+	// associated objects for the individual hit objects. We need to event through them and
 	// keep track of how many hits for each track number we find
 
 	map<int, int> locHitMatches; //first int is MC my id, second is num hits
@@ -696,10 +697,9 @@ int DTrackTimeBased_factory::GetThrownIndex(vector<const DMCThrown*>& locMCThrow
 	// CDC hits
 	for(size_t loc_i = 0; loc_i < cdctrackhits.size(); ++loc_i)
 	{
-		const DCDCHit* locCDCHit = NULL;
-		cdctrackhits[loc_i]->GetSingle(locCDCHit);
-		vector<const DCDCHit*> locTruthCDCHits;
-      locCDCHit->Get(locTruthCDCHits);
+		const DCDCHit* locCDCHit = cdctrackhits[loc_i]->GetSingle<DCDCHit>();
+		vector<const DCDCHit*> locTruthCDCHits = locCDCHit->Get<DCDCHit>();
+
 		if(locTruthCDCHits.empty()) continue;
 
 		int itrack = locTruthCDCHits[0]->itrack;
@@ -711,8 +711,7 @@ int DTrackTimeBased_factory::GetThrownIndex(vector<const DMCThrown*>& locMCThrow
 	// FDC hits
 	for(size_t loc_i = 0; loc_i < fdcpseudos.size(); ++loc_i)
 	{
-		vector<const DMCTrackHit*> mctrackhits;
-		fdcpseudos[loc_i]->Get(mctrackhits);
+		vector<const DMCTrackHit*> mctrackhits = fdcpseudos[loc_i]->Get<DMCTrackHit>();
 		if(mctrackhits.empty())
 			continue;
 		if(!mctrackhits[0]->primary)
@@ -759,7 +758,7 @@ void DTrackTimeBased_factory
   // Match to the start counter and the outer detectors
   double locStartTimeVariance = 0.0;
   double track_t0=track->t0();
-  double locStartTime = track_t0;  // initial guess from tracking
+  double locStartTime = track_t0;  // Initial guess from tracking
  
   // Get start time estimate from Start Counter
   if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_START),sc_hits,locStartTime)){
@@ -770,7 +769,7 @@ void DTrackTimeBased_factory
     start_times.push_back(start_time);
   }
   // Get start time estimate from TOF
-  locStartTime = track_t0;  // initial guess from tracking
+  locStartTime = track_t0;  // Initial guess from tracking
   if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_TOF),tof_points,locStartTime)){
     // Fill in the start time vector
     start_time.t0=locStartTime;
@@ -780,7 +779,7 @@ void DTrackTimeBased_factory
     start_times.push_back(start_time); 
   }
   // Get start time estimate from FCAL
-  locStartTime = track_t0;  // initial guess from tracking
+  locStartTime = track_t0;  // Initial guess from tracking
   if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_FCAL),fcal_showers,locStartTime)){
     // Fill in the start time vector
     start_time.t0=locStartTime;
@@ -827,7 +826,7 @@ void DTrackTimeBased_factory
 // Create a list of start times and do the fit for a particular mass hypothesis
 bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
 				    vector<DTrackTimeBased::DStartTime_t>&start_times,
-				    JEventLoop *loop,
+				    const std::shared_ptr<const JEvent>&event,
 				    double mass){  
   if(DEBUG_LEVEL>1){_DBG__;_DBG_<<"---- Starting time based fit with mass: "<<mass<<endl;}
   // Get the hits from the wire-based track
@@ -851,7 +850,7 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
   else{   
     fitter->Reset();
     fitter->SetFitType(DTrackFitter::kTimeBased);    
-    status = fitter->FindHitsAndFitTrack(*track, track->extrapolations,loop, 
+    status = fitter->FindHitsAndFitTrack(*track, track->extrapolations,event, 
 					 mass,
 					 mycdchits.size()+2*myfdchits.size(),
 					 mStartTime,mStartDetector);
@@ -941,7 +940,7 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
       timebased_track->dNumHitsUsedFordEdx_CDC = locNumHitsUsedFordEdx_CDC;
 
       timebased_track->AddAssociatedObject(track);
-      _data.push_back(timebased_track);
+      Insert(timebased_track);
       
       return true;
       break;
@@ -1006,10 +1005,9 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
       timebased_track->dNumHitsUsedFordEdx_CDC = locNumHitsUsedFordEdx_CDC;
 
       // Set CDC ring & FDC plane hit patterns before candidate and wirebased tracks are associated
-      vector<const DCDCTrackHit*> tempCDCTrackHits;
-      vector<const DFDCPseudo*> tempFDCPseudos;
-      timebased_track->Get(tempCDCTrackHits);
-      timebased_track->Get(tempFDCPseudos);
+      vector<const DCDCTrackHit*> tempCDCTrackHits = timebased_track->Get<DCDCTrackHit>();
+      vector<const DFDCPseudo*> tempFDCPseudos = timebased_track->Get<DFDCPseudo>();
+
       timebased_track->dCDCRings = pid_algorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
       timebased_track->dFDCPlanes = pid_algorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
 
@@ -1020,7 +1018,7 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
       timebased_track->FOM = TMath::Prob(timebased_track->chisq, timebased_track->Ndof);
       //_DBG_<< "FOM:   " << timebased_track->FOM << endl;
 
-      _data.push_back(timebased_track);
+      Insert(timebased_track);
      
       return true;
       break;
@@ -1039,7 +1037,7 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
 				      const DTrackTimeBased *src_track,
 							double my_mass,
 							double q,
-							JEventLoop *loop){
+							const std::shared_ptr<const JEvent>&event){
 
   // Create a new time-based track object
   DTrackTimeBased *timebased_track = new DTrackTimeBased();
@@ -1098,7 +1096,7 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
     fitter->Reset();
     fitter->SetFitType(DTrackFitter::kTimeBased);    
     status = fitter->FindHitsAndFitTrack(*timebased_track,
-					 timebased_track->extrapolations,loop, 
+					 timebased_track->extrapolations,event, 
 					 my_mass,
 					 src_cdchits.size()+2*src_fdchits.size(),
 					 timebased_track->t0(),
@@ -1256,10 +1254,9 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
   }
 
   // Set CDC ring & FDC plane hit patterns before candidate and wirebased tracks are associated
-  vector<const DCDCTrackHit*> tempCDCTrackHits;
-  vector<const DFDCPseudo*> tempFDCPseudos;
-  timebased_track->Get(tempCDCTrackHits);
-  timebased_track->Get(tempFDCPseudos);
+  vector<const DCDCTrackHit*> tempCDCTrackHits = timebased_track->Get<DCDCTrackHit>();
+  vector<const DFDCPseudo*> tempFDCPseudos = timebased_track->Get<DFDCPseudo>();
+
   timebased_track->dCDCRings = pid_algorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
   timebased_track->dFDCPlanes = pid_algorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
   
@@ -1269,57 +1266,57 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
 
 // If the fit failed for certain hypotheses, fill in the gaps using data from
 // successful fits for each candidate.
-bool DTrackTimeBased_factory::InsertMissingHypotheses(JEventLoop *loop){
-  if (_data.size()==0) return false;
+bool DTrackTimeBased_factory::InsertMissingHypotheses(const std::shared_ptr<const JEvent>&event){
+  if (mData.size()==0) return false;
   
   // Make sure the tracks are ordered by candidate id
-  sort(_data.begin(),_data.end(),DTrackTimeBased_cmp);
+  sort(mData.begin(),mData.end(),DTrackTimeBased_cmp);
  
-  JObject::oid_t old_id=_data[0]->candidateid;
+  oid_t old_id=mData[0]->candidateid;
   unsigned int mass_bits=0;
-  double q=_data[0]->charge();
+  double q=mData[0]->charge();
   bool flipped_charge=false;
   vector<DTrackTimeBased*>myhypotheses;
   vector<DTrackTimeBased*>tracks_to_add;
-  for (size_t i=0;i<_data.size();i++){
-    if (_data[i]->candidateid!=old_id){
+  for (size_t i=0;i<mData.size();i++){
+    if (mData[i]->candidateid!=old_id){
       AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q,
-				flipped_charge,loop);
+				flipped_charge,event);
 
       // Clear the myhypotheses vector for the next track
       myhypotheses.clear();
       // Reset flags and charge 
-      q=_data[i]->charge();	
+      q=mData[i]->charge();	
       flipped_charge=false;
       // Set the bit for this mass hypothesis
-      mass_bits = 1<<_data[i]->PID();
+      mass_bits = 1<<mData[i]->PID();
       
       // Add the data to the myhypotheses vector
-      myhypotheses.push_back(_data[i]);
+      myhypotheses.push_back(mData[i]);
     }
     else{
-      myhypotheses.push_back(_data[i]);
+      myhypotheses.push_back(mData[i]);
 
       // Set the bit for this mass hypothesis
-      mass_bits |= 1<< _data[i]->PID();
+      mass_bits |= 1<< mData[i]->PID();
       
       // Check if the sign of the charge has flipped
-      if (_data[i]->charge()!=q) flipped_charge=true;
+      if (mData[i]->charge()!=q) flipped_charge=true;
     }
     
-    old_id=_data[i]->candidateid;
+    old_id=mData[i]->candidateid;
   }
   // Deal with last track candidate	
   AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q,
-			    flipped_charge,loop);
+			    flipped_charge,event);
     
   // Add the new list of tracks to the output list
   if (tracks_to_add.size()>0){
     for (size_t i=0;i<tracks_to_add.size();i++){
-      _data.push_back(tracks_to_add[i]);
+      mData.push_back(tracks_to_add[i]);
     }
     // Make sure the tracks are ordered by candidate id
-    sort(_data.begin(),_data.end(),DTrackTimeBased_cmp);
+    sort(mData.begin(),mData.end(),DTrackTimeBased_cmp);
   }
 
   return true;
@@ -1330,7 +1327,7 @@ bool DTrackTimeBased_factory::InsertMissingHypotheses(JEventLoop *loop){
 // been lost had the particle emerged from the target.
 void DTrackTimeBased_factory::CorrectForELoss(DVector3 &position,DVector3 &momentum,double q,double my_mass){  
   DReferenceTrajectory::swim_step_t dummy_step;
-  DReferenceTrajectory rt(fitter->GetDMagneticFieldMap(),q,&dummy_step);
+  DReferenceTrajectory rt(fitter->GetDMagneticFieldMap(),GetApplication(),q,&dummy_step);
   rt.SetDGeometry(geom);
   rt.SetMass(my_mass);
   rt.SetPLossDirection(DReferenceTrajectory::kBackward);
@@ -1348,7 +1345,7 @@ void DTrackTimeBased_factory::AddMissingTrackHypotheses(unsigned int mass_bits,
 							vector<DTrackTimeBased *>&myhypotheses,
 							double q,
 							bool flipped_charge,
-							JEventLoop *loop){ 
+							const std::shared_ptr<const JEvent>&event){ 
 
   unsigned int last_index=myhypotheses.size()-1;
   unsigned int index=0;
@@ -1356,7 +1353,7 @@ void DTrackTimeBased_factory::AddMissingTrackHypotheses(unsigned int mass_bits,
     if (flipped_charge){
       /*if ((mass_bits & (1<<AntiProton))==0){
 	AddMissingTrackHypothesis(tracks_to_add,myhypotheses[last_index],
-				  ParticleMass(Proton),-1.,loop);  
+				  ParticleMass(Proton),-1.,event);  
       } 
       */
       for (unsigned int i=0;i<mass_hypotheses_negative.size();i++){
@@ -1365,13 +1362,13 @@ void DTrackTimeBased_factory::AddMissingTrackHypotheses(unsigned int mass_bits,
 	  else index=0;
 	  AddMissingTrackHypothesis(tracks_to_add,myhypotheses[index],
 				    ParticleMass(Particle_t(mass_hypotheses_negative[i])),
-				    -1.,loop);  
+				    -1.,event);  
 	} 
       }
     }
     /*   if ((mass_bits & (1<<Proton))==0){
       AddMissingTrackHypothesis(tracks_to_add,myhypotheses[last_index],
-				ParticleMass(Proton),+1.,loop);  
+				ParticleMass(Proton),+1.,event);  
 				} */
     for (unsigned int i=0;i<mass_hypotheses_positive.size();i++){
       if ((mass_bits & (1<<mass_hypotheses_positive[i]))==0){
@@ -1379,7 +1376,7 @@ void DTrackTimeBased_factory::AddMissingTrackHypotheses(unsigned int mass_bits,
 	else index=0;
 	AddMissingTrackHypothesis(tracks_to_add,myhypotheses[index],
 				  ParticleMass(Particle_t(mass_hypotheses_positive[i])),
-				  +1.,loop);  
+				  +1.,event);  
       } 
     }    
   }
@@ -1387,7 +1384,7 @@ void DTrackTimeBased_factory::AddMissingTrackHypotheses(unsigned int mass_bits,
     /*
     if ((mass_bits & (1<<AntiProton))==0){
       AddMissingTrackHypothesis(tracks_to_add,myhypotheses[last_index],
-				ParticleMass(Proton),-1.,loop);  
+				ParticleMass(Proton),-1.,event);  
 				} */	
     for (unsigned int i=0;i<mass_hypotheses_negative.size();i++){
       if ((mass_bits & (1<<mass_hypotheses_negative[i]))==0){
@@ -1395,13 +1392,13 @@ void DTrackTimeBased_factory::AddMissingTrackHypotheses(unsigned int mass_bits,
 	else index=0;
 	AddMissingTrackHypothesis(tracks_to_add,myhypotheses[index],
 				  ParticleMass(Particle_t(mass_hypotheses_negative[i])),
-				  -1.,loop);  
+				  -1.,event);  
       } 
     }
     if (flipped_charge){
       /*if ((mass_bits & (1<<Proton))==0){
 	AddMissingTrackHypothesis(tracks_to_add,myhypotheses[last_index],
-				  ParticleMass(Proton),+1.,loop);  
+				  ParticleMass(Proton),+1.,event);  
 				  } */
       for (unsigned int i=0;i<mass_hypotheses_positive.size();i++){
 	if ((mass_bits & (1<<mass_hypotheses_positive[i]))==0){
@@ -1409,7 +1406,7 @@ void DTrackTimeBased_factory::AddMissingTrackHypotheses(unsigned int mass_bits,
 	  else index=0;
 	  AddMissingTrackHypothesis(tracks_to_add,myhypotheses[index],
 				    ParticleMass(Particle_t(mass_hypotheses_positive[i])),
-				    +1.,loop);  
+				    +1.,event);  
 	} 
       }	
     }
