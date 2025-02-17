@@ -91,14 +91,14 @@ class DHelicityData:public DDAQAddress{
 
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-				
-			DDAQAddress::toStrings(items);
-			AddString(items, "expected_helicity_state"     , "%d", expected_helicity_state      );
-			AddString(items, "pattern_sync_count"          , "%d", pattern_sync_count           );
-			AddString(items, "pair_sync_count"             , "%d", pair_sync_count              );
-			AddString(items, "time_from_start_tstable"     , "%d", time_from_start_tstable      );
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(expected_helicity_state, NAME_OF(expected_helicity_state), "%d");
+			summary.add(pattern_sync_count, NAME_OF(pattern_sync_count), "%d");
+			summary.add(pair_sync_count, NAME_OF(pair_sync_count), "%d");
+			summary.add(time_from_start_tstable, NAME_OF(time_from_start_tstable), "%d");
 		}
+
 };
 
 #endif // _DHelicityData_

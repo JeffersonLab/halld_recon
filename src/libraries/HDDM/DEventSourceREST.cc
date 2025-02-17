@@ -1038,15 +1038,15 @@ bool DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactoryT<DTrigger
 //-----------------------
 // Extract_DBeamHelicity
 //-----------------------
-jerror_t DEventSourceREST::Extract_DBeamHelicity(hddm_r::HDDM *record, JFactory<DBeamHelicity>* factory)
+bool DEventSourceREST::Extract_DBeamHelicity(hddm_r::HDDM *record, JFactoryT<DBeamHelicity>* factory)
 {
-	/// Copies the data from the trigger hddm record. This is
+	/// Copies the data from the electron beam hddm record. This is
 	/// call from JEventSourceREST::GetObjects. If factory is NULL, this
 	/// returns OBJECT_NOT_AVAILABLE immediately.
 
 	if (factory==NULL)
-		return OBJECT_NOT_AVAILABLE;
-	string tag = (factory->Tag())? factory->Tag() : "";
+		return false; //OBJECT_NOT_AVAILABLE
+	string tag = factory->GetTag();
 
 	vector<DBeamHelicity*> data;
 
@@ -1074,9 +1074,9 @@ jerror_t DEventSourceREST::Extract_DBeamHelicity(hddm_r::HDDM *record, JFactory<
 	}
 
 	// Copy into factory
-	factory->CopyTo(data);
+	factory->Set(data);
 
-	return NOERROR;
+	return true; //NOERROR;
 }
 
 

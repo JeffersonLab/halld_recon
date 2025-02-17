@@ -88,7 +88,7 @@ class DEventSourceREST:public JEventSource
    bool Extract_DTrigger(hddm_r::HDDM *record,
                     JFactoryT<DTrigger>* factory);
    bool Extract_DBeamHelicity(hddm_r::HDDM *record,
-                    JFactory<DBeamHelicity>* factory);
+                    JFactoryT<DBeamHelicity>* factory);
    bool Extract_DDetectorMatches(const std::shared_ptr<const JEvent>& locEvent, hddm_r::HDDM *record,
                     JFactoryT<DDetectorMatches>* factory);
 #if 0
