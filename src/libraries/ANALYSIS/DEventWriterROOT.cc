@@ -184,6 +184,10 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, const std::
 	locBranchRegister.Register_Single<Double_t>("L1BCALEnergy");
 	locBranchRegister.Register_Single<Double_t>("L1FCALEnergy");
 
+	//create info about electron beam
+	locBranchRegister.Register_Single<Bool_t>("HasEBeamHelicity");
+	locBranchRegister.Register_Single<Bool_t>("EBeamHelicity");
+
 	//create X4_Production
 	locBranchRegister.Register_Single<TLorentzVector>("X4_Production");
 
@@ -1344,6 +1348,10 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 	const DTrigger* locTrigger = NULL;
 	locEvent->GetSingle(locTrigger);
 
+	//GET ELECTRON BEAM HELICITY
+	const DBeamHelicity* locBeamHelicity = NULL;
+	locEvent->GetSingle(locBeamHelicity);
+
 	/************************************************* EXECUTE ANALYSIS ACTIONS ************************************************/
 	       
 	DEvent::GetLockService(locEvent)->RootWriteLock();
@@ -1377,6 +1385,14 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 	locTreeFillData->Fill_Single<Double_t>("L1BCALEnergy", locTrigger->Get_GTP_BCALEnergy());
 	locTreeFillData->Fill_Single<Double_t>("L1FCALEnergy", locTrigger->Get_GTP_FCALEnergy());
 
+	//INFO
+	if(locBeamHelicity == NULL) {
+		locTreeFillData->Fill_Single<Bool_t>("HasEBeamHelicity", false);
+		locTreeFillData->Fill_Single<Bool_t>("EBeamHelicity", false);
+	} else {
+		locTreeFillData->Fill_Single<Bool_t>("HasEBeamHelicity", true);
+		locTreeFillData->Fill_Single<Bool_t>("EBeamHelicity", locBeamHelicity->helicity);	
+	}
 
 	//PRODUCTION X4
 	DLorentzVector locProductionX4 = locVertex->dSpacetimeVertex;
