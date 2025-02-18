@@ -628,21 +628,22 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	// push any DBeamHelicity objects to the output record
 	if(locBeamHelicities.size() == 0) {
 		// write out data with helicity == zero if there's no object
+		// first bit says whether or not there is valid helicity data
 		hddm_r::ElectronBeamList electronBeam = res().addElectronBeams(1);
-		electronBeam().setHelicity(0);
-		electronBeam().setFlags(0);
+		electronBeam().setHelicitydata(0); 
 	
 	}
 	for (size_t i=0; i < locBeamHelicities.size(); ++i)
 	{
 		hddm_r::ElectronBeamList electronBeam = res().addElectronBeams(1);
-		electronBeam().setHelicity(locBeamHelicities[i]->helicity);
-		int flags = locBeamHelicities[i]->pattern_sync 
-					| (locBeamHelicities[i]->t_settle << 1)
-					| (locBeamHelicities[i]->pair_sync << 2)
-					| (locBeamHelicities[i]->ihwp << 3)
-					| (locBeamHelicities[i]->beam_on << 4);
-		electronBeam().setFlags(flags);
+		int flags = 0x01      // first bit indicates that this event has valid helicity data
+					| (locBeamHelicities[i]->helicity << 1)
+					| (locBeamHelicities[i]->pattern_sync << 2)
+					| (locBeamHelicities[i]->t_settle << 3)
+					| (locBeamHelicities[i]->pair_sync << 4)
+					| (locBeamHelicities[i]->ihwp << 5)
+					| (locBeamHelicities[i]->beam_on << 6);
+		electronBeam().setHelicitydata(flags);
 
 	}
 
