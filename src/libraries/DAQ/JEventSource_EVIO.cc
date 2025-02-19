@@ -891,7 +891,7 @@ jerror_t JEventSource_EVIO::ParseEvents(ObjList *objs_ptr)
 					double tstart = GetTime();
 					ParseEVIOEvent(evt, my_full_events);
 					time_evio_parse = GetTime() - tstart;
-				}catch(JException &jexception){
+				}catch(const JException &jexception){
 					jerr << "Exception thrown from ParseEVIOEvent!" << endl;
 					jerr << jexception.what() << endl;
 				}

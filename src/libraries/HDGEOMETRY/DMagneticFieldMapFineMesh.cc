@@ -862,7 +862,7 @@ void DMagneticFieldMapFineMesh::GetFineMeshMap(string namepath,int32_t runnumber
     // see if we can get the EVIO file as a resource
     try {
         evioFileName = jresman->GetResource(finemesh_namepath);
-    } catch ( JException e ) {
+    } catch ( const JException& e ) {
         // if we can't get it as a resource, try to get it from a local file
         size_t ipos=namepath.find("/");
         size_t ipos2=namepath.find("/",ipos+1);

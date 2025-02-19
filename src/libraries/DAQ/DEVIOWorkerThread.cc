@@ -776,7 +776,7 @@ void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
 		iptr += 2;
 		try{
 			ParseBORbank(iptr, iend);
-		}catch(JException &e){
+		}catch(const JException &e){
 			cerr << e.what();
 		}
 		return;

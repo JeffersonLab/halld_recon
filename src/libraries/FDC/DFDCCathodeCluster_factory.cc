@@ -191,7 +191,7 @@ void DFDCCathodeCluster_factory::Process(const std::shared_ptr<const JEvent>& ev
       std::sort(mData.begin(), mData.end(), DFDCCathodeCluster_gPlane_cmp);
     }
   }
-  catch (JException d) {
+  catch (const JException& d) {
     cout << d << endl;
   }	
   catch (...) {
