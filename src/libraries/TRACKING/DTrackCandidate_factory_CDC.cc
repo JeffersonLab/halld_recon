@@ -153,7 +153,6 @@ void DTrackCandidate_factory_CDC::Init()
 //------------------
 void DTrackCandidate_factory_CDC::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	auto event_number = event->GetEventNumber();
 	auto run_number = event->GetRunNumber();
 	auto app = event->GetJApplication();
 	auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
