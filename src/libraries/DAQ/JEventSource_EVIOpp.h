@@ -174,7 +174,7 @@ class JEventSource_EVIOpp: public JEventSource{
 		vector<DEVIOWorkerThread*> worker_threads;
 		thread *dispatcher_thread;
 
-		JStreamLog evioout;
+		JLogger evioout;
 		
 		uint32_t F250_EMULATION_MODE; // (EmulationModeType)
 		uint32_t F125_EMULATION_MODE; // (EmulationModeType)

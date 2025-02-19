@@ -87,8 +87,6 @@ class DFDCSegment_factory : public JFactoryT<DFDCSegment> {
 		void Process(const std::shared_ptr<const JEvent>& event) override;
 
 	private:
-		JStreamLog* _log;
-
 		double N[3];
 	        double varN[3][3];
 	 	double dist_to_origin,xc,yc,rc;

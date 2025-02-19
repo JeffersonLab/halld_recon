@@ -55,7 +55,6 @@ class DFDCCathodeCluster_factory : public JFactoryT<DFDCCathodeCluster> {
 		void Process(const std::shared_ptr<const JEvent>& event) override;
 		void Init() override;
 	private:
-		JStreamLog* _log;
 		double TIME_SLICE;
 };
 

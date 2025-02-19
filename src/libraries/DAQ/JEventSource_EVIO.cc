@@ -97,10 +97,10 @@ JEventSource_EVIO::JEventSource_EVIO(std::string source_name, JApplication* app)
 	source_type = kNoSource;
 	quit_on_next_ET_timeout = false;
 
-	// Initialize dedicated JStreamLog used for debugging messages
-	evioout.SetTag("--- EVIO ---: ");
-	evioout.SetTimestampFlag();
-	evioout.SetThreadstampFlag();
+	// Initialize dedicated logger
+	evioout.SetGroup("EVIO");
+	evioout.ShowTimestamp(true);
+	evioout.ShowThreadstamp(true);
 	
 	// Define base set of status bits
 	DStatusBits::SetStatusBitDescriptions();

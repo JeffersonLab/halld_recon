@@ -223,7 +223,7 @@ class JEventSource_EVIO: public JEventSource {
 		map<tagNum, MODULE_TYPE> module_type;
 		map<MODULE_TYPE, MODULE_TYPE> modtype_translate;
 
-		JStreamLog evioout;
+		JLogger evioout;
 
 		bool  AUTODETECT_MODULE_TYPES;
 		bool  DUMP_MODULE_MAP;

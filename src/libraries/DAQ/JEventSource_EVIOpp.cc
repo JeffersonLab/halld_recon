@@ -58,10 +58,10 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 	NEVENTBUFF_STALLED   = 0;
 	NPARSER_STALLED      = 0;
 
-	// Initialize dedicated JStreamLog used for debugging messages
-	evioout.SetTag("--- EVIO ---: ");
-	evioout.SetTimestampFlag();
-	evioout.SetThreadstampFlag();
+	// Initialize dedicated logger
+	evioout.SetGroup("EVIO");
+	evioout.ShowTimestamp(true);
+	evioout.ShowThreadstamp(true);
 	
 	// Define base set of status bits
 	DStatusBits::SetStatusBitDescriptions();

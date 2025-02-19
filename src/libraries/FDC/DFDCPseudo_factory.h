@@ -137,7 +137,6 @@ class DFDCPseudo_factory : public JFactoryT<DFDCPseudo> {
 		TH1F *u_cl_size, *v_cl_size, *u_cl_n, *v_cl_n, *x_dist_2, *x_dist_3, *x_dist_23, *x_dist_33;
 		TH1F *d_uv;
 
-//		JStreamLog* _log;
 };
 
 #endif // DFACTORY_DFDCPSEUDO_H

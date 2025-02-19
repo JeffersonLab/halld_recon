@@ -63,18 +63,16 @@ bool DFDCCathodeCluster_gPlane_cmp(	const DFDCCathodeCluster* a,
 
 ///
 /// DFDCCathodeCluster_factory::DFDCCathodeCluster_factory():
-///	default constructor--initializes log file
+///	default constructor
 ///
 DFDCCathodeCluster_factory::DFDCCathodeCluster_factory() {
-	_log = new JStreamLog(std::cout, "DFDCCathodeCluster >>");
 }
 
 ///
 /// DFDCCathodeCluster_factory::~DFDCCathodeCluster_factory():
-/// default destructor--closes log file.
+/// default destructor
 ///
 DFDCCathodeCluster_factory::~DFDCCathodeCluster_factory() {
-	delete _log;
 }
 
 ///

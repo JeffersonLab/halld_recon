@@ -64,16 +64,14 @@ bool DFDCPseudo_cmp(const DFDCPseudo* a, const DFDCPseudo *b){
 
 ///
 /// DFDCPseudo_factory::DFDCPseudo_factory():
-/// default constructor -- initializes log file
+/// default constructor
 ///
 DFDCPseudo_factory::DFDCPseudo_factory() {
-  //_log = new JStreamLog(std::cout, "FDC PSEUDO >>");
-  //*_log << "File initialized." << endMsg;
 }
 
 ///
 /// DFDCPseudo_factory::~DFDCPseudo_factory():
-/// default destructor -- closes log file
+/// default destructor
 ///
 DFDCPseudo_factory::~DFDCPseudo_factory() {
   if (fdcwires.size()){
@@ -90,7 +88,6 @@ DFDCPseudo_factory::~DFDCPseudo_factory() {
       }
     }    
   }
-  //delete _log;
 }
 
 //------------------
