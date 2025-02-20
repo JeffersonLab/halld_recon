@@ -2014,24 +2014,23 @@ void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid,
         // Make sure this is a data continuation word, if not, stop here
         if(((*iptr>>31) & 0x1) != 0x0)break;
 
-        bool invalid_1 = (*iptr>>29) & 0x1;
-        bool invalid_2 = (*iptr>>13) & 0x1;
-        uint16_t sample_1 = 0;
+        uint16_t sample_1 = (*iptr>>16) & 0xFFF;
+
         uint16_t sample_2 = 0;
-        if(!invalid_1)sample_1 = (*iptr>>16) & 0x1FFF;
-        if(!invalid_2)sample_2 = (*iptr>>0) & 0x1FFF;
+        bool invalid_2 = (*iptr>>13) & 0x1;
+	if(!invalid_2)sample_2 = (*iptr>>0) & 0xFFF;
 
         // Sample 1
         wrd->samples.push_back(sample_1);
-        wrd->invalid_samples |= invalid_1;
-        wrd->overflow |= (sample_1>>12) & 0x1;
+        wrd->invalid_samples = 0;
+        wrd->overflow = 0;
 
         if((isample+2) == window_width && invalid_2)break; // skip last sample if flagged as invalid
 
         // Sample 2
         wrd->samples.push_back(sample_2);
         wrd->invalid_samples |= invalid_2;
-        wrd->overflow |= (sample_2>>12) & 0x1;
+        wrd->overflow = 0;
     }
 }
 
