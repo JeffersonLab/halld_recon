@@ -9,7 +9,7 @@
 #define _JEventProcessor_BCAL_Eff_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <ANALYSIS/DHistogramActions.h>
 #include "ANALYSIS/DAnalysisUtilities.h"

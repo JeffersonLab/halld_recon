@@ -147,6 +147,7 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	string locOutputFileName = Get_OutputFileName(locOutputFileNameSubString);
 
 	hddm_r::HDDM locRecord;
+	hddm_r::threads::ID = 1;
 	hddm_r::ReconstructedPhysicsEventList res = locRecord.addReconstructedPhysicsEvents(1);
 
 	// load the run and event numbers
@@ -958,6 +959,7 @@ bool DEventWriterREST::Write_RESTEvent(string locOutputFileName, hddm_r::HDDM& l
 
 		// write a comment record at the head of the file
 		hddm_r::HDDM locCommentRecord;
+		hddm_r::threads::ID = 1;
 		hddm_r::ReconstructedPhysicsEventList res = locCommentRecord.addReconstructedPhysicsEvents(1);
 		hddm_r::CommentList comment = res().addComments();
 		comment().setText("This is a REST event stream...");

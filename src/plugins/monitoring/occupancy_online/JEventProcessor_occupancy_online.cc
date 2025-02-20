@@ -18,6 +18,7 @@
 #include <FDC/DFDCWireDigiHit.h>
 #include <FMWPC/DFMWPCDigiHit.h>
 #include <FCAL/DFCALDigiHit.h>
+#include <ECAL/DECALDigiHit.h>
 #include <PAIR_SPECTROMETER/DPSCDigiHit.h>
 #include <PAIR_SPECTROMETER/DPSCTDCDigiHit.h>
 #include <PAIR_SPECTROMETER/DPSDigiHit.h>
@@ -48,6 +49,7 @@
 	X(DFDCWireDigiHit) \
 	X(DFMWPCDigiHit) \
 	X(DFCALDigiHit) \
+	X(DECALDigiHit) \
 	X(DPSCDigiHit) \
 	X(DPSCTDCDigiHit) \
 	X(DPSDigiHit) \
@@ -174,7 +176,11 @@ void JEventProcessor_occupancy_online::Init()
 	}
 	cdc_num_events = new TH1I("cdc_num_events", "CDC number of events", 1, 0.0, 1.0);
 	new TH2D("cdc_axes", "CDC Occupancy", 100, -57.0*4.0/3.0, 57.0*4.0/3.0, 100, -57.0, 57.0);
-    
+
+	//------------------------ ECAL -----------------------
+	ecal_occ = new TH2F("ecal_occ", "ECAL Occupancy; column; row", 42, -1.5, 40.5, 42, -1.5, 40.5);
+	ecal_num_events = new TH1I("ecal_num_events", "ECAL number of events", 1, 0.0, 1.0);
+	
 	//------------------------ FCAL -----------------------
 	fcal_occ = new TH2F("fcal_occ", "FCAL Occupancy; column; row", 61, -1.5, 59.5, 61, -1.5, 59.5);
 	fcal_num_events = new TH1I("fcal_num_events", "FCAL number of events", 1, 0.0, 1.0);
@@ -252,10 +258,10 @@ void JEventProcessor_occupancy_online::Init()
 	dirc_tdc_pixel_N_occ_led = new TH2I("dirc_tdc_pixel_N_occ_led","DIRC, TDC North (Upper) Pixel Occupancy: LED trigger; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
 	dirc_tdc_pixel_S_occ_led = new TH2I("dirc_tdc_pixel_S_occ_led","DIRC, TDC South (Lower) Pixel Occupancy: LED trigger; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
 	dirc_tdc_pixel_N_occ = new TH2I("dirc_tdc_pixel_N_occ","DIRC, TDC North (Upper) Pixel Occupancy: Non-LED triggers; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
-        dirc_tdc_pixel_S_occ = new TH2I("dirc_tdc_pixel_S_occ","DIRC, TDC South (Lower) Pixel Occupancy; Non-LED triggers; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+        dirc_tdc_pixel_S_occ = new TH2I("dirc_tdc_pixel_S_occ","DIRC, TDC South (Lower) Pixel Occupancy: Non-LED triggers; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
 
 	//------------------------ DigiHits ------------------------
-	#define FillDigiHitMap(A) digihitbinmap[#A]=(double)(digihitbinmap.size());
+	#define FillDigiHitMap(A) digihitbinmap[#A]=(double)(digihitbinmap.size()+1);
 	DigiHitTypes(FillDigiHitMap) // Initialize digihitbinmap with values from DigiHitTypes
 
 	digihits_trig1 = new TH2I("digihits_trig1", "Digihits", digihitbinmap.size(), 0.5, 0.5+(double)digihitbinmap.size(), 151, 0.0,  151.0);
@@ -395,6 +401,12 @@ void JEventProcessor_occupancy_online::Process(const std::shared_ptr<const JEven
 		cdc_occ_ring[ring]->SetBinContent(straw, 1, w);
 	}
 
+	//------------------------ ECAL -----------------------
+	ecal_num_events->Fill(0.5);
+	for(size_t loc_i = 0; loc_i < vDECALDigiHit.size(); ++loc_i){
+	  ecal_occ->Fill(vDECALDigiHit[loc_i]->column, vDECALDigiHit[loc_i]->row);
+	}
+	
 	//------------------------ FCAL -----------------------
 	fcal_num_events->Fill(0.5);
 	for(size_t loc_i = 0; loc_i < vDFCALDigiHit.size(); ++loc_i){

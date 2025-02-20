@@ -18,7 +18,7 @@
 #include "TDirectoryFile.h"
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "GlueX.h"
 #include "DAQ/DCODAROCInfo.h"
@@ -67,8 +67,8 @@ class JEventProcessor_RF_online : public JEventProcessor
 		map<pair<DetectorSystem_t, DetectorSystem_t>, TH1I*> dHistMap_AbsoluteRFRFDeltaTs;
 
 		void Init() override;
-		void BeginRun(const std::shared_ptr<const JEvent>& locEvent, int32_t runnumber);	///< Called everytime a new run number is detected.
-		void Process(const std::shared_ptr<const JEvent>& locEvent, uint64_t eventnumber);	///< Called every event.
+		void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;	///< Called everytime a new run number is detected.
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override;	///< Called every event.
 		void EndRun() override;
 		void Finish() override;
 

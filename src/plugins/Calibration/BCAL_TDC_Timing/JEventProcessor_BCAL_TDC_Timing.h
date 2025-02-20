@@ -9,7 +9,7 @@
 #define _JEventProcessor_BCAL_TDC_Timing_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <BCAL/DBCALGeometry.h>
 #include <TRACKING/DTrackFitter.h>
 

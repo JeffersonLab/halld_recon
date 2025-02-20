@@ -335,7 +335,7 @@ void JEventProcessor_TOF_Eff::Process(const std::shared_ptr<const JEvent> &locEv
 		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
 		//TRACK
-		Particle_t locPID = (locChargedTrackHypothesis->Get_FCALShowerMatchParams() != NULL) ? locChargedTrackHypothesis->PID() : Unknown;
+		Particle_t locPID = (locChargedTrackHypothesis->Get_FCALShowerMatchParams() != NULL) ? locChargedTrackHypothesis->PID() : UnknownParticle;
 		dTreeFillData.Fill_Single<Int_t>("PID_PDG", PDGtype(locPID));
 		dTreeFillData.Fill_Single<Float_t>("TrackVertexZ", locChargedTrackHypothesis->position().Z());
 		dTreeFillData.Fill_Single<UInt_t>("TrackCDCRings", locTrackTimeBased->dCDCRings);

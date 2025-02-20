@@ -7,7 +7,7 @@
 #ifndef _DEventSourceEventStore_
 #define _DEventSourceEventStore_
 
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 #include <JANA/JEventSource.h>
 #include <JANA/JEvent.h>
 

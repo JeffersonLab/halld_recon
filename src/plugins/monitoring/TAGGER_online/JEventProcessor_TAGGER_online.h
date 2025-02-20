@@ -9,7 +9,7 @@
 #define _JEventProcessor_TAGGER_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <TAGGER/DTAGMHit.h>
 #include <START_COUNTER/DSCHit.h>

@@ -9,7 +9,7 @@
 #define _JEventProcessor_HLDetectorTiming_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <DAQ/DEPICSvalue.h>
 #include <BCAL/DBCALHit.h>

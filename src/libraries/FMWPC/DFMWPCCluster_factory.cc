@@ -122,7 +122,7 @@ void DFMWPCCluster_factory::Process(const std::shared_ptr<const JEvent> &event)
       }
     }
   }
-  catch (JException& d) {
+  catch (const JException& d) {
     cout << d << endl;
   }	
   catch (...) {

@@ -9,7 +9,7 @@
 #define DFDCPSEUDO_H
 
 #include <JANA/JObject.h>
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 
 #include "DFDCWire.h"
 #include "DFDCCathodeCluster.h"

@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 #include <JANA/JApplication.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <TH1I.h>
 #include <TH2I.h>
 #include <TH3I.h>

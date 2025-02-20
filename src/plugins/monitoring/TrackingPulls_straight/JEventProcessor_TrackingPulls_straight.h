@@ -9,7 +9,7 @@
 #define _JEventProcessor_TrackingPulls_straight_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <TTree.h>
 
 class JEventProcessor_TrackingPulls_straight : public JEventProcessor {

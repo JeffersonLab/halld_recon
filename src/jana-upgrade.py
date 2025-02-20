@@ -72,7 +72,7 @@ def main():
 
     r.add(re.compile(r'using namespace jana;\n'), ''),
 
-    r.add(re.compile(r'#include <JANA/jerror\.h>'), r'#include <JANA/Compatibility/jerror.h>'),
+    r.add(re.compile(r'#include <JANA/jerror\.h>'), r'#include <DANA/jerror.h>'),
 
     r.add(re.compile(r'gPARMS'), 'app'),
     r.add(re.compile(r'JObject::oid'), 'oid'),

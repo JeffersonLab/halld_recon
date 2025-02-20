@@ -13,16 +13,13 @@
 using std::string;
 using std::map;
 
-#include <JANA/Compatibility/jerror.h>
 #include <JANA/JObject.h>
 #include <JANA/JEvent.h>
 
-
+#include <DANA/jerror.h>
 #include <DANA/DStatusBits.h>
 #include <DAQ/daq_param_type.h>
 #include <DAQ/DModuleType.h>
-
-
 #include <DAQ/Df250Config.h>
 #include <DAQ/Df250PulseIntegral.h>
 #include <DAQ/Df250StreamingRawData.h>

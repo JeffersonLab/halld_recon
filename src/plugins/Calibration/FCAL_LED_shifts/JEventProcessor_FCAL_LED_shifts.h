@@ -9,7 +9,7 @@
 #define _JEventProcessor_FCAL_LED_shifts_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <FCAL/DFCALGeometry.h>
 #include <TTAB/DTranslationTable.h>
 

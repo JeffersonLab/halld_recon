@@ -11,7 +11,7 @@
 #include <TDirectory.h>
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 class JEventProcessor_DAQ_online:public JEventProcessor{
 	public:

@@ -9,7 +9,7 @@
 #include <iostream>
 using namespace std;
 
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "JFactoryGenerator_RSAI_KO.h"

@@ -16,7 +16,7 @@
 #include "TH2I.h"
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "ANALYSIS/DTreeInterface.h"
 

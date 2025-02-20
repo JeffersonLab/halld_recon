@@ -8,10 +8,10 @@
 #ifndef _DTrackFitterStraightTrack_
 #define _DTrackFitterStraightTrack_
 
-#include <JANA/Compatibility/jerror.h>
 
 #include <TRACKING/DTrackFitter.h>
 
+#include <DANA/jerror.h>
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h> 
 #include <DMatrixSIMD.h>

@@ -9,7 +9,7 @@
 #define _JEventProcessor_TOF_TDC_shift_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <TDirectory.h>
 #include <TH2I.h>

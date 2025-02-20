@@ -18,7 +18,7 @@ void DCustomAction_CutNoDetectorHit::Initialize(const std::shared_ptr<const JEve
 	lockService = app->GetService<JLockService>();
 
 	auto locMissingPIDs = Get_Reaction()->Get_MissingPIDs();
-	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : Unknown;
+	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : UnknownParticle;
 	if(locMissingPIDs.size() != 1)
 		return; //invalid reaction setup
 
@@ -86,6 +86,7 @@ void DCustomAction_CutNoDetectorHit::Initialize(const std::shared_ptr<const JEve
 		locHistName = "BCALDeltaZVsZ";
 		locHistTitle = locTrackString + string(";Projected BCAL Hit-Z (cm);BCAL / Track #Deltaz (cm)");
 		dHistMap_BCALDeltaZVsZ = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DBCALZBins, 0.0, 450.0, dNum2DDeltaZBins, dMinDeltaZ, dMaxDeltaZ);
+		ChangeTo_BaseDirectory();
 }
 	lockService->RootUnLock(); //RELEASE ROOT LOCK!!
 }
@@ -97,7 +98,7 @@ bool DCustomAction_CutNoDetectorHit::Perform_Action(const std::shared_ptr<const 
 	//NEVER: Grab objects that are created post-kinfit (e.g. DKinFitResults, etc.) from the JEventLoop if Get_UseKinFitResultsFlag() == false: CAN CAUSE INFINITE DEPENDENCY LOOP
 	//NEVER: Get anything from the JEventLoop while in a lock: May deadlock
 
-	if(dMissingPID == Unknown)
+	if(dMissingPID == UnknownParticle)
 		return false; //invalid reaction setup
 	if(ParticleCharge(dMissingPID) == 0)
 		return false; //NOT SUPPORTED

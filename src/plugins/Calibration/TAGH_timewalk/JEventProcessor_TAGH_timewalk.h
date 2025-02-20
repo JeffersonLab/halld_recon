@@ -9,7 +9,7 @@
 #define _JEventProcessor_TAGH_timewalk_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <RF/DRFTime_factory.h>
 
 class JEventProcessor_TAGH_timewalk:public JEventProcessor{

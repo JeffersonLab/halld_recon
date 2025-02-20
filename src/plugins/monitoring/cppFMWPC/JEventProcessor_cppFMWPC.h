@@ -9,7 +9,7 @@
 #define _JEventProcessor_cppFMWPC_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <FMWPC/DFMWPCHit.h>
 #include <FDC/DFDCHit.h>

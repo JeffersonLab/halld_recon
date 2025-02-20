@@ -61,8 +61,8 @@ void DChargedTrackHypothesis_factory::BeginRun(const std::shared_ptr<const JEven
 	  }
 	  else if( dedx_theta_file_name.find("file_name") != dedx_theta_file_name.end()
 		  && dedx_theta_file_name["file_name"] != "None" ) {
-	    auto *jlargecalib = DEvent::GetJLargeCalibration(event);
-	    dedx_theta_correction_file = jlargecalib->GetResource(dedx_theta_file_name["file_name"]);
+	    auto *jresource = DEvent::GetJResource(event);
+	    dedx_theta_correction_file = jresource->GetResource(dedx_theta_file_name["file_name"]);
 	  }
 
 	 // check to see if we actually have a filename
@@ -120,8 +120,8 @@ void DChargedTrackHypothesis_factory::BeginRun(const std::shared_ptr<const JEven
 	 }
 	 else if( dedx_i_theta_file_name.find("file_name") != dedx_i_theta_file_name.end()
 		 && dedx_i_theta_file_name["file_name"] != "None" ) {
-	   auto *jlargecalib = DEvent::GetJLargeCalibration(event);
-	   dedx_i_theta_correction_file = jlargecalib->GetResource(dedx_i_theta_file_name["file_name"]);
+	   auto *res = DEvent::GetJResource(event);
+	   dedx_i_theta_correction_file = res->GetResource(dedx_i_theta_file_name["file_name"]);
 	 }
 
 	 // check to see if we actually have a filename

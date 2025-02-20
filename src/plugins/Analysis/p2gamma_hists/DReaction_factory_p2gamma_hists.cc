@@ -59,9 +59,9 @@ void DReaction_factory_p2gamma_hists::Init()
 
 	// PID
         locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction, false));
-        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 1.0, Unknown, SYS_TOF)); //false: measured data //Unknown: All PIDs
-        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 10.0, Unknown, SYS_BCAL)); //false: measured data //Unknown: All PIDs
-        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 10.0, Unknown, SYS_FCAL)); //false: measured data //Unknown: All PIDs
+        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 1.0, UnknownParticle, SYS_TOF)); //false: measured data //UnknownParticle: All PIDs
+        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 10.0, UnknownParticle, SYS_BCAL)); //false: measured data //UnknownParticle: All PIDs
+        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 10.0, UnknownParticle, SYS_FCAL)); //false: measured data //UnknownParticle: All PIDs
 
 	// Custom histograms (after PID)
         locReaction->Add_AnalysisAction(new DCustomAction_p2gamma_hists(locReaction, false, "TimingCut_Measured"));

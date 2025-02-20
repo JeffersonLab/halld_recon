@@ -8,7 +8,7 @@
 #ifndef _JEventProcessor_FCAL_Pi0TOF_
 #define _JEventProcessor_FCAL_Pi0TOF_
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <PID/DNeutralParticle.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALCluster.h>

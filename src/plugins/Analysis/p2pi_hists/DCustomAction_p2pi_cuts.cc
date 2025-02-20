@@ -11,7 +11,7 @@ void DCustomAction_p2pi_cuts::Initialize(const std::shared_ptr<const JEvent>& lo
 {
 	// check if a particle is missing
 	auto locMissingPIDs = Get_Reaction()->Get_MissingPIDs();
-	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : Unknown;
+	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : UnknownParticle;
 }
 
 bool DCustomAction_p2pi_cuts::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)

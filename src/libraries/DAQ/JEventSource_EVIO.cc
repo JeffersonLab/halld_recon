@@ -97,10 +97,10 @@ JEventSource_EVIO::JEventSource_EVIO(std::string source_name, JApplication* app)
 	source_type = kNoSource;
 	quit_on_next_ET_timeout = false;
 
-	// Initialize dedicated JStreamLog used for debugging messages
-	evioout.SetTag("--- EVIO ---: ");
-	evioout.SetTimestampFlag();
-	evioout.SetThreadstampFlag();
+	// Initialize dedicated logger
+	evioout.SetGroup("EVIO");
+	evioout.ShowTimestamp(true);
+	evioout.ShowThreadstamp(true);
 	
 	// Define base set of status bits
 	DStatusBits::SetStatusBitDescriptions();
@@ -891,7 +891,7 @@ jerror_t JEventSource_EVIO::ParseEvents(ObjList *objs_ptr)
 					double tstart = GetTime();
 					ParseEVIOEvent(evt, my_full_events);
 					time_evio_parse = GetTime() - tstart;
-				}catch(JException &jexception){
+				}catch(const JException &jexception){
 					jerr << "Exception thrown from ParseEVIOEvent!" << endl;
 					jerr << jexception.what() << endl;
 				}

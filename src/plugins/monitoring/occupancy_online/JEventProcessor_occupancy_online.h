@@ -9,7 +9,7 @@
 #define _JEventProcessor_occupancy_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <GlueX.h>
 #include <PAIR_SPECTROMETER/DPSGeometry.h>
@@ -40,6 +40,10 @@ class JEventProcessor_occupancy_online:public JEventProcessor{
 		TH1I *cdc_num_events;
 		TH2F *cdc_occ_ring[28];
 
+  //------------------------ ECAL -----------------------
+  TH1I *ecal_num_events;
+  TH2F* ecal_occ;
+  
 		//------------------------ FCAL -----------------------
 		TH1I *fcal_num_events;
 		TH2F* fcal_occ;

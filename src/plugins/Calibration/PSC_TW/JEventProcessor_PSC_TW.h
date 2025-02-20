@@ -9,7 +9,7 @@
 #define _JEventProcessor_PSC_TW_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <PAIR_SPECTROMETER/DPSCHit.h>
 #include <PAIR_SPECTROMETER/DPSCPair.h>

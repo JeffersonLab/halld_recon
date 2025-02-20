@@ -11,7 +11,7 @@
 #include <TTree.h>
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <DAQ/Df250TriggerTime.h>
 #include <DAQ/Df250PulseData.h>

@@ -57,7 +57,7 @@ void DCustomAction_p2pi_hists::Initialize(const std::shared_ptr<const JEvent>& l
 
 	// check if a particle is missing
 	auto locMissingPIDs = Get_Reaction()->Get_MissingPIDs();
-	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : Unknown;
+	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : UnknownParticle;
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock

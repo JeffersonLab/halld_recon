@@ -51,18 +51,16 @@ bool DFDCSegment_package_cmp(const DFDCPseudo* a, const DFDCPseudo* b) {
 
 
 DFDCSegment_factory::DFDCSegment_factory() {
-        _log = new JStreamLog(std::cout, "FDCSEGMENT >>");
-        *_log << "File initialized." << endMsg;
 }
 
 
 ///
 /// DFDCSegment_factory::~DFDCSegment_factory():
-/// default destructor -- closes log file
+/// default destructor
 ///
 DFDCSegment_factory::~DFDCSegment_factory() {
-        delete _log;	
 }
+
 ///
 /// DFDCSegment_factory::brun():
 /// Initialization: read in deflection map, get magnetic field map
@@ -82,7 +80,7 @@ void DFDCSegment_factory::BeginRun(const std::shared_ptr<const JEvent>& event) {
   bfield = dapp->GetBfield();
   lorentz_def=dapp->GetLorentzDeflections();
 
-  *_log << "Table of Lorentz deflections initialized." << endMsg;
+  GetLogger() << "Table of Lorentz deflections initialized.";
   */
   DEBUG_LEVEL=0;
   app->SetDefaultParameter("FDC:DEBUG_LEVEL", DEBUG_LEVEL);

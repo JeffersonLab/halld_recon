@@ -10,7 +10,7 @@
 #include "TRandom3.h"
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "PAIR_SPECTROMETER/DPSGeometry.h"
 #include "ANALYSIS/DTreeInterface.h"

@@ -59,7 +59,7 @@ void DReaction_factory_dirc_tree::Process(const std::shared_ptr<const JEvent> &l
 
 	// Kinematic Fit Results
 	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma
-	// locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Unknown, false, 0.77-0.15, 0.77+0.15));
+	// locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, UnknownParticle, false, 0.77-0.15, 0.77+0.15));
 	// locReaction->Add_AnalysisAction(new DCutAction_MissingMassSquared(locReaction, false, -0.02, 0.02));
 	
 	// MASSES, POST-KINFIT
@@ -106,7 +106,7 @@ void DReaction_factory_dirc_tree::Process(const std::shared_ptr<const JEvent> &l
 	
 	// Kinematic Fit Results
 	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma	
-	// locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Unknown, false, 0.95, 1.05));
+	// locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, UnknownParticle, false, 0.95, 1.05));
 	// locReaction->Add_AnalysisAction(new DCutAction_MissingMassSquared(locReaction, false, -0.02, 0.02));
 		
 

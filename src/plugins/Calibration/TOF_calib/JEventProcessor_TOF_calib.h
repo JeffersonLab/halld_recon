@@ -9,11 +9,11 @@
 #define _JEventProcessor_TOF_calib_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/jerror.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 using namespace std;
 #include <stdint.h>
+#include <DANA/jerror.h>
 #include <DAQ/DCODAEventInfo.h>
 #include <TOF/DTOFDigiHit.h>
 

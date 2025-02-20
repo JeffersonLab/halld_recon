@@ -169,7 +169,6 @@ void DTrackWireBased_factory::Init()
 //------------------
 void DTrackWireBased_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	auto event_number = event->GetEventNumber();
 	auto run_number = event->GetRunNumber();
 	auto app = GetApplication();
 

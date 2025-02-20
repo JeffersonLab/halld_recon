@@ -11,7 +11,7 @@
 #include <TDirectory.h>
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <BCAL/DBCALGeometry.h>
 
 class JEventProcessor_BCAL_point_time:public JEventProcessor{
