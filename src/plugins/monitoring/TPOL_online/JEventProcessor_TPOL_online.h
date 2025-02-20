@@ -3,7 +3,7 @@
 #define _JEventProcessor_TPOL_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 
 class JEventProcessor_TPOL_online:public JEventProcessor{

@@ -9,7 +9,7 @@
 #define _JEventProcessor_FCAL_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 class TH1D;
 class TH1I;

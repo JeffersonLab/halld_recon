@@ -22,9 +22,9 @@ using namespace std;
 #include <pthread.h>
 
 #include <JANA/JEventSource.h>
-#include <JANA/Compatibility/jerror.h>
 #include <JANA/Calibrations/JCalibration.h>
 
+#include <DANA/jerror.h>
 #include <HDDM/hddm_s.hpp>
 
 #include "TRACKING/DMCTrackHit.h"

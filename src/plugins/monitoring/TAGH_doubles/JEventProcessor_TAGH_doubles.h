@@ -9,7 +9,7 @@
 #define _JEventProcessor_TAGH_doubles_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 class JEventProcessor_TAGH_doubles:public JEventProcessor{
     public:

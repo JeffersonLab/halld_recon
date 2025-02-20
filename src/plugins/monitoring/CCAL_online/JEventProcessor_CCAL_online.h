@@ -9,7 +9,7 @@
 #define _JEventProcessor_CCAL_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <stdint.h>
 #include <vector>

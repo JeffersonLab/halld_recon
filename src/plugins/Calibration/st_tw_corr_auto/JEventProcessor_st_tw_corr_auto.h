@@ -9,7 +9,7 @@
 #define _JEventProcessor_st_tw_corr_auto_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 using namespace std;
 using std::vector;

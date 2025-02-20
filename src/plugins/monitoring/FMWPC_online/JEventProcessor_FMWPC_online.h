@@ -9,7 +9,7 @@
 #define _JEventProcessor_FMWPC_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <vector>
 
 class JEventProcessor_FMWPC_online:public JEventProcessor{

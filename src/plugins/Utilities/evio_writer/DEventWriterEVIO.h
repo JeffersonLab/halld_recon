@@ -9,7 +9,7 @@
 #include <JANA/JEvent.h>
 #include <JANA/JEventSource.h>
 #include <JANA/JApplication.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <DAQ/JEventSource_EVIO.h>
 #include <DAQ/JEventSource_EVIOpp.h>

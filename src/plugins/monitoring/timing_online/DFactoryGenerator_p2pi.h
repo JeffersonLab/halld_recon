@@ -8,7 +8,7 @@
 #ifndef _DFactoryGenerator_p2pi_
 #define _DFactoryGenerator_p2pi_
 
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_p2pi.h"

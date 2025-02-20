@@ -12,7 +12,7 @@
 using namespace std;
 
 #include <JANA/JApplication.h>
-#include <JANA/Compatibility/jerror.h>
+#include <JANA/Services/jerror.h>
 #include <JANA/JEventSourceGenerator.h>
 
 class DEventSourceEVIOGenerator:public JEventSourceGenerator{

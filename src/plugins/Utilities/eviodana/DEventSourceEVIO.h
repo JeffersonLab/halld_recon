@@ -8,10 +8,10 @@
 #ifndef _DEventSourceEVIO_
 #define _DEventSourceEVIO_
 
-#include <JANA/Compatibility/jerror.h>
 #include <JANA/JEventSource.h>
 #include <JANA/JEvent.h>
 
+#include <DANA/jerror.h>
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 #include <HDGEOMETRY/DGeometry.h>
 #include <TRACKING/DTrackTimeBased.h>

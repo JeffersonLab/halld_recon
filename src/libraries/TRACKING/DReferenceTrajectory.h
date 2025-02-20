@@ -14,7 +14,7 @@ using std::vector;
 #include <TMatrixFSym.h>
 #include <TMatrix.h>
 
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 #include <JANA/JApplication.h>
 
 #include <HDGEOMETRY/DGeometry.h>

@@ -8,7 +8,7 @@
 
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "DANA/DStatusBits.h"
 #include "DANA/DGeometryManager.h"
@@ -42,9 +42,8 @@ namespace DEvent {
 		return event->GetJApplication()->GetService<JCalibrationManager>()->GetJCalibration(event->GetRunNumber());
 	}
 
-// TODO: NWB: Not so happy with naming of "JResourceManager" or "JLargeCalibration"
-	inline JLargeCalibration* GetJLargeCalibration(const std::shared_ptr<const JEvent>& event) {
-		return event->GetJApplication()->GetService<JCalibrationManager>()->GetLargeCalibration(event->GetRunNumber());
+	inline JResource* GetJResource(const std::shared_ptr<const JEvent>& event) {
+		return event->GetJApplication()->GetService<JCalibrationManager>()->GetResource(event->GetRunNumber());
 	}
 
 	inline DGeometry* GetDGeometry(const std::shared_ptr<const JEvent>& event) {

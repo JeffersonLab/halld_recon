@@ -7,7 +7,7 @@
 #define _JEventProcessor_BCAL_LED_time_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <stdint.h>
 #include <vector>

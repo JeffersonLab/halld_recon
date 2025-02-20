@@ -12,11 +12,11 @@
 using namespace std;
 
 #include <JANA/JFactoryT.h>
-#include <JANA/Compatibility/jerror.h>
 
+#include <DANA/jerror.h>
 #include <DANA/ReadWriteLock.h>
-#include <TTAB/DTTabUtilities.h>
 #include <DAQ/Df250PulseRawData.h>
+#include <TTAB/DTTabUtilities.h>
 
 #include "DTACDigiHit.h"
 #include "DTACTDCDigiHit.h"

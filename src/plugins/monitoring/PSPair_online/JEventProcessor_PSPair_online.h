@@ -9,7 +9,7 @@
 #define _JEventProcessor_PSPair_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 class JEventProcessor_PSPair_online:public JEventProcessor{
 public:

@@ -34,7 +34,7 @@ int main(int narg, char *argv[])
 	JApplication* app = dapp.GetJApp();
 
 	// Set tag prefix for JANA streams to empty
-	jout.SetTag("");
+	jout.SetGroup("");
 	
 	// If LIST_FACTORIES is set, print all factories and exit
 	if(LIST_FACTORIES){

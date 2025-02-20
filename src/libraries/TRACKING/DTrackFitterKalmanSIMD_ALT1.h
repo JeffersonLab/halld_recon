@@ -8,7 +8,7 @@
 #ifndef _DTrackFitterKalmanSIMD_ALT1_
 #define _DTrackFitterKalmanSIMD_ALT1_
 
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 #include <TRACKING/DTrackFitterKalmanSIMD.h>
 
 class DTrackFitterKalmanSIMD_ALT1: public DTrackFitterKalmanSIMD{

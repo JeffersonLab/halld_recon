@@ -10,7 +10,7 @@ using namespace std;
 
 #include <TROOT.h>
 
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <TRACKING/DReferenceTrajectory.h>
 

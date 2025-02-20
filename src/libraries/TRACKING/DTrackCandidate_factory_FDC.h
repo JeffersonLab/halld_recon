@@ -13,7 +13,7 @@
 #include <TH3F.h>
 
 #include <JANA/JFactoryT.h>
-#include <JANA/Compatibility/JGeometry.h>
+#include <JANA/Geometry/JGeometry.h>
 
 
 #include "DQuickFit.h"

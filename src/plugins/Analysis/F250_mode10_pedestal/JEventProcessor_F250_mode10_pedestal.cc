@@ -18,7 +18,7 @@
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 extern "C"{
 void InitPlugin(JApplication *app){

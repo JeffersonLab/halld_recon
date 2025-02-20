@@ -15,8 +15,7 @@
 #include <JANA/JApplication.h>
 #include <JANA/JEventSource.h>
 #include <JANA/JEvent.h>
-#include <JANA/Compatibility/JStreamLog.h>
-#include <JANA/Compatibility/jerror.h>
+#include <JANA/JLogger.h>
 
 #include <DAQ/HDEVIO.h>
 #include <DAQ/HDET.h>
@@ -30,6 +29,7 @@
 
 #include <DANA/DApplication.h>
 #include <DANA/DStatusBits.h>
+#include <DANA/jerror.h>
 
 /// How this Event Source Works
 /// ===================================================================
@@ -174,7 +174,7 @@ class JEventSource_EVIOpp: public JEventSource{
 		vector<DEVIOWorkerThread*> worker_threads;
 		thread *dispatcher_thread;
 
-		JStreamLog evioout;
+		JLogger evioout;
 		
 		uint32_t F250_EMULATION_MODE; // (EmulationModeType)
 		uint32_t F125_EMULATION_MODE; // (EmulationModeType)

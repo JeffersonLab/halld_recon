@@ -21,7 +21,7 @@
 #ifndef _DStatusBits_
 #define _DStatusBits_
 
-#include <JANA/Compatibility/JStatusBits.h>
+#include <JANA/Utils/JStatusBits.h>
 
 // Used for status flags set for each event
 enum StatusBitType{

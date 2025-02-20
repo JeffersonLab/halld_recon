@@ -1,5 +1,5 @@
 #include "DTreeInterface.h"
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 /************************************************* STATIC-VARIABLE-ACCESSING PRIVATE MEMBER FUNCTIONS *************************************************/
 

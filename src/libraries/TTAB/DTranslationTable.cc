@@ -150,10 +150,10 @@ DTranslationTable::DTranslationTable(JApplication* app, JEvent* event)
 	// DTranslationTable.h
 	InitNsamplesOverride(app);
 
-	// Initialize dedicated JStreamLog used for debugging messages
-	ttout.SetTag("--- TT ---: ");
-	ttout.SetTimestampFlag();
-	ttout.SetThreadstampFlag();
+	// Initialize dedicated JLogger used for debugging messages
+	ttout.SetGroup("TT");
+	ttout.ShowTimestamp(true);
+	ttout.ShowThreadstamp(true);
 
 	// Look for and read in an optional rocid <-> rocid translation table
 	ReadOptionalROCidTranslation();

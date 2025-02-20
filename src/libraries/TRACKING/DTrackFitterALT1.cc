@@ -15,7 +15,7 @@ using namespace std;
 #include <DVector3.h>
 #include <DMatrix.h>
 
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "GlueX.h"
 #include "PID/DParticleID.h"

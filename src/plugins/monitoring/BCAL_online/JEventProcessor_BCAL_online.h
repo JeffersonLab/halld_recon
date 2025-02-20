@@ -9,7 +9,7 @@
 #define _JEventProcessor_BCAL_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <BCAL/DBCALGeometry.h>
 
 class JEventProcessor_BCAL_online:public JEventProcessor{

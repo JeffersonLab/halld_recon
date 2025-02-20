@@ -7,7 +7,7 @@
 #include <TString.h>
 
 #include <JANA/Calibrations/JCalibrationManager.h>
-#include <JANA/Compatibility/JGeometryManager.h>
+#include <JANA/Geometry/JGeometryManager.h>
 
 #include "DDIRCGeometry.h"
 

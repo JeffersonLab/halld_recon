@@ -9,7 +9,7 @@
 #define _JEventProcessor_CDC_TimeToDistance_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include "TProfile2D.h"
 #include "TProfile.h"
 #include "TH1F.h"

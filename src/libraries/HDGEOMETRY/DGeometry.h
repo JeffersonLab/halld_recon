@@ -12,9 +12,9 @@
 #include <map>
 
 #include <JANA/JApplication.h>
-#include <JANA/Compatibility/jerror.h>
-#include <JANA/Compatibility/JGeometry.h>
+#include <JANA/Geometry/JGeometry.h>
 
+#include <DANA/jerror.h>
 #include <DANA/DGeometryManager.h>
 #include "FDC/DFDCGeometry.h"
 #include "FDC/DFDCWire.h"

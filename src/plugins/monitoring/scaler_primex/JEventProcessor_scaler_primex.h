@@ -9,7 +9,7 @@
 #define _JEventProcessor_scaler_primex_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 
 #include <TDirectory.h>

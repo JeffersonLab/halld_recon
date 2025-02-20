@@ -9,7 +9,7 @@
 #define _JEventProcessor_CDC_roc_hits_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "CDC/DCDCDigiHit.h"
 #include "DAQ/Df125PulseIntegral.h"

@@ -9,7 +9,7 @@
 #define _JEventProcessor_ST_online_tracking_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <START_COUNTER/DSCHit.h>
 #include <RF/DRFTDCDigiTime.h>
 #include <RF/DRFTime_factory.h>

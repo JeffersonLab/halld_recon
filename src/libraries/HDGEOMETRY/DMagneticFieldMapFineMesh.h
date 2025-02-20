@@ -15,7 +15,7 @@ using std::string;
 
 #include <JANA/JApplication.h>
 #include <JANA/Calibrations/JCalibration.h>
-#include <JANA/Calibrations/JLargeCalibration.h>
+#include <JANA/Calibrations/JResource.h>
 
 class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
  public:
@@ -69,7 +69,7 @@ class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
  protected:
   
   JCalibration *jcalib;
-  JLargeCalibration *jresman;
+  JResource *jresman;
 
   vector< vector< vector<DBfieldPoint_t> > > Btable;
   

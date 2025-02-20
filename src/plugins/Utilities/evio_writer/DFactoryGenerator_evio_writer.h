@@ -1,7 +1,7 @@
 #ifndef _DFactoryGenerator_evio_writer_
 #define _DFactoryGenerator_evio_writer_
 
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DEventWriterEVIO_factory.h"

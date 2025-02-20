@@ -9,7 +9,7 @@
 #define _JEventProcessor_ST_online_multi_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 using namespace std;
 // ***************** C++ header files******************
 //*****************************************************

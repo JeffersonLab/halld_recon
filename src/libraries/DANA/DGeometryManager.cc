@@ -17,7 +17,7 @@
 #include <DIRC/DDIRCLutReader.h>
 
 #include <JANA/Calibrations/JCalibrationManager.h>
-#include <JANA/Compatibility/JGeometryManager.h>
+#include <JANA/Geometry/JGeometryManager.h>
 
 
 DGeometryManager::DGeometryManager(JApplication* app) : m_app(app) {}

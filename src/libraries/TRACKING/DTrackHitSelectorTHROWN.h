@@ -8,7 +8,7 @@
 #ifndef _DTrackHitSelectorTHROWN_
 #define _DTrackHitSelectorTHROWN_
 
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 
 #include <TRACKING/DTrackHitSelector.h>
 

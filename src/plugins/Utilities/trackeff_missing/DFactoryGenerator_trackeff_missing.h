@@ -8,7 +8,7 @@
 #ifndef _DFactoryGenerator_trackeff_missing_
 #define _DFactoryGenerator_trackeff_missing_
 
-#include <JANA/Compatibility/jerror.h>
+#include <DANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_trackeff_missing.h"

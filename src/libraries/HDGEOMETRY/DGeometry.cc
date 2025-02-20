@@ -8,7 +8,7 @@
 #include <algorithm>
 
 #include <JANA/Calibrations/JCalibrationManager.h>
-#include <JANA/Compatibility/JGeometryXML.h>
+#include <JANA/Geometry/JGeometryXML.h>
 
 #include "DGeometry.h"
 #include "FDC/DFDCWire.h"

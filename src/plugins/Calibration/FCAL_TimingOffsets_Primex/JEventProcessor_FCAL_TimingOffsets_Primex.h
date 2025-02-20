@@ -9,7 +9,7 @@
 #define _JEventProcessor_FCAL_TimingOffsets_Primex_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include "TTree.h"
 #include "TH1.h"

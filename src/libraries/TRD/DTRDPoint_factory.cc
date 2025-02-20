@@ -31,7 +31,6 @@ void DTRDPoint_factory::Init()
 //------------------
 void DTRDPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  auto event_number = event->GetEventNumber();
   auto runnumber = event->GetRunNumber();
   auto app = event->GetJApplication();
   auto geo_manager = app->GetService<DGeometryManager>();

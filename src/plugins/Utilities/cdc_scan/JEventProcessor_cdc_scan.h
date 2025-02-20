@@ -9,7 +9,7 @@
 #define _JEventProcessor_cdc_scan_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 
 class JEventProcessor_cdc_scan:public JEventProcessor{

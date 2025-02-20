@@ -9,7 +9,7 @@
 #define _JEventProcessor_FDC_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 
 class JEventProcessor_FDC_online:public JEventProcessor{

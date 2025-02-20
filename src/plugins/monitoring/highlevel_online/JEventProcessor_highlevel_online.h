@@ -2,7 +2,7 @@
 #define _JEventProcessor_highlevel_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 
 #include <TDirectory.h>
 #include <TH2.h>

@@ -7,7 +7,7 @@
 #define _JEventProcessor_DIRC_online_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 #include <DIRC/DDIRCGeometry.h>
 
 class JEventProcessor_DIRC_online:public JEventProcessor{

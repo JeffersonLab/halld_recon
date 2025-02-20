@@ -28,13 +28,14 @@ using namespace std;
 
 #include <JANA/JFactoryT.h>
 #include <JANA/JEvent.h>
-#include <DANA/DStatusBits.h>
-#include <DANA/DEvent.h>
+#include <JANA/Geometry/JGeometryXML.h>
 
-#include <JANA/Compatibility/JGeometryXML.h>
 #include "BCAL/DBCALGeometry.h"
 #include "PAIR_SPECTROMETER/DPSGeometry.h"
-#include "DANA/DObjectID.h"
+
+#include <DANA/DObjectID.h>
+#include <DANA/DStatusBits.h>
+#include <DANA/DEvent.h>
 
 
 #include <DVector2.h>

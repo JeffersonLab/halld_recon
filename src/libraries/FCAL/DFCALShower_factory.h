@@ -9,8 +9,8 @@
 #define _DFCALShower_factory_
 
 #include <JANA/JFactoryT.h>
-#include <JANA/Compatibility/jerror.h>
 
+#include <DANA/jerror.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALCluster.h>
 

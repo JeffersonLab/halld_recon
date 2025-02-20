@@ -9,7 +9,7 @@
 #define _JEventProcessor_ST_online_Tresolution_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/Compatibility/JLockService.h>
+#include <JANA/Services/JLockService.h>
 // ROOT header files
 #include <TMath.h>
 #include <TDirectory.h>

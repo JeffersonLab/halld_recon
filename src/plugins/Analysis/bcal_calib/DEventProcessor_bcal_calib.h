@@ -23,11 +23,11 @@ using std::map;
 #include <JANA/JEventProcessor.h>
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibration.h>
-#include <JANA/Compatibility/jerror.h>
 
 #include <PID/DKinematicData.h>
 #include <CDC/DCDCTrackHit.h>
 #include <BCAL/DBCALShower.h>
+#include <DANA/jerror.h>
 #include <DMatrixSIMD.h>
 #include <DVector2.h>
 #include <DVector3.h>
