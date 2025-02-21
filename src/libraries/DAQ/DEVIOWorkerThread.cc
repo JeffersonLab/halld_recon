@@ -1810,33 +1810,36 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						cout << "      FADC125 FDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
 					}
 
-					// Word 2:
-					++iptr;
-					if(iptr>=iend){
-						jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
-						continue;
-					}
-					if( ((*iptr>>31) & 0x1) != 0 ){
-						jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
-						continue;
-					}
-					uint32_t word2      = *iptr;
-					uint32_t pulse_peak = 0;
-					uint32_t sum        = (*iptr>>19) & 0xFFF;
-					uint32_t peak_time  = (*iptr>>11) & 0xFF;
-					uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
-					if(VERBOSE>7){
-						cout << "      FADC125 FDC Pulse Data(integral) word2: " << hex << (*iptr) << dec << endl;
-						cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
-					}
+					// Word 2 should be present for each peak found (a total of pulse_number times)				  
+					
+					for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
+					      // Word 2:
+					      ++iptr;
+					      if(iptr>=iend){
+						    jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
+						    continue;
+					      }
+					      if( ((*iptr>>31) & 0x1) != 0 ){
+						    jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
+						    continue;
+					      }
+					      uint32_t word2      = *iptr;
+					      uint32_t pulse_peak = 0;
+					      uint32_t sum        = (*iptr>>19) & 0xFFF;
+					      uint32_t peak_time  = (*iptr>>11) & 0xFF;
+					      uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
+					      if(VERBOSE>7){
+					            cout << "      FADC125 FDC Pulse Data(integral) word2: " << hex << (*iptr) << dec << endl;
+					            cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
+					      }
 
-					// Create hit objects
-					uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
-					uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
+					      // Create hit objects
+					      uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
+					      uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
 
-					if( pe ) {
-						pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
-									, pulse_number        // NPK
+					      if( pe ) {
+						    pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
+									, nword - 1            // pulse number
 									, pulse_time          // le_time
 									, quality_factor      // time_quality_bit
 									, overflow_count      // overflow_count
@@ -1849,7 +1852,8 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 									, nsamples_pedestal   // nsamples_pedestal
 									, nsamples_integral   // nsamples_integral
 									, false);             // emulated
-					}
+					      }
+					} // end of collection of multiple peak data					
 				}
                 break;
 
@@ -1895,43 +1899,46 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						cout << "      FADC125 FDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
 					}
 
-					// Word 2:
-					++iptr;
-					if(iptr>=iend){
-						jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
-						continue;
-					}
-					if( ((*iptr>>31) & 0x1) != 0 ){
-						jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
-						continue;
-					}
-					uint32_t word2      = *iptr;
-					uint32_t pulse_peak = (*iptr>>19) & 0xFFF;
-					uint32_t sum        = 0;
-					uint32_t peak_time  = (*iptr>>11) & 0xFF;
-					uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
-					if(VERBOSE>7){
-						cout << "      FADC125 FDC Pulse Data(peak) word2: " << hex << (*iptr) << dec << endl;
-						cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
-					}
-
-					// Create hit objects
-					uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
-					uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
-
-					if( pe ) {
+					// Word 2 should be present for each peak found (a total of pulse_number times)				  
 					
-						// The following is a temporary fix. In late 2017 the CDC group started
-						// using data type 9 (i.e. FDC pulse peak). This caused many conflicts
-						// with plugins downstream that were built around there being a Df125CDCPulse
-						// object associated with the DCDCDigiHit. In order to quickly solve
-						// the issue as the run was starting, this fix was made to produce Df125CDCPulse
-						// object from this data iff rocid<30 indicating the data came from the
-						// CDC. 
-						if( rocid<30 ){
+					for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
+					       // Word 2:
+					      ++iptr;
+					      if(iptr>=iend){
+						    jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
+						    continue;
+					      }
+					      if( ((*iptr>>31) & 0x1) != 0 ){
+						    jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
+						    continue;
+					      }
+					      uint32_t word2      = *iptr;
+					      uint32_t pulse_peak = (*iptr>>19) & 0xFFF;
+					      uint32_t sum        = 0;
+					      uint32_t peak_time  = (*iptr>>11) & 0xFF;
+					      uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
+					      if(VERBOSE>7){
+						    cout << "      FADC125 FDC Pulse Data(peak) word2: " << hex << (*iptr) << dec << endl;
+						    cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
+					      }
 
-							pe->NEW_Df125CDCPulse(rocid, slot, channel, itrigger
-										, pulse_number        // NPK
+					      // Create hit objects
+					      uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
+					      uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
+
+					      if( pe ) {
+					
+						    // The following is a temporary fix. In late 2017 the CDC group started
+						    // using data type 9 (i.e. FDC pulse peak). This caused many conflicts
+						    // with plugins downstream that were built around there being a Df125CDCPulse
+						    // object associated with the DCDCDigiHit. In order to quickly solve
+						    // the issue as the run was starting, this fix was made to produce Df125CDCPulse
+						    // object from this data iff rocid<30 indicating the data came from the
+						    // CDC. 
+						    if( rocid<30 ){
+
+							  pe->NEW_Df125CDCPulse(rocid, slot, channel, itrigger
+										, nword - 1            // pulse number
 										, pulse_time          // le_time
 										, quality_factor      // time_quality_bit
 										, overflow_count      // overflow_count
@@ -1944,10 +1951,10 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 										, nsamples_integral   // nsamples_integral
 										, false);             // emulated
 						
-						}else{
+						    }else{
 					
-							pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
-										, pulse_number        // NPK
+							  pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
+										, nword - 1            // pulse number
 										, pulse_time          // le_time
 										, quality_factor      // time_quality_bit
 										, overflow_count      // overflow_count
@@ -1960,8 +1967,9 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 										, nsamples_pedestal   // nsamples_pedestal
 										, nsamples_integral   // nsamples_integral
 										, false);             // emulated
-						}
-					}
+						    }
+					      }
+					}  // end of collection of multiple peak data
 				}
                 break;
 
