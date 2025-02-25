@@ -1448,7 +1448,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
             case 4: // Window Raw Data
                 // iptr passed by reference and so will be updated automatically
                 if(VERBOSE>7) cout << "      FADC250 Window Raw Data"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-                if(pe) MakeDf250WindowRawData(pe, rocid, slot, itrigger, iptr);
+                if(pe) MakeDf250WindowRawData(pe, rocid, slot, itrigger, iptr, iend);
                 break;
             case 5: // Window Sum
 				{
@@ -1636,7 +1636,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 //----------------
 // MakeDf250WindowRawData
 //----------------
-void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr)
+void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr, uint32_t* &iend)
 {
     uint32_t channel = (*iptr>>23) & 0x0F;
     uint32_t window_width = (*iptr>>0) & 0x0FFF;
@@ -1654,6 +1654,9 @@ void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid,
             break;
         }
 
+        if (iptr >= iend) jerr << "fa250 window raw data are incomplete - the collection of samples has been truncated!" << endl;
+        if (iptr >= iend) break;
+	
         bool invalid_1 = (*iptr>>29) & 0x1;
         bool invalid_2 = (*iptr>>13) & 0x1;
         uint16_t sample_1 = 0;
@@ -1738,7 +1741,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
             case 4: // Window Raw Data
 					// iptr passed by reference and so will be updated automatically
 					if(VERBOSE>7) cout << "      FADC125 Window Raw Data"<<endl;
-					if(pe) MakeDf125WindowRawData(pe, rocid, slot, itrigger, iptr);
+					if(pe) MakeDf125WindowRawData(pe, rocid, slot, itrigger, iptr, iend);
 					break;
 
             case 5: // CDC pulse data (new)  (GlueX-doc-2274-v8)
@@ -2007,7 +2010,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 //----------------
 // MakeDf125WindowRawData
 //----------------
-void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr)
+void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr, uint32_t* &iend)
 {
     uint32_t channel = (*iptr>>20) & 0x7F;
     uint32_t window_width = (*iptr>>0) & 0x0FFF;
@@ -2015,13 +2018,16 @@ void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid,
     Df125WindowRawData *wrd = pe->NEW_Df125WindowRawData(rocid, slot, channel, itrigger);
 
     for(uint32_t isample=0; isample<window_width; isample +=2){
-
+      
         // Advance to next word
         iptr++;
 
         // Make sure this is a data continuation word, if not, stop here
         if(((*iptr>>31) & 0x1) != 0x0)break;
 
+        if (iptr >= iend) jerr << "fa125 window raw data are incomplete - the collection of samples has been truncated!" << endl;
+        if (iptr >= iend) break;
+	
         uint16_t sample_1 = (*iptr>>16) & 0xFFF;
 
         uint16_t sample_2 = 0;
