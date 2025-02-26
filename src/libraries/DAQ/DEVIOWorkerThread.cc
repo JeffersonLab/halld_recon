@@ -996,6 +996,13 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 
 			case 0xDEC:  // Helicity decoder board, SD 2025-01-28
 				jout << "found Helicity decoder board!  (len = " << data_block_bank_len << ")" << endl;
+//             	jout<<"Skip Helicity Decoder Block!" << endl;
+//             	break;
+            	
+				cout << "----- First few words to help with debugging -----" << endl;
+				cout.flush(); cerr.flush();
+				DumpBinary(&iptr[-2], iend, 32, &iptr[-1]);
+				
                 ParseHelicityDecoderBank(rocid, iptr, iend);
                 //Parsef250Bank(rocid, iptr, iend);
  				break;
@@ -1349,7 +1356,7 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
 		// Get module type from next word (bits 18-21)
 		uint32_t mod_id = ((*iptr) >> 18) & 0x000F;
 		MODULE_TYPE type = (MODULE_TYPE)mod_id;
-		cout << "      rocid=" << rocid << "  Encountered module type: " << type << " (=" << DModuleType::GetModule(type).GetName() << ")  word=" << hex << (*iptr) << dec << endl;
+		//cout << "      rocid=" << rocid << "  Encountered module type: " << type << " (=" << DModuleType::GetModule(type).GetName() << ")  word=" << hex << (*iptr) << dec << endl;
 
         switch(type){
             case DModuleType::FADC250:
@@ -1379,9 +1386,9 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
                */
                break;
                
-            case DModuleType::HELICITY_DECODER:
-                ParseHelicityDecoderBank(rocid, iptr, iend);
-                break;
+//             case DModuleType::HELICITY_DECODER:
+//                 ParseHelicityDecoderBank(rocid, iptr, iend);
+//                 break;
 
             case DModuleType::UNKNOWN:
             default:
