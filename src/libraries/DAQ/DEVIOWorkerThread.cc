@@ -996,6 +996,8 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 
 			case 0xDEC:  // Helicity decoder board, SD 2025-01-28
 				jout << "found Helicity decoder board!  (len = " << data_block_bank_len << ")" << endl;
+            	jout<<"Skip Helicity Decoder Block!" << endl;
+            	break;
                 ParseHelicityDecoderBank(rocid, iptr, iend);
                 //Parsef250Bank(rocid, iptr, iend);
  				break;
