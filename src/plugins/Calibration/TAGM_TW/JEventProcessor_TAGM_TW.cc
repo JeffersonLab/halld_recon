@@ -2,11 +2,7 @@
 // Author: aebarnes
 
 #include "JEventProcessor_TAGM_TW.h"
-using namespace jana;
 
-// Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 // ROOT header files
 #include <TH1.h>
 #include <TH2.h>
@@ -57,7 +53,7 @@ DRFTime_factory* dRFTimeFactory;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_TAGM_TW());
+	app->Add(new JEventProcessor_TAGM_TW());
 }
 } // "C"
 
@@ -67,7 +63,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_TAGM_TW::JEventProcessor_TAGM_TW()
 {
-
+	SetTypeName("JEventProcessor_TAGM_TW");
 }
 
 //------------------
@@ -79,10 +75,13 @@ JEventProcessor_TAGM_TW::~JEventProcessor_TAGM_TW()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_TAGM_TW::init(void)
+void JEventProcessor_TAGM_TW::Init()
 {
+   auto app = GetApplication();
+   lockService = app->GetService<JLockService>();
+
    TDirectory *main = gDirectory;
 
    TDirectory *tagmDir = gDirectory->mkdir("TAGM_TW");
@@ -145,48 +144,44 @@ jerror_t JEventProcessor_TAGM_TW::init(void)
 
    main->cd();
 
-   return NOERROR;
-	
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_TAGM_TW::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_TAGM_TW::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
    // Initialize RF time factory
-   dRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
+   dRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime", ""));
 
    // be sure that DRFTime_factory::init() and brun() are called
    vector<const DRFTime*> locRFTimes;
-   eventLoop->Get(locRFTimes);
-
-   return NOERROR;
+   event->Get(locRFTimes);
 
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_TAGM_TW::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_TAGM_TW::Process(const std::shared_ptr<const JEvent>& event)
 {
    // FILL HISTOGRAMS
    // Since we are filling histograms local to this plugin, it will not interfere
    // with other ROOT operations: can use plugin-wide ROOT fill lock
 
    vector<const DTAGMHit*>      hits;
-   loop->Get(hits, "Calib");
+   event->Get(hits, "Calib");
 
    vector<const DRFTime*>	locRFTimes;
-   loop->Get(locRFTimes, "TAGH");
+   event->Get(locRFTimes, "TAGH");
    const DRFTime* locRFTime = NULL;
 
    if (locRFTimes.size() > 0)
       locRFTime = locRFTimes[0];
    else
-      return NOERROR;
+      return;
 
-   japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+   lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
    for (uint32_t i = 0; i < hits.size(); ++i) {
       if (!hits[i]->has_TDC || !hits[i]->has_fADC) continue;
@@ -243,27 +238,24 @@ jerror_t JEventProcessor_TAGM_TW::evnt(JEventLoop *loop, uint64_t eventnumber)
       }
    }
 
-   japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+   lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-   return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_TAGM_TW::erun(void)
+void JEventProcessor_TAGM_TW::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_TAGM_TW::fini(void)
+void JEventProcessor_TAGM_TW::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }

@@ -6,9 +6,10 @@
 #include <string>
 
 #include <JANA/JObject.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 #include <JANA/JEventSource.h>
 #include <JANA/JApplication.h>
+#include <JANA/Services/JLockService.h>
 
 #include <DAQ/JEventSource_EVIO.h>
 #include <DAQ/JEventSource_EVIOpp.h>
@@ -17,7 +18,7 @@
 #include <stdint.h>
 #include <fstream>
 
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
 #include <DAQ/Df250PulseIntegral.h>
 #include <DAQ/Df250TriggerTime.h>
@@ -43,24 +44,23 @@
 #include "DEVIOBufferWriter.h"
 
 using namespace std;
-using namespace jana;
 
 class DEventWriterEVIO : public JObject
 {
 	public:
 		JOBJECT_PUBLIC(DEventWriterEVIO);
 
-		DEventWriterEVIO(JEventLoop* locEventLoop);
+		DEventWriterEVIO(const std::shared_ptr<const JEvent>& locEvent);
 		~DEventWriterEVIO(void);
 
-		bool Write_EVIOEvent(JEventLoop* locEventLoop, string locOutputFileNameSubString) const;
-		bool Write_EVIOEvent(JEventLoop* locEventLoop, string locOutputFileNameSubString,
+		bool Write_EVIOEvent(const std::shared_ptr<const JEvent>& locEvent, string locOutputFileNameSubString) const;
+		bool Write_EVIOEvent(const std::shared_ptr<const JEvent>& locEvent, string locOutputFileNameSubString,
                              vector<const JObject *> &locObjectsToSave) const;
-		bool Write_EVIOBuffer(JEventLoop* locEventLoop, vector<uint32_t> *locOutputBuffer, string locOutputFileNameSubString) const;
-		bool Write_EVIOBuffer(JEventLoop* locEventLoop, uint32_t *locOutputBuffer, uint32_t locOutputBufferSize, string locOutputFileNameSubString) const;
+		bool Write_EVIOBuffer(const std::shared_ptr<const JEvent>& locEvent, vector<uint32_t> *locOutputBuffer, string locOutputFileNameSubString) const;
+		bool Write_EVIOBuffer(const std::shared_ptr<const JEvent>& locEvent, uint32_t *locOutputBuffer, uint32_t locOutputBufferSize, string locOutputFileNameSubString) const;
 
-		string Get_OutputFileName(JEventLoop* locEventLoop, string locOutputFileNameSubString) const;
-        void SetDetectorsToWriteOut(JEventLoop* locEventLoop, string detector_list, string locOutputFileNameSubString) const;
+		string Get_OutputFileName(const std::shared_ptr<const JEvent>& locEvent, string locOutputFileNameSubString) const;
+        void SetDetectorsToWriteOut(const std::shared_ptr<const JEvent>& locEvent, string detector_list, string locOutputFileNameSubString) const;
 
         bool Is_MergingFiles() const { return dMergeFiles; }
         void Set_MergeFiles(bool in_flag) { dMergeFiles = in_flag; }
@@ -73,7 +73,7 @@ class DEventWriterEVIO : public JObject
         bool CLOSE_FILES;
         
 	protected:
-		bool Open_OutputFile(JEventLoop* locEventLoop, string locOutputFileName) const;
+		bool Open_OutputFile(const std::shared_ptr<const JEvent>& locEvent, string locOutputFileName) const;
 		
 		std::ofstream *ofs_debug_input;
 		std::ofstream *ofs_debug_output;
@@ -85,6 +85,8 @@ class DEventWriterEVIO : public JObject
         string dMergedFilename;
 
 	private:
+
+		std::shared_ptr<JLockService> lockService;
 
 		//contain static variables shared amongst threads: acquire "EVIOWriter" write lock before calling
 		size_t& Get_NumEVIOOutputThreads(void) const;

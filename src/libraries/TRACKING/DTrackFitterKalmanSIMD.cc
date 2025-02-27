@@ -3,12 +3,14 @@
 //************************************************************************
 
 #include "DTrackFitterKalmanSIMD.h"
+
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include "DANA/DGeometryManager.h"
 #include "CDC/DCDCTrackHit.h"
 #include "HDGEOMETRY/DLorentzDeflections.h"
 #include "HDGEOMETRY/DMaterialMap.h"
 #include "HDGEOMETRY/DRootGeom.h"
-#include "DANA/DApplication.h"
-#include <JANA/JCalibration.h>
 #include "PID/DParticleID.h"
 
 #include <TH2F.h>
@@ -292,11 +294,11 @@ double DTrackFitterKalmanSIMD::fdc_drift_distance(double time,double Bz) const {
 }
 
 
-DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(loop){
+DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEvent>& event):DTrackFitter(event){
    FactorForSenseOfRotation=(bfield->GetBz(0.,0.,65.)>0.)?-1.:1.;
 
    // keep track of which runs we print out messages for
-   int32_t runnumber = loop->GetJEvent().GetRunNumber();
+   int32_t runnumber = event->GetRunNumber();
    pthread_mutex_lock(&print_mutex);
    bool print_messages = false;
    if(runs_announced.find(runnumber) == runs_announced.end()){
@@ -378,134 +380,133 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    // Get z positions of fdc wire planes
    geom->GetFDCZ(fdc_z_wires);
 
+   auto app = event->GetJApplication();
    ADD_VERTEX_POINT=false; 
-   gPARMS->SetDefaultParameter("KALMAN:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
+   app->SetDefaultParameter("KALMAN:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
   
    THETA_CUT=60.0; 
-   gPARMS->SetDefaultParameter("KALMAN:THETA_CUT", THETA_CUT); 
+   app->SetDefaultParameter("KALMAN:THETA_CUT", THETA_CUT); 
 
    RING_TO_SKIP=0;
-   gPARMS->SetDefaultParameter("KALMAN:RING_TO_SKIP",RING_TO_SKIP);
+   app->SetDefaultParameter("KALMAN:RING_TO_SKIP",RING_TO_SKIP);
 
    PLANE_TO_SKIP=0;
-   gPARMS->SetDefaultParameter("KALMAN:PLANE_TO_SKIP",PLANE_TO_SKIP); 
+   app->SetDefaultParameter("KALMAN:PLANE_TO_SKIP",PLANE_TO_SKIP); 
 
    MINIMUM_HIT_FRACTION=0.7;
-   gPARMS->SetDefaultParameter("KALMAN:MINIMUM_HIT_FRACTION",MINIMUM_HIT_FRACTION); 
+   app->SetDefaultParameter("KALMAN:MINIMUM_HIT_FRACTION",MINIMUM_HIT_FRACTION); 
    MIN_HITS_FOR_REFIT=6; 
-   gPARMS->SetDefaultParameter("KALMAN:MIN_HITS_FOR_REFIT", MIN_HITS_FOR_REFIT);
+   app->SetDefaultParameter("KALMAN:MIN_HITS_FOR_REFIT", MIN_HITS_FOR_REFIT);
    PHOTON_ENERGY_CUTOFF=0.125; 
-   gPARMS->SetDefaultParameter("KALMAN:PHOTON_ENERGY_CUTOFF",
+   app->SetDefaultParameter("KALMAN:PHOTON_ENERGY_CUTOFF",
          PHOTON_ENERGY_CUTOFF); 
 
    USE_FDC_HITS=true;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_FDC_HITS",USE_FDC_HITS);
+   app->SetDefaultParameter("TRKFIT:USE_FDC_HITS",USE_FDC_HITS);
    USE_CDC_HITS=true;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_CDC_HITS",USE_CDC_HITS); 
+   app->SetDefaultParameter("TRKFIT:USE_CDC_HITS",USE_CDC_HITS); 
    USE_TRD_HITS=false;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_HITS",USE_TRD_HITS); 
+   app->SetDefaultParameter("TRKFIT:USE_TRD_HITS",USE_TRD_HITS);
    USE_TRD_DRIFT_TIMES=true;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_DRIFT_TIMES",USE_TRD_DRIFT_TIMES);
+   app->SetDefaultParameter("TRKFIT:USE_TRD_DRIFT_TIMES",USE_TRD_DRIFT_TIMES);
 
 
    // Flag to enable calculation of alignment derivatives
    ALIGNMENT=false;
-   gPARMS->SetDefaultParameter("TRKFIT:ALIGNMENT",ALIGNMENT);
+   app->SetDefaultParameter("TRKFIT:ALIGNMENT",ALIGNMENT);
 
    ALIGNMENT_FORWARD=false;
-   gPARMS->SetDefaultParameter("TRKFIT:ALIGNMENT_FORWARD",ALIGNMENT_FORWARD);
+   app->SetDefaultParameter("TRKFIT:ALIGNMENT_FORWARD",ALIGNMENT_FORWARD);
 
    ALIGNMENT_CENTRAL=false;
-   gPARMS->SetDefaultParameter("TRKFIT:ALIGNMENT_CENTRAL",ALIGNMENT_CENTRAL);
+   app->SetDefaultParameter("TRKFIT:ALIGNMENT_CENTRAL",ALIGNMENT_CENTRAL);
 
    if(ALIGNMENT){ALIGNMENT_FORWARD=true;ALIGNMENT_CENTRAL=true;}
 
    DEBUG_HISTS=false; 
-   gPARMS->SetDefaultParameter("KALMAN:DEBUG_HISTS", DEBUG_HISTS);
+   app->SetDefaultParameter("KALMAN:DEBUG_HISTS", DEBUG_HISTS);
 
    DEBUG_LEVEL=0;
-   gPARMS->SetDefaultParameter("KALMAN:DEBUG_LEVEL", DEBUG_LEVEL); 
+   app->SetDefaultParameter("KALMAN:DEBUG_LEVEL", DEBUG_LEVEL); 
 
    USE_T0_FROM_WIRES=0;
-   gPARMS->SetDefaultParameter("KALMAN:USE_T0_FROM_WIRES", USE_T0_FROM_WIRES);
+   app->SetDefaultParameter("KALMAN:USE_T0_FROM_WIRES", USE_T0_FROM_WIRES);
 
    ESTIMATE_T0_TB=false;
-   gPARMS->SetDefaultParameter("KALMAN:ESTIMATE_T0_TB",ESTIMATE_T0_TB);
+   app->SetDefaultParameter("KALMAN:ESTIMATE_T0_TB",ESTIMATE_T0_TB);
 
    ENABLE_BOUNDARY_CHECK=true;
-   gPARMS->SetDefaultParameter("GEOM:ENABLE_BOUNDARY_CHECK",
+   app->SetDefaultParameter("GEOM:ENABLE_BOUNDARY_CHECK",
          ENABLE_BOUNDARY_CHECK);
 
    USE_MULS_COVARIANCE=true;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_MULS_COVARIANCE",
+   app->SetDefaultParameter("TRKFIT:USE_MULS_COVARIANCE",
          USE_MULS_COVARIANCE);  
 
    USE_PASS1_TIME_MODE=false;
-   gPARMS->SetDefaultParameter("KALMAN:USE_PASS1_TIME_MODE",USE_PASS1_TIME_MODE); 
+   app->SetDefaultParameter("KALMAN:USE_PASS1_TIME_MODE",USE_PASS1_TIME_MODE); 
 
    USE_FDC_DRIFT_TIMES=true;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_FDC_DRIFT_TIMES",
+   app->SetDefaultParameter("TRKFIT:USE_FDC_DRIFT_TIMES",
          USE_FDC_DRIFT_TIMES);
 
    RECOVER_BROKEN_TRACKS=true;
-   gPARMS->SetDefaultParameter("KALMAN:RECOVER_BROKEN_TRACKS",RECOVER_BROKEN_TRACKS);
+   app->SetDefaultParameter("KALMAN:RECOVER_BROKEN_TRACKS",RECOVER_BROKEN_TRACKS);
 
    NUM_CDC_SIGMA_CUT=5.0;
    NUM_FDC_SIGMA_CUT=5.0;
-   gPARMS->SetDefaultParameter("KALMAN:NUM_CDC_SIGMA_CUT",NUM_CDC_SIGMA_CUT,
+   app->SetDefaultParameter("KALMAN:NUM_CDC_SIGMA_CUT",NUM_CDC_SIGMA_CUT,
          "maximum distance in number of sigmas away from projection to accept cdc hit");
-   gPARMS->SetDefaultParameter("KALMAN:NUM_FDC_SIGMA_CUT",NUM_FDC_SIGMA_CUT,
+   app->SetDefaultParameter("KALMAN:NUM_FDC_SIGMA_CUT",NUM_FDC_SIGMA_CUT,
          "maximum distance in number of sigmas away from projection to accept fdc hit"); 
 
    ANNEAL_SCALE=9.0;
    ANNEAL_POW_CONST=1.5;
-   gPARMS->SetDefaultParameter("KALMAN:ANNEAL_SCALE",ANNEAL_SCALE,
+   app->SetDefaultParameter("KALMAN:ANNEAL_SCALE",ANNEAL_SCALE,
          "Scale factor for annealing");
-   gPARMS->SetDefaultParameter("KALMAN:ANNEAL_POW_CONST",ANNEAL_POW_CONST,
+   app->SetDefaultParameter("KALMAN:ANNEAL_POW_CONST",ANNEAL_POW_CONST,
          "Annealing parameter"); 
    FORWARD_ANNEAL_SCALE=9.;
    FORWARD_ANNEAL_POW_CONST=1.5;
-   gPARMS->SetDefaultParameter("KALMAN:FORWARD_ANNEAL_SCALE",
+   app->SetDefaultParameter("KALMAN:FORWARD_ANNEAL_SCALE",
          FORWARD_ANNEAL_SCALE,
          "Scale factor for annealing");
-   gPARMS->SetDefaultParameter("KALMAN:FORWARD_ANNEAL_POW_CONST",
+   app->SetDefaultParameter("KALMAN:FORWARD_ANNEAL_POW_CONST",
          FORWARD_ANNEAL_POW_CONST,
          "Annealing parameter");
 
    FORWARD_PARMS_COV=false;
-   gPARMS->SetDefaultParameter("KALMAN:FORWARD_PARMS_COV",FORWARD_PARMS_COV); 
+   app->SetDefaultParameter("KALMAN:FORWARD_PARMS_COV",FORWARD_PARMS_COV); 
 
    CDC_VAR_SCALE_FACTOR=1.;
-   gPARMS->SetDefaultParameter("KALMAN:CDC_VAR_SCALE_FACTOR",CDC_VAR_SCALE_FACTOR); 
+   app->SetDefaultParameter("KALMAN:CDC_VAR_SCALE_FACTOR",CDC_VAR_SCALE_FACTOR); 
    CDC_T_DRIFT_MIN=-12.; // One f125 clock = 8 ns
-   gPARMS->SetDefaultParameter("KALMAN:CDC_T_DRIFT_MIN",CDC_T_DRIFT_MIN);
+   app->SetDefaultParameter("KALMAN:CDC_T_DRIFT_MIN",CDC_T_DRIFT_MIN);
 
    MOLIERE_FRACTION=0.9;
-   gPARMS->SetDefaultParameter("KALMAN:MOLIERE_FRACTION",MOLIERE_FRACTION);    
+   app->SetDefaultParameter("KALMAN:MOLIERE_FRACTION",MOLIERE_FRACTION);    
    MS_SCALE_FACTOR=2.0;
-   gPARMS->SetDefaultParameter("KALMAN:MS_SCALE_FACTOR",MS_SCALE_FACTOR);
+   app->SetDefaultParameter("KALMAN:MS_SCALE_FACTOR",MS_SCALE_FACTOR);
    MOLIERE_RATIO1=0.5/(1.-MOLIERE_FRACTION);
    MOLIERE_RATIO2=MS_SCALE_FACTOR*1.e-6/(1.+MOLIERE_FRACTION*MOLIERE_FRACTION); //scale_factor/(1+F*F)
 
    COVARIANCE_SCALE_FACTOR_CENTRAL=2.0;
-   gPARMS->SetDefaultParameter("KALMAN:COVARIANCE_SCALE_FACTOR_CENTRAL",
+   app->SetDefaultParameter("KALMAN:COVARIANCE_SCALE_FACTOR_CENTRAL",
 			       COVARIANCE_SCALE_FACTOR_CENTRAL);
  
    COVARIANCE_SCALE_FACTOR_FORWARD=2.0;
-   gPARMS->SetDefaultParameter("KALMAN:COVARIANCE_SCALE_FACTOR_FORWARD",
+   app->SetDefaultParameter("KALMAN:COVARIANCE_SCALE_FACTOR_FORWARD",
                                COVARIANCE_SCALE_FACTOR_FORWARD);
 
    WRITE_ML_TRAINING_OUTPUT=false;
-   gPARMS->SetDefaultParameter("KALMAN:WRITE_ML_TRAINING_OUTPUT",
+   app->SetDefaultParameter("KALMAN:WRITE_ML_TRAINING_OUTPUT",
                                WRITE_ML_TRAINING_OUTPUT);
 
    if (WRITE_ML_TRAINING_OUTPUT){
      mlfile.open("mltraining.dat");
    }
 
-
-   DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-   JCalibration *jcalib = dapp->GetJCalibration((loop->GetJEvent()).GetRunNumber());
+   JCalibration *jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
    vector< map<string, double> > tvals;
    cdc_drift_table.clear();
    if (jcalib->Get("CDC/cdc_drift_table", tvals)==false){    
@@ -651,7 +652,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
       geom->GetTargetZ(TARGET_Z);
    }
    if (ADD_VERTEX_POINT){
-     gPARMS->SetDefaultParameter("KALMAN:VERTEX_POSITION",TARGET_Z);
+     app->SetDefaultParameter("KALMAN:VERTEX_POSITION",TARGET_Z);
    }
 
    // Beam position and direction

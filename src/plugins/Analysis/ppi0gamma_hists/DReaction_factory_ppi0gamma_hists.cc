@@ -32,21 +32,19 @@ void DReaction_factory_ppi0gamma_hists::PIDCuts(DReaction* locReaction)
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DReaction_factory_ppi0gamma_hists::brun(JEventLoop* locEventLoop, int32_t locRunNumber)
+void DReaction_factory_ppi0gamma_hists::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	GetCalib(locEvent, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
-
-	return NOERROR;
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DReaction_factory_ppi0gamma_hists::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DReaction_factory_ppi0gamma_hists::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// Make as many DReaction objects as desired
 	DReactionStep* locReactionStep = NULL;
@@ -126,7 +124,7 @@ jerror_t DReaction_factory_ppi0gamma_hists::evnt(JEventLoop* locEventLoop, uint6
 	// Kinematics of final selection
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false, "Final")); //false: fill histograms with measured particle data
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 
 
@@ -175,7 +173,7 @@ jerror_t DReaction_factory_ppi0gamma_hists::evnt(JEventLoop* locEventLoop, uint6
 	// Kinematics of final selection
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false, "Final")); //false: fill histograms with measured particle data
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 
 
@@ -224,7 +222,7 @@ jerror_t DReaction_factory_ppi0gamma_hists::evnt(JEventLoop* locEventLoop, uint6
 	// Kinematics of final selection
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false, "Final")); //false: fill histograms with measured particle data
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 
 
@@ -268,7 +266,7 @@ jerror_t DReaction_factory_ppi0gamma_hists::evnt(JEventLoop* locEventLoop, uint6
 	// Kinematics of final selection
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false, "Final")); //false: fill histograms with measured particle data
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 
 
@@ -314,17 +312,14 @@ jerror_t DReaction_factory_ppi0gamma_hists::evnt(JEventLoop* locEventLoop, uint6
 	// Kinematics of final selection
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false, "Final")); //false: fill histograms with measured particle data
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
-
-	return NOERROR;
+	Insert(locReaction); //Register the DReaction with the factory
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_ppi0gamma_hists::fini(void)
+void DReaction_factory_ppi0gamma_hists::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
 }

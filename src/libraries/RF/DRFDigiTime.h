@@ -9,14 +9,13 @@
 #define _DRFDigiTime_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
 #include "DAQ/DModuleType.h"
 #include "GlueX.h"
 
 using namespace std;
 
-class DRFDigiTime : public jana::JObject
+class DRFDigiTime : public JObject
 {
 	public:
 		JOBJECT_PUBLIC(DRFDigiTime);
@@ -24,9 +23,10 @@ class DRFDigiTime : public jana::JObject
 		DetectorSystem_t dSystem;
 		uint32_t time;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "System", "%s", SystemName(dSystem));
-			AddString(items, "time", "%u", time);
+
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(SystemName(dSystem), "System", "%s");
+			summary.add(time, NAME_OF(time), "%u");
 		}
 };
 

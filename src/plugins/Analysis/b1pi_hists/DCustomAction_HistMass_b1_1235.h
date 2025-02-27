@@ -13,7 +13,7 @@
 
 #include "TH1I.h"
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "JANA/JApplication.h"
 
 #include "ANALYSIS/DAnalysisAction.h"
@@ -22,7 +22,6 @@
 #include "ANALYSIS/DAnalysisUtilities.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_HistMass_b1_1235 : public DAnalysisAction
 {
@@ -31,12 +30,12 @@ class DCustomAction_HistMass_b1_1235 : public DAnalysisAction
 		DCustomAction_HistMass_b1_1235(const DReaction* locReaction, bool locUseKinFitResultsFlag, string locActionUniqueString = "") : 
 		DAnalysisAction(locReaction, "Custom_HistMass_b1_1235", locUseKinFitResultsFlag, locActionUniqueString) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop) { locEventLoop->GetSingle(dAnalysisUtilities); }
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) { locEvent->GetSingle(dAnalysisUtilities); }
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 		void Reset_NewEvent(void){dPastParticles.clear();}
 
 		// Optional: Useful utility functions.

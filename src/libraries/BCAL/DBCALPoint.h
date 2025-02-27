@@ -13,9 +13,7 @@
 #include "BCAL/DBCALGeometry.h"
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-using namespace jana;
 
 /** 
    This object gives a z position to BCAL hits using timing information.
@@ -69,16 +67,15 @@ public:
   void add2Pi() const;
   void sub2Pi() const;
 
-  void toStrings(vector<pair<string,string> > &items) const {
-    AddString(items, "E(GeV)", "%5.3f", m_E);
-    AddString(items, "t(ns)", "%5.1f", m_t);
-    AddString(items, "z(cm)", "%5.1f", m_z);
-    AddString(items, "r(cm)", "%5.1f", m_r);
-    AddString(items, "phi", "%5.3f", m_phi);
-    AddString(items, "module", "%i", m_module);
-    AddString(items, "layer", "%i", m_layer);
-    AddString(items, "sector", "%i", m_sector);
-    
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(m_E, "E(GeV)", "%5.3f");
+    summary.add(m_t, "t(ns)", "%5.1f");
+    summary.add(m_z, "z(cm)", "%5.1f");
+    summary.add(m_r, "r(cm)", "%5.1f");
+    summary.add(m_phi, "phi", "%5.3f");
+    summary.add(m_module, "module", "%i");
+    summary.add(m_layer, "layer", "%i");
+    summary.add(m_sector, "sector", "%i");
   }
   
 private:

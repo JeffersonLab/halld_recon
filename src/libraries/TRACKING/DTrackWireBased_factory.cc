@@ -18,11 +18,11 @@ using namespace std;
 #include <TRACKING/DReferenceTrajectory.h>
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h>
+#include <DANA/DObjectID.h>
 #include <SplitString.h>
 
 #include <TROOT.h>
 
-using namespace jana;
 
 //------------------
 // CDCSortByRincreasing
@@ -76,9 +76,9 @@ bool DTrackWireBased_cmp(DTrackWireBased *a,DTrackWireBased *b){
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrackWireBased_factory::init(void)
+void DTrackWireBased_factory::Init()
 {
    fitter = NULL;
 
@@ -86,13 +86,15 @@ jerror_t DTrackWireBased_factory::init(void)
    DEBUG_HISTS = false;
    DEBUG_LEVEL = 0;
 
-   gPARMS->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",DEBUG_LEVEL);
+   auto app = GetApplication();
+
+   app->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",DEBUG_LEVEL);
 
    SKIP_MASS_HYPOTHESES_WIRE_BASED=true; 
-   gPARMS->SetDefaultParameter("TRKFIT:SKIP_MASS_HYPOTHESES_WIRE_BASED",
+   app->SetDefaultParameter("TRKFIT:SKIP_MASS_HYPOTHESES_WIRE_BASED",
 			       SKIP_MASS_HYPOTHESES_WIRE_BASED); 
    PROTON_MOM_THRESH=0.8; // GeV 
-   gPARMS->SetDefaultParameter("TRKFIT:PROTON_MOM_THRESH",
+   app->SetDefaultParameter("TRKFIT:PROTON_MOM_THRESH",
 			       PROTON_MOM_THRESH);
 
    // Make list of mass hypotheses to use in fit
@@ -115,7 +117,7 @@ jerror_t DTrackWireBased_factory::init(void)
      }
    
    string HYPOTHESES = locMassStream.str();
-   gPARMS->SetDefaultParameter("TRKFIT:HYPOTHESES", HYPOTHESES);
+   app->SetDefaultParameter("TRKFIT:HYPOTHESES", HYPOTHESES);
 
    // Parse MASS_HYPOTHESES strings to make list of masses to try
    hypotheses.clear();
@@ -131,46 +133,47 @@ jerror_t DTrackWireBased_factory::init(void)
    if(mass_hypotheses_positive.empty()){
      static once_flag pwarn_flag;
      call_once(pwarn_flag, [](){
-	 jout << endl;
-	 jout << "############# WARNING !! ################ " <<endl;
-	 jout << "There are no mass hypotheses for positive tracks!" << endl;
-	 jout << "Be SURE this is what you really want!" << endl;
-	 jout << "######################################### " <<endl;
-	 jout << endl;
+	 jout << jendl;
+	 jout << "############# WARNING !! ################ " <<jendl;
+	 jout << "There are no mass hypotheses for positive tracks!" << jendl;
+	 jout << "Be SURE this is what you really want!" << jendl;
+	 jout << "######################################### " <<jendl;
+	 jout << jendl;
        });
    }
    if(mass_hypotheses_negative.empty()){
      static once_flag nwarn_flag;
      call_once(nwarn_flag, [](){
-	 jout << endl;
-	 jout << "############# WARNING !! ################ " <<endl;
-	 jout << "There are no mass hypotheses for negative tracks!" << endl;
-	 jout << "Be SURE this is what you really want!" << endl;
-	 jout << "######################################### " <<endl;
-	 jout << endl;
+	 jout << jendl;
+	 jout << "############# WARNING !! ################ " <<jendl;
+	 jout << "There are no mass hypotheses for negative tracks!" << jendl;
+	 jout << "Be SURE this is what you really want!" << jendl;
+	 jout << "######################################### " <<jendl;
+	 jout << jendl;
        });
    }
    mNumHypPlus=mass_hypotheses_positive.size();
    mNumHypMinus=mass_hypotheses_negative.size();
-
-   return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
+void DTrackWireBased_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-   // Get the geometry
-   DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
-   geom = dapp->GetDGeometry(runnumber);
+	auto run_number = event->GetRunNumber();
+	auto app = GetApplication();
+
+	auto geo_manager = app->GetService<DGeometryManager>();
+	geom = geo_manager->GetDGeometry(run_number);
+
    // Check for magnetic field
-   const DMagneticFieldMap *bfield=dapp->GetBfield(runnumber);
+   const DMagneticFieldMap *bfield = geo_manager->GetBfield(run_number);
    dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(bfield) != NULL);
    
    if(dIsNoFieldFlag){
      //Setting this flag makes it so that JANA does not delete the objects in 
-     //_data.  This factory will manage this memory.
+     //mData.  This factory will manage this memory.
      //This is all of these pointers are just copied from the "StraightLine" 
      //factory, and should not be re-deleted.
      SetFactoryFlag(NOT_OBJECT_OWNER);
@@ -185,11 +188,11 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
 
    // Get pointer to DTrackFitter object that actually fits a track
    vector<const DTrackFitter *> fitters;
-   loop->Get(fitters);
+   event->Get(fitters);
    
    if(fitters.size()<1){
       _DBG_<<"Unable to get a DTrackFitter object! NO Charged track fitting will be done!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      return; // RESOURCE_UNAVAILABLE;
    }
 
    // Drop the const qualifier from the DTrackFitter pointer (I'm surely going to hell for this!)
@@ -198,58 +201,56 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
    // Warn user if something happened that caused us NOT to get a fitter object pointer
    if(!fitter){
       _DBG_<<"Unable to get a DTrackFitter object! NO Charged track fitting will be done!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      return; // RESOURCE_UNAVAILABLE;
    }
 
    USE_HITS_FROM_CANDIDATE=false;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_HITS_FROM_CANDIDATE",
+   app->SetDefaultParameter("TRKFIT:USE_HITS_FROM_CANDIDATE",
          USE_HITS_FROM_CANDIDATE);
 
    MIN_FIT_P = 0.050; // GeV
-   gPARMS->SetDefaultParameter("TRKFIT:MIN_FIT_P", MIN_FIT_P, "Minimum fit momentum in GeV/c for fit to be considered successful");
+   app->SetDefaultParameter("TRKFIT:MIN_FIT_P", MIN_FIT_P, "Minimum fit momentum in GeV/c for fit to be considered successful");
 
    if(DEBUG_HISTS){
-      dapp->Lock();
+      // dapp->Lock();
 
       // Histograms may already exist. (Another thread may have created them)
       // Try and get pointers to the existing ones.
 
-
-      dapp->Unlock();
+      // dapp->Unlock();
    }
 
    // Get the particle ID algorithms
-   loop->GetSingle(dPIDAlgorithm);
-
-   return NOERROR;
+   event->Get(&dPIDAlgorithm);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 
-  if(!fitter)return NOERROR; 
+  std::vector<DTrackWireBased*> data;
+  if(!fitter)return; 
   
   if(dIsNoFieldFlag){
     //Clear previous objects: 
     //JANA doesn't do it because NOT_OBJECT_OWNER was set
     //It DID delete them though, in the "StraightLine" factory
-    _data.clear();
+    mData.clear();
      
     vector<const DTrackWireBased*> locWireBasedTracks;
-    loop->Get(locWireBasedTracks, "StraightLine");
+    event->Get(locWireBasedTracks, "StraightLine");
     for(size_t loc_i = 0; loc_i < locWireBasedTracks.size(); ++loc_i)
-      _data.push_back(const_cast<DTrackWireBased*>(locWireBasedTracks[loc_i]));
-    return NOERROR;
+      mData.push_back(const_cast<DTrackWireBased*>(locWireBasedTracks[loc_i]));
+    return;
   }
 
    // Get candidates and hits
    vector<const DTrackCandidate*> candidates;
-   loop->Get(candidates);
+   event->Get(candidates);
 
-   if (candidates.size()==0) return NOERROR;
+   if (candidates.size()==0) return;
 
    // Loop over candidates
    for(unsigned int i=0; i<candidates.size(); i++){
@@ -264,11 +265,11 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	rt->Reset();
 	rt->q = candidate->charge();
 
-	DoFit(i,candidate,rt,loop,ParticleMass(PiPlus));
+	DoFit(i,candidate,rt,event,ParticleMass(PiPlus));
 	// Only do fit for proton mass hypothesis for low momentum particles
 	if (candidate->momentum().Mag()<PROTON_MOM_THRESH){
 	  rt->Reset();
-	  DoFit(i,candidate,rt,loop,ParticleMass(Proton));
+	  DoFit(i,candidate,rt,event,ParticleMass(Proton));
 	}
       }
       else{
@@ -281,7 +282,7 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
          }
 
          if ((!isfinite(candidate->momentum().Mag())) || (!isfinite(candidate->position().Mag())))
-            _DBG_ << "Invalid seed data for event "<< eventnumber <<"..."<<endl;
+            _DBG_ << "Invalid seed data for event "<< event->GetEventNumber() <<"..."<<endl;
 
          // Loop over potential particle masses
          for(unsigned int j=0; j<mass_hypotheses.size(); j++){
@@ -289,7 +290,7 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	    rt->Reset();
             rt->q = candidate->charge();
-            DoFit(i,candidate,rt,loop,ParticleMass(Particle_t(mass_hypotheses[j])));
+            DoFit(i,candidate,rt,event,ParticleMass(Particle_t(mass_hypotheses[j])));
          }
 
       }
@@ -303,26 +304,23 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
      InsertMissingHypotheses();
    }
 
-   return NOERROR;
+   return;
 }
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrackWireBased_factory::erun(void)
+void DTrackWireBased_factory::EndRun()
 {
   if (rt) delete rt;
-   return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTrackWireBased_factory::fini(void)
+void DTrackWireBased_factory::Finish()
 {
-
-   return NOERROR;
 }
 
 //------------------
@@ -333,29 +331,25 @@ void DTrackWireBased_factory::FilterDuplicates(void)
    /// Look through all current DTrackWireBased objects and remove any
    /// that have all of their hits in common with another track
 
-   if(_data.size()==0)return;
+   if(mData.size()==0)return;
 
    if(DEBUG_LEVEL>2)_DBG_<<"Looking for clones of wire-based tracks ..."<<endl;
 
    set<unsigned int> indexes_to_delete;
-   for(unsigned int i=0; i<_data.size()-1; i++){
-      DTrackWireBased *dtrack1 = _data[i];
+   for(unsigned int i=0; i<mData.size()-1; i++){
+      DTrackWireBased *dtrack1 = mData[i];
 
-      vector<const DCDCTrackHit*> cdchits1;
-      vector<const DFDCPseudo*> fdchits1;
-      dtrack1->Get(cdchits1);
-      dtrack1->Get(fdchits1);
+      auto cdchits1 = dtrack1->Get<DCDCTrackHit>();
+	  auto fdchits1 = dtrack1->Get<DFDCPseudo>();
 
-      JObject::oid_t cand1=dtrack1->candidateid;
-      for(unsigned int j=i+1; j<_data.size(); j++){
-         DTrackWireBased *dtrack2 = _data[j];
+      oid_t cand1=dtrack1->candidateid;
+      for(unsigned int j=i+1; j<mData.size(); j++){
+         DTrackWireBased *dtrack2 = mData[j];
          if (dtrack2->candidateid==cand1) continue;
          if (dtrack2->mass() != dtrack1->mass())continue;
 
-         vector<const DCDCTrackHit*> cdchits2;
-         vector<const DFDCPseudo*> fdchits2;
-         dtrack2->Get(cdchits2);
-         dtrack2->Get(fdchits2);
+         auto cdchits2 = dtrack2->Get<DCDCTrackHit>();
+         auto fdchits2 = dtrack2->Get<DFDCPseudo>();
 
          // Count number of cdc and fdc hits in common
          unsigned int Ncdc = count_common_members(cdchits1, cdchits2);
@@ -376,7 +370,7 @@ void DTrackWireBased_factory::FilterDuplicates(void)
             // track to the candidate id from the clone match to 
             // prevent multiple clone tracks confusing matters 
             // at a later stage of the reconstruction...
-            _data[j]->candidateid=cand1;
+            mData[j]->candidateid=cand1;
             indexes_to_delete.insert(i);
          }else{
             indexes_to_delete.insert(j);
@@ -392,29 +386,29 @@ void DTrackWireBased_factory::FilterDuplicates(void)
 
    // Copy pointers that we want to keep to a new container and delete
    // the clone objects
-   vector<DTrackWireBased*> new_data;
-   for(unsigned int i=0; i<_data.size(); i++){
+   vector<DTrackWireBased*> newmData;
+   for(unsigned int i=0; i<mData.size(); i++){
       if(indexes_to_delete.find(i)==indexes_to_delete.end()){
-         new_data.push_back(_data[i]);
+         newmData.push_back(mData[i]);
       }else{
-         delete _data[i];
+         delete mData[i];
          if(DEBUG_LEVEL>1)_DBG_<<"Deleting clone wire-based track "<<i<<endl;
       }
    }	
-   _data = new_data;
+   mData = newmData;
 }
 
 // Routine to find the hits, do the fit, and fill the list of wire-based tracks
 void DTrackWireBased_factory::DoFit(unsigned int c_id,
       const DTrackCandidate *candidate,
       DReferenceTrajectory *rt,
-      JEventLoop *loop, double mass){
+      const std::shared_ptr<const JEvent>& event, double mass){
    // Get the hits from the candidate
   vector<const DFDCPseudo*>myfdchits;
   candidate->GetT(myfdchits);
   vector<const DCDCTrackHit *>mycdchits;
   candidate->GetT(mycdchits);
-  
+
    // Do the fit
    DTrackFitter::fit_status_t status = DTrackFitter::kFitNotDone;
    if (USE_HITS_FROM_CANDIDATE) {
@@ -436,7 +430,7 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
       //rt->Swim(candidate->position(),candidate->momentum(),candidate->charge());
       rt->FastSwimForHitSelection(candidate->position(),candidate->momentum(),candidate->charge());
 
-      status=fitter->FindHitsAndFitTrack(*candidate,rt,loop,mass,
+      status=fitter->FindHitsAndFitTrack(*candidate,rt,event,mass,
 					 mycdchits.size()+2*myfdchits.size());
       if (/*false && */status==DTrackFitter::kFitNotDone){
          if (DEBUG_LEVEL>1)_DBG_ << "Using hits from candidate..." << endl;
@@ -485,17 +479,16 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
             for(unsigned int m=0; m<fdchits.size(); m++)track->AddAssociatedObject(fdchits[m]);
 
 	    // Set CDC ring & FDC plane hit patterns before candidate tracks are associated
-	    vector<const DCDCTrackHit*> tempCDCTrackHits;
-	    vector<const DFDCPseudo*> tempFDCPseudos;
-	    track->Get(tempCDCTrackHits);
-	    track->Get(tempFDCPseudos);
+	    vector<const DCDCTrackHit*> tempCDCTrackHits = track->Get<DCDCTrackHit>();
+	    vector<const DFDCPseudo*> tempFDCPseudos = track->Get<DFDCPseudo>();
+
 	    track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
 	    track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
 
             // Add DTrackCandidate as associated object
             track->AddAssociatedObject(candidate);
 
-            _data.push_back(track);
+            Insert(track);
             break;
          }
       default:
@@ -506,18 +499,18 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
 // If the fit failed for certain hypotheses, fill in the gaps using data from
 // successful fits for each candidate.
 bool DTrackWireBased_factory::InsertMissingHypotheses(void){
-  if (_data.size()==0) return false;
+  if (mData.size()==0) return false;
   
   // Make sure the tracks are ordered by candidate id
-  sort(_data.begin(),_data.end(),DTrackWireBased_cmp);
+  sort(mData.begin(),mData.end(),DTrackWireBased_cmp);
   
-  JObject::oid_t old_id=_data[0]->candidateid;
+  oid_t old_id=mData[0]->candidateid;
   unsigned int mass_bits=0;
-  double q=_data[0]->charge();
+  double q=mData[0]->charge();
   vector<DTrackWireBased*>myhypotheses;
   vector<DTrackWireBased*>tracks_to_add;
-  for (size_t i=0;i<_data.size();i++){
-    if (_data[i]->candidateid!=old_id){
+  for (size_t i=0;i<mData.size();i++){
+    if (mData[i]->candidateid!=old_id){
       int num_hyp=myhypotheses.size();
       if ((q<0 && num_hyp!=mNumHypMinus)||(q>0 && num_hyp!=mNumHypPlus)){ 
 	AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q);
@@ -526,22 +519,22 @@ bool DTrackWireBased_factory::InsertMissingHypotheses(void){
       // Clear the myhypotheses vector for the next track
       myhypotheses.clear();
       // Reset charge 
-      q=_data[i]->charge();	
+      q=mData[i]->charge();	
    
       // Set the bit for this mass hypothesis
-      mass_bits = 1<<_data[i]->PID();
+      mass_bits = 1<<mData[i]->PID();
 
       // Add the data to the myhypotheses vector
-      myhypotheses.push_back(_data[i]);
+      myhypotheses.push_back(mData[i]);
     }
     else{
-      myhypotheses.push_back(_data[i]);
+      myhypotheses.push_back(mData[i]);
       
       // Set the bit for this mass hypothesis
-      mass_bits |= 1<< _data[i]->PID();
+      mass_bits |= 1<< mData[i]->PID();
     }
     
-    old_id=_data[i]->candidateid;
+    old_id=mData[i]->candidateid;
   }
   // Deal with last track candidate	
   int num_hyp=myhypotheses.size();
@@ -552,10 +545,10 @@ bool DTrackWireBased_factory::InsertMissingHypotheses(void){
   // Add the new list of tracks to the output list
   if (tracks_to_add.size()>0){
     for (size_t i=0;i<tracks_to_add.size();i++){ 
-      _data.push_back(tracks_to_add[i]);
+      mData.push_back(tracks_to_add[i]);
     }
     // Make sure the tracks are ordered by candidate id
-    sort(_data.begin(),_data.end(),DTrackWireBased_cmp);
+    sort(mData.begin(),mData.end(),DTrackWireBased_cmp);
   }
 
   return true;
@@ -608,6 +601,7 @@ void DTrackWireBased_factory::AddMissingTrackHypothesis(vector<DTrackWireBased*>
   src_track->GetT(cdchits);
   vector<const DFDCPseudo *>fdchits;
   src_track->GetT(fdchits);
+
   for(unsigned int m=0; m<fdchits.size(); m++)
     wirebased_track->AddAssociatedObject(fdchits[m]); 
   for(unsigned int m=0; m<cdchits.size(); m++)

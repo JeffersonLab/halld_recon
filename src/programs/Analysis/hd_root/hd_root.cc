@@ -11,6 +11,8 @@
 
 #include "MyProcessor.h"
 #include "DANA/DApplication.h"
+#include <JANA/CLI/JMain.h>
+
 using namespace std;
 
 typedef void SetTFilePtrAddress_t(TFile **);
@@ -20,8 +22,8 @@ string COMMAND_LINE_OUTPUT_FILENAME = "";
 bool filename_from_command_line = false;
 
 void ParseCommandLineArguments(int &narg, char *argv[]);
-void DecideOutputFilename(void);
-void Usage(void);
+void DecideOutputFilename(JApplication* app);
+void Usage();
 
 
 //-----------
@@ -30,25 +32,26 @@ void Usage(void);
 int main(int narg, char *argv[])
 {
 	// Parse the command line
-	ParseCommandLineArguments(narg, argv);
+	ParseCommandLineArguments(narg, argv); // May exit early
 
-	// Instantiate our event processor
-	MyProcessor *myproc = new MyProcessor;
+	// Ensure that halld-specific parameters, factories, and sources have been set
+	DApplication dapp(narg, argv);
+	JApplication* app = dapp.GetJApp();
 
-	// Instantiate an event loop object
-	DApplication app(narg, argv);
-	
-	// Decide on the output filename
-	DecideOutputFilename();
-	
-	// Run though all events, calling our event processor's methods
-	app.monitor_heartbeat = 0;
-	app.Run(myproc);
-	
-	delete myproc;
-	
-	if( app.GetExitCode() ) cerr << "Exit code: " << app.GetExitCode() << endl;
-	return app.GetExitCode();
+	DecideOutputFilename(app); // Ensure that the command-line flag overrides the OUTPUT_FILENAME parameter
+
+	app->SetTimeoutEnabled(false);
+
+	// Add the hd_root EventProcessor
+	app->Add(new MyProcessor);
+
+	// Run JANA
+	auto exitCode = jana::Execute(app, dapp.GetUserOptions());
+
+    delete app;
+
+	if( exitCode ) cerr << "Exit code: " << exitCode << endl;
+	return exitCode;
 }
 
 
@@ -106,7 +109,7 @@ void ParseCommandLineArguments(int &narg, char *argv[])
 //-----------
 // DecideOutputFilename
 //-----------
-void DecideOutputFilename(void)
+void DecideOutputFilename(JApplication* app)
 {
 	/// Decide on the output filename to use based on the command line
 	/// input and configuration parameter input. The command line takes
@@ -114,15 +117,15 @@ void DecideOutputFilename(void)
 	/// being used into the configuration parameter.
 
 	// Set the default output filename (avoids later warnings from JANA)
-	gPARMS->SetDefaultParameter("OUTPUT_FILENAME", OUTPUT_FILENAME,"Output filename used by hd_root");
+	app->SetDefaultParameter("OUTPUT_FILENAME", OUTPUT_FILENAME, "Output filename used by hd_root");
 	
 	// If the user specified an output filename on the command line,
 	// use it to overwrite the config. parameter/default one
 	if(filename_from_command_line){
 		OUTPUT_FILENAME = COMMAND_LINE_OUTPUT_FILENAME;
-	
+
 		// Set the actual output filename in config. param.
-		gPARMS->SetParameter("OUTPUT_FILENAME", OUTPUT_FILENAME);
+		app->SetParameterValue("OUTPUT_FILENAME", OUTPUT_FILENAME);
 	}
 
 	jout<<"OUTPUT_FILENAME: "<<OUTPUT_FILENAME<<endl;
@@ -134,10 +137,6 @@ void DecideOutputFilename(void)
 //-----------
 void Usage(void)
 {
-	// Make sure a JApplication object exists so we can call Usage()
-	JApplication *app = japp;
-	if(app == NULL) app = new DApplication(0, NULL);
-
 	cout<<"Usage:"<<endl;
 	cout<<"       hd_root [options] source1 source2 ..."<<endl;
 	cout<<endl;
@@ -147,7 +146,7 @@ void Usage(void)
 	cout<<endl;
 	cout<<"Options:"<<endl;
 	cout<<endl;
-	app->Usage();
+	jana::PrintUsage();
 	cout<<endl;
 	cout<<"   -h        Print this message"<<endl;
 	cout<<"   -Dname    Activate factory for data of type \"name\" (can be used multiple times)"<<endl;

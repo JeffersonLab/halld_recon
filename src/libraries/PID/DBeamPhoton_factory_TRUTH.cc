@@ -10,38 +10,36 @@
 using namespace std;
 
 #include "DBeamPhoton_factory_TRUTH.h"
-using namespace jana;
+
+#include "DANA/DEvent.h"
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DBeamPhoton_factory_TRUTH::init(void)
+void DBeamPhoton_factory_TRUTH::Init()
 {
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBeamPhoton_factory_TRUTH::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DBeamPhoton_factory_TRUTH::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	DApplication* dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = dapp->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = DEvent::GetDGeometry(event);
 	dTargetCenterZ = 0.0;
 	locGeometry->GetTargetZ(dTargetCenterZ);
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBeamPhoton_factory_TRUTH::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DBeamPhoton_factory_TRUTH::Process(const std::shared_ptr<const JEvent>& event)
 {
 	DVector3 pos(0.0, 0.0, dTargetCenterZ);
 
 	vector<const DTAGMHit*> tagm_hits;
-	locEventLoop->Get(tagm_hits, "TRUTH");
+	event->Get(tagm_hits, "TRUTH");
 	for (unsigned int ih=0; ih < tagm_hits.size(); ++ih)
 	{
 		if (tagm_hits[ih]->row > 0) continue;
@@ -54,11 +52,11 @@ jerror_t DBeamPhoton_factory_TRUTH::evnt(jana::JEventLoop *locEventLoop, uint64_
 		gamma->dSystem = SYS_TAGM;
 		gamma->dCounter = tagm_hits[ih]->column;
 		gamma->AddAssociatedObject(tagm_hits[ih]);
-		_data.push_back(gamma);
+		Insert(gamma);
 	}
 
 	vector<const DTAGHHit*> tagh_hits;
-	locEventLoop->Get(tagh_hits, "TRUTH");
+	event->Get(tagh_hits, "TRUTH");
 	for (unsigned int ih=0; ih < tagh_hits.size(); ++ih)
 	{
 		DVector3 mom(0.0, 0.0, tagh_hits[ih]->E);
@@ -70,25 +68,23 @@ jerror_t DBeamPhoton_factory_TRUTH::evnt(jana::JEventLoop *locEventLoop, uint64_
 		gamma->dSystem = SYS_TAGH;
 		gamma->dCounter = tagh_hits[ih]->counter_id;
 		gamma->AddAssociatedObject(tagh_hits[ih]);
-		_data.push_back(gamma);
+		Insert(gamma);
 	}
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DBeamPhoton_factory_TRUTH::erun(void)
+void DBeamPhoton_factory_TRUTH::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DBeamPhoton_factory_TRUTH::fini(void)
+void DBeamPhoton_factory_TRUTH::Finish()
 {
-	return NOERROR;
 }
 

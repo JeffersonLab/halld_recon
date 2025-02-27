@@ -30,21 +30,19 @@ void DReaction_factory_OmegaSkim::PIDCuts(DReaction* locReaction)
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DReaction_factory_OmegaSkim::brun(JEventLoop* locEventLoop, int32_t locRunNumber)
+void DReaction_factory_OmegaSkim::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
   vector<double> locBeamPeriodVector;
-  locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+  GetCalib(locEvent, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
   dBeamBunchPeriod = locBeamPeriodVector[0];
-
-  return NOERROR;
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DReaction_factory_OmegaSkim::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DReaction_factory_OmegaSkim::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
   // Make as many DReaction objects as desired
   DReactionStep* locReactionStep = NULL;
@@ -123,17 +121,14 @@ jerror_t DReaction_factory_OmegaSkim::evnt(JEventLoop* locEventLoop, uint64_t lo
    string locTreeFileName = "p3pi_excl_skim.root";
    locReaction->Enable_TTreeOutput(locTreeFileName, true); //true/false: do/don't save unused hypotheses
   
-  _data.push_back(locReaction); //Register the DReaction with the factory
-
-  return NOERROR;
+  Insert(locReaction); //Register the DReaction with the factory
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_OmegaSkim::fini(void)
+void DReaction_factory_OmegaSkim::Finish()
 {
   for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
     delete dReactionStepPool[loc_i]; //cleanup memory
-  return NOERROR;
 }

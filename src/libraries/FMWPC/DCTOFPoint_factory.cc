@@ -14,43 +14,42 @@
 #include <cmath>
 using namespace std;
 
+#include <JANA/JEvent.h>
 #include "DCTOFPoint_factory.h"
 #include "DCTOFHit.h"
 #include "HDGEOMETRY/DGeometry.h"
-using namespace jana;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DCTOFPoint_factory::init(void)
+void DCTOFPoint_factory::Init()
 {
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DCTOFPoint_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DCTOFPoint_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
   ATTENUATION_LENGTH=400.;
   LIGHT_PROPAGATION_SPEED=15.; // cm/ns
   THRESHOLD=0.0005; // GeV
 
   // Get the geometry
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  auto runnumber = event->GetRunNumber();
+  auto app = GetApplication();
+  auto geoman = app->GetService<DGeometryManager>();
+  const DGeometry *geom = geoman->GetDGeometry(runnumber);
   geom->GetCTOFPositions(ctof_positions);
- 
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DCTOFPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DCTOFPoint_factory::Process(const std::shared_ptr<const JEvent> &event)
 {
   vector<const DCTOFHit *>ctofhits;
-  loop->Get(ctofhits);
+  event->Get(ctofhits);
   
   const double paddle_length=120.; // cm
   for (unsigned int i=0;i<ctofhits.size();i++){
@@ -72,28 +71,24 @@ jerror_t DCTOFPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  myDCTOFPoint->t = t;
 	  myDCTOFPoint->dE= dE;
 	  
-	  _data.push_back(myDCTOFPoint);
+	  mData.push_back(myDCTOFPoint);
 	}
       }
     }
   }
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DCTOFPoint_factory::erun(void)
+void DCTOFPoint_factory::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DCTOFPoint_factory::fini(void)
+void DCTOFPoint_factory::Finish()
 {
-  return NOERROR;
 }
 

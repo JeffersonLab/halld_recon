@@ -9,7 +9,7 @@
 #include <string>
 #include <iostream>
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "JANA/JApplication.h"
 
 #include "DIRC/DDIRCGeometry.h"
@@ -20,7 +20,6 @@
 #include "ANALYSIS/DAnalysisUtilities.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_dirc_track_pair : public DAnalysisAction
 {
@@ -29,12 +28,12 @@ class DCustomAction_dirc_track_pair : public DAnalysisAction
                 DCustomAction_dirc_track_pair(const DReaction* locReaction, bool locUseKinFitResultsFlag, int locParticleComboStepIndex, int locParticleIndex1, int locParticleIndex2, string locActionUniqueString = "") : 
                 DAnalysisAction(locReaction, "Custom_dirc_track_pair", locUseKinFitResultsFlag, locActionUniqueString), dParticleComboStepIndex(locParticleComboStepIndex), dParticleIndex1(locParticleIndex1), dParticleIndex2(locParticleIndex2) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
                 // indices for particles to histogram
                 int dParticleComboStepIndex, dParticleIndex1, dParticleIndex2;

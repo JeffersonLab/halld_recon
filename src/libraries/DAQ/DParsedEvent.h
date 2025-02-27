@@ -13,16 +13,13 @@
 using std::string;
 using std::map;
 
-#include <JANA/jerror.h>
 #include <JANA/JObject.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
+#include <DANA/jerror.h>
 #include <DANA/DStatusBits.h>
 #include <DAQ/daq_param_type.h>
 #include <DAQ/DModuleType.h>
-
-
 #include <DAQ/Df250Config.h>
 #include <DAQ/Df250PulseIntegral.h>
 #include <DAQ/Df250StreamingRawData.h>
@@ -179,7 +176,7 @@ class DParsedEvent{
 			MyTypes(returntopool)
 			MyTypes(clearvectors)
 			MyBORTypes(clearvectors)
-      MyDerivedTypes(returntopool)
+			MyDerivedTypes(returntopool)
 			MyDerivedTypes(clearvectors)
 			MyNoPoolTypes(deletepool)
 			MyNoPoolTypes(clearpoolvectors)
@@ -213,20 +210,17 @@ class DParsedEvent{
 		// Define a class that has pointers to factories for each data type.
 		// One of these is instantiated for each JEventLoop encountered.
 		// See comments below for CopyToFactories for details.
-		#define makefactoryptr(A) JFactory<A> *fac_##A;
-		#define copyfactoryptr(A) fac_##A = (JFactory<A>*)loop->GetFactory(#A, NULL, false);
+		#define makefactoryptr(A) JFactoryT<A> *fac_##A;
+		#define copyfactoryptr(A) fac_##A = event->GetFactory<A>();
 		class DFactoryPointers{
 			public:
-				JEventLoop *loop;
+				bool initialized = false;
 				MyTypes(makefactoryptr)
 				MyDerivedTypes(makefactoryptr)
 				MyBORTypes(makefactoryptr)
 
-				DFactoryPointers():loop(NULL){}
-				~DFactoryPointers(){}
-
-				void Init(JEventLoop *loop){
-					this->loop = loop;
+				void Init(const std::shared_ptr<const JEvent>& event){
+					this->initialized = true;
 					MyTypes(copyfactoryptr)
 					MyDerivedTypes(copyfactoryptr)
 					MyBORTypes(copyfactoryptr)
@@ -239,39 +233,50 @@ class DParsedEvent{
 		// for every event. Note that only one processing thread at a time will
 		// ever call this method for this DParsedEvent object so we don't need
 		// to lock access to the factory_pointers map.
-		#define copytofactory(A)    facptrs.fac_##A->CopyTo(v##A);
-		#define copybortofactory(A) facptrs.fac_##A->CopyTo(borptrs->v##A);
-		#define setevntcalled(A)    facptrs.fac_##A->Set_evnt_called();
-		#define keepownership(A)    facptrs.fac_##A->SetFactoryFlag(JFactory_base::NOT_OBJECT_OWNER);
-		#define copytofactorynonempty(A)    if(!v##A.empty()) facptrs.fac_##A->CopyTo(v##A);
-		#define setevntcallednonempty(A)    if(!v##A.empty()) facptrs.fac_##A->Set_evnt_called();
-		#define keepownershipnonempty(A)    if(!v##A.empty()) facptrs.fac_##A->SetFactoryFlag(JFactory_base::NOT_OBJECT_OWNER);
-		void CopyToFactories(JEventLoop *loop){
-			// Get DFactoryPointers for this JEventLoop, creating new one if necessary
-			DFactoryPointers &facptrs = factory_pointers[loop];
-			if(facptrs.loop == NULL) facptrs.Init(loop);
-            
+
+		#define copytofactory(A)    facptrs.fac_##A->Set(v##A);
+		#define copybortofactory(A) facptrs.fac_##A->Set(borptrs->v##A);
+		#define keepownership(A)    facptrs.fac_##A->SetFactoryFlag(JFactory::NOT_OBJECT_OWNER);
+		#define copytofactorynonempty(A)    if(!v##A.empty()) facptrs.fac_##A->Set(v##A);
+		#define keepownershipnonempty(A)    if(!v##A.empty()) facptrs.fac_##A->SetFactoryFlag(JFactory::NOT_OBJECT_OWNER);
+
+		#define insertintofactory(A)            {auto fac=event->Insert(v##A); fac->SetFactoryFlag(JFactory::NOT_OBJECT_OWNER); fac->EnableGetAs<JObject>(); }
+		#define insertborintofactory(A)         {auto fac=event->Insert(borptrs->v##A); fac->SetFactoryFlag(JFactory::NOT_OBJECT_OWNER); fac->EnableGetAs<JObject>(); }
+		#define insertintofactorynonempty(A)    if(!v##A.empty()) event->Insert(v##A)->SetFactoryFlag(JFactory::NOT_OBJECT_OWNER);
+
+	void CopyToFactories(const std::shared_ptr<const JEvent>& event){
+			DFactoryPointers &facptrs = factory_pointers[&(*event)];
+			if(!facptrs.initialized) facptrs.Init(event);
+
 			// Copy all data vectors to appropriate factories
 			MyTypes(copytofactory)
-			MyTypes(setevntcalled)
 			MyTypes(keepownership)
 			MyDerivedTypes(copytofactorynonempty)
-			MyDerivedTypes(setevntcallednonempty)
 			MyDerivedTypes(keepownershipnonempty)
 			if(borptrs){
 				MyBORTypes(copybortofactory)
-				MyBORTypes(setevntcalled)
 				MyBORTypes(keepownership)
 			}
 			copied_to_factories=true;
-		}
+
+			// TODO: NWB: I'd much rather not hang on to pointers to factories outside a JEvent, and just use
+			//       JEvent::Insert instead. I.e. we could replace the above with what is below.
+			//       I'm curious as to what the performance penalty would be.
+
+			// MyTypes(insertintofactory)
+			// MyDerivedTypes(insertintofactorynonempty)
+			// if (borptrs) {
+			// 	MyBORTypes(insertborintofactory)
+			// }
+			// copied_to_factories=true;
+	}
 		
 		// Method to check class name against each classname in MyTypes returning
 		// true if found and false if not.
 		#define checkclassname(A) if(classname==#A) return true;
 		bool IsParsedDataType(string &classname)const {
 			MyTypes(checkclassname)
-			MyDerivedTypes(checkclassname)
+			//MyDerivedTypes(checkclassname)
 			MyBORTypes(checkclassname)
 			return false;
 		}
@@ -352,7 +357,7 @@ class DParsedEvent{
 		}
 
 	protected:
-		map<JEventLoop*, DFactoryPointers> factory_pointers;
+		map<const JEvent*, DFactoryPointers> factory_pointers;
 
 
 };
@@ -383,6 +388,9 @@ class DParsedEvent{
 #undef printcounts
 #undef printpoolcounts
 
+#undef insertintofactory
+#undef insertborintofactory
+#undef insertintofactorynonempty
 
 #endif // _DParsedEvent_
 

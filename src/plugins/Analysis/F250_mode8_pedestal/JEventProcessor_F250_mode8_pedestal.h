@@ -12,11 +12,10 @@
 #include "TH1I.h"
 #include "TProfile2D.h"
 
-class JEventProcessor_F250_mode8_pedestal:public jana::JEventProcessor{
+class JEventProcessor_F250_mode8_pedestal:public JEventProcessor{
 	public:
 		JEventProcessor_F250_mode8_pedestal();
 		~JEventProcessor_F250_mode8_pedestal();
-		const char* className(void){return "JEventProcessor_F250_mode8_pedestal";}
 
 		static const int highcratenum=100;
 		static const int highslotnum=21;
@@ -35,11 +34,11 @@ class JEventProcessor_F250_mode8_pedestal:public jana::JEventProcessor{
 	private:
 		uint32_t NSA_NSB;
 
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, int eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 };
 
 #endif // _JEventProcessor_F250_mode8_pedestal_

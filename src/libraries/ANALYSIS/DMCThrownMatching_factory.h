@@ -12,7 +12,7 @@
 
 #include "TDecompLU.h"
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "TRACKING/DMCThrown.h"
 #include "PID/DChargedTrackHypothesis.h"
 #include "PID/DChargedTrack.h"
@@ -21,7 +21,6 @@
 #include "PID/DNeutralShower.h"
 #include "PID/DBeamPhoton.h"
 #include "ANALYSIS/DMCThrownMatching.h"
-#include "DANA/DApplication.h"
 
 #include "TRACKING/DTrackTimeBased.h"
 #include "TAGGER/DTAGMHit.h"
@@ -33,23 +32,22 @@
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALTruthShower.h"
 
-using namespace jana;
 using namespace std;
 
-class DMCThrownMatching_factory : public jana::JFactory<DMCThrownMatching>
+class DMCThrownMatching_factory : public JFactoryT<DMCThrownMatching>
 {
 	public:
 		bool Calc_InverseMatrix(const TMatrixFSym& locInputCovarianceMatrix, TMatrixDSym& locInverse3x3Matrix) const;
 		double Calc_MatchFOM(const DVector3& locMomentum_Thrown, const DVector3& locMomentum_Detected, TMatrixDSym locInverse3x3Matrix) const;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
-		void Find_GenReconMatches_BeamPhotons(JEventLoop* locEventLoop, DMCThrownMatching* locMCThrownMatching) const;
+		void Find_GenReconMatches_BeamPhotons(const std::shared_ptr<const JEvent>& locEvent, DMCThrownMatching* locMCThrownMatching) const;
 
 		void Find_GenReconMatches_ChargedTrack(const vector<const DChargedTrack*>& locChargedTracks, DMCThrownMatching* locMCThrownMatching) const;
 		void Find_GenReconMatches_ChargedHypo(const vector<const DMCThrown*>& locInputMCThrownVector, const vector<const DChargedTrackHypothesis*>& locInputChargedTrackHypothesisVector, DMCThrownMatching* locMCThrownMatching) const;
@@ -57,9 +55,9 @@ class DMCThrownMatching_factory : public jana::JFactory<DMCThrownMatching>
 		void Find_GenReconMatches_NeutralParticle(const vector<const DNeutralParticle*>& locNeutralParticles, DMCThrownMatching* locMCThrownMatching) const;
 		void Find_GenReconMatches_NeutralHypo(const vector<const DMCThrown*>& locInputMCThrownVector, const vector<const DNeutralParticleHypothesis*>& locInputNeutralParticleHypothesisVector, DMCThrownMatching* locMCThrownMatching) const;
 
-		void Find_GenReconMatches_TOFPoints(JEventLoop* locEventLoop, DMCThrownMatching* locMCThrownMatching) const;
-		void Find_GenReconMatches_BCALShowers(JEventLoop* locEventLoop, DMCThrownMatching* locMCThrownMatching) const;
-		void Find_GenReconMatches_FCALShowers(JEventLoop* locEventLoop, DMCThrownMatching* locMCThrownMatching) const;
+		void Find_GenReconMatches_TOFPoints(const std::shared_ptr<const JEvent>& locEvent, DMCThrownMatching* locMCThrownMatching) const;
+		void Find_GenReconMatches_BCALShowers(const std::shared_ptr<const JEvent>& locEvent, DMCThrownMatching* locMCThrownMatching) const;
+		void Find_GenReconMatches_FCALShowers(const std::shared_ptr<const JEvent>& locEvent, DMCThrownMatching* locMCThrownMatching) const;
 
 		double dMinTrackMatchHitFraction;
 		double dMaximumTOFMatchDistance;

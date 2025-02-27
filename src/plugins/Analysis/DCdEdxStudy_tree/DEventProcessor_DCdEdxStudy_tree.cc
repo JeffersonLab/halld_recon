@@ -8,41 +8,37 @@ extern TFile *ROOTfile;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_DCdEdxStudy_tree());
+	app->Add(new DEventProcessor_DCdEdxStudy_tree());
 }
 } // "C"
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_DCdEdxStudy_tree::init(void)
+void DEventProcessor_DCdEdxStudy_tree::Init()
 {
 
 	dDCdEdxInformation = new DCdEdxInformation();
 	dPluginTree_DCdEdxInformation = new TTree("dPluginTree_DCdEdxInformation", "DC dEdx Information");
 	dPluginTree_DCdEdxInformation->Branch("dPluginBranch_DCdEdxInformation", "DCdEdxInformation", &dDCdEdxInformation);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_DCdEdxStudy_tree::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_DCdEdxStudy_tree::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_DCdEdxStudy_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_DCdEdxStudy_tree::Process(const std::shared_ptr<const JEvent>& event)
 {
   // Get the particle ID algorithms
 	vector<const DParticleID *> locPIDAlgorithms;
-	eventLoop->Get(locPIDAlgorithms);
+	event->Get(locPIDAlgorithms);
 	if(locPIDAlgorithms.size() < 1){
 		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
 		return RESOURCE_UNAVAILABLE;
@@ -58,11 +54,11 @@ jerror_t DEventProcessor_DCdEdxStudy_tree::evnt(JEventLoop *loop, uint64_t event
 
 	vector<const DMCThrown*> locDMCThrownVector;
 	const DMCThrown *locDMCThrown;
-	loop->Get(locDMCThrownVector);
+	event->Get(locDMCThrownVector);
 
 	vector<const DChargedTrackHypothesis*> locChargedTrackHypothesisVector;
 	const DChargedTrackHypothesis *locChargedTrackHypothesis;
-	loop->Get(locChargedTrackHypothesisVector);
+	event->Get(locChargedTrackHypothesisVector);
 
 	const DTrackTimeBased *locTrackTimeBased;
 
@@ -70,9 +66,9 @@ jerror_t DEventProcessor_DCdEdxStudy_tree::evnt(JEventLoop *loop, uint64_t event
 	float locThrownMass, locMomentum, locBeta;
 
 	if(locDMCThrownVector.size() != 1)
-		return NOERROR; //routine assumes only one thrown track (matching not performed!)
+		return; //routine assumes only one thrown track (matching not performed!)
 	if(locChargedTrackHypothesisVector.size() == 0)
-		return NOERROR;
+		return;
 	locDMCThrown = locDMCThrownVector[0];
 	locThrownPID = Particle_t(locDMCThrown->type);
 	locThrownMass = ParticleMass(locThrownPID);
@@ -94,7 +90,7 @@ jerror_t DEventProcessor_DCdEdxStudy_tree::evnt(JEventLoop *loop, uint64_t event
 	locBeta = locMomentum/sqrt(locThrownMass*locThrownMass + locMomentum*locMomentum);
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	//low-momentum & beta protons are reconstructed as low-momentum but high-beta pions
 	dDCdEdxInformation->dBeta = locBeta;
@@ -114,26 +110,22 @@ jerror_t DEventProcessor_DCdEdxStudy_tree::evnt(JEventLoop *loop, uint64_t event
 	dDCdEdxInformation->dFOM = TMath::Prob(dDCdEdxInformation->dChiSq_DCdEdx, dDCdEdxInformation->dNDF_DCdEdx);
 	dPluginTree_DCdEdxInformation->Fill();
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_DCdEdxStudy_tree::erun(void)
+void DEventProcessor_DCdEdxStudy_tree::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_DCdEdxStudy_tree::fini(void)
+void DEventProcessor_DCdEdxStudy_tree::Finish()
 {
-	return NOERROR;
 }
 

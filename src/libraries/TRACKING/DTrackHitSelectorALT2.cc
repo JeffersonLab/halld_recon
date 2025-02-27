@@ -10,6 +10,12 @@ using namespace std;
 
 #include <TROOT.h>
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/Services/JLockService.h>
+
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
 #include <TRACKING/DReferenceTrajectory.h>
 
 #include "DTrackHitSelectorALT2.h"
@@ -58,8 +64,13 @@ bool static DTrackHitSelector_fdchit_in_cmp(const DFDCPseudo *a, const DFDCPseud
 //---------------------------------
 // DTrackHitSelectorALT2    (Constructor)
 //---------------------------------
-DTrackHitSelectorALT2::DTrackHitSelectorALT2(jana::JEventLoop *loop, int32_t runnumber):DTrackHitSelector(loop)
+DTrackHitSelectorALT2::DTrackHitSelectorALT2(const std::shared_ptr<const JEvent>& event):DTrackHitSelector(event)
 {
+	auto runnumber = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto root_lock = app->GetService<JLockService>();
+	auto geo_manager = app->GetService<DGeometryManager>();
+
 	HS_DEBUG_LEVEL = 0;
 	MAKE_DEBUG_TREES = false;
 	MIN_HIT_PROB_CDC = 0.01;
@@ -71,22 +82,22 @@ DTrackHitSelectorALT2::DTrackHitSelectorALT2(jana::JEventLoop *loop, int32_t run
 	MIN_FDC_SIGMA_CATHODE_WIREBASED = 0.0100;
 	MAX_DOCA=2.5;
 
-	gPARMS->SetDefaultParameter("TRKFIT:MAX_DOCA",MAX_DOCA,"Maximum doca for associating hit with track");
+	app->SetDefaultParameter("TRKFIT:MAX_DOCA",MAX_DOCA,"Maximum doca for associating hit with track");
 
-	gPARMS->SetDefaultParameter("TRKFIT:HS_DEBUG_LEVEL", HS_DEBUG_LEVEL, "Debug verbosity level for hit selector used in track fitting (0=no debug messages)");
-	gPARMS->SetDefaultParameter("TRKFIT:MAKE_DEBUG_TREES", MAKE_DEBUG_TREES, "Create a TTree with debugging info on hit selection for the FDC and CDC");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_HIT_PROB_CDC", MIN_HIT_PROB_CDC, "Minimum probability a CDC hit may have to be associated with a track to be included in list passed to fitter");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_HIT_PROB_FDC", MIN_HIT_PROB_FDC, "Minimum probability a FDC hit may have to be associated with a track to be included in list passed to fitter");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_ANODE_CANDIDATE", MIN_FDC_SIGMA_ANODE_CANDIDATE, "Minimum sigma used for FDC anode hits on track candidates");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_CATHODE_CANDIDATE", MIN_FDC_SIGMA_CATHODE_CANDIDATE, "Minimum sigma used for FDC cathode hits on track candidates");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_ANODE_WIREBASED", MIN_FDC_SIGMA_ANODE_WIREBASED, "Minimum sigma used for FDC anode hits on wire-based tracks");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_CATHODE_WIREBASED", MIN_FDC_SIGMA_CATHODE_WIREBASED, "Minimum sigma used for FDC cathode hits on wire-based tracks");
+	app->SetDefaultParameter("TRKFIT:HS_DEBUG_LEVEL", HS_DEBUG_LEVEL, "Debug verbosity level for hit selector used in track fitting (0=no debug messages)");
+	app->SetDefaultParameter("TRKFIT:MAKE_DEBUG_TREES", MAKE_DEBUG_TREES, "Create a TTree with debugging info on hit selection for the FDC and CDC");
+	app->SetDefaultParameter("TRKFIT:MIN_HIT_PROB_CDC", MIN_HIT_PROB_CDC, "Minimum probability a CDC hit may have to be associated with a track to be included in list passed to fitter");
+	app->SetDefaultParameter("TRKFIT:MIN_HIT_PROB_FDC", MIN_HIT_PROB_FDC, "Minimum probability a FDC hit may have to be associated with a track to be included in list passed to fitter");
+	app->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_ANODE_CANDIDATE", MIN_FDC_SIGMA_ANODE_CANDIDATE, "Minimum sigma used for FDC anode hits on track candidates");
+	app->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_CATHODE_CANDIDATE", MIN_FDC_SIGMA_CATHODE_CANDIDATE, "Minimum sigma used for FDC cathode hits on track candidates");
+	app->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_ANODE_WIREBASED", MIN_FDC_SIGMA_ANODE_WIREBASED, "Minimum sigma used for FDC anode hits on wire-based tracks");
+	app->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_CATHODE_WIREBASED", MIN_FDC_SIGMA_CATHODE_WIREBASED, "Minimum sigma used for FDC cathode hits on wire-based tracks");
 	
 	cdchitsel = NULL;
 	fdchitsel = NULL;
 	if(MAKE_DEBUG_TREES){
-		loop->GetJApplication()->Lock();
-		
+		root_lock->RootWriteLock();
+
 		cdchitsel= (TTree*)gROOT->FindObject("cdchitsel");
 		if(!cdchitsel){
 			cdchitsel = new TTree("cdchitsel", "CDC Hit Selector");
@@ -117,11 +128,10 @@ DTrackHitSelectorALT2::DTrackHitSelectorALT2(jana::JEventLoop *loop, int32_t run
 			fdchitsel = NULL;
 		}
 
-		loop->GetJApplication()->Unlock();
+		root_lock->RootUnLock();
 	}
 
-	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-        bfield = dapp->GetBfield(runnumber); // this should be run number based!
+	bfield = geo_manager->GetBfield(runnumber); // this should be run number based!
 	
 }
 

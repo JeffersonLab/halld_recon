@@ -12,13 +12,11 @@ using namespace std;
 #include "hdbyte_swapout.h"
 
 #include <JANA/JApplication.h>
-#include <JANA/JParameterManager.h>
-using namespace jana;
 
 //---------------------------------
 // HDEVIOWriter    (Constructor)
 //---------------------------------
-HDEVIOWriter::HDEVIOWriter(string sink_name)
+HDEVIOWriter::HDEVIOWriter(string sink_name, JApplication* app)
 {
 	pthread_mutex_init(&output_deque_mutex, NULL);
 	pthread_mutex_init(&buff_pool_mutex,NULL);
@@ -38,18 +36,18 @@ HDEVIOWriter::HDEVIOWriter(string sink_name)
     THREAD_SLEEP_TIME      = 250;  // in microseconds - can be increased if few threads are used, depending on the event processing rate
 	DEBUG_FILES            = false; 
 
-	if(gPARMS){
+	if(app){
 		// We want the default for MAX_OUTPUT_BUFFER_SIZE to be "AUTO" so that it can be set
 		// based on the ET system evnt size. This means the type of the config. variable
 		// must be a string.
 		string max_output_buffer = "AUTO";
 
-		gPARMS->SetDefaultParameter("EVIOOUT:MAX_OUTPUT_QUEUE_SIZE" , MAX_OUTPUT_QUEUE_SIZE,  "Maximum number of events output queue can have before processing threads start blocking.");
-		gPARMS->SetDefaultParameter("EVIOOUT:MAX_OUTPUT_BUFFER_SIZE", max_output_buffer,      "Maximum number of words in output EVIO block. This may be overwritten by ET event size if writing to ET.");
-		gPARMS->SetDefaultParameter("EVIOOUT:MAX_HOLD_TIME",          MAX_HOLD_TIME,          "Maximum time in seconds to keep events in buffer before flushing them. This is to prevent farm from witholding events from ER when running very slow trigger rates. This should not be set less than 2 when running online.  Default is 5 for offline running");
-		gPARMS->SetDefaultParameter("EVIOOUT:NEVENTS_PER_BLOCK",      NEVENTS_PER_BLOCK,      "Suggested number of events to write in single output block.");
-		gPARMS->SetDefaultParameter("EVIOOUT:DEBUG_FILES" , DEBUG_FILES,  "Write input and output debug files in addition to the standard output.");
-		gPARMS->SetDefaultParameter("EVIOOUT:THREAD_SLEEP_TIME" , THREAD_SLEEP_TIME,  "Time in microseconds for thread to sleep in between checking to see if we are ready to write to the disk");
+		app->SetDefaultParameter("EVIOOUT:MAX_OUTPUT_QUEUE_SIZE" , MAX_OUTPUT_QUEUE_SIZE,  "Maximum number of events output queue can have before processing threads start blocking.");
+		app->SetDefaultParameter("EVIOOUT:MAX_OUTPUT_BUFFER_SIZE", max_output_buffer,      "Maximum number of words in output EVIO block. This may be overwritten by ET event size if writing to ET.");
+		app->SetDefaultParameter("EVIOOUT:MAX_HOLD_TIME",          MAX_HOLD_TIME,          "Maximum time in seconds to keep events in buffer before flushing them. This is to prevent farm from witholding events from ER when running very slow trigger rates. This should not be set less than 2 when running online.  Default is 5 for offline running");
+		app->SetDefaultParameter("EVIOOUT:NEVENTS_PER_BLOCK",      NEVENTS_PER_BLOCK,      "Suggested number of events to write in single output block.");
+		app->SetDefaultParameter("EVIOOUT:DEBUG_FILES" , DEBUG_FILES,  "Write input and output debug files in addition to the standard output.");
+		app->SetDefaultParameter("EVIOOUT:THREAD_SLEEP_TIME" , THREAD_SLEEP_TIME,  "Time in microseconds for thread to sleep in between checking to see if we are ready to write to the disk");
 
 		// Check if user specified max max buffer size
 		if( max_output_buffer != "AUTO" ){
@@ -335,7 +333,7 @@ void* HDEVIOWriter::HDEVIOOutputThread(void)
 			if(quit) break; // don't go to sleep just as we're quitting
 			usleep(THREAD_SLEEP_TIME);
 
-			if(japp && japp->GetQuittingStatus()) quit=true;
+			if(japp && japp->IsQuitting()) quit=true;
 			continue;
 		}
 

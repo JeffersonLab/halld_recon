@@ -11,33 +11,30 @@
 using namespace std;
 
 #include "DTrackCandidate_factory_CDC_or_FDCpseudo.h"
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrackCandidate_factory_CDC_or_FDCpseudo::init(void)
+void DTrackCandidate_factory_CDC_or_FDCpseudo::Init()
 {
 	DEBUG_LEVEL = 0;
 
-	gPARMS->SetDefaultParameter("TRKFIND:DEBUG_LEVEL", DEBUG_LEVEL);
-
-	return NOERROR;
+	auto app = GetApplication();
+	app->SetDefaultParameter("TRKFIND:DEBUG_LEVEL", DEBUG_LEVEL);
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackCandidate_factory_CDC_or_FDCpseudo::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTrackCandidate_factory_CDC_or_FDCpseudo::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackCandidate_factory_CDC_or_FDCpseudo::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrackCandidate_factory_CDC_or_FDCpseudo::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 	/// This factory simply combines the list of candidates from the 
@@ -47,12 +44,12 @@ jerror_t DTrackCandidate_factory_CDC_or_FDCpseudo::evnt(JEventLoop *loop, uint64
 	vector<const DTrackCandidate*> cdc;
 	vector<const DTrackCandidate*> fdc;
 
-	loop->Get(cdc, "CDC");
-	loop->Get(fdc, "FDCpseudo");
+	event->Get(cdc, "CDC");
+	event->Get(fdc, "FDCpseudo");
 	
 	// Add FDC candidates
 	if(DEBUG_LEVEL>2)_DBG_<<"Copying "<<fdc.size()<<" FDC generated candidates to final list"<<endl;
-	for(unsigned int i=0; i<fdc.size(); i++)_data.push_back((DTrackCandidate*)fdc[i]);
+	for(unsigned int i=0; i<fdc.size(); i++)mData.push_back((DTrackCandidate*)fdc[i]);
 
 	// Add CDC candidates providing they aren't clones of ones already added
 	if(DEBUG_LEVEL>2)_DBG_<<"Checking "<<cdc.size()<<" CDC generated candidates for inclusion in final list ..."<<endl;
@@ -62,10 +59,10 @@ jerror_t DTrackCandidate_factory_CDC_or_FDCpseudo::evnt(JEventLoop *loop, uint64
 		DVector3 pos1 = cdc[i]->position();
 		double q1 = cdc[i]->charge();
 		bool is_clone = false;
-		for(unsigned int j=0; j<_data.size(); j++){
-			DVector3 mom2 = _data[j]->momentum();
-			DVector3 pos2 = _data[j]->position();
-			double q2 = _data[j]->charge();
+		for(unsigned int j=0; j<mData.size(); j++){
+			DVector3 mom2 = mData[j]->momentum();
+			DVector3 pos2 = mData[j]->position();
+			double q2 = mData[j]->charge();
 			double curvature_diff = fabs(1.0/mom1.Mag() - 1.0/mom2.Mag())/((1.0/mom1.Mag() + 1.0/mom2.Mag())/2.0);
 			double relative_mom_diff = fabs(mom1.Mag()-mom2.Mag())/((mom1.Mag()+mom2.Mag())/2.0);
 			if(DEBUG_LEVEL>4)_DBG_<<"q1="<<q1<<" q2="<<q2<<" mom1,mom2 angle:"<<mom1.Angle(mom2)*57.3<<" curvature diff:"<<curvature_diff<<" relative_mom_diff:"<<relative_mom_diff<<" pos diff:"<<(pos1-pos2).Mag()<<endl;
@@ -81,28 +78,24 @@ jerror_t DTrackCandidate_factory_CDC_or_FDCpseudo::evnt(JEventLoop *loop, uint64
 			}
 		}
 		if(!is_clone){
-			_data.push_back((DTrackCandidate*)cdc[i]);
+			mData.push_back((DTrackCandidate*)cdc[i]);
 		}
 	}
 	
 	SetFactoryFlag(NOT_OBJECT_OWNER); // make sure these aren't deleted twice
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrackCandidate_factory_CDC_or_FDCpseudo::erun(void)
+void DTrackCandidate_factory_CDC_or_FDCpseudo::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTrackCandidate_factory_CDC_or_FDCpseudo::fini(void)
+void DTrackCandidate_factory_CDC_or_FDCpseudo::Finish()
 {
-	return NOERROR;
 }
 

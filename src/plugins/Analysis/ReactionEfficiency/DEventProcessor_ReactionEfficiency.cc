@@ -15,46 +15,42 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_ReactionEfficiency()); //register this plugin
-		locApplication->AddFactoryGenerator(new DFactoryGenerator_ReactionEfficiency()); //register the factory generator
+		locApplication->Add(new DEventProcessor_ReactionEfficiency()); //register this plugin
+		locApplication->Add(new DFactoryGenerator_ReactionEfficiency()); //register the factory generator
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_ReactionEfficiency::init(void)
+void DEventProcessor_ReactionEfficiency::Init()
 {
 	// This is called once at program startup.
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_ReactionEfficiency::brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber)
+void DEventProcessor_ReactionEfficiency::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_ReactionEfficiency::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_ReactionEfficiency::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
 	// japp->RootFillLock(this);
 	//  ... fill historgrams or trees ...
@@ -73,25 +69,25 @@ jerror_t DEventProcessor_ReactionEfficiency::evnt(jana::JEventLoop* locEventLoop
 		//The event writer gets the DAnalysisResults objects from JANA, performing the analysis. 
 	// string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
 	const DEventWriterROOT_ReactionEfficiency* locEventWriterROOT = NULL;
-	locEventLoop->GetSingle(locEventWriterROOT, "ReactionEfficiency");
-	locEventWriterROOT->Fill_DataTrees(locEventLoop, "ReactionEfficiency");
+	locEvent->GetSingle(locEventWriterROOT, "ReactionEfficiency");
+	locEventWriterROOT->Fill_DataTrees(locEvent, "ReactionEfficiency");
 
-	return NOERROR;
+	return;
 }
 
-int DEventProcessor_ReactionEfficiency::Get_FileNumber(JEventLoop* locEventLoop) const
+int DEventProcessor_ReactionEfficiency::Get_FileNumber(const std::shared_ptr<const JEvent>& locEvent) const
 {
 	//Assume that the file name is in the format: *_X.ext, where:
 		//X is the file number (a string of numbers of any length)
 		//ext is the file extension (probably .evio or .hddm)
 
 	//get the event source
-	JEventSource* locEventSource = locEventLoop->GetJEvent().GetJEventSource();
+	JEventSource* locEventSource = locEvent->GetJEventSource();
 	if(locEventSource == NULL)
 		return -1;
 
 	//get the source file name (strip the path)
-	string locSourceFileName = locEventSource->GetSourceName();
+	string locSourceFileName = GetResourceName();
 
 	//find the last "_" & "." indices
 	size_t locUnderscoreIndex = locSourceFileName.rfind("_");
@@ -110,24 +106,22 @@ int DEventProcessor_ReactionEfficiency::Get_FileNumber(JEventLoop* locEventLoop)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_ReactionEfficiency::erun(void)
+void DEventProcessor_ReactionEfficiency::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_ReactionEfficiency::fini(void)
+void DEventProcessor_ReactionEfficiency::Finish()
 {
 	// Called before program exit after event processing is finished.
 	if(dEventStoreSkimStream.is_open())
 		dEventStoreSkimStream.close();
-	return NOERROR;
 }
 

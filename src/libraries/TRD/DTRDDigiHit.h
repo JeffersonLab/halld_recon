@@ -7,9 +7,8 @@
 #define _DTRDDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DTRDDigiHit:public jana::JObject{
+class DTRDDigiHit : public JObject {
 	public:
 		JOBJECT_PUBLIC(DTRDDigiHit);
 		
@@ -21,19 +20,18 @@ class DTRDDigiHit:public jana::JObject{
 		uint32_t QF;                   ///< Quality Factor from FPGA algorithms
 		uint32_t nsamples_integral;    ///< number of samples used in integral 
 		uint32_t nsamples_pedestal;    ///< number of samples used in pedestal
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "plane", "%d", plane);
-			AddString(items, "strip", "%d", strip);
-			AddString(items, "pulse_peak", "%d", pulse_peak);
-			AddString(items, "pulse_time", "%d", pulse_time);
-			AddString(items, "pedestal", "%d", pedestal);
-			AddString(items, "QF", "%d", QF);
-			AddString(items, "nsamples_integral", "%d", nsamples_integral);
-			AddString(items, "nsamples_pedestal", "%d", nsamples_pedestal);
-		}		
+
+
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(plane, NAME_OF(plane), "%4d");
+			summary.add(strip, NAME_OF(strip), "%4d");
+			summary.add(pulse_peak, NAME_OF(pulse_peak), "%d");
+			summary.add(pulse_time, NAME_OF(pulse_time), "%d");
+			summary.add(pedestal, NAME_OF(pedestal), "%d");
+			summary.add(QF, NAME_OF(QF), "%d");
+			summary.add(nsamples_integral, NAME_OF(nsamples_integral), "%d");
+			summary.add(nsamples_pedestal, NAME_OF(nsamples_pedestal), "%d");
+		}
 };
 
 #endif // _DTRDDigiHit_

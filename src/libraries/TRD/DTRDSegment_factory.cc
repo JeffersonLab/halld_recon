@@ -4,6 +4,8 @@
 
 #include "DTRDSegment_factory.h"
 #include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
+
 //#include "HDGEOMETRY/DLorentzMapCalibDB.h"
 #include <math.h>
 #include <cmath>
@@ -29,15 +31,30 @@ DTRDSegment_factory::~DTRDSegment_factory() {
 }
 
 ///
+/// DFDCSegment_factory::Init():
+/// Initialization
+///
+void DTRDSegment_factory::Init() 
+{
+	auto app = GetApplication();
+
+	DEBUG_LEVEL=0;
+	app->SetDefaultParameter("TRD:DEBUG_LEVEL", DEBUG_LEVEL);
+	
+	BEAM_VARIANCE=1.0;
+	app->SetDefaultParameter("TRD:BEAM_VARIANCE",BEAM_VARIANCE);  
+
+}
+
+///
 /// DFDCSegment_factory::brun():
 /// Initialization
 ///
-jerror_t DTRDSegment_factory::brun(JEventLoop* eventLoop, int32_t runnumber) { 
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-
+void DTRDSegment_factory::BeginRun(const std::shared_ptr<const JEvent>& event) 
+{ 
   // get the geometry
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
-
+  DGeometry *geom = DEvent::GetDGeometry(event);
+  
   geom->GetTargetZ(TARGET_Z);
   /*    
   bfield = dapp->GetBfield();
@@ -45,25 +62,20 @@ jerror_t DTRDSegment_factory::brun(JEventLoop* eventLoop, int32_t runnumber) {
 
   *_log << "Table of Lorentz deflections initialized." << endMsg;
   */
-  DEBUG_LEVEL=0;
-  gPARMS->SetDefaultParameter("TRD:DEBUG_LEVEL", DEBUG_LEVEL);
-  
-  BEAM_VARIANCE=1.0;
-  gPARMS->SetDefaultParameter("TRD:BEAM_VARIANCE",BEAM_VARIANCE);
-  
 
-  return NOERROR;
+  return;
 }
 
 ///
 /// DFDCSegment_factory::evnt():
 /// Routine where pseudopoints are combined into track segments
 ///
-jerror_t DTRDSegment_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
-  myeventno=eventNo;
+void DTRDSegment_factory::Process(const std::shared_ptr<const JEvent>& event)
+{
+//   myeventno=eventNo;
 
   vector<const DTRDPoint*> points;
-  eventLoop->Get(points);  
+  event->Get<DTRDPoint>(points);  
  
   // Skip segment finding if there aren't enough points to form a sensible 
   // segment 
@@ -84,7 +96,7 @@ jerror_t DTRDSegment_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 //     } 
 //   } // pseudopoints>2
   
-  return NOERROR;
+  return;
 }
 
 // // Riemann Line fit: linear regression of s on z to determine the tangent of 

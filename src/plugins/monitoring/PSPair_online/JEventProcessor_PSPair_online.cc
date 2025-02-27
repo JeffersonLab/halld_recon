@@ -9,7 +9,6 @@
 #include "JEventProcessor_PSPair_online.h"
 
 using namespace std;
-using namespace jana;
 
 #include <PAIR_SPECTROMETER/DPSCPair.h>
 #include <PAIR_SPECTROMETER/DPSPair.h>
@@ -22,7 +21,7 @@ using namespace jana;
 #include <TPOL/DTPOLHit_factory.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <TDirectory.h>
 #include <TH1.h>
 #include <TH2.h>
@@ -107,7 +106,7 @@ static TH2I *hPSTPOL_timeVsPeak;
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_PSPair_online());
+        app->Add(new JEventProcessor_PSPair_online());
 
     }
 } // "C"
@@ -118,7 +117,7 @@ extern "C"{
 //------------------
 JEventProcessor_PSPair_online::JEventProcessor_PSPair_online()
 {
-
+	SetTypeName("JEventProcessor_PSPair_online");
 }
 
 //------------------
@@ -130,10 +129,13 @@ JEventProcessor_PSPair_online::~JEventProcessor_PSPair_online()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_PSPair_online::init(void)
+void JEventProcessor_PSPair_online::Init()
 {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
+
     // energy binning
     const double Ebw_PS = 0.1;
     const double Ebl_PS = 5.0; const double Ebl_PSarm = 2.0;
@@ -275,19 +277,18 @@ jerror_t JEventProcessor_PSPair_online::init(void)
     // back to main dir
     mainDir->cd();
 
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_PSPair_online::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_PSPair_online::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // This is called whenever the run number changes
     // extract the PS geometry
     vector<const DPSGeometry*> psGeomVect;
-    eventLoop->Get(psGeomVect);
-    if (psGeomVect.size() == 0) return OBJECT_NOT_AVAILABLE;
+    event->Get(psGeomVect);
+    if (psGeomVect.size() == 0) throw JException("Missing DPSGeometry object");
     const DPSGeometry& psGeom = *(psGeomVect[0]);
     // get photon energy bin lows for variable-width energy binning
     double Elows_PSarm[Narms][NC_PS+1];
@@ -316,8 +317,8 @@ jerror_t JEventProcessor_PSPair_online::brun(JEventLoop *eventLoop, int32_t runn
     }
     // extract the TAGH geometry
     vector<const DTAGHGeometry*> taghGeomVect;
-    eventLoop->Get(taghGeomVect);
-    if (taghGeomVect.size() == 0) return OBJECT_NOT_AVAILABLE;
+    event->Get(taghGeomVect);
+    if (taghGeomVect.size() == 0) throw JException("Missing DTAGHGeometry object");
     const DTAGHGeometry& taghGeom = *(taghGeomVect[0]);
     // get photon energy bin low of each counter for energy histogram binning
     double Elows_TAGH[NC_TAGH+1];
@@ -328,9 +329,8 @@ jerror_t JEventProcessor_PSPair_online::brun(JEventLoop *eventLoop, int32_t runn
     Elows_TAGH[NC_TAGH] = taghGeom.getEhigh(1);
     // extract the TAGM geometry
     vector<const DTAGMGeometry*> tagmGeomVect;
-    eventLoop->Get(tagmGeomVect);
-    if (tagmGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+    event->Get(tagmGeomVect);
+    if (tagmGeomVect.size() < 1) throw JException("Missing DTAGMGeometry");
     const DTAGMGeometry& tagmGeom = *(tagmGeomVect[0]);
     // get photon energy bin low of each counter for energy histogram binning
     double Elows_TAGM[NC_TAGM+1];
@@ -361,7 +361,7 @@ jerror_t JEventProcessor_PSPair_online::brun(JEventLoop *eventLoop, int32_t runn
     }
 
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     // set variable-width energy bins if histogram is empty
     // PS
@@ -393,40 +393,38 @@ jerror_t JEventProcessor_PSPair_online::brun(JEventLoop *eventLoop, int32_t runn
     if (hPSTAGM_timeVsEtagm->GetEntries()==0) hPSTAGM_timeVsEtagm->SetBins(NC_TAGM,Elows_TAGM,NTb,Tlows);
     if (hPSTAGM_EdiffVsEtagm->GetEntries()==0) hPSTAGM_EdiffVsEtagm->SetBins(NC_TAGM,Elows_TAGM,NEdiff,EdiffLows);
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
-    //
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_PSPair_online::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_PSPair_online::Process(const std::shared_ptr<const JEvent>& event)
 {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
-    // loop->Get(...) to get reconstructed objects (and thereby activating the
+    // event->Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
     // coarse PS pairs
     vector<const DPSCPair*> cpairs;
-    loop->Get(cpairs);
+    event->Get(cpairs);
     // fine PS pairs
     vector<const DPSPair*> fpairs;
-    loop->Get(fpairs);
+    event->Get(fpairs);
     // tagger hits
     vector<const DTAGHHit*> taghhits;
-    loop->Get(taghhits);
+    event->Get(taghhits);
     vector<const DTAGMHit*> tagmhits;
-    loop->Get(tagmhits);
+    event->Get(tagmhits);
     // TPOL hits
     vector<const DTPOLHit*> tpolhits;
-    loop->Get(tpolhits);
+    event->Get(tpolhits);
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     hPSC_NHitPairs->Fill(cpairs.size());
     hPS_NHitPairs->Fill(fpairs.size());
@@ -512,16 +510,16 @@ jerror_t JEventProcessor_PSPair_online::evnt(JEventLoop *loop, uint64_t eventnum
                 hPSTAGM_timeVsE->Fill(E_pair,clhit->t-tag->t);
             }
             // PSC,PS,TPOL coincidences
-            if (fabs(PS_Ediff) > 1.75) {japp->RootFillUnLock(this); return NOERROR;}
-            if (fabs(PSC_tdiff) > 1.3) {japp->RootFillUnLock(this); return NOERROR;}
-            if (E_pair < 8.4 || E_pair > 9.0) {japp->RootFillUnLock(this); return NOERROR;}
+            if (fabs(PS_Ediff) > 1.75) {lockService->RootUnLock(); return;}
+            if (fabs(PSC_tdiff) > 1.3) {lockService->RootUnLock(); return;}
+            if (E_pair < 8.4 || E_pair > 9.0) {lockService->RootUnLock(); return;}
             double ph_cut = 100.0;
             int N_TPOL = 0;
             for(unsigned int i=0; i<tpolhits.size(); i++) {
                 if (tpolhits[i]->pulse_peak>=ph_cut) N_TPOL++;
             }
             hPSTPOL_NHits->Fill(N_TPOL);
-            if (N_TPOL>1) {japp->RootFillUnLock(this); return NOERROR;}
+            if (N_TPOL>1) {lockService->RootUnLock(); return;}
             for(unsigned int i=0; i<tpolhits.size(); i++) {
                 const DTPOLHit* hit = tpolhits[i];
                 hPSTPOL_peak->Fill(hit->pulse_peak);
@@ -537,28 +535,25 @@ jerror_t JEventProcessor_PSPair_online::evnt(JEventLoop *loop, uint64_t eventnum
         }
     }
     //
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
-    return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_PSPair_online::erun(void)
+void JEventProcessor_PSPair_online::EndRun()
 {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_PSPair_online::fini(void)
+void JEventProcessor_PSPair_online::Finish()
 {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 

@@ -12,8 +12,8 @@
 using namespace std;
 
 #include "DFMWPCCluster_factory.h"
+#include <DANA/DEvent.h>
 
-using namespace jana;
 
 bool DFMWPCHit_cmp(const DFMWPCHit* a, const DFMWPCHit* b) {
   if (a->layer==b->layer){
@@ -37,24 +37,22 @@ bool DFMWPCHit_wire_cmp(const DFMWPCHit* a, const DFMWPCHit* b) {
 //------------------
 // init
 //------------------
-jerror_t DFMWPCCluster_factory::init(void)
+void DFMWPCCluster_factory::Init()
 {
+  auto app = GetApplication();
   // Future calibration constants
   TIME_SLICE=10000.0; //ns
-  gPARMS->SetDefaultParameter("FMWPC:CLUSTER_TIME_SLICE",TIME_SLICE);
-  
-  return NOERROR;
+  app->SetDefaultParameter("FMWPC:CLUSTER_TIME_SLICE",TIME_SLICE);
 }
 
 //------------------
 // brun
 //------------------
-jerror_t DFMWPCCluster_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DFMWPCCluster_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 
   // Get pointer to DGeometry object
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  dgeom  = dapp->GetDGeometry(runnumber);
+  dgeom  = DEvent::GetDGeometry(event);
 
   // Get the FMWPC z,x and y positions from the HDDM geometry
   // if they are not in there, use hard-coded values
@@ -70,21 +68,19 @@ jerror_t DFMWPCCluster_factory::brun(jana::JEventLoop *eventLoop, int32_t runnum
 
   // Get the FMWPC wire orientation (should be vertical, horizontal, ...)
   dgeom->GetFMWPCWireOrientation( fmwpc_wire_orientation );
-
-  return NOERROR;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t DFMWPCCluster_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DFMWPCCluster_factory::Process(const std::shared_ptr<const JEvent> &event)
 {
 
   vector<const DFMWPCHit*> allHits;
   vector<vector<const DFMWPCHit*> >thisLayer;
 
   try {
-    eventLoop->Get(allHits);
+    event->Get(allHits);
     
     if (allHits.size()>0) {
       // Sort hits by layer number and by time
@@ -126,14 +122,12 @@ jerror_t DFMWPCCluster_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       }
     }
   }
-  catch (JException d) {
+  catch (const JException& d) {
     cout << d << endl;
   }	
   catch (...) {
     cerr << "exception caught in DFMWPCCluster_factory" << endl;
   }
-
-  return NOERROR;
 }
 
 //-----------------------------
@@ -147,6 +141,8 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
   /// by wire number and should only contains hits from
   /// the same layer that are in time with each other.
   /// This will form clusters from all contiguous wires.
+  
+  std::vector<DFMWPCCluster*> results;
   
   // Loop over hits
   for(uint32_t istart=0; istart<H.size(); istart++){
@@ -193,25 +189,23 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
     DVector3 pos(x,y,z);
     newCluster->pos = pos;
 
-     _data.push_back(newCluster);
-		
+    results.push_back(newCluster);
     istart = iend-1;
   }
+  Set(results);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DFMWPCCluster_factory::erun(void)
+void DFMWPCCluster_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DFMWPCCluster_factory::fini(void)
+void DFMWPCCluster_factory::Finish()
 {
-	return NOERROR;
 }
 

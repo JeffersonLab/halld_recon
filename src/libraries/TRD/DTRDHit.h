@@ -6,8 +6,6 @@
 #define DTRDHIT_H_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
 class DTRDHit: public JObject {
 
@@ -23,12 +21,13 @@ public:
   float q;
   
 
-  void toStrings(vector<pair<string, string> >&items) const {
-    AddString(items, "t", "%1.3f", t);
-    AddString(items, "pulse_height", "%1.3f", pulse_height);
-    AddString(items, "q", "%1.3f", q);
-    AddString(items, "plane", "%d", plane);
-    AddString(items, "strip", "%d", strip);
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(t, "t", "%1.3f");
+    summary.add(pulse_height, "pulse_height", "%1.3f");
+    summary.add(q, "q", "%1.3f");
+    summary.add(plane, "plane", "%d");
+    summary.add(strip, "strip", "%d");
+
   }
 };
 

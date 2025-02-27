@@ -2,33 +2,30 @@
 #define _Df250Scaler_
 
 #include <JANA/JObject.h>
-#include <JANA/JObject.h>
 
-using namespace jana;
 using namespace std;
 
-class Df250Scaler:public jana::JObject{
-            public:
-                JOBJECT_PUBLIC(Df250Scaler);
-  
-                uint32_t nsync;
-		uint32_t trig_number;
-		uint32_t version;
-		
-		int crate;
+class Df250Scaler : public JObject {
+public:
+	JOBJECT_PUBLIC(Df250Scaler);
 
-		vector<uint32_t> fa250_sc;
+	uint32_t nsync;
+	uint32_t trig_number;
+	uint32_t version;
 
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-		  AddString(items, "nsync"       , "%d" , nsync); 
-		  AddString(items, "trig_number" , "%d" , trig_number); 
-		  AddString(items, "version"     , "%d" , version); 
-		  AddString(items, "crate"       , "%d" , crate); 
+	int crate;
 
-		  AddString(items, "fa250_sc"    , "%d" , fa250_sc.size());
-		}		
+	vector<uint32_t> fa250_sc;
+
+	// This method is used primarily for pretty printing
+	// the second argument to AddString is printf style format
+	void Summarize(JObjectSummary &summary) const override {
+		summary.add(nsync, NAME_OF(nsync), "%d");
+		summary.add(trig_number, NAME_OF(trig_number), "%d");
+		summary.add(version, NAME_OF(version), "%d");
+		summary.add(crate, NAME_OF(crate), "%d");
+		summary.add(fa250_sc.size(), "fa250_sc", "%d");
+	}
 };
 
 #endif // _Df250Scaler_

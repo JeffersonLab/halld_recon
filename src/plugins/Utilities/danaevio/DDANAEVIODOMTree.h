@@ -11,7 +11,6 @@
 #include "evioUtil.hxx"
 
 
-using namespace jana;
 using namespace evio;
 
 

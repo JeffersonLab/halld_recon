@@ -8,21 +8,20 @@
 #ifndef _DFactoryGenerator_npp_hists_
 #define _DFactoryGenerator_npp_hists_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_npp_hists.h"
 
-class DFactoryGenerator_npp_hists : public jana::JFactoryGenerator
+class DFactoryGenerator_npp_hists : public JFactoryGenerator
 {
 	public:
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DFactoryGenerator_npp_hists";}
 		
-		jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
+		void GenerateFactories(JFactorySet *factory_set) override
 		{
-			locEventLoop->AddFactory(new DReaction_factory_npp_hists());
-			return NOERROR;
+			factory_set->Add(new DReaction_factory_npp_hists());
+			return;
 		}
 };
 

@@ -6,7 +6,6 @@
 #ifndef _DMagneticFieldMapPS_
 #define _DMagneticFieldMapPS_
 
-#include <JANA/jerror.h>
 #include <DVector3.h>
 
 class DMagneticFieldMapPS{

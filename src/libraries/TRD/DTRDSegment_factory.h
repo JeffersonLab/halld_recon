@@ -5,9 +5,8 @@
 #ifndef DFACTORY_DTRDSEGMENT_H
 #define DFACTORY_DTRDSEGMENT_H
 
-#include "JANA/JFactory.h"
+#include "JANA/JFactoryT.h"
 #include "JANA/JException.h"
-#include "JANA/JStreamLog.h"
 
 #include "DTRDSegment.h"
 #include "DTRDPoint.h"
@@ -31,7 +30,7 @@
 /// class DFDCSegment_factory: definition for a JFactory that
 /// produces space points from pseudopoints.
 /// 
-class DTRDSegment_factory : public JFactory<DTRDSegment> {
+class DTRDSegment_factory : public JFactoryT<DTRDSegment> {
  public:
 		
   ///
@@ -73,17 +72,11 @@ class DTRDSegment_factory : public JFactory<DTRDSegment> {
 //   void FillSegmentData(DFDCSegment *segment);
 
 	protected:
-		///
-		/// DFDCSegment_factory::brun():
-		///
-		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);
-
-		///
-		/// DFDCSegment_factory::evnt():
-		/// this is the place that finds track segments and  
-		/// converts pseudopoints into space points.
-		///
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+// 		void EndRun() override;
+// 		void Finish() override;
 
 	private:
 
@@ -109,7 +102,7 @@ class DTRDSegment_factory : public JFactory<DTRDSegment> {
 		double TARGET_Z,BEAM_VARIANCE;
 		int DEBUG_LEVEL;
 
-		int myeventno;
+// 		int myeventno;
 };
 
 #endif // DFACTORY_DTRDSEGMENT_H
