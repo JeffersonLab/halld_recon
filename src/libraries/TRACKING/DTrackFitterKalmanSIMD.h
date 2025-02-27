@@ -490,7 +490,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   vector<double>dTRDz_vec;
 
   // Mass hypothesis
-  double MASS,mass2;
+  double MASS,INV_MASS,mass2;
   double m_ratio; // electron mass/MASS
   double m_ratio_sq; // .. and its square
   double two_m_e; // twice the electron mass

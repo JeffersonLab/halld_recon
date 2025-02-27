@@ -739,6 +739,7 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
    chisq_ = 0.0;
    ndf_ = 0;
    MASS=0.13957;
+   INV_MASS=1./MASS;
    mass2=MASS*MASS;
 
    myField.Bx=myField.By=myField.Bz=0.;
@@ -917,6 +918,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 
    //Set the mass
    MASS=input_params.mass();
+   INV_MASS=1./MASS;
    mass2=MASS*MASS;
    m_ratio=ELECTRON_MASS/MASS;
    m_ratio_sq=m_ratio*m_ratio;
@@ -2862,11 +2864,12 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(const DVector2 &xy,
    }
    double kds=qBr2p*ds;
    double kq_ds_over_pt=kds*q_over_pt;
+   double kq_ds_over_pt_sinl=kq_ds_over_pt*sinl;
    double By_cosphi_minus_Bx_sinphi=myField.By*cosphi-myField.Bx*sinphi;
    double By_sinphi_plus_Bx_cosphi=myField.By*sinphi+myField.Bx*cosphi;
 
    // Jacobian matrix elements
-   J(state_phi,state_phi)+=kq_ds_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
+   J(state_phi,state_phi)+=kq_ds_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
    J(state_phi,state_q_over_pt)=kds*(By_sinphi_plus_Bx_cosphi*sinl-myField.Bz*cosl);
    J(state_phi,state_tanl)=kq_ds_over_pt*(By_sinphi_plus_Bx_cosphi*cosl
          +myField.Bz*sinl)*cosl2;
@@ -2875,12 +2878,12 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(const DVector2 &xy,
 
    J(state_tanl,state_phi)=-kq_ds_over_pt*By_sinphi_plus_Bx_cosphi*one_over_cosl;
    J(state_tanl,state_q_over_pt)=kds*By_cosphi_minus_Bx_sinphi*one_over_cosl;
-   J(state_tanl,state_tanl)+=kq_ds_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
+   J(state_tanl,state_tanl)+=kq_ds_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
    J(state_tanl,state_z)=kq_ds_over_pt*(myField.dBydz*cosphi-myField.dBxdz*sinphi)*one_over_cosl;  
    J(state_q_over_pt,state_phi)
      =-kq_ds_over_pt*q_over_pt*sinl*By_sinphi_plus_Bx_cosphi;  
    J(state_q_over_pt,state_q_over_pt)
-     +=2.*kq_ds_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
+     +=2.*kq_ds_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
    J(state_q_over_pt,state_tanl)
      =kq_ds_over_pt*q_over_pt*cosl3*By_cosphi_minus_Bx_sinphi;
    if (CORRECT_FOR_ELOSS && fabs(dEdx)>EPS){  
@@ -3085,7 +3088,7 @@ double DTrackFitterKalmanSIMD::GetdEdx(double q_over_p,double K_rho_Z_over_A,
    //return 0.;
 
    double p=fabs(1./q_over_p);
-   double betagamma=p/MASS;
+   double betagamma=p*INV_MASS;
    double betagamma2=betagamma*betagamma;
    double gamma2=1.+betagamma2;
    double beta2=betagamma2/gamma2;
