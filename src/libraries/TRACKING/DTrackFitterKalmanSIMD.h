@@ -473,9 +473,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double ftime, len, var_ftime;
 
   // B-field and gradient
-  double Bx,By,Bz;
-  double dBxdx,dBxdy,dBxdz,dBydx,dBydy,dBydz,dBzdx,dBzdy,dBzdz;
-  bool get_field;
+  DMagneticFieldMap::DBfieldCartesian_t myField;
   double FactorForSenseOfRotation;
 
   // endplate dimensions and location
