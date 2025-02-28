@@ -26,7 +26,7 @@
 
 
 #include "JEventProcessor_cdc_scan.h"
-#include <JANA/JApplication.h>
+//#include <JANA/JApplication.h>
 
 
 using namespace std;
@@ -263,7 +263,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
   /* 0xN0B4 FE timing_thres_hi definitions */
   #define FA125_FE_TIMING_THRES_HI_MASK(x) (0x1FF<<((x%3)*9))
   
-  
+  /*
   // Only look at physics triggers
   
   const DTrigger* locTrigger = NULL; 
@@ -273,19 +273,15 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
   if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
     return;
   }
-   
-  vector <const Df125CDCPulse*> cdcpulses;
-  event->Get(cdcpulses);
+  */
+  
+  auto cdcpulses = event->Get<Df125CDCPulse>();  
   uint32_t nc = (uint32_t)cdcpulses.size();
 
-  
-  vector <const Df125FDCPulse*> fdcpulses;
-  event->Get(fdcpulses);
+  auto fdcpulses = event->Get<Df125FDCPulse>();
   uint32_t nf = (uint32_t)fdcpulses.size();
 
-
-  vector<const Df125TriggerTime*> ttvector;
-  event->Get(ttvector);
+  auto ttvector = event->Get<Df125TriggerTime>();
   uint32_t ntt = (uint32_t)ttvector.size();
 
   
@@ -295,7 +291,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
   ULong64_t eventnum = (ULong64_t)event->GetEventNumber();
 
   
-  lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+  lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
   t->SetBranchAddress("eventnum",&eventnum);
   t->SetBranchAddress("CDCPulsecount",&nc);
@@ -304,7 +300,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
     
   t->Fill();  
 
-  lockService->RootFillUnLock(this);
+  lockService->RootUnLock();
   
  
   
@@ -312,7 +308,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
   
   if (ntt > 0) { //   Df125TriggerTime 
 
-    lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!    
+    lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!    
 
     tt->SetBranchAddress("eventnum",&eventnum);
 
@@ -340,7 +336,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
       tt->Fill();
     }
 
-    lockService->RootFillUnLock(this);
+    lockService->RootUnLock();
 
   }
 
@@ -350,7 +346,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
 
   if (nc || (nf&&FDC)) {  // branches are almost the same for CDC & FDC - only amp differs
 
-    lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+    lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
     
     p->SetBranchAddress("eventnum",&eventnum);
 
@@ -457,9 +453,8 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
 	
         emulated = cp->emulated;
 
-        const Df125WindowRawData *wrd;
-        cp->GetSingle(wrd);
-
+	auto wrd = cp->GetSingle<Df125WindowRawData>();
+	
         if (wrd) {
           ns = (uint32_t)wrd->samples.size();
 
@@ -518,9 +513,8 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
         cTH=0;
         cTL=0;
 
-        const Df125BORConfig *BORConfig=NULL;
-        cp->GetSingle(BORConfig);
-
+	auto BORConfig = cp->GetSingle<Df125BORConfig>();
+	
         if (BORConfig) {
 
           board_id = BORConfig->board_id;
@@ -594,8 +588,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
 	
         emulated = fp->emulated;
 
-        const Df125WindowRawData *wrd;
-        fp->GetSingle(wrd);
+	auto wrd = fp->GetSingle<Df125WindowRawData>();	
 
         if (wrd) {
           ns = (uint32_t)wrd->samples.size();
@@ -656,9 +649,8 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
         cTH=0;
         cTL=0;
 
-        const Df125BORConfig *BORConfig=NULL;
-        fp->GetSingle(BORConfig);
-
+	auto BORConfig = fp->GetSingle<Df125BORConfig>();
+	
         if (BORConfig) {
 
           board_id = BORConfig->board_id;
@@ -705,7 +697,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
   
     }
 
-    lockService->RootFillUnLock(this);    
+    lockService->RootUnLock();    
   }
     
   return;
