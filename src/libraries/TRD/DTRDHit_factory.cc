@@ -27,9 +27,9 @@ jerror_t DTRDHit_factory::init(void)
     t_scale      = 8.0/10.0;     // 8 ns/count and integer time is in 1/10th of sample
     t_base       = { 0.,  0.};   // ns, per plane
     
-    PEAK_THRESHOLD = 600.;  // fADC units
+    PEAK_THRESHOLD = 100.;  // fADC units
     gPARMS->SetDefaultParameter("TRD:PEAK_THRESHOLD", PEAK_THRESHOLD, 
-			      "Threshold in fADC units for hit amplitudes");
+			      "Threshold in fADC units for hit amplitudes (default: 100.)");
 
   	LOW_TCUT = -10000.;
   	HIGH_TCUT = 10000.;
@@ -37,6 +37,14 @@ jerror_t DTRDHit_factory::init(void)
 			      "Throw away hits which come before this time (default: -10000.)");
     gPARMS->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
 			      "Throw away hits which come after this time (default: 10000.)");
+
+	IS_XY_TIME_DIFF_CUT = false;
+	gPARMS->SetDefaultParameter("TRD:IS_XY_TIME_DIFF_CUT", IS_XY_TIME_DIFF_CUT, 
+			      "Apply time difference cut between X and Y hits (default: false)");
+
+	XY_TIME_DIFF = 20.;
+	gPARMS->SetDefaultParameter("TRD:XY_TIME_DIFF", XY_TIME_DIFF, 
+			      "Time difference between hits in X and Y planes to be considered a coincidence (default: 20.)");
 
 	return NOERROR;
 }
@@ -120,8 +128,10 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     vector<const DTRDDigiHit*> digihits;
     loop->Get(digihits);
+
+	vector<DTRDHit*> hits_plane[2]; // one for each plane
     
-    // make hits out of all DTRDDigiHit objects
+    // make hits out of all DTRDDigiHit objects	
     for (unsigned int i=0; i < digihits.size(); i++) {
 	    const DTRDDigiHit *digihit = digihits[i];
 	    
@@ -198,13 +208,37 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
  
 	    // Apply calibration constants
 	    hit->t = T + t_base[digihit->plane-1];
-	    //hit->t = hit->t + t_base[plane-1] - time_offsets[plane-1][strip-1];
+	    // hit->t = T + t_base[digihit->plane-1] + time_offsets[digihit->plane-1][digihit->strip-1];
 
 		hit->q = a_scale * hit->pulse_height;  // probably need to set this more sensibly
 
 	    hit->AddAssociatedObject(digihit);
-	    _data.push_back(hit);
+
+		if (!IS_XY_TIME_DIFF_CUT) _data.push_back(hit);
+		else hits_plane[digihit->plane-1].push_back(hit);
+		// _data.push_back(hit);
     }
+
+	// loops to check the time coincidence of hits in the two planes and add them to the _data vector
+	if (IS_XY_TIME_DIFF_CUT) {
+		for (unsigned int i=0; i < hits_plane[0].size(); i++) {
+			for (unsigned int j=0; j < hits_plane[1].size(); j++) {
+				if (abs(hits_plane[0][i]->t - hits_plane[1][j]->t) < XY_TIME_DIFF) {
+					_data.push_back(hits_plane[0][i]);
+					break;
+				}
+			}
+		}
+	
+		for (unsigned int i=0; i < hits_plane[1].size(); i++) {
+			for (unsigned int j=0; j < hits_plane[0].size(); j++) {
+				if (abs(hits_plane[1][i]->t - hits_plane[0][j]->t) < XY_TIME_DIFF) {
+					_data.push_back(hits_plane[1][i]);
+					break;
+				}
+			}
+		}	
+	}
 		    
     return NOERROR;
 }

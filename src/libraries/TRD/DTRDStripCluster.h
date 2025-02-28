@@ -22,12 +22,19 @@ class DTRDStripCluster : public JObject {
   vector<const DTRDHit*> members; ///< DTRDHits that make up this cluster
   int num_hits;               ///< number of hits (needed for raw analysis)
   int plane;			      ///< GEM X=1, GEM Y=2 
-  float q_tot;		          ///< total energy/charge deposited in the cluster
+  double q_tot;		          ///< total energy/charge deposited in the cluster
   double t_avg;               ///< average time for hits in cluster
 		
-  DVector3 pos;               /// center of cluster
-  DVector3 width;
-  DVector3 length;
+  DVector3 pos;               ///< position of the cluster in the plane
+  DVector3 pos_max;           ///< position of the maximum energy hit in the cluster
+
+  double q_max;
+  double t_max;
+ 
+
+  // can be removed if we don't use raw data clustering
+  DVector3 width;             ///< width of the cluster in the plane
+  DVector3 length;            ///< length of the cluster in the plane 
 		
   /// Return a sensible string representation of this object
   void toStrings(vector<pair<string,string> > &items)const{
@@ -38,6 +45,11 @@ class DTRDStripCluster : public JObject {
     AddString(items, "x", "%f", pos.x());
     AddString(items, "y", "%f", pos.y());
     AddString(items, "z", "%f", pos.z());
+    AddString(items, "q_max", "%f", q_max);
+    AddString(items, "t_max", "%f", t_max);
+    AddString(items, "x_max", "%f", pos_max.x());
+    AddString(items, "y_max", "%f", pos_max.y());
+    AddString(items, "z_max", "%f", pos_max.z());
   }
 };
 
