@@ -2568,8 +2568,8 @@ jerror_t DTrackFitterKalmanSIMD::StepStateAndCovariance(DVector2 &xy,
 
    // New covariance matrix
    // C=J C J^T
-   //C=C.SandwichMultiply(J);
-   C=J*C*J.Transpose();
+   C=C.SandwichMultiply(J);
+   //C=J*C*J.Transpose();
 
    return NOERROR;
 }
@@ -3983,8 +3983,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
       // Update the actual state vector and covariance matrix
       Sc=S0+J*(Sc-S0_);
       // Cc=J*(Cc*JT)+Q;   
-      // Cc=Q.AddSym(Cc.SandwichMultiply(J));
-      Cc=Q.AddSym(J*Cc*J.Transpose());
+      Cc=Q.AddSym(Cc.SandwichMultiply(J));
+      //Cc=Q.AddSym(J*Cc*J.Transpose());
 
       // Save the current state and covariance matrix in the deque
       if (fit_type==kTimeBased){
@@ -4151,8 +4151,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
 
             // Difference and inverse of variance
             //InvV=1./(V+H*(Cc*H_T));
-            //double Vproj=Cc.SandwichMultiply(H_T);
-	    double Vproj=H*Cc*H_T;
+            double Vproj=Cc.SandwichMultiply(H_T);
+	    //double Vproj=H*Cc*H_T;
             InvV=1./(V+Vproj);
             double dm=measurement-prediction;
 
@@ -4421,8 +4421,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     
 
     //C=J*(C*J_T)+Q;   
-    //C=Q.AddSym(C.SandwichMultiply(J));
-    C=Q.AddSym(J*C*J.Transpose());
+    C=Q.AddSym(C.SandwichMultiply(J));
+    //C=Q.AddSym(J*C*J.Transpose());
     
     // Save the current state and covariance matrix in the deque
     forward_traj[k].Skk=S;
@@ -4681,8 +4681,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	  
 	  // inverse variance including prediction
 	  //double InvV1=1./(Vc+H*(C*H_T));
-	  //double Vproj=C.SandwichMultiply(Hc_T);
-	  double Vproj=Hc*C*Hc_T;
+	  double Vproj=C.SandwichMultiply(Hc_T);
+	  //double Vproj=Hc*C*Hc_T;
 	  double InvV1=1./(Vc+Vproj);
 	  if (InvV1<0.){
 	    if (DEBUG_LEVEL>0)
@@ -4809,8 +4809,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
       double newz=z_+my_dz;
       // Step C along z
       StepJacobian(z_,newz,S,0.,J);
-      C=J*C*J.Transpose();
-      //C=C.SandwichMultiply(J);
+      //C=J*C*J.Transpose();
+      C=C.SandwichMultiply(J);
       
       // Step S along z
       Step(z_,newz,0.,S);
@@ -4820,8 +4820,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     
     // Step C along z
     StepJacobian(z_,TARGET_Z,S,0.,J);
-    C=J*C*J.Transpose();
-    //C=C.SandwichMultiply(J);
+    //C=J*C*J.Transpose();
+    C=C.SandwichMultiply(J);
     
     // Step S along z
     Step(z_,TARGET_Z,0.,S);
@@ -5062,8 +5062,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
     }
    
     //C=J*(C*J_T)+Q;   
-    C=Q.AddSym(J*C*J.Transpose());
-    //C=Q.AddSym(C.SandwichMultiply(J));
+    //C=Q.AddSym(J*C*J.Transpose());
+    C=Q.AddSym(C.SandwichMultiply(J));
     
     // Save the current state of the reference trajectory
     S0_=S0;
@@ -5419,8 +5419,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S,
          StepJacobian(z,z_,S,dEdx,J);  
 
          // Propagate the covariance matrix
-         C=J*C*J.Transpose();
-         //C=C.SandwichMultiply(J);
+         //C=J*C*J.Transpose();
+         C=C.SandwichMultiply(J);
 
          // Step to the position of the doca
          Step(z,z_,dEdx,S);
@@ -5440,8 +5440,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S,
          StepJacobian(z,newz,S,dEdx,J);  
 
          // Propagate the covariance matrix
-         C=J*C*J.Transpose();
-         //C=C.SandwichMultiply(J);
+         //C=J*C*J.Transpose();
+         C=C.SandwichMultiply(J);
 
          S2=S;
          S=S1;
@@ -5459,8 +5459,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S,
          StepJacobian(z,newz,S,dEdx,J);  
 
          // Propagate the covariance matrix
-         C=J*C*J.Transpose();
-         //C=C.SandwichMultiply(J);
+         //C=J*C*J.Transpose();
+         C=C.SandwichMultiply(J);
 
          S1=S;
          S=S2;
@@ -5546,8 +5546,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S,
       StepJacobian(z,newz,S,dEdx,J);  
 
       // Propagate the covariance matrix
-      C=Q.AddSym(J*C*J.Transpose());
-      //C=Q.AddSym(C.SandwichMultiply(J));
+      //C=Q.AddSym(J*C*J.Transpose());
+      C=Q.AddSym(C.SandwichMultiply(J));
 
       // Step through field
       Step(z,newz,dEdx,S);
@@ -5574,8 +5574,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S,
          // Propagate the covariance matrix
          //C=J*C*J.Transpose()+(dz/(newz-z))*Q;
          //C=((dz/newz-z)*Q).AddSym(C.SandwichMultiply(J));
-         //C=C.SandwichMultiply(J);
-	 C=J*C*J.Transpose();
+         C=C.SandwichMultiply(J);
+	 //C=J*C*J.Transpose();
 
          // update internal variables
          x_=S(state_x);
@@ -5834,8 +5834,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
 
          // Propagate the covariance matrix
          //Cc=Jc*Cc*Jc.Transpose()+(my_ds/ds_old)*Q;
-         //Cc=((my_ds/ds_old)*Q).AddSym(Cc.SandwichMultiply(Jc));
-	 Cc=((my_ds/ds_old)*Q).AddSym(Jc*Cc*Jc.Transpose());
+         Cc=((my_ds/ds_old)*Q).AddSym(Cc.SandwichMultiply(Jc));
+	 //Cc=((my_ds/ds_old)*Q).AddSym(Jc*Cc*Jc.Transpose());
 
          break;
       }
@@ -6627,7 +6627,8 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	   StepJacobian(z,newz,SReverse,dEdx,J);
 	   Step(z,newz,dEdx,SReverse);
 	   
-	   CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	   //CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	   CReverse=forward_traj[k].Q.AddSym(CReverse.SandwichMultiply(J));
 	 }
 
 	 double reduced_chisq=reverse_chisq/double(reverse_ndf);
@@ -6946,7 +6947,8 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 	   StepJacobian(z,newz,SReverse,dEdx,J);
 	   Step(z,newz,dEdx,SReverse);
 	   
-	   CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	   //CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	   CReverse=forward_traj[k].Q.AddSym(CReverse.SandwichMultiply(J));
 	 }
 	 
 	 double reduced_chisq=reverse_chisq/double(reverse_ndf);
@@ -7252,8 +7254,8 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
    // lab 
    DMatrix5x5 Jc=I5x5;
    Jc(state_D,state_D)=(dy*cosphi-dx*sinphi)/D_;
-   //Cclast=Cclast.SandwichMultiply(Jc);
-   Cclast=Jc*Cclast*Jc.Transpose();
+   Cclast=Cclast.SandwichMultiply(Jc);
+   //Cclast=Jc*Cclast*Jc.Transpose();
 
    if (!isfinite(x_) || !isfinite(y_) || !isfinite(z_) || !isfinite(phi_) 
          || !isfinite(q_over_pt_) || !isfinite(tanl_)){
@@ -7424,12 +7426,12 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
 
                if (my_fdchits[id]->hit!=NULL 
 		   && my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP){
-                  //V+=Cs.SandwichMultiply(H_T);
-                  V=V+H*Cs*H_T;
+		 //V+=Cs.SandwichMultiply(H_T);
+		 V=V+H*Cs*H_T;
                }
                else{
-                  //V-=dC.SandwichMultiply(H_T);
-                  V=V-H*dC*H_T;
+		 //V-=dC.SandwichMultiply(H_T);
+		 V=V-H*dC*H_T;
                }
 
 
@@ -9454,7 +9456,9 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
      }
      // Update the actual state vector and covariance matrix
      S=S0+J*(S-S0_);
-     C=Q.AddSym(J*C*J.Transpose());
+     //C=Q.AddSym(J*C*J.Transpose());
+     C=Q.AddSym(C.SandwichMultiply(J));
+
      //C.Print();
      
      // Save the current state of the reference trajectory
@@ -9541,7 +9545,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	   double res=dmeas-d;
 	   
 	   // inverse variance including prediction
-	   double Vproj=Hc*C*Hc_T;	   
+	   //double Vproj=Hc*C*Hc_T;
+	   double Vproj=C.SandwichMultiply(Hc_T);
 	   double InvV1=1./(Vc+Vproj);
 
 	   // Check if this hit is an outlier
@@ -9777,8 +9782,8 @@ DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
 
 	// propagate error matrix to z-position of hit
 	StepJacobian(my_z,newz,S0,dedx,J);
-	C=J*C*J.Transpose();
-	//C=C.SandwichMultiply(J);
+	//C=J*C*J.Transpose();
+	C=C.SandwichMultiply(J);
 	
 	// Step reference trajectory by my_dz
 	Step(my_z,newz,dedx,S0); 
@@ -9789,8 +9794,8 @@ DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
       newz=my_z+dz3;
       // propagate error matrix to z-position of hit
       StepJacobian(my_z,newz,S0,dedx,J);
-      C=J*C*J.Transpose();
-      //C=C.SandwichMultiply(J);
+      //C=J*C*J.Transpose();
+      C=C.SandwichMultiply(J);
 
       // Step reference trajectory by dz3
       Step(my_z,newz,dedx,S0); 	    
@@ -9800,8 +9805,8 @@ DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
       
       // propagate error matrix to z-position of hit
       StepJacobian(z,newz,S0,dedx,J);
-      C=J*C*J.Transpose();
-      //C=C.SandwichMultiply(J);
+      //C=J*C*J.Transpose();
+      C=C.SandwichMultiply(J);
       
       // Step reference trajectory by dz
       Step(z,newz,dedx,S0); 
@@ -9843,8 +9848,8 @@ void DTrackFitterKalmanSIMD::StepBack(double dedx,double newz,double z,
   if (num_steps==0){
     // Step C back to the z-position on the reference trajectory
     StepJacobian(newz,z,S0,dedx,J);
-    C=J*C*J.Transpose();
-    //C=C.SandwichMultiply(J);
+    //C=J*C*J.Transpose();
+    C=C.SandwichMultiply(J);
 
     // Step S to current position on the reference trajectory
     Step(newz,z,dedx,S);
@@ -9861,8 +9866,8 @@ void DTrackFitterKalmanSIMD::StepBack(double dedx,double newz,double z,
       
       // Step C along z
       StepJacobian(my_z,z,S0,dedx,J);
-      C=J*C*J.Transpose();
-      //C=C.SandwichMultiply(J);
+      //C=J*C*J.Transpose();
+      C=C.SandwichMultiply(J);
       
       // Step S along z
       Step(my_z,z,dedx,S); 
@@ -9876,8 +9881,8 @@ void DTrackFitterKalmanSIMD::StepBack(double dedx,double newz,double z,
     
     // Step C back to the z-position on the reference trajectory
     StepJacobian(my_z,z,S0,dedx,J);
-    C=J*C*J.Transpose();
-    //C=C.SandwichMultiply(J);
+    //C=J*C*J.Transpose();
+    C=C.SandwichMultiply(J);
 
     // Step S to current position on the reference trajectory
     Step(my_z,z,dedx,S);
