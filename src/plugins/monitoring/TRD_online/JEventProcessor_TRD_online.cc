@@ -13,7 +13,7 @@ using namespace jana;
 #include <TRD/DTRDDigiHit.h>
 #include <TRD/DTRDHit.h>
 #include <TRD/DTRDStripCluster.h>
-#include <TRD/DTRDPoint.h>
+// #include <TRD/DTRDPoint.h>
 
 #include <TDirectory.h>
 #include <TH1.h>
@@ -40,7 +40,11 @@ static TH1I *hHit_NHits;
 static TH1I *hHit_Occupancy[NTRDplanes];
 static TH1I *hHit_Time[NTRDplanes];
 static TH1I *hHit_PulseHeight[NTRDplanes];
+static TH2I *hHit_TimeVsStrip[NTRDplanes];
 
+const int NEventsClusterMonitor = 10;
+static TH2I *hClusterHits_TimeVsStrip[NTRDplanes][NEventsClusterMonitor];
+static TH2I *hCluster_TimeVsStrip[NTRDplanes][NEventsClusterMonitor];
 
 //----------------------------------------------------------------------------------
 
@@ -118,13 +122,31 @@ jerror_t JEventProcessor_TRD_online::init(void) {
 		hHit_Occupancy[i] = new TH1I(Form("Hit_Occupancy_Plane%d", i),Form("Plane %d TRD hit occupancy;strip;calibrated hits / counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
 		hHit_Time[i] = new TH1I(Form("Hit_Time_Plane%d", i),Form("Plane %d TRD pulse time;pulse time [ns];calibrated hits / 2 ns",i),1000,-500.0,1500.0);
 		hHit_PulseHeight[i] = new TH1I(Form("Hit_PulseHeight_Plane%d", i),Form("Plane %d TRD pulse height;pulse height [fADC units];calibrated hits / 1 unit",i),600,-100.0,500.0);
+        hHit_TimeVsStrip[i] = new TH2I(Form("Hit_TimeVsStrip_Plane%d", i),Form("Plane %d TRD pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,200,0.0,1000.0);
 
 	}
     
 
     trdDir->cd();
 
+    eventClusterCount = 0;
 
+    gDirectory->mkdir("Cluster")->cd();
+    // hCluster_NClusters = new TH1I("Cluster_NClusters","TRD number of cluster per event;clusters;events",20,0.5,0.5+20);
+
+    // histograms for each plane
+    for(int i=0; i<NTRDplanes; i++) {
+        int NTRDstrips = 0.;
+        if(i==0)
+            NTRDstrips = NTRD_xstrips;
+        else
+            NTRDstrips = NTRD_ystrips;
+
+        for(int j=0; j<NEventsClusterMonitor; j++) {
+            hClusterHits_TimeVsStrip[i][j] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d_Event%d", i, j),Form("Plane %d TRD cluster hits pulse time vs. strip;pulse time [ns];strip",i),200,100,1100.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+            hCluster_TimeVsStrip[i][j] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d_Event%d", i, j),Form("Plane %d TRD cluster pulse time vs. strip;pulse time [ns];strip",i),200,100,1100.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+        }
+    }   
     
     // back to main dir
     mainDir->cd();
@@ -183,8 +205,8 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
     eventLoop->Get(digihits);
     vector<const DTRDHit*> hits;
     eventLoop->Get(hits);
-//     vector<const DTRDStripCluster*> clusters;
-//     eventLoop->Get(clusters);
+    vector<const DTRDStripCluster*> clusters;
+    eventLoop->Get(clusters);
 //     vector<const DTRDPoint*> points;
 //     eventLoop->Get(points);
 
@@ -220,9 +242,28 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	    hHit_Occupancy[plane]->Fill(hit->strip);
 	    hHit_Time[plane]->Fill(hit->t);
 	    hHit_PulseHeight[plane]->Fill(hit->pulse_height);
+        hHit_TimeVsStrip[plane]->Fill(hit->strip, hit->t);
     }
 
+    // if (clusters.size() > 0) cout << "Event " << eventnumber << " has " << digihits.size() << " digihits, " << hits.size() << " hits, and " << clusters.size() << " clusters" << endl;
+    if (clusters.size() > 10 && eventClusterCount < NEventsClusterMonitor) {
+        cout << "Event " << eventnumber << " has " << clusters.size() << " clusters, eventClusterCount = " << eventClusterCount << endl;
+        for (const auto& cluster : clusters) {
+            int plane = cluster->plane-1;
+            double pos = 0.;
+            if (plane == 0) pos = cluster->pos.x();
+            else pos = cluster->pos.y();
+            
+            hCluster_TimeVsStrip[plane][eventClusterCount]->Fill(cluster->t_avg, pos);
+        }
 
+        for (const auto& hit : hits) {
+            int plane = hit->plane-1;
+            hClusterHits_TimeVsStrip[plane][eventClusterCount]->Fill(hit->t, hit->strip);
+        }
+        
+        eventClusterCount++;
+    }
 
     japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
