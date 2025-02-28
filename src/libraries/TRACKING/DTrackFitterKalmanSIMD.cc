@@ -1206,9 +1206,9 @@ jerror_t DTrackFitterKalmanSIMD::CalcDeriv(double z,
 
    D(state_q_over_p)=0.;
    if (CORRECT_FOR_ELOSS && fabs(dEdx)>EPS){
-      double q_over_p_sq=q_over_p*q_over_p;
-      double E=sqrt(1./q_over_p_sq+mass2); 
-      D(state_q_over_p)=-q_over_p_sq*q_over_p*E*dEdx*dsdz;
+     double q_over_p_sq=q_over_p*q_over_p;
+     double qE_over_p=((q_over_p>0)?1.:-1.)*sqrt(1.+mass2*q_over_p_sq);
+     D(state_q_over_p)=-q_over_p_sq*qE_over_p*dEdx*dsdz;
    }
    return NOERROR;
 }
@@ -2401,6 +2401,8 @@ jerror_t DTrackFitterKalmanSIMD::CalcDerivAndJacobian(const DVector2 &xy,
       dEdx=0.;
    }
    double kq_over_pt=qBr2p*q_over_pt;
+   double kq_over_pt_sinl=kq_over_pt*sinl;
+   double k_q_over_pt_sq_sinl=kq_over_pt_sinl*q_over_pt;
 
    // B-field and gradient at (x,y,z)
    bfield->GetFieldAndGradient(xy.X(),xy.Y(),S(state_z),myField);
@@ -2408,7 +2410,7 @@ jerror_t DTrackFitterKalmanSIMD::CalcDerivAndJacobian(const DVector2 &xy,
    // Derivative of S with respect to s
    double By_cosphi_minus_Bx_sinphi=myField.By*cosphi-myField.Bx*sinphi;
    double By_sinphi_plus_Bx_cosphi=myField.By*sinphi+myField.Bx*cosphi;
-   D1(state_q_over_pt)=kq_over_pt*q_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
+   D1(state_q_over_pt)=k_q_over_pt_sq_sinl*By_cosphi_minus_Bx_sinphi;
    D1(state_phi)=kq_over_pt*(By_sinphi_plus_Bx_cosphi*sinl-myField.Bz*cosl);
    D1(state_tanl)=kq_over_pt*By_cosphi_minus_Bx_sinphi*one_over_cosl;
    D1(state_z)=sinl;
@@ -2417,22 +2419,22 @@ jerror_t DTrackFitterKalmanSIMD::CalcDerivAndJacobian(const DVector2 &xy,
    dxy.Set(cosl*cosphi,cosl*sinphi);
 
    // Jacobian matrix elements
-   J1(state_phi,state_phi)=kq_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
+   J1(state_phi,state_phi)=kq_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
    J1(state_phi,state_q_over_pt)
      =qBr2p*(By_sinphi_plus_Bx_cosphi*sinl-myField.Bz*cosl);
    J1(state_phi,state_tanl)=kq_over_pt*(By_sinphi_plus_Bx_cosphi*cosl
 					+myField.Bz*sinl)*cosl2;
    J1(state_phi,state_z)
-     =kq_over_pt*(myField.dBxdz*cosphi*sinl+myField.dBydz*sinphi*sinl-myField.dBzdz*cosl);
+     =kq_over_pt*((myField.dBxdz*cosphi+myField.dBydz*sinphi)*sinl-myField.dBzdz*cosl);
 
    J1(state_tanl,state_phi)=-kq_over_pt*By_sinphi_plus_Bx_cosphi*one_over_cosl;
    J1(state_tanl,state_q_over_pt)=qBr2p*By_cosphi_minus_Bx_sinphi*one_over_cosl;
-   J1(state_tanl,state_tanl)=kq_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
+   J1(state_tanl,state_tanl)=kq_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
    J1(state_tanl,state_z)=kq_over_pt*(myField.dBydz*cosphi-myField.dBxdz*sinphi)*one_over_cosl;  
    J1(state_q_over_pt,state_phi)
-     =-kq_over_pt*q_over_pt*sinl*By_sinphi_plus_Bx_cosphi;  
+     =-k_q_over_pt_sq_sinl*By_sinphi_plus_Bx_cosphi;
    J1(state_q_over_pt,state_q_over_pt)
-     =2.*kq_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
+     =2.*kq_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
    J1(state_q_over_pt,state_tanl)
      =kq_over_pt*q_over_pt*cosl3*By_cosphi_minus_Bx_sinphi;
    if (CORRECT_FOR_ELOSS && fabs(dEdx)>EPS){  
@@ -2446,7 +2448,7 @@ jerror_t DTrackFitterKalmanSIMD::CalcDerivAndJacobian(const DVector2 &xy,
      J1(state_q_over_pt,state_tanl)+=q*dEdx*sinl*(1.+2.*m2_over_p2)/(p*E);
    }
    J1(state_q_over_pt,state_z)
-     =kq_over_pt*q_over_pt*sinl*(myField.dBydz*cosphi-myField.dBxdz*sinphi);
+     =k_q_over_pt_sq_sinl*(myField.dBydz*cosphi-myField.dBxdz*sinphi);
    J1(state_z,state_tanl)=cosl3;
    
    return NOERROR;
@@ -2865,6 +2867,7 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(const DVector2 &xy,
    double kds=qBr2p*ds;
    double kq_ds_over_pt=kds*q_over_pt;
    double kq_ds_over_pt_sinl=kq_ds_over_pt*sinl;
+   double k_ds_q_over_pt_sq_sinl=kq_ds_over_pt_sinl*q_over_pt;
    double By_cosphi_minus_Bx_sinphi=myField.By*cosphi-myField.Bx*sinphi;
    double By_sinphi_plus_Bx_cosphi=myField.By*sinphi+myField.Bx*cosphi;
 
@@ -2881,7 +2884,7 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(const DVector2 &xy,
    J(state_tanl,state_tanl)+=kq_ds_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
    J(state_tanl,state_z)=kq_ds_over_pt*(myField.dBydz*cosphi-myField.dBxdz*sinphi)*one_over_cosl;  
    J(state_q_over_pt,state_phi)
-     =-kq_ds_over_pt*q_over_pt*sinl*By_sinphi_plus_Bx_cosphi;  
+     =-k_ds_q_over_pt_sq_sinl*By_sinphi_plus_Bx_cosphi;
    J(state_q_over_pt,state_q_over_pt)
      +=2.*kq_ds_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
    J(state_q_over_pt,state_tanl)
@@ -2897,7 +2900,7 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(const DVector2 &xy,
      J(state_q_over_pt,state_tanl)+=q*dE_over_E*sinl*(1.+2.*m2_over_p2)/p;
    }
    J(state_q_over_pt,state_z)
-     =kq_ds_over_pt*q_over_pt*sinl*(myField.dBydz*cosphi-myField.dBxdz*sinphi);
+     =k_ds_q_over_pt_sq_sinl*(myField.dBydz*cosphi-myField.dBxdz*sinphi);
    J(state_z,state_tanl)=cosl3*ds;
    
    // Deal with changes in D
@@ -3153,7 +3156,7 @@ double DTrackFitterKalmanSIMD::GetdEdx(double q_over_p,double K_rho_Z_over_A,
 
 // Calculate the variance in the energy loss in a Gaussian approximation.
 // The standard deviation of the energy loss distribution is
-//      var=0.1535*density*(Z/A)*x*(1-0.5*beta^2)*Tmax  [MeV]
+//      var=0.1535*density*(Z/A)*x*(1-0.5*beta^2)*Tmax*beta^-2  [MeV]
 // where Tmax is the maximum energy transfer.
 // (derived from Leo (2nd ed.), eq. 2.100.  Note that I think there is a typo 
 // in this formula in the text...)
@@ -3166,7 +3169,8 @@ double DTrackFitterKalmanSIMD::GetEnergyVariance(double ds,
    double gamma2=betagamma2*one_over_beta2;
    double two_Me_betagamma_sq=two_m_e*betagamma2;
    double Tmax=two_Me_betagamma_sq/(1.+2.*sqrt(gamma2)*m_ratio+m_ratio_sq);
-   double var=K_rho_Z_over_A*one_over_beta2*fabs(ds)*Tmax*(1.-0.5/one_over_beta2);
+   double var=K_rho_Z_over_A*fabs(ds)*Tmax*(one_over_beta2-0.5);
+   
    return var;
 }
 
