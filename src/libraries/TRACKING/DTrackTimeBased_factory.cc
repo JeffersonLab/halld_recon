@@ -169,7 +169,7 @@ void DTrackTimeBased_factory::Init()
   SAVE_TRUNCATED_DEDX = false;
   app->SetDefaultParameter("TRK:SAVE_TRUNCATED_DEDX",SAVE_TRUNCATED_DEDX);
 
-  COUNT_POTENTIAL_HITS = false;
+  COUNT_POTENTIAL_HITS = true;
   app->SetDefaultParameter("TRK:COUNT_POTENTIAL_HITS",COUNT_POTENTIAL_HITS);
 
 
