@@ -47,6 +47,16 @@ class DMagneticFieldMapParameterized:public DMagneticFieldMap{
 						 double &dBzdx, 
 						 double &dBzdy,
 						 double &dBzdz) const;
+		void GetFieldAndGradient(double x,double y,double z,
+					 DBfieldCartesian_t &Bdata) const{
+		  GetFieldAndGradient(x,y,z, Bdata.Bx,Bdata.By,Bdata.Bz,
+				      Bdata.dBxdx, Bdata.dBxdy,Bdata.dBxdz,
+				      Bdata.dBydx, Bdata.dBydy,Bdata.dBydz,
+				      Bdata.dBzdx, Bdata.dBzdy,Bdata.dBzdz);
+		  Bdata.Bmag=sqrt(Bdata.Bx*Bdata.Bx+Bdata.By*Bdata.By
+				 +Bdata.Bz*Bdata.Bz);
+		};
+
 	protected:
 		JCalibration *jcalib;
 		

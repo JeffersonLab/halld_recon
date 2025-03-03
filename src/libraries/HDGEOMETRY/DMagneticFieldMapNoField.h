@@ -82,6 +82,14 @@ class DMagneticFieldMapNoField:public DMagneticFieldMap{
     By=0.;
     Bz=0.;
   };
+  void GetFieldAndGradient(double x,double y,double z,
+			   DBfieldCartesian_t &Bdata) const {
+    Bdata.Bmag=0.;
+    GetFieldAndGradient(x,y,z, Bdata.Bx,Bdata.By,Bdata.Bz,
+			Bdata.dBxdx, Bdata.dBxdy,Bdata.dBxdz,
+			Bdata.dBydx, Bdata.dBydy,Bdata.dBydz,
+			Bdata.dBzdx, Bdata.dBzdy,Bdata.dBzdz);
+  };
 };
 
 #endif // _DMagneticFieldMapNoField_

@@ -46,7 +46,7 @@ class DTrackTimeBased_factory:public JFactoryT<DTrackTimeBased>{
 
   bool DEBUG_HISTS;
   int DEBUG_LEVEL;
-  bool PID_FORCE_TRUTH;
+  bool PID_FORCE_TRUTH,COUNT_POTENTIAL_HITS;
   bool USE_HITS_FROM_WIREBASED_FIT;
 
   bool SAVE_TRUNCATED_DEDX;       // store extra dEdx information in time based tracks
