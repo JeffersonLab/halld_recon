@@ -272,7 +272,7 @@ void DBCALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 	hit_E = gain * integral_pedsub;
 
       }
-      if (VERBOSE>2) printf("%5llu digihit %2i of %2lu, type %i time %4u, peak %3u, int %4.0f %.0f, ped %3.0f %.0f %5.1f %6.1f, gain %.1e, E=%5.0f MeV\n",
+      if (VERBOSE>2) printf("%5lu digihit %2i of %2lu, type %i time %4u, peak %3u, int %4.0f %.0f, ped %3.0f %.0f %5.1f %6.1f, gain %.1e, E=%5.0f MeV\n",
 							event->GetEventNumber(),i,digihits.size(),digihit->datasource,
 							digihit->pulse_time,digihit->pulse_peak,integral,nsamples_integral,
 							pedestal,nsamples_pedestal,single_sample_ped,totalpedestal,gain,hit_E*1000);
