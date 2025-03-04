@@ -156,10 +156,10 @@ class DEventSourceHDDM:public JEventSource
       bool Extract_DCTOFTruth(hddm_s::HDDM *record,  JFactoryT<DCTOFTruth> *factory, string tag);
 
   bool Extract_DTRDTruthPoint(hddm_s::HDDM *record,
-			      JFactory<DTRDTruthPoint>* factory,
+			      JFactoryT<DTRDTruthPoint> *factory,
 			      string tag);
   bool Extract_DTRDHit(hddm_s::HDDM *record,
-		       JFactory<DTRDHit> *factory, string tag);
+		       JFactoryT<DTRDHit> *factory, string tag);
   
   bool Extract_DTPOLHit(hddm_s::HDDM *record, JFactoryT<DTPOLHit>* factory, string tag);
   bool Extract_DTPOLTruthHit(hddm_s::HDDM *record, JFactoryT<DTPOLTruthHit>* factory, string tag);

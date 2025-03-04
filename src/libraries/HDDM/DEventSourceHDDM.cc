@@ -504,15 +504,15 @@ bool DEventSourceHDDM::GetObjects(const std::shared_ptr<const JEvent> &event, JF
 
    if (dataClassName == "DTPOLTruthHit")
       return Extract_DTPOLTruthHit(record,
-                     dynamic_cast<JFactory<DTPOLTruthHit>*>(factory), tag);
+                     dynamic_cast<JFactoryT<DTPOLTruthHit>*>(factory), tag);
    
    if (dataClassName == "DTRDTruthPoint")
       return Extract_DTRDTruthPoint(record, 
-                     dynamic_cast<JFactory<DTRDTruthPoint>*>(factory), tag);
+                     dynamic_cast<JFactoryT<DTRDTruthPoint>*>(factory), tag);
 
    if (dataClassName == "DTRDHit")
       return Extract_DTRDHit(record, 
-                     dynamic_cast<JFactory<DTRDHit>*>(factory), tag);
+                     dynamic_cast<JFactoryT<DTRDHit>*>(factory), tag);
 
    return false; // OBJECT_NOT_AVAILABLE;
 }
@@ -3286,7 +3286,7 @@ bool DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
 // Extract_DTRDTruthPoint
 //------------------
 bool DEventSourceHDDM::Extract_DTRDTruthPoint(hddm_s::HDDM *record,
-                                   JFactory<DTRDTruthPoint>* factory, string tag)
+                                   JFactoryT<DTRDTruthPoint> *factory, string tag)
 {
    /// Copies the data from the given hddm_s structure. This is called
    /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
@@ -3328,7 +3328,7 @@ bool DEventSourceHDDM::Extract_DTRDTruthPoint(hddm_s::HDDM *record,
 //------------------
 // Extract_DTRDHit
 //------------------
-bool DEventSourceHDDM::Extract_DTRDHit(hddm_s::HDDM *record,  JFactory<DTRDHit> *factory, string tag)
+bool DEventSourceHDDM::Extract_DTRDHit(hddm_s::HDDM *record,  JFactoryT<DTRDHit> *factory, string tag)
 {
    /// Copies the data from the given hddm_s record. This is called
    /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
