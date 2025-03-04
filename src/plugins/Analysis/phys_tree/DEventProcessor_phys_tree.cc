@@ -21,8 +21,7 @@ using namespace std;
 #include <TROOT.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 #include <PID/DKinematicData.h>
 #include <PID/DBeamPhoton.h>
@@ -38,7 +37,7 @@ bool static CompareLorentzEnergy(const Particle &a, const Particle &b){
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_phys_tree());
+	app->Add(new DEventProcessor_phys_tree());
 }
 } // "C"
 
@@ -48,6 +47,7 @@ void InitPlugin(JApplication *app){
 //------------------
 DEventProcessor_phys_tree::DEventProcessor_phys_tree()
 {
+	SetTypeName("DEventProcessor_trackres_tree");
 	pthread_mutex_init(&mutex, NULL);
 }
 
@@ -60,9 +60,9 @@ DEventProcessor_phys_tree::~DEventProcessor_phys_tree()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_phys_tree::init(void)
+void DEventProcessor_phys_tree::Init()
 {
 	// Create PHYSICS directory
 	TDirectory *dir = (TDirectory*)gROOT->FindObject("PHYSICS");
@@ -88,32 +88,28 @@ jerror_t DEventProcessor_phys_tree::init(void)
 	evt->AddFriend("tree_recon");
 
 	dir->cd("../");
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_phys_tree::brun(JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_phys_tree::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_phys_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_phys_tree::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Get reconstructed objects and make TLorentz vectors out of each of them
 	vector<const DBeamPhoton*> beam_photons;
 	vector<const DMCThrown*> mcthrowns;
 	vector<const DPhysicsEvent*> physicsevents;
 
-	loop->Get(beam_photons);
-	loop->Get(mcthrowns);
-	loop->Get(physicsevents);
+	event->Get(beam_photons);
+	event->Get(mcthrowns);
+	event->Get(physicsevents);
 
 	TVector3 VertexRec, VertexGen;
 	VertexGen = TVector3(mcthrowns[0]->position().X(),mcthrowns[0]->position().Y(),mcthrowns[0]->position().Z());
@@ -216,7 +212,7 @@ jerror_t DEventProcessor_phys_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
 	}
 	
 	// Lock mutex
-	japp->RootWriteLock();
+	GetLockService(locEvent)->RootWriteLock();
 	//pthread_mutex_lock(&mutex);
 	
 	// Fill in Event objects for both thrown and reconstructed
@@ -248,10 +244,8 @@ jerror_t DEventProcessor_phys_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
 	tree_recon->Fill();
 
 	// Unlock mutex
-	japp->RootUnLock();
+	GetLockService(locEvent)->RootUnLock();
 	//pthread_mutex_unlock(&mutex);
-
-	return NOERROR;
 }
 
 
@@ -514,20 +508,16 @@ bool DEventProcessor_phys_tree::IsFiducial(const DKinematicData *kd)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_phys_tree::erun(void)
+void DEventProcessor_phys_tree::EndRun()
 {
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_phys_tree::fini(void)
+void DEventProcessor_phys_tree::Finish()
 {
-
-	return NOERROR;
 }
 

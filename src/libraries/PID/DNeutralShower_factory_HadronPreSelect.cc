@@ -6,11 +6,12 @@
 //
 
 #include "DNeutralShower_factory_HadronPreSelect.h"
+#include <JANA/JEvent.h>
 
 //------------------
 // init
 //------------------
-jerror_t DNeutralShower_factory_HadronPreSelect::init(void)
+void DNeutralShower_factory_HadronPreSelect::Init()
 {
 	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
 	//This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.  
@@ -24,30 +25,29 @@ jerror_t DNeutralShower_factory_HadronPreSelect::init(void)
 	dMaxBCALZ = 393.0;
 	
 	dFCALInnerRingCut = true;
-	
-	return NOERROR;
 }
 
 //------------------
 // brun
 //------------------
-jerror_t DNeutralShower_factory_HadronPreSelect::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DNeutralShower_factory_HadronPreSelect::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
-	gPARMS->SetDefaultParameter("HADRONPRESELECT:MIN_FCAL_E", dMinFCALE);
-	gPARMS->SetDefaultParameter("HADRONPRESELECT:MIN_BCAL_E", dMinBCALE);
-	gPARMS->SetDefaultParameter("HADRONPRESELECT:MIN_CCAL_E", dMinCCALE);
-	gPARMS->SetDefaultParameter("HADRONPRESELECT:MIN_BCAL_NCELL", dMinBCALNcell);
-	gPARMS->SetDefaultParameter("HADRONPRESELECT:MIN_FCAL_R", dMaxFCALR);
-	gPARMS->SetDefaultParameter("HADRONPRESELECT:MIN_BCAL_Z", dMaxBCALZ);
-	gPARMS->SetDefaultParameter("HADRONPRESELECT:FCAL_INNER_CUT", dFCALInnerRingCut);
+	auto app = GetApplication();
+	app->SetDefaultParameter("HADRONPRESELECT:MIN_FCAL_E", dMinFCALE);
+	app->SetDefaultParameter("HADRONPRESELECT:MIN_BCAL_E", dMinBCALE);
+	app->SetDefaultParameter("HADRONPRESELECT:MIN_CCAL_E", dMinCCALE);
+	app->SetDefaultParameter("HADRONPRESELECT:MIN_BCAL_NCELL", dMinBCALNcell);
+	app->SetDefaultParameter("HADRONPRESELECT:MIN_FCAL_R", dMaxFCALR);
+	app->SetDefaultParameter("HADRONPRESELECT:MIN_BCAL_Z", dMaxBCALZ);
+	app->SetDefaultParameter("HADRONPRESELECT:FCAL_INNER_CUT", dFCALInnerRingCut);
 
 	// get FCAL Geometry object
 	vector< const DFCALGeometry * > fcalGeomVec;
-	locEventLoop->Get( fcalGeomVec );
+	event->Get( fcalGeomVec );
 
 	if( fcalGeomVec.size() != 1 ){
 		cerr << "Could not load FCAL Geometry!" << endl;
-		return RESOURCE_UNAVAILABLE;
+		return; // RESOURCE_UNAVAILABLE;
 	}
   	dFCALGeometry = fcalGeomVec[0];		
 
@@ -87,21 +87,19 @@ jerror_t DNeutralShower_factory_HadronPreSelect::brun(jana::JEventLoop *locEvent
 	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 29, 31 ) );
 	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 30, 31 ) );
 	}
-
-	return NOERROR;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t DNeutralShower_factory_HadronPreSelect::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DNeutralShower_factory_HadronPreSelect::Process(const std::shared_ptr<const JEvent> &event)
 {
 	//Clear objects from last event
-	_data.clear();
+	mData.clear();
 
 	//Get original objects
 	vector<const DNeutralShower*> locNeutralShowers;
-	locEventLoop->Get(locNeutralShowers);
+	event->Get(locNeutralShowers);
 
 	//Cut on shower energy, BCAL cells, fiducial regions
 	for(size_t loc_i = 0; loc_i < locNeutralShowers.size(); ++loc_i)
@@ -139,7 +137,7 @@ jerror_t DNeutralShower_factory_HadronPreSelect::evnt(jana::JEventLoop *locEvent
 				continue;
 
 			const DBCALShower* locBCALShower = NULL;
-			locNeutralShowers[loc_i]->GetSingleT(locBCALShower);
+			locNeutralShowers[loc_i]->GetSingle(locBCALShower);
 			if(locBCALShower->N_cell < dMinBCALNcell)
 				continue;
 		  }
@@ -157,24 +155,20 @@ jerror_t DNeutralShower_factory_HadronPreSelect::evnt(jana::JEventLoop *locEvent
 			//	continue;
 		  }
 
-		_data.push_back(const_cast<DNeutralShower*>(locNeutralShowers[loc_i]));
+		Insert(const_cast<DNeutralShower*>(locNeutralShowers[loc_i]));
 	}
-
-	return NOERROR;
 }
 
 //------------------
 // erun
 //------------------
-jerror_t DNeutralShower_factory_HadronPreSelect::erun(void)
+void DNeutralShower_factory_HadronPreSelect::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t DNeutralShower_factory_HadronPreSelect::fini(void)
+void DNeutralShower_factory_HadronPreSelect::Finish()
 {
-	return NOERROR;
 }

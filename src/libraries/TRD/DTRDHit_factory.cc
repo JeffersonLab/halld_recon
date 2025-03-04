@@ -7,20 +7,24 @@
 #include <iomanip>
 using namespace std;
 
+#include "DANA/DEvent.h"
+
 #include <DAQ/Df125Config.h>
 #include <DAQ/Df125FDCPulse.h>
 
 #include "TRD/DTRDHit_factory.h"
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTRDHit_factory::init(void)
+void DTRDHit_factory::Init()
 {
-	// initialize calibration tables
+	// Initialize calibration tables
 	//vector<double> new_t0s(TRD_MAX_CHANNELS);	
 	//time_offsets.push_back(new_t0s); time_offsets.push_back(new_t0s);
+
+	auto app = GetApplication();
 
     /// set the base conversion scales
     a_scale      = 2.4E4/1.3E5;  // NOTE: currently fixed to FDC values, currently not used
@@ -28,24 +32,26 @@ jerror_t DTRDHit_factory::init(void)
     t_base       = { 0.,  0.};   // ns, per plane
     
     PEAK_THRESHOLD = 600.;  // fADC units
-    gPARMS->SetDefaultParameter("TRD:PEAK_THRESHOLD", PEAK_THRESHOLD, 
+    app->SetDefaultParameter("TRD:PEAK_THRESHOLD", PEAK_THRESHOLD, 
 			      "Threshold in fADC units for hit amplitudes");
 
   	LOW_TCUT = -10000.;
   	HIGH_TCUT = 10000.;
-    gPARMS->SetDefaultParameter("TRD:LOW_TCUT", LOW_TCUT, 
+    app->SetDefaultParameter("TRD:LOW_TCUT", LOW_TCUT, 
 			      "Throw away hits which come before this time (default: -10000.)");
-    gPARMS->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
+    app->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
 			      "Throw away hits which come after this time (default: 10000.)");
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTRDHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	auto runnumber = event->GetRunNumber();
+
 	// Only print messages for one thread whenever run number change
 	static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 	static set<int> runs_announced;
@@ -57,12 +63,12 @@ jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	}
 	pthread_mutex_unlock(&print_mutex);
 	
-	if(print_messages) jout << "In DTRDHit_factory, loading constants..." << endl;
+	if(print_messages) jout << "In DTRDHit_factory, loading constants..." << jendl;
 
 	
 	// load base time offset
 	map<string,double> base_time_offset;
-	if (eventLoop->GetCalib("/TRD/base_time_offset",base_time_offset))
+	if (DEvent::GetCalib(event, "/TRD/base_time_offset",base_time_offset))
 		jout << "Error loading /TRD/base_time_offset !" << endl;
 	else if (base_time_offset.find("plane1") != base_time_offset.end() && base_time_offset.find("plane2") != base_time_offset.end()) {
 		t_base[0] = base_time_offset["plane1"];
@@ -74,7 +80,7 @@ jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	// load geometry info so that we know how many strips are in each plane
 	int num_x_strips = 0, num_y_strips = 0;
 	map<string,double> geometry_info;
-	if (eventLoop->GetCalib("/TRD/trd_geometry",geometry_info))
+	if (DEvent::GetCalib(event, "/TRD/trd_geometry",geometry_info))
 		jout << "Error loading /TRD/trd_geometry !" << endl;
 	else if (geometry_info.find("num_x_strips") != geometry_info.end() && geometry_info.find("num_y_strips") != base_time_offset.end()) {
 		num_x_strips = geometry_info["num_x_strips"];
@@ -87,9 +93,9 @@ jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	trd_digi_constants_t empty_table;
 	time_offsets.push_back(empty_table);
 	time_offsets.push_back(empty_table);
-	if (eventLoop->GetCalib("/TRD/plane1/timing_offsets", time_offsets[0]))
+	if (DEvent::GetCalib(event, "/TRD/plane1/timing_offsets", time_offsets[0]))
 		jout << "Error loading /TRD/plane1/timing_offsets !" << endl;
-	if (eventLoop->GetCalib("/TRD/plane2/timing_offsets", time_offsets[1]))
+	if (DEvent::GetCalib(event, "/TRD/plane2/timing_offsets", time_offsets[1]))
 		jout << "Error loading /TRD/plane2/timing_offsets !" << endl;
 	
 	if(time_offsets[0].size() != num_x_strips)
@@ -101,13 +107,13 @@ jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	
 	// also set time window from CCDB
 
-    return NOERROR;
+    return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTRDHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
     /// Generate DTRDHit object for each DTRDDigiHit object.
     /// This is where the first set of calibration constants
@@ -119,7 +125,7 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// the precalibrated values directly into the _data vector.
 
     vector<const DTRDDigiHit*> digihits;
-    loop->Get(digihits);
+    event->Get(digihits);
     
     // make hits out of all DTRDDigiHit objects
     for (unsigned int i=0; i < digihits.size(); i++) {
@@ -203,24 +209,20 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		hit->q = a_scale * hit->pulse_height;  // probably need to set this more sensibly
 
 	    hit->AddAssociatedObject(digihit);
-	    _data.push_back(hit);
+	    Insert(hit);
     }
-		    
-    return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTRDHit_factory::erun(void)
+void DTRDHit_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTRDHit_factory::fini(void)
+void DTRDHit_factory::Finish()
 {
-    return NOERROR;
 }

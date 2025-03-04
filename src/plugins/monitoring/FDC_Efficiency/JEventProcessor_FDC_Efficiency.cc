@@ -6,8 +6,8 @@
 //
 
 #include "JEventProcessor_FDC_Efficiency.h"
-using namespace jana;
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
+#include "DANA/DEvent.h"
 #include "HistogramTools.h"
 
 static TH1D *fdc_wire_measured_cell[25]; //Filled with total actually detected before division at end
@@ -56,6 +56,7 @@ static TH1F *hExpectedHitsVsTheta;
 static TH1F *hExpectedHitsVsMom;
 static TH1F *hExpectedHitsVsPhi;
 static TH1F *hExpectedHitsVsHitCells;
+
   
 static TH1F *hMeasuredHitsVsDOCA;
 static TH1F *hMeasuredHitsVsTrackingFOM;
@@ -67,11 +68,11 @@ static TH1F *hMeasuredHitsVsHitCells;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_FDC_Efficiency());
+    app->Add(new JEventProcessor_FDC_Efficiency());
 }
 } // "C"
 
@@ -81,7 +82,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_FDC_Efficiency::JEventProcessor_FDC_Efficiency()
 {
-    ;
+	SetTypeName("JEventProcessor_FDC_Efficiency");
 }
 
 //------------------
@@ -93,10 +94,13 @@ JEventProcessor_FDC_Efficiency::~JEventProcessor_FDC_Efficiency()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FDC_Efficiency::init(void)
+void JEventProcessor_FDC_Efficiency::Init()
 {
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
+
   // create root folder for fdc and cd to it, store main dir
   TDirectory *main = gDirectory;
   gDirectory->mkdir("FDC_Efficiency")->cd();
@@ -207,19 +211,17 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
   main->cd();
 
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FDC_Efficiency::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_FDC_Efficiency::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dapp->GetBfield(runnumber)) != NULL);
+  dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(GetBfield(event)) != NULL);
   //JCalibration *jcalib = dapp->GetJCalibration(runnumber);
-  dgeom  = dapp->GetDGeometry(runnumber);
+  dgeom  = GetDGeometry(event);
   //bfield = dapp->GetBfield();
 
   // Get the position of the FDC wires from DGeometry
@@ -235,18 +237,17 @@ jerror_t JEventProcessor_FDC_Efficiency::brun(JEventLoop *eventLoop, int32_t run
   dgeom->GetFDCRmax(fdcrmax);
   fdcrmax = 48; // fix to 48cm from DFDCPseudo_factory
 		  
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnumber){
+void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>& event){
 
   vector< const DFDCHit *> locFDCHitVector;
-  loop->Get(locFDCHitVector);
+  event->Get(locFDCHitVector);
   vector< const DFDCPseudo *> locFDCPseudoVector;
-  loop->Get(locFDCPseudoVector);
+  event->Get(locFDCPseudoVector);
 
   //Pre-sort Hits to save time
   //only need to search within the given cell, wire
@@ -255,9 +256,9 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     const DFDCHit * locHit = locFDCHitVector[hitNum];
     if (locHit->plane != 2) continue; // only wires!
     
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
     hWireTime[locHit->gLayer]->Fill(locHit->t);
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
     // cut on timing of hits
     //if (-100 > locHit->t || locHit->t > 300) continue;
@@ -273,11 +274,11 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     const DFDCPseudo * locPseudo = locFDCPseudoVector[hitNum];
     locSortedFDCPseudos[locPseudo->wire->layer].insert(locPseudo);
 
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
     hPseudoTime[locPseudo->wire->layer]->Fill(locPseudo->time);
     hCathodeTime[locPseudo->wire->layer]->Fill(locPseudo->t_u);
     hCathodeTime[locPseudo->wire->layer]->Fill(locPseudo->t_v);
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
   }
   
@@ -287,11 +288,11 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
   vector<shared_ptr<const DBCALShowerMatchParams>> BCALMatches;
 
   if(!dIsNoFieldFlag){
-    loop->GetSingle(detMatches);
+    event->GetSingle(detMatches);
   }
 
   vector <const DChargedTrack *> chargedTrackVector;
-  loop->Get(chargedTrackVector);
+  event->Get(chargedTrackVector);
 
   for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
 
@@ -309,9 +310,9 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     for (unsigned int i = 0; i < pulls.size(); i++){
       const DFDCPseudo * thisTrackFDCHit = pulls[i].fdc_hit;
       if (thisTrackFDCHit != NULL){
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	hPullTime[thisTrackFDCHit->wire->layer]->Fill(pulls[i].tdrift);
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	if ( find(cellsHit.begin(), cellsHit.end(), thisTrackFDCHit->wire->layer) == cellsHit.end())
 	  cellsHit.push_back(thisTrackFDCHit->wire->layer);
       }
@@ -332,14 +333,14 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     double tmom = thisTimeBasedTrack->pmag();
     
     // Fill Histograms for all Tracks    
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
     hCellsHit->Fill(cells);
     hRingsHit->Fill(rings);
     hChi2OverNDF->Fill(thisTimeBasedTrack->FOM);
     hMom->Fill(tmom);
     hTheta->Fill(theta_deg);
     hPhi->Fill(phi_deg);
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
     // All Cuts on Track Quality:
     
@@ -374,7 +375,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
       	continue; // At least one match either to the Time-Of-Flight (forward) OR the BCAL (large angles)
       }
     }
-    else return NOERROR; // Field off not supported for now !!
+    else return; // Field off not supported for now !!
     
     // count how many hits in each package (= 6 cells)
     unsigned int packageHit[4] = {0,0,0,0};
@@ -385,7 +386,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     if (packageHit[0] < minCells && packageHit[1] < minCells && packageHit[2] < minCells && packageHit[3] < minCells) continue;
     
     // Fill Histograms for accepted Tracks
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
     hCellsHit_accepted->Fill(cells);
     //if (tmom < 2)
     hRingsHit_accepted->Fill(rings);
@@ -394,7 +395,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     hTheta_accepted->Fill(theta_deg);
     hPhi_accepted->Fill(phi_deg);
     hRingsHit_vs_P->Fill(rings, tmom);
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
     
     // Start efficiency computation with these tracks
     
@@ -461,23 +462,22 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 
 	  
 	if (expectHit && fdc_wire_expected_cell[cellNum] != NULL && cellNum < 25){
-
-	  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-	  hExpectedHitsVsDOCA->Fill(distanceToWire);
-	  hExpectedHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
-	  hExpectedHitsVsTheta->Fill(theta_deg);
-	  hExpectedHitsVsMom->Fill(tmom);
-	  hExpectedHitsVsPhi->Fill(phi_deg);
-	  hExpectedHitsVsHitCells->Fill(cells);
-	  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	  // japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	  // hExpectedHitsVsDOCA->Fill(distanceToWire);
+	  // hExpectedHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+	  // hExpectedHitsVsTheta->Fill(theta_deg);
+	  // hExpectedHitsVsMom->Fill(tmom);
+	  // hExpectedHitsVsPhi->Fill(phi_deg);
+	  // hExpectedHitsVsHitCells->Fill(cells);
+	  // japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 	  Double_t w, v;
 	  if(fdc_wire_expected_cell[cellNum] != NULL && cellNum < 25){
 	    // FILL HISTOGRAMS
-	    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	    w = fdc_wire_expected_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
 	    fdc_wire_expected_cell[cellNum]->SetBinContent(wireNum, 1, w);
-	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 	  }
 	  
 	  // look in the presorted FDC Hits for a match
@@ -490,26 +490,32 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	      // Loop over multiple hits in the wire
 	      for(set<const DFDCHit*>::iterator locIterator = locSortedFDCHits[cellNum][wireNum].begin();  locIterator !=  locSortedFDCHits[cellNum][wireNum].end(); ++locIterator){
 	      	const DFDCHit* locHit = * locIterator;
-		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 		hWireTime_accepted[cellNum]->Fill(locHit->t);
 		hResVsT[cellNum]->Fill(distanceToWire, locHit->t);
-		japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 	      }
 	    }
-	    	    
-	    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-	    hMeasuredHitsVsDOCA->Fill(distanceToWire);
-	    hMeasuredHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
-	    hMeasuredHitsVsTheta->Fill(theta_deg);
-	    hMeasuredHitsVsMom->Fill(tmom);
-	    hMeasuredHitsVsPhi->Fill(phi_deg);
-	    hMeasuredHitsVsHitCells->Fill(cells);
-	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-	    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs DOCA", distanceToWire, "Measured Hits", 100, 0 , 0.5);
+	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs Tracking FOM", thisTimeBasedTrack->FOM, "Measured Hits", 100, 0 , 1.0);
+	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs theta", theta_deg, "Measured Hits", 100, 0, 180);
+	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs phi", phi_deg, "Measured Hits", 100, -180, 180);
+	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs p", tmom, "Measured Hits", 100, 0 , 10.0);
+	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs Hit Cells", cells, "Measured Hits", 25, -0.5 , 24.5);  
+	    // lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	    // hMeasuredHitsVsDOCA->Fill(distanceToWire);
+	    // hMeasuredHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+	    // hMeasuredHitsVsTheta->Fill(theta_deg);
+	    // hMeasuredHitsVsMom->Fill(tmom);
+	    // hMeasuredHitsVsPhi->Fill(phi_deg);
+	    // hMeasuredHitsVsHitCells->Fill(cells);
+	    // lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
+	    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	    v = fdc_wire_measured_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
 	    fdc_wire_measured_cell[cellNum]->SetBinContent(wireNum, 1, v);
-	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 	  }
 
 	  break; // break if 1 expected hit was found, 2 are geometrically not possible (speedup!)
@@ -526,9 +532,9 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
       
       if(fdc_pseudo_expected_cell[cellNum] != NULL && cellNum < 25){
 	// FILL HISTOGRAMS
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	fdc_pseudo_expected_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
       }
 
       bool foundPseudo = false;
@@ -555,7 +561,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	    double residualV = -1*(residual2D.Rotate(wire->angle)).Y();
 
 	    // these can be used for background studies/correction
-	    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	    hPseudoRes->Fill(residualR);
 	    // hPseudoResX[cellNum]->Fill(residualX);
 	    // hPseudoResY[cellNum]->Fill(residualY);
@@ -564,7 +570,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	    unsigned int radius = interPosition2D.Mod()/(45/rad);
 	    if (radius<rad)
 	      hPseudoResUvsV[cellNum][radius]->Fill(residualU, residualV);
-	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 	    
 	    if (foundPseudo) continue; 
 	    // to avoid double conting
@@ -575,7 +581,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	      
 	      if(fdc_pseudo_measured_cell[cellNum] != NULL && cellNum < 25){
 		// fill histogramms with the predicted, not with the measured position
-		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 		fdc_pseudo_measured_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
 		hPseudoTime_accepted[cellNum]->Fill(locPseudo->time);
 		hCathodeTime_accepted[cellNum]->Fill(locPseudo->t_u);
@@ -583,7 +589,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 		hDeltaTime[cellNum]->Fill(locPseudo->time - locPseudo->t_u);
 		hDeltaTime[cellNum]->Fill(locPseudo->time - locPseudo->t_v);
 		hPseudoResVsT[cellNum]->Fill(residualU, locPseudo->time);
-		japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 	      }
 	    }
 	    
@@ -595,26 +601,22 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
       
     } // End cell loop
   } // End track loop
-   
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FDC_Efficiency::erun(void)
+void JEventProcessor_FDC_Efficiency::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FDC_Efficiency::fini(void)
+void JEventProcessor_FDC_Efficiency::Finish()
 {
-  return NOERROR;
 }
 

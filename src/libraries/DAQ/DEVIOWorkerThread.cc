@@ -11,7 +11,7 @@
 #include "JEventSource_EVIOpp.h"
 #include "LinkAssociations.h"
 
-#include <swap_bank.h>
+#include "swap_bank.h"
 #include <DANA/JExceptionDataFormat.h>
 
 using namespace std;
@@ -121,7 +121,7 @@ void DEVIOWorkerThread::Run(void)
 			current_parsed_events.clear(); // (these are also in parsed_event_pool so were already deleted)
 			jerr << "Data format error exception caught" << endl;
 			jerr << "Stack trace follows:" << endl;
-			jerr << e.getStackTrace() << endl;
+			jerr << e.GetStackTrace() << endl;
 			jerr << e.what() << endl;
 			japp->Quit(10);
 		} catch (exception &e) {
@@ -776,7 +776,7 @@ void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
 		iptr += 2;
 		try{
 			ParseBORbank(iptr, iend);
-		}catch(JException &e){
+		}catch(const JException &e){
 			cerr << e.what();
 		}
 		return;
@@ -1448,7 +1448,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
             case 4: // Window Raw Data
                 // iptr passed by reference and so will be updated automatically
                 if(VERBOSE>7) cout << "      FADC250 Window Raw Data"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-                if(pe) MakeDf250WindowRawData(pe, rocid, slot, itrigger, iptr);
+                if(pe) MakeDf250WindowRawData(pe, rocid, slot, itrigger, iptr, iend);
                 break;
             case 5: // Window Sum
 				{
@@ -1636,7 +1636,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 //----------------
 // MakeDf250WindowRawData
 //----------------
-void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr)
+void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr, uint32_t* &iend)
 {
     uint32_t channel = (*iptr>>23) & 0x0F;
     uint32_t window_width = (*iptr>>0) & 0x0FFF;
@@ -1654,6 +1654,9 @@ void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid,
             break;
         }
 
+        if (iptr >= iend) jerr << "fa250 window raw data are incomplete - the collection of samples has been truncated!" << endl;
+        if (iptr >= iend) break;
+	
         bool invalid_1 = (*iptr>>29) & 0x1;
         bool invalid_2 = (*iptr>>13) & 0x1;
         uint16_t sample_1 = 0;
@@ -1738,7 +1741,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
             case 4: // Window Raw Data
 					// iptr passed by reference and so will be updated automatically
 					if(VERBOSE>7) cout << "      FADC125 Window Raw Data"<<endl;
-					if(pe) MakeDf125WindowRawData(pe, rocid, slot, itrigger, iptr);
+					if(pe) MakeDf125WindowRawData(pe, rocid, slot, itrigger, iptr, iend);
 					break;
 
             case 5: // CDC pulse data (new)  (GlueX-doc-2274-v8)
@@ -1810,37 +1813,36 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						cout << "      FADC125 FDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
 					}
 
-				    // Word 2 should be present for each peak found (a total of pulse_number times)
-
-				    for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
+					// Word 2 should be present for each peak found (a total of pulse_number times)				  
 					
-					// Word 2:
-					++iptr;
-					if(iptr>=iend){
-						jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
-						continue;
-					}
-					if( ((*iptr>>31) & 0x1) != 0 ){
-						jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
-						continue;
-					}
-					uint32_t word2      = *iptr;
-					uint32_t pulse_peak = 0;
-					uint32_t sum        = (*iptr>>19) & 0xFFF;
-					uint32_t peak_time  = (*iptr>>11) & 0xFF;
-					uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
-					if(VERBOSE>7){
-						cout << "      FADC125 FDC Pulse Data(integral) word2: " << hex << (*iptr) << dec << endl;
-						cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
-					}
+					for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
+					      // Word 2:
+					      ++iptr;
+					      if(iptr>=iend){
+						    jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
+						    continue;
+					      }
+					      if( ((*iptr>>31) & 0x1) != 0 ){
+						    jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
+						    continue;
+					      }
+					      uint32_t word2      = *iptr;
+					      uint32_t pulse_peak = 0;
+					      uint32_t sum        = (*iptr>>19) & 0xFFF;
+					      uint32_t peak_time  = (*iptr>>11) & 0xFF;
+					      uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
+					      if(VERBOSE>7){
+					            cout << "      FADC125 FDC Pulse Data(integral) word2: " << hex << (*iptr) << dec << endl;
+					            cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
+					      }
 
-					// Create hit objects
-					uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
-					uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
+					      // Create hit objects
+					      uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
+					      uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
 
-					if( pe ) {
-						pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
-								        , nword-1 //pulse_number instead of NPK
+					      if( pe ) {
+						    pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
+									, nword - 1            // pulse number
 									, pulse_time          // le_time
 									, quality_factor      // time_quality_bit
 									, overflow_count      // overflow_count
@@ -1853,8 +1855,8 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 									, nsamples_pedestal   // nsamples_pedestal
 									, nsamples_integral   // nsamples_integral
 									, false);             // emulated
-					}
-				    } // end of collection of multiple peak data
+					      }
+					} // end of collection of multiple peak data					
 				}
                 break;
 
@@ -1900,47 +1902,45 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						cout << "      FADC125 FDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
 					}
 
-				    // Word 2 should be present for each peak found (a total of pulse_number times)
-					
-				    for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
-					
-					// Word 2:
-					++iptr;
-					if(iptr>=iend){
-						jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
-						continue;
-					}
-					if( ((*iptr>>31) & 0x1) != 0 ){
-						jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
-						continue;
-					}
-					uint32_t word2      = *iptr;
-					uint32_t pulse_peak = (*iptr>>19) & 0xFFF;
-					uint32_t sum        = 0;
-					uint32_t peak_time  = (*iptr>>11) & 0xFF;
-					uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
-					if(VERBOSE>7){
-						cout << "      FADC125 FDC Pulse Data(peak) word2: " << hex << (*iptr) << dec << endl;
-						cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
-					}
+					// Word 2 should be present for each peak found (a total of pulse_number times)				  					
+					for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
+					       // Word 2:
+					      ++iptr;
+					      if(iptr>=iend){
+						    jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
+						    continue;
+					      }
+					      if( ((*iptr>>31) & 0x1) != 0 ){
+						    jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
+						    continue;
+					      }
+					      uint32_t word2      = *iptr;
+					      uint32_t pulse_peak = (*iptr>>19) & 0xFFF;
+					      uint32_t sum        = 0;
+					      uint32_t peak_time  = (*iptr>>11) & 0xFF;
+					      uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
+					      if(VERBOSE>7){
+						    cout << "      FADC125 FDC Pulse Data(peak) word2: " << hex << (*iptr) << dec << endl;
+						    cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
+					      }
 
-					// Create hit objects
-					uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
-					uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
+					      // Create hit objects
+					      uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
+					      uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
 
-					if( pe ) {
+					      if( pe ) {
 					
-						// The following is a temporary fix. In late 2017 the CDC group started
-						// using data type 9 (i.e. FDC pulse peak). This caused many conflicts
-						// with plugins downstream that were built around there being a Df125CDCPulse
-						// object associated with the DCDCDigiHit. In order to quickly solve
-						// the issue as the run was starting, this fix was made to produce Df125CDCPulse
-						// object from this data iff rocid<30 indicating the data came from the
-						// CDC. 
-						if( rocid<30 ){
+						    // The following is a temporary fix. In late 2017 the CDC group started
+						    // using data type 9 (i.e. FDC pulse peak). This caused many conflicts
+						    // with plugins downstream that were built around there being a Df125CDCPulse
+						    // object associated with the DCDCDigiHit. In order to quickly solve
+						    // the issue as the run was starting, this fix was made to produce Df125CDCPulse
+						    // object from this data iff rocid<30 indicating the data came from the
+						    // CDC. 
+						    if( rocid<30 ){
 
-							pe->NEW_Df125CDCPulse(rocid, slot, channel, itrigger
-										, pulse_number        // NPK
+							  pe->NEW_Df125CDCPulse(rocid, slot, channel, itrigger
+										, nword - 1            // pulse number
 										, pulse_time          // le_time
 										, quality_factor      // time_quality_bit
 										, overflow_count      // overflow_count
@@ -1953,11 +1953,11 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 										, nsamples_integral   // nsamples_integral
 										, false);             // emulated
 						
-						}else{
+						    }else{
 					
-							pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
-								                , nword-1 //pulse_number instead of NPK
-									        , pulse_time          // le_time
+							  pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
+										, nword - 1            // pulse number
+										, pulse_time          // le_time
 										, quality_factor      // time_quality_bit
 										, overflow_count      // overflow_count
 										, pedestal            // pedestal
@@ -1969,10 +1969,9 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 										, nsamples_pedestal   // nsamples_pedestal
 										, nsamples_integral   // nsamples_integral
 										, false);             // emulated
-						}
-					  
-					}
-				    } // end of collection of multiple peak data
+						    }
+					      }
+					}  // end of collection of multiple peak data
 				}
                 break;
 
@@ -2010,7 +2009,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 //----------------
 // MakeDf125WindowRawData
 //----------------
-void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr)
+void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr, uint32_t* &iend)
 {
     uint32_t channel = (*iptr>>20) & 0x7F;
     uint32_t window_width = (*iptr>>0) & 0x0FFF;
@@ -2018,31 +2017,33 @@ void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid,
     Df125WindowRawData *wrd = pe->NEW_Df125WindowRawData(rocid, slot, channel, itrigger);
 
     for(uint32_t isample=0; isample<window_width; isample +=2){
-
+      
         // Advance to next word
         iptr++;
 
         // Make sure this is a data continuation word, if not, stop here
         if(((*iptr>>31) & 0x1) != 0x0)break;
 
-        bool invalid_1 = (*iptr>>29) & 0x1;
-        bool invalid_2 = (*iptr>>13) & 0x1;
-        uint16_t sample_1 = 0;
+        if (iptr >= iend) jerr << "fa125 window raw data are incomplete - the collection of samples has been truncated!" << endl;
+        if (iptr >= iend) break;
+	
+        uint16_t sample_1 = (*iptr>>16) & 0xFFF;
+
         uint16_t sample_2 = 0;
-        if(!invalid_1)sample_1 = (*iptr>>16) & 0x1FFF;
-        if(!invalid_2)sample_2 = (*iptr>>0) & 0x1FFF;
+        bool invalid_2 = (*iptr>>13) & 0x1;
+	if(!invalid_2)sample_2 = (*iptr>>0) & 0xFFF;
 
         // Sample 1
         wrd->samples.push_back(sample_1);
-        wrd->invalid_samples |= invalid_1;
-        wrd->overflow |= (sample_1>>12) & 0x1;
+        wrd->invalid_samples = 0;
+        wrd->overflow = 0;
 
         if((isample+2) == window_width && invalid_2)break; // skip last sample if flagged as invalid
 
         // Sample 2
         wrd->samples.push_back(sample_2);
         wrd->invalid_samples |= invalid_2;
-        wrd->overflow |= (sample_2>>12) & 0x1;
+        wrd->overflow = 0;
     }
 }
 

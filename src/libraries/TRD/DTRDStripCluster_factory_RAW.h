@@ -6,7 +6,7 @@
 #ifndef DFACTORY_DTRDSTRIPCLUSTER_RAW_H
 #define DFACTORY_DTRDSTRIPCLUSTER_RAW_H
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 using namespace std;
 
 #include "DTRDStripCluster.h"
@@ -21,11 +21,10 @@ using namespace std;
 /// class DTRDStripCluster_factory_RAW: 
 /// defines a JFactory for producing groups of cathode strips that form a cluster
 ///  
-class DTRDStripCluster_factory_RAW:public JFactory<DTRDStripCluster> {
+class DTRDStripCluster_factory_RAW:public JFactoryT<DTRDStripCluster> {
 	public:
-	    DTRDStripCluster_factory_RAW(){};
+	    DTRDStripCluster_factory_RAW(){  SetTag("RAW");  };
 		~DTRDStripCluster_factory_RAW(){};
-		const char* Tag(void){return "RAW";}
 		
 		///
 		/// DTRDStripCluster_factory_RAW::pique():
@@ -42,8 +41,9 @@ class DTRDStripCluster_factory_RAW:public JFactory<DTRDStripCluster> {
 		/// is the place cathode hits are associated into cathode clusters. This function 
 		/// should eventually be modified to do more sophisticated peak finding. 
 		///
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);	
-		jerror_t init(void);
+		void Process(const std::shared_ptr<const JEvent>& event) override;	
+		void Init() override;
+
 	private:
 		//double TIME_SLICE;
 

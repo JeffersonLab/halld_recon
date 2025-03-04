@@ -60,7 +60,7 @@ void DFCALCluster::saveHits( const userhits_t* const hits )
 {
    
    for ( int i=0; i < fNhits; i++) {
-      JObject::oid_t id = getHitID( hits, i ) ;
+      oid_t id = getHitID( hits, i ) ;
       if ( id != 0 ) {  
 	addHit(id,getHitCh( hits, i ),getHitE( hits, i ),getHitX( hits, i ),
 	       getHitY( hits, i ),getHitT( hits, i ));

@@ -10,16 +10,14 @@
 
 #include <string>
 
-#include <JANA/JFactory.h>
 #include <JANA/JObject.h>
 #include <JANA/JApplication.h>
 #include <JANA/JEvent.h>
-#include <JANA/JCalibration.h>
-#include <JANA/JCalibrationCCDB.h>
-#include <JANA/JCalibrationGeneratorCCDB.h>
-using namespace jana;
+#include <JANA/Calibrations/JCalibration.h>
+#include <JANA/Calibrations/JCalibrationCCDB.h>
+#include <JANA/Calibrations/JCalibrationGeneratorCCDB.h>
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 
 #include "units.h"
 
@@ -32,7 +30,7 @@ class DTAGMGeometry : public JObject {
    
    JOBJECT_PUBLIC(DTAGMGeometry);
 
-   DTAGMGeometry(JEventLoop *loop);
+   DTAGMGeometry(const std::shared_ptr<const JEvent>& event);
    DTAGMGeometry(JCalibration *jcalib, int32_t runnumber);
    ~DTAGMGeometry();
 
@@ -48,11 +46,11 @@ class DTAGMGeometry : public JObject {
    double getEhigh(unsigned int column) const;
    bool E_to_column(double E, unsigned int &column) const;
 
-   void toStrings(vector<pair<string,string> > &items) const {
-      AddString(items, "kFiberWidth", "%f cm", kFiberWidth);
-      AddString(items, "kFiberLength", "%f cm", kFiberLength);
-      AddString(items, "kRowCount", "%d", kRowCount);
-      AddString(items, "kColumnCount", "%d", kColumnCount);
+   void Summarize(JObjectSummary& summary) const override {
+      summary.add(kFiberWidth, "kFiberWidth", "%f cm");
+      summary.add(kFiberLength, "kFiberLength", "%f cm");
+      summary.add(kRowCount, "kRowCount", "%d");
+      summary.add(kColumnCount, "kColumnCount", "%d");
    }
    
  private:

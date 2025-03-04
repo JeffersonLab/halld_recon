@@ -2,6 +2,8 @@
 #define _SplitString_
 
 #include <sstream>
+using std::string;
+using std::vector;
 
 template<typename T>
 void SplitString(string str, vector<T> &vec, const string &delim=" ")

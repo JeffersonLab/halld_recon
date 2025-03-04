@@ -6,10 +6,11 @@
 #ifndef _DBeamHelicity_factory_
 #define _DBeamHelicity_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/JEvent.h>
 #include "DBeamHelicity.h"
 
-class DBeamHelicity_factory:public jana::JFactory<DBeamHelicity>{
+class DBeamHelicity_factory:public JFactoryT<DBeamHelicity>{
 	public:
 		DBeamHelicity_factory(){};
 		~DBeamHelicity_factory(){};
@@ -17,11 +18,11 @@ class DBeamHelicity_factory:public jana::JFactory<DBeamHelicity>{
 		static int   dIHWP;
 		static int   dBeamOn;
 
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop,  int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;							///< Called after last event of last event source has been processed.
 };
 
 #endif // _DBeamHelicity_factory_

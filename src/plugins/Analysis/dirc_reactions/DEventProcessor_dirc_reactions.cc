@@ -12,57 +12,53 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_dirc_reactions()); //register this plugin
-		locApplication->AddFactoryGenerator(new DFactoryGenerator_dirc_reactions()); //register the factory generator
+		locApplication->Add(new DEventProcessor_dirc_reactions()); //register this plugin
+		locApplication->Add(new DFactoryGenerator_dirc_reactions()); //register the factory generator
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_dirc_reactions::init(void)
+void DEventProcessor_dirc_reactions::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... create historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	//
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_dirc_reactions::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void DEventProcessor_dirc_reactions::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_dirc_reactions::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_dirc_reactions::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
@@ -72,36 +68,32 @@ jerror_t DEventProcessor_dirc_reactions::evnt(jana::JEventLoop* locEventLoop, ui
                 //The event writer gets the DAnalysisResults objects from JANA, performing the analysis. 
         // string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
         //const DEventWriterROOT* locEventWriterROOT = NULL;
-        //locEventLoop->GetSingle(locEventWriterROOT);
-        //locEventWriterROOT->Fill_DataTrees(locEventLoop, "p2pi_dirc");
-	//locEventWriterROOT->Fill_DataTrees(locEventLoop, "p2k_dirc");
+        //locEvent->GetSingle(locEventWriterROOT);
+        //locEventWriterROOT->Fill_DataTrees(locEvent, "p2pi_dirc");
+	//locEventWriterROOT->Fill_DataTrees(locEvent, "p2k_dirc");
 	
 	// Get the analysis results for all DReactions. 
 		//Getting these objects triggers the analysis, if it wasn't performed already. 
 		//These objects contain the DParticleCombo objects that survived the DAnalysisAction cuts that were added to the DReactions
 	vector<const DAnalysisResults*> locAnalysisResultsVector;
-	locEventLoop->Get(locAnalysisResultsVector);
-
-	return NOERROR;
+	locEvent->Get(locAnalysisResultsVector);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_dirc_reactions::erun(void)
+void DEventProcessor_dirc_reactions::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_dirc_reactions::fini(void)
+void DEventProcessor_dirc_reactions::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

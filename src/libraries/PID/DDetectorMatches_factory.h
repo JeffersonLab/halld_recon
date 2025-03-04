@@ -12,7 +12,7 @@
 #include <iomanip>
 #include <memory>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <PID/DDetectorMatches.h>
 #include <TRACKING/DTrackTimeBased.h>
 #include <PID/DParticleID.h>
@@ -26,21 +26,21 @@
 #include <TMath.h>
 
 using namespace std;
-using namespace jana;
 
-class DDetectorMatches_factory : public jana::JFactory<DDetectorMatches>
+
+class DDetectorMatches_factory : public JFactoryT<DDetectorMatches>
 {
 	public:
 		DDetectorMatches_factory(){};
 		~DDetectorMatches_factory(){};
 
 		//called by DDetectorMatches tag=Combo factory
-		DDetectorMatches* Create_DDetectorMatches(jana::JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locTrackTimeBasedVector);
+		DDetectorMatches* Create_DDetectorMatches(const std::shared_ptr<const JEvent>& event, vector<const DTrackTimeBased*>& locTrackTimeBasedVector);
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
 
 		//matching tracks to hits/showers routines
 		void MatchToTOF(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DTOFPoint*>& locTOFPoints, DDetectorMatches* locDetectorMatches) const;

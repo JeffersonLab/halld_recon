@@ -11,10 +11,9 @@
 
 #include "JEventProcessor_pedestal_online.h"
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 using namespace std;
-using namespace jana;
 
 #include <DAQ/DF1TDCHit.h>
 #include <DAQ/Df250PulseIntegral.h>
@@ -55,7 +54,7 @@ long int periodstarttime[highcratenum];
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_pedestal_online());
+    app->Add(new JEventProcessor_pedestal_online());
   }
 } // "C"
 
@@ -65,11 +64,7 @@ extern "C"{
 //------------------
 JEventProcessor_pedestal_online::JEventProcessor_pedestal_online()
 {
-	VERBOSE = 0;
-
-	if(gPARMS){
-		gPARMS->SetDefaultParameter("pedestal_online:VERBOSE", VERBOSE, "pedestal_online verbosity level");
-	}
+	SetTypeName("JEventProcessor_pedestal_online");
 }
 
 //------------------
@@ -81,10 +76,16 @@ JEventProcessor_pedestal_online::~JEventProcessor_pedestal_online()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_pedestal_online::init(void)
+void JEventProcessor_pedestal_online::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
+	VERBOSE = 0;
+	app->SetDefaultParameter("pedestal_online:VERBOSE", VERBOSE, "pedestal_online verbosity level");
+
 	if (VERBOSE>=1) printf("JEventProcessor_pedestal_online::init()\n");
 
 	// create root folder for DAQ and cd to it, store main dir
@@ -101,28 +102,27 @@ jerror_t JEventProcessor_pedestal_online::init(void)
 	
 	// back to main dir
 	maindir->cd();
-
-	return NOERROR;
 }
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_pedestal_online::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_pedestal_online::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_pedestal_online::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_pedestal_online::Process(const std::shared_ptr<const JEvent>& event)
 {
+	auto eventnumber = event->GetEventNumber();
+
 	// first look for an epics event
 	vector<const DEPICSvalue*> depicsvalue;
-	loop->Get(depicsvalue);
+	event->Get(depicsvalue);
 	if (depicsvalue.size()>0) {
 		recentwalltime = (long int)depicsvalue[0]->timestamp;
 		if (VERBOSE>=2) printf("JEventProcessor_pedestal_online::evnt %li found epics event at time %li\n",eventnumber,recentwalltime);
@@ -132,19 +132,19 @@ jerror_t JEventProcessor_pedestal_online::evnt(JEventLoop *loop, uint64_t eventn
 			for (int i=0; i<highcratenum; i++) periodstarttime[i] = globalstarttime;
 			if (VERBOSE>=1) printf("\nsetting the global start time %li  %li\n\n",recentwalltime,globalstarttime);
 		}
-		return NOERROR;
+		return;
 	}
 
 	vector<const Df250PulseData*> f250PDs;
 	vector<const Df250PulseIntegral*> f250PIs;
 	vector<const Df125PulseIntegral*> f125PIs;
 
-	loop->Get(f250PDs);
-	loop->Get(f250PIs);
-	loop->Get(f125PIs);
+	event->Get(f250PDs);
+	event->Get(f250PIs);
+	event->Get(f125PIs);
 	
 	// Although we are only filling objects local to this plugin, the directory changes: Global ROOT lock
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 
 	if (peddir!=NULL) peddir->cd();
 	
@@ -336,23 +336,21 @@ jerror_t JEventProcessor_pedestal_online::evnt(JEventLoop *loop, uint64_t eventn
 
 	maindir->cd();
 	// Unlock ROOT
-	japp->RootUnLock();
-
-	return NOERROR;
+	lockService->RootUnLock();
 }
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_pedestal_online::erun(void)
+void JEventProcessor_pedestal_online::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
 
 	// Lock ROOT
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 
 	peddir->cd();
 
@@ -395,16 +393,14 @@ jerror_t JEventProcessor_pedestal_online::erun(void)
 	maindir->cd();
 
 	// Unlock ROOT
-	japp->RootUnLock();
-	return NOERROR;
+	lockService->RootUnLock();
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_pedestal_online::fini(void)
+void JEventProcessor_pedestal_online::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

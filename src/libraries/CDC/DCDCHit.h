@@ -9,9 +9,8 @@
 #define _DCDCHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DCDCHit:public jana::JObject{
+class DCDCHit: public JObject{
  public:
   JOBJECT_PUBLIC(DCDCHit);
   
@@ -25,16 +24,16 @@ class DCDCHit:public jana::JObject{
   int itrack;
   int ptype;
   
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "ring", "%d", ring);
-    AddString(items, "straw", "%d", straw);
-    AddString(items, "q", "%10.4e", q);
-    AddString(items, "amp", "%10.4e", amp);
-    AddString(items, "t", "%6.1f", t);
-    AddString(items, "d", "%10.4e", d);
-    AddString(items, "itrack", "%d", itrack);
-    AddString(items, "ptype", "%d", ptype);
-    AddString(items, "QF", "%d", QF);
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(ring, "ring", "%d");
+    summary.add(straw, "straw", "%d");
+    summary.add(q, "q", "%10.4e");
+    summary.add(amp, "amp", "%10.4e");
+    summary.add(t, "t", "%6.1f");
+    summary.add(d, "d", "%10.4e");
+    summary.add(itrack, "itrack", "%d");
+    summary.add(ptype, "ptype", "%d");
+    summary.add(QF, "QF", "%d");
  }
 };
 

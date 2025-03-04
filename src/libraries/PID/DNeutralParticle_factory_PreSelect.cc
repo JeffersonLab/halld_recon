@@ -6,11 +6,12 @@
 //
 
 #include "DNeutralParticle_factory_PreSelect.h"
+#include <JANA/JEvent.h>
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DNeutralParticle_factory_PreSelect::init(void)
+void DNeutralParticle_factory_PreSelect::Init()
 {
 	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
 	//This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.  
@@ -24,37 +25,34 @@ jerror_t DNeutralParticle_factory_PreSelect::init(void)
 	// the exact vertex, and at this point we don't know that so have to assume
 	// the center of the target as a default
 	dMaxNeutronBeta = 1.0;   // don't throw anything away by default
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DNeutralParticle_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DNeutralParticle_factory_PreSelect::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	gPARMS->SetDefaultParameter("PRESELECT:MAX_NEUTRON_BETA", dMaxNeutronBeta);   
-
-	return NOERROR;
+	GetApplication()->SetDefaultParameter("PRESELECT:MAX_NEUTRON_BETA", dMaxNeutronBeta);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DNeutralParticle_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DNeutralParticle_factory_PreSelect::Process(const std::shared_ptr<const JEvent>& event)
 {
 	//Clear objects from last event
 	dResourcePool_NeutralParticle->Recycle(dCreated);
 	dCreated.clear();
-	_data.clear();
+	mData.clear();
+	// TODO: NWB: Aesthetics: Improve getter to mData
 
 	vector<const DNeutralParticle*> locNeutralParticles;
-	locEventLoop->Get(locNeutralParticles);
+	event->Get(locNeutralParticles);
 
 	vector<const DNeutralShower*> locNeutralShowers;
-	locEventLoop->Get(locNeutralShowers, "PreSelect");
+	event->Get(locNeutralShowers, "PreSelect");
 	vector<const DNeutralShower*> locHadronNeutralShowers;
-	locEventLoop->Get(locHadronNeutralShowers, "HadronPreSelect");
+	event->Get(locHadronNeutralShowers, "HadronPreSelect");
 
 	// 
 	set<const DNeutralShower*> locNeutralShowerSet;
@@ -99,34 +97,30 @@ jerror_t DNeutralParticle_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop
 		
 		// keep the particle if any of the hypotheses survive
 		if(locNeutralParticle_PreSelected->dNeutralParticleHypotheses.size() > 0)
-			_data.push_back(const_cast<DNeutralParticle*>(locNeutralParticle_PreSelected));
+			Insert(const_cast<DNeutralParticle*>(locNeutralParticle_PreSelected));
 		else 
 			delete locNeutralParticle_PreSelected;
 	}
 
-	dCreated = _data;
-	return NOERROR;
+	dCreated = mData;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DNeutralParticle_factory_PreSelect::erun(void)
+void DNeutralParticle_factory_PreSelect::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DNeutralParticle_factory_PreSelect::fini(void)
+void DNeutralParticle_factory_PreSelect::Finish()
 {
-	for(auto locHypo : _data)
+	for(auto locHypo : mData)
 		Recycle_Hypothesis(locHypo);
-	_data.clear();
+	mData.clear();
 	delete dResourcePool_NeutralParticle;
-
-	return NOERROR;
 }
 
 

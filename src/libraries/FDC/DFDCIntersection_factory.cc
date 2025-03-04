@@ -9,13 +9,13 @@
 using namespace std;
 
 #include "DFDCIntersection_factory.h"
+#include "DANA/DEvent.h"
 #include "FDC/DFDCGeometry.h"
-#include "HDGEOMETRY/DGeometry.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DFDCIntersection_factory::init(void)
+void DFDCIntersection_factory::Init()
 {
 	MAX_DIST2 = 2.0*2.0;
 	DEBUG_LEVEL=0;
@@ -26,31 +26,28 @@ jerror_t DFDCIntersection_factory::init(void)
 	for(int i=0; i<6; i++)mt_trkhits_by_layer.push_back(mt_trkhits);
 	for(int i=0; i<4; i++)fdchits_by_package.push_back(mt_trkhits_by_layer);
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DFDCIntersection_factory::brun(JEventLoop *loop, int32_t runnumber)
+void DFDCIntersection_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // Get pointer to DGeometry object
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
+  DGeometry *dgeom  = DEvent::GetDGeometry(event);
   if (!dgeom->GetFDCWires(fdcwires)){
     _DBG_<< "FDC geometry not available!" <<endl;
     USE_FDC=false;
   }
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DFDCIntersection_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DFDCIntersection_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
-  // if (!USE_FDC) return NOERROR;
+  // if (!USE_FDC) return;
 
 	// Clear fdchits_by_package structure
 	for(int package=1; package<=4; package++){
@@ -61,16 +58,16 @@ jerror_t DFDCIntersection_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	// Get raw hits
 	vector<const DFDCHit*> fdchits;
-	loop->Get(fdchits);
+	event->Get(fdchits);
 
 	// For events with a very large number of hits, assume
 	// we can't reconstruct them so bail early
 	// Feb. 8, 2008  D.L.
 	if(fdchits.size()>(5+5+1)*24*4){
 	  if (DEBUG_LEVEL>0){
-	    _DBG_<<"Too many hits in FDC! Intersection point reconstruction in FDC bypassed for event "<<loop->GetJEvent().GetEventNumber()<<endl;
+	    _DBG_<<"Too many hits in FDC! Intersection point reconstruction in FDC bypassed for event "<<event->GetEventNumber()<<endl;
 	  }
-	  return NOERROR;
+	  return;
 	}
 	
 	// Sort wire hits by package and layer
@@ -98,7 +95,7 @@ jerror_t DFDCIntersection_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		//MakeRestrictedIntersectionPoints(fdchits_by_package[package-1]);
 	}
 
-	return NOERROR;
+	return;
 }
 
 //------------------
@@ -116,7 +113,7 @@ void DFDCIntersection_factory::MakeIntersectionPoints(vector<vector<const DFDCHi
 		vector<const DFDCHit*> &layer1 = hits_by_layer[i];
 		vector<const DFDCHit*> &layer2 = hits_by_layer[i+1];
 		
-		FindIntersections(layer1, layer2, _data);
+		FindIntersections(layer1, layer2, mData);
 	}
 }
 
@@ -228,7 +225,7 @@ void DFDCIntersection_factory::MakeRestrictedIntersectionPoints(vector<vector<co
 			DFDCIntersection *intersection = intersections[i][j];
 			bool keep = intersects_to_keep[intersection];
 			if(keep){
-				_data.push_back(intersection);
+				Insert(intersection);
 			}else{
 				delete intersection;
 			}

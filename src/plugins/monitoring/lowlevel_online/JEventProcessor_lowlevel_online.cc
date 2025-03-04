@@ -6,7 +6,6 @@
 #include <TMath.h>
 
 #include "JEventProcessor_lowlevel_online.h"
-using namespace jana;
 
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
@@ -43,11 +42,11 @@ using namespace jana;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_lowlevel_online());
+    app->Add(new JEventProcessor_lowlevel_online());
   }
 } // "C"
 
@@ -57,7 +56,7 @@ extern "C"{
 //------------------
 JEventProcessor_lowlevel_online::JEventProcessor_lowlevel_online()
 {
-  
+	SetTypeName("JEventProcessor_lowlevel_online");
 }
 
 //------------------
@@ -69,11 +68,14 @@ JEventProcessor_lowlevel_online::~JEventProcessor_lowlevel_online()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_lowlevel_online::init(void)
+void JEventProcessor_lowlevel_online::Init()
 {
-    // initialize variables
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
+
+    // Initialize variables
     MORE_PLOTS = false;
     INDIVIDUAL_CHANNEL_DATA = false;
     CHECK_EMULATED_DATA = false;
@@ -83,13 +85,13 @@ jerror_t JEventProcessor_lowlevel_online::init(void)
     F250_THRESHOLD = 0;
     F125_THRESHOLD = 0;
 
-    gPARMS->SetDefaultParameter("LOWLEVEL:MOREPLOTS", MORE_PLOTS, "Make more monitoring plots.");
-    gPARMS->SetDefaultParameter("LOWLEVEL:CHECKEMULATION", CHECK_EMULATED_DATA, "Make plots for checking emulation.");
-    gPARMS->SetDefaultParameter("LOWLEVEL:INDIVIDUAL", INDIVIDUAL_CHANNEL_DATA, "Make histograms for individual channels.");
-    gPARMS->SetDefaultParameter("LOWLEVEL:F250DATA", ANALYZE_F250_DATA, "Analyze f250ADC data");
-    gPARMS->SetDefaultParameter("LOWLEVEL:F125DATA", ANALYZE_F125_DATA, "Analyze f125ADC data");
-    gPARMS->SetDefaultParameter("LOWLEVEL:F125THRESHOLD", F125_THRESHOLD, "Set threshold for accepting f125ADC hits (in ADC counts)");
-    gPARMS->SetDefaultParameter("LOWLEVEL:F250THRESHOLD", F250_THRESHOLD, "Set threshold for accepting f250ADC hits (in ADC counts)");
+    app->SetDefaultParameter("LOWLEVEL:MOREPLOTS", MORE_PLOTS, "Make more monitoring plots.");
+    app->SetDefaultParameter("LOWLEVEL:CHECKEMULATION", CHECK_EMULATED_DATA, "Make plots for checking emulation.");
+    app->SetDefaultParameter("LOWLEVEL:INDIVIDUAL", INDIVIDUAL_CHANNEL_DATA, "Make histograms for individual channels.");
+    app->SetDefaultParameter("LOWLEVEL:F250DATA", ANALYZE_F250_DATA, "Analyze f250ADC data");
+    app->SetDefaultParameter("LOWLEVEL:F125DATA", ANALYZE_F125_DATA, "Analyze f125ADC data");
+    app->SetDefaultParameter("LOWLEVEL:F125THRESHOLD", F125_THRESHOLD, "Set threshold for accepting f125ADC hits (in ADC counts)");
+    app->SetDefaultParameter("LOWLEVEL:F250THRESHOLD", F250_THRESHOLD, "Set threshold for accepting f250ADC hits (in ADC counts)");
     
 	// Set a base directory
 	TDirectory *base = gDirectory;
@@ -558,19 +560,14 @@ jerror_t JEventProcessor_lowlevel_online::init(void)
 
 	// back to base dir
 	base->cd();
-  
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_lowlevel_online::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_lowlevel_online::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
-
-
-  return NOERROR;
 }
 
 
@@ -580,10 +577,12 @@ bool f250pulsedata_sorter(const Df250PulseData *a, const Df250PulseData *b) {
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_lowlevel_online::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_lowlevel_online::Process(const std::shared_ptr<const JEvent>& event)
 {
+	auto eventnumber = event->GetEventNumber();
+
 	vector<const DBCALDigiHit*>        bcaldigihits;
 	vector<const DBCALTDCDigiHit*>     bcaltdcdigihits;
 	vector<const DCCALDigiHit*>        ccaldigihits;
@@ -608,45 +607,45 @@ jerror_t JEventProcessor_lowlevel_online::evnt(JEventLoop *loop, uint64_t eventn
 
 	// ignore front panel triggers
 	const DTrigger* locTrigger = NULL; 
-	loop->GetSingle(locTrigger); 
+	event->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-	  return NOERROR;
+	  return;
 
 
 	// Get hit data
-	loop->Get(bcaldigihits);
-	loop->Get(bcaltdcdigihits);
-	loop->Get(ccaldigihits);
-	loop->Get(cdcdigihits);
-	loop->Get(fdccathodehits);
-	loop->Get(fdcwirehits);
-	loop->Get(fcaldigihits);
-	loop->Get(pscdigihits);
-	loop->Get(psctdcdigihits);
-	loop->Get(psdigihits);
-	loop->Get(tofdigihits);
-	loop->Get(toftdcdigihits);
-	loop->Get(scdigihits);
-	loop->Get(rfdigihits);
-	loop->Get(sctdcdigihits);
-	loop->Get(tagmdigihits);
-	loop->Get(tagmtdcdigihits);
-	loop->Get(taghdigihits);
-	loop->Get(taghtdcdigihits);
-	loop->Get(tpoldigihits);
-	loop->Get(f1tdchits);
+	event->Get(bcaldigihits);
+	event->Get(bcaltdcdigihits);
+	event->Get(ccaldigihits);
+	event->Get(cdcdigihits);
+	event->Get(fdccathodehits);
+	event->Get(fdcwirehits);
+	event->Get(fcaldigihits);
+	event->Get(pscdigihits);
+	event->Get(psctdcdigihits);
+	event->Get(psdigihits);
+	event->Get(tofdigihits);
+	event->Get(toftdcdigihits);
+	event->Get(scdigihits);
+	event->Get(rfdigihits);
+	event->Get(sctdcdigihits);
+	event->Get(tagmdigihits);
+	event->Get(tagmtdcdigihits);
+	event->Get(taghdigihits);
+	event->Get(taghtdcdigihits);
+	event->Get(tpoldigihits);
+	event->Get(f1tdchits);
 	
     vector< const DFCALGeometry* > geomVec;
-    loop->Get( geomVec );
+    event->Get( geomVec );
     const DFCALGeometry& fcalGeom = *(geomVec[0]);
 
     const DTTabUtilities* locTTabUtilities = nullptr;
-    loop->GetSingle(locTTabUtilities);
+    event->GetSingle(locTTabUtilities);
 
     // For now, just histogram fADC data and don't worry about TDCs
     // The only extra information that TDCs have are time information
     // Maybe we can fold that into calibrated hit monitoring
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     if(ANALYZE_F250_DATA) {
 
@@ -1252,30 +1251,26 @@ jerror_t JEventProcessor_lowlevel_online::evnt(JEventLoop *loop, uint64_t eventn
       }
     }
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_lowlevel_online::erun(void)
+void JEventProcessor_lowlevel_online::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_lowlevel_online::fini(void)
+void JEventProcessor_lowlevel_online::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 
 

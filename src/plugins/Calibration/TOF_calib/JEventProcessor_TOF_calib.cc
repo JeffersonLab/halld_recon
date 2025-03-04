@@ -8,18 +8,16 @@
 
 #include "JEventProcessor_TOF_calib.h"
 #include "TOF/DTOFGeometry.h"
-using namespace jana;
+#include "DANA/DEvent.h"
 
 #include <thread>
 #include <mutex>
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_TOF_calib());
+    app->Add(new JEventProcessor_TOF_calib());
   }
 } // "C"
 
@@ -28,7 +26,7 @@ extern "C"{
 //------------------
 JEventProcessor_TOF_calib::JEventProcessor_TOF_calib()
 {
-
+	SetTypeName("JEventProcessor_TOF_calib");
 }
 
 //------------------
@@ -40,18 +38,20 @@ JEventProcessor_TOF_calib::~JEventProcessor_TOF_calib()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_TOF_calib::init(void)
+void JEventProcessor_TOF_calib::Init()
 {
   // This is called once at program startup. If you are creating
   // and filling historgrams in this plugin, you should lock the
   // ROOT mutex like this:
   //
-  // japp->RootWriteLock();
+  // GetLockService(locEvent)->RootWriteLock();
   //  ... fill historgrams or trees ...
-  // japp->RootUnLock();
+  // GetLockService(locEvent)->RootUnLock();
   //
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 
   cout<<"INITIALIZE VARIABLES "<<flush<<endl;
 
@@ -72,30 +72,29 @@ jerror_t JEventProcessor_TOF_calib::init(void)
   ADCTimeCut = 70.;
   TDCTimeCut = 70.;
 
-  gPARMS->SetDefaultParameter("TOFCALIB:TDCTPEAK",TDCTLOC,
+  app->SetDefaultParameter("TOFCALIB:TDCTPEAK",TDCTLOC,
                               "Define location of TOF TDC time-peak in Raw histogram");
-  gPARMS->SetDefaultParameter("TOFCALIB:ADCTPEAK",ADCTLOC,
+  app->SetDefaultParameter("TOFCALIB:ADCTPEAK",ADCTLOC,
                               "Defin location of TOF ADC time-peak in Raw histogram");
 
   // move histogram creation to brun() for potential run dependence, since the tree is initialized there
   // probably we should separate the histogram and tree logic, and use a DTreeInterface class
   // but this is left for later work - sdobbs, 8/17/2020
   //MakeHistograms();
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_TOF_calib::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_TOF_calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
+  auto calibration = GetJCalibration(event);
 
-  RunNumber = runnumber;
-  japp->RootWriteLock();
+  RunNumber = event->GetRunNumber();
+  lockService->RootWriteLock();
   ThreadCounter++;
-  japp->RootUnLock();
+  lockService->RootUnLock();
 
   MakeHistograms();
 
@@ -104,9 +103,9 @@ jerror_t JEventProcessor_TOF_calib::brun(JEventLoop *eventLoop, int32_t runnumbe
 
   map<string,double> tdcshift;
   const DTOFGeometry *locTOFGeometry = nullptr;
-  eventLoop->GetSingle(locTOFGeometry);
+  event->GetSingle(locTOFGeometry);
   string locTOFTDCShiftTable = locTOFGeometry->Get_CCDB_DirectoryName() + "/tdc_shift";
-  if(!eventLoop->GetCalib(locTOFTDCShiftTable.c_str(), tdcshift)) {
+  if(!calibration->Get(locTOFTDCShiftTable.c_str(), tdcshift)) {
     TOF_TDC_SHIFT = tdcshift["TOF_TDC_SHIFT"];
   }
   
@@ -114,7 +113,7 @@ jerror_t JEventProcessor_TOF_calib::brun(JEventLoop *eventLoop, int32_t runnumbe
   // load base time offset
   map<string,double> base_time_offset;
   string locTOFBaseTimeOffsetTable = tofGeom.Get_CCDB_DirectoryName() + "/base_time_offset";
-  if (eventLoop->GetCalib(locTOFBaseTimeOffsetTable.c_str(),base_time_offset))
+  if (calibration->Get(locTOFBaseTimeOffsetTable.c_str(),base_time_offset))
     jout << "Error loading " << locTOFBaseTimeOffsetTable << " !" << endl;
   if (base_time_offset.find("TOF_BASE_TIME_OFFSET") != base_time_offset.end())
     ADCTLOC = TMath::Abs(base_time_offset["TOF_BASE_TIME_OFFSET"]);
@@ -129,28 +128,26 @@ jerror_t JEventProcessor_TOF_calib::brun(JEventLoop *eventLoop, int32_t runnumbe
 
   jout<<"TOF: Updated ADC and TDC offsets according to CCDB: "<<ADCTLOC<<" / "<<TDCTLOC<<endl;
 
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_TOF_calib::Process(const std::shared_ptr<const JEvent>& event)
 {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
-  // loop->Get(...) to get reconstructed objects (and thereby activating the
+  // event->Get(...) to get reconstructed objects (and thereby activating the
   // reconstruction algorithm) should be done outside of any mutex lock
   // since multiple threads may call this method at the same time.
   // Here's an example:
   //
   // vector<const MyDataClass*> mydataclasses;
-  // loop->Get(mydataclasses);
+  // event->Get(mydataclasses);
   //
-  // japp->RootWriteLock();
+  // GetLockService(locEvent)->RootWriteLock();
   //  ... fill historgrams or trees ...
-  // japp->RootUnLock();
+  // GetLockService(locEvent)->RootUnLock();
 
   //NOTE: we do not use WriteLock() to safe time.
 
@@ -161,7 +158,7 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   vector <const DL1Trigger*> trig_words;
   uint32_t trig_mask, fp_trig_mask;
   try {
-    loop->Get(trig_words);
+    event->Get(trig_words);
   } catch(...) {};
   if (trig_words.size()) {
     trig_mask = trig_words[0]->trig_mask;
@@ -178,21 +175,21 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
      trig_mask & 0x1 - cosmic trigger*/
 
   if (fp_trig_mask){ // this is a front pannel trigger like LED
-    return NOERROR;
+    return;
   }
   if (trig_mask>7){ // this is not a BCAL/FCAL trigger
-    return NOERROR;
+    return;
   }
 
   vector< const DCAEN1290TDCHit*> CAENHits;
-  loop->Get(CAENHits);
+  event->Get(CAENHits);
   if (CAENHits.size()<=0){
-    return NOERROR;
+    return;
   }
   uint32_t locROCID = CAENHits[0]->rocid;
 
   vector <const DCODAROCInfo*> ROCS;
-  loop->Get(ROCS);
+  event->Get(ROCS);
   int indx = -1;
   for ( unsigned int n=0; n<ROCS.size(); n++) {
     if (locROCID == ROCS[n]->rocid){
@@ -202,12 +199,12 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   }
 
   if (indx<0){
-    return NOERROR;
+    return;
   }
   
 
   const DTOFGeometry* locTOFGeometry;
-  loop->GetSingle(locTOFGeometry);
+  event->GetSingle(locTOFGeometry);
 
   uint64_t TriggerTime = ROCS[indx]->timestamp;
   int TriggerBIT = TriggerTime%6;
@@ -222,8 +219,8 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   vector<const DTOFTDCDigiHit*> TDCHits, TDCHitsLeft[2], TDCHitsRight[2];
   vector<int> ADCLeftOverFlow[2],ADCRightOverFlow[2];
 
-  loop->Get(ADCHits);
-  loop->Get(TDCHits);
+  event->Get(ADCHits);
+  event->Get(TDCHits);
 
   // loop over DTOFDigiHit: this are ADC hits
   // sort them into ADCLeft and ADCRight hits
@@ -450,9 +447,9 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   // Since we are filling histograms (and trees in a file) local to this plugin, 
   // it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   
-  Event = eventnumber;
+  Event = event->GetEventNumber();
   TShift = TimingShift;
   Nhits = TOFTDCPaddles[0].size() + TOFTDCPaddles[1].size();
   int cnt = 0;
@@ -562,39 +559,34 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     t3->Fill();
   }
   
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-  
-  return NOERROR;
+  lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_TOF_calib::erun(void)
+void JEventProcessor_TOF_calib::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_TOF_calib::fini(void)
+void JEventProcessor_TOF_calib::Finish()
 {
   // Called before program exit after event processing is finished.
 
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   ThreadCounter--;
   if (ThreadCounter == 0) {
     WriteRootFile();
   }
 
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-  return NOERROR;
+  lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 
@@ -636,7 +628,7 @@ jerror_t JEventProcessor_TOF_calib::MakeHistograms(void){
 
   std::once_flag flag;
   std::call_once(flag, [&](){
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     TDirectory *top = gDirectory;
 
@@ -697,7 +689,7 @@ jerror_t JEventProcessor_TOF_calib::MakeHistograms(void){
 
     top->cd();
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   });
 
   return NOERROR;

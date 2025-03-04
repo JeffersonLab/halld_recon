@@ -7,13 +7,13 @@
 
 #include "DCustomAction_p2gamma_unusedHists.h"
 
-void DCustomAction_p2gamma_unusedHists::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_p2gamma_unusedHists::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
@@ -148,10 +148,10 @@ void DCustomAction_p2gamma_unusedHists::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_p2gamma_unusedHists::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_p2gamma_unusedHists::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	
 	// should only have one reaction step
@@ -164,13 +164,13 @@ bool DCustomAction_p2gamma_unusedHists::Perform_Action(JEventLoop* locEventLoop,
 
 	// detector matches for charged track -to- shower matching
 	const DDetectorMatches* locDetectorMatches = NULL;
-        locEventLoop->GetSingle(locDetectorMatches);
+        locEvent->GetSingle(locDetectorMatches);
 
 	// get all charged tracks and showers for comparison to combo (no "pre-select" cut here)
         vector<const DChargedTrack*> locChargedTracks;
-        locEventLoop->Get(locChargedTracks); //, "PreSelect"); 
+        locEvent->Get(locChargedTracks); //, "PreSelect"); 
 	vector<const DNeutralShower*> locNeutralShowers;
-        locEventLoop->Get(locNeutralShowers); //, "PreSelect");  
+        locEvent->Get(locNeutralShowers); //, "PreSelect");  
 
 	// loop over charged tracks to make list of unused
         for(size_t loc_j = 0; loc_j < locChargedTracks.size(); ++loc_j) {
@@ -269,8 +269,6 @@ void DCustomAction_p2gamma_unusedHists::FillTrack(const DChargedTrack* locCharge
 		//dHistMap_TrackHitFrac_Theta[locMatch][locCharge]->Fill(locTrackTimeBased->momentum().Theta()*180/TMath::Pi(), fitFrac);
 	}
 	Unlock_Action(); //RELEASE ROOT LOCK!!
-
-	return;
 }
 
 
@@ -293,7 +291,7 @@ void DCustomAction_p2gamma_unusedHists::FillShower(const DNeutralShower* locNeut
 	if(locSystem == SYS_FCAL) {
 			
 		const DFCALShower* locFCALShower = NULL;
-		locNeutralShower->GetSingleT(locFCALShower);
+		locNeutralShower->GetSingle(locFCALShower);
 
 		vector<const DFCALCluster*> locFCALClusters;
 		locFCALShower->Get(locFCALClusters);
@@ -315,7 +313,7 @@ void DCustomAction_p2gamma_unusedHists::FillShower(const DNeutralShower* locNeut
 	if(locSystem == SYS_BCAL) {
 
 		const DBCALShower* locBCALShower = NULL;
-		locNeutralShower->GetSingleT(locBCALShower);
+		locNeutralShower->GetSingle(locBCALShower);
 
 		//FILL HISTOGRAMS
 		//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
@@ -377,8 +375,6 @@ void DCustomAction_p2gamma_unusedHists::FillShower(const DNeutralShower* locNeut
 
 	}
 	Unlock_Action(); //RELEASE ROOT LOCK!!
-
-	return;
 }
 
 

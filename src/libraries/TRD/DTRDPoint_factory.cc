@@ -4,6 +4,9 @@
 
 #include "DTRDPoint_factory.h"
 
+#include <JANA/JEvent.h>
+#include "DANA/DGeometryManager.h"
+
 ///
 /// DTRDPoint_cmp(): 
 /// non-member function passed to std::sort() to sort DTRDHit pointers 
@@ -14,51 +17,49 @@ bool DTRDPoint_cmp(const DTRDPoint* a, const DTRDPoint *b){
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTRDPoint_factory::init(void)
+void DTRDPoint_factory::Init()
 {
-
-  return NOERROR;
-}
-
-
-//------------------
-// brun
-//------------------
-jerror_t DTRDPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
-{
-  // Get pointer to DGeometry object
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
-  
-  // Get GEM geometry from xml (CCDB or private HDDS)
-  dgeom->GetTRDZ(dTRDz);
+	auto app = GetApplication();
   
   // Some parameters for defining matching
   TIME_DIFF_MAX = 50.;
 //   DIST_DIFF_MAX = 10.;
   //DE_DIFF_MAX = 1.0;
 
-  gPARMS->SetDefaultParameter("TRDPOINT:TIME_DIFF_MAX",TIME_DIFF_MAX);
-//   gPARMS->SetDefaultParameter("TRDPOINT:DIST_DIFF_MAX",DIST_DIFF_MAX);
-
-  return NOERROR;
+  app->SetDefaultParameter("TRDPOINT:TIME_DIFF_MAX",TIME_DIFF_MAX);
+//   app->SetDefaultParameter("TRDPOINT:DIST_DIFF_MAX",DIST_DIFF_MAX);
 }
 
-jerror_t DTRDPoint_factory::erun(void){
- 
-  return NOERROR;
+
+//------------------
+// BeginRun
+//------------------
+void DTRDPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
+{
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto dgeom = geo_manager->GetDGeometry(runnumber);
+
+  // Get GEM geometry from xml (CCDB or private HDDS)
+  dgeom->GetTRDZ(dTRDz);
+
+  return;
+}
+
+void DTRDPoint_factory::EndRun(){
 }
 ///
 /// DTRDPoint_factory::evnt():
 /// this is the place that produces points from wire hits and GEM strips
 ///
-jerror_t DTRDPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
+void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event) {
 
 	// Get strip clusters
 	vector<const DTRDStripCluster*> stripClus;
-	eventLoop->Get(stripClus);
+	event->Get(stripClus);
 
 	// Sift through clusters and select out X and Y plane wires
 	vector<const DTRDStripCluster*> stripClusX,stripClusY;
@@ -95,15 +96,13 @@ jerror_t DTRDPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 				newPoint->AddAssociatedObject(stripClusX[i]);
 				newPoint->AddAssociatedObject(stripClusY[j]);
 
-				_data.push_back(newPoint);
+				Insert(newPoint);
 			}
 		}
 	}
 
 	// Make sure the data are both time- and z-ordered
-	std::sort(_data.begin(),_data.end(),DTRDPoint_cmp);
-	
-	return NOERROR;
+	std::sort(mData.begin(),mData.end(),DTRDPoint_cmp);
 }
 
 // double DTRDPoint_factory::calcClusterTime(const DTRDStripCluster *clus)

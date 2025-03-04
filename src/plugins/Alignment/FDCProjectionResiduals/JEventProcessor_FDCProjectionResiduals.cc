@@ -11,16 +11,17 @@
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include "HistogramTools.h"
 
-using namespace jana;
-
+#include <CDC/DCDCHit.h>
+#include "DANA/DEvent.h"
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_FDCProjectionResiduals());
+	app->Add(new JEventProcessor_FDCProjectionResiduals());
 }
 } // "C"
 
@@ -30,7 +31,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_FDCProjectionResiduals::JEventProcessor_FDCProjectionResiduals()
 {
-
+    SetTypeName("JEventProcessor_FDCProjectionResiduals");
 }
 
 //------------------
@@ -42,27 +43,24 @@ JEventProcessor_FDCProjectionResiduals::~JEventProcessor_FDCProjectionResiduals(
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FDCProjectionResiduals::init(void)
+void JEventProcessor_FDCProjectionResiduals::Init()
 {
    // This is called once at program startup. 
-
-   return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FDCProjectionResiduals::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_FDCProjectionResiduals::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
    // This is called whenever the run number changes
-   // This is called whenever the run number changes
-   DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dapp->GetBfield(runnumber)) != NULL);
-   JCalibration *jcalib = dapp->GetJCalibration(runnumber);
-   dgeom  = dapp->GetDGeometry(runnumber);
-   //bfield = dapp->GetBfield();
+
+   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(DEvent::GetBfield(event)) != nullptr);
+   JCalibration *jcalib = DEvent::GetJCalibration(event);
+   dgeom = DEvent::GetDGeometry(event);
+   //bfield = DEvent::GetBfield(event);
 
    //Get Target Center Z, length
    dgeom->GetTargetZ(dTargetCenterZ);
@@ -174,31 +172,29 @@ jerror_t JEventProcessor_FDCProjectionResiduals::brun(JEventLoop *eventLoop, int
    PLANE_TO_SKIP = 0;
    //Make sure it gets initialize first, in case we want to change it:
    vector<const DTrackCandidate*> locTrackCandidates;
-   eventLoop->Get(locTrackCandidates,"StraightLine");
-   gPARMS->GetParameter("TRKFIT:PLANE_TO_SKIP", PLANE_TO_SKIP);
-
-   return NOERROR;
+   event->Get(locTrackCandidates,"StraightLine");
+   GetApplication()->GetParameter("TRKFIT:PLANE_TO_SKIP", PLANE_TO_SKIP);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FDCProjectionResiduals::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_FDCProjectionResiduals::Process(const std::shared_ptr<const JEvent>& event)
 {
    vector<const DTrackFitter *> fitters;
-   loop->Get(fitters);
+   event->Get(fitters);
    
    if(fitters.size()<1){
      _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-     return RESOURCE_UNAVAILABLE;
+     throw JException("Unable to get a DTrackFinder object!");
    }
    const DTrackFitter *fitter = fitters[0];
 
    vector <const DCDCHit *> cdcHitVector;
-   loop->Get(cdcHitVector);
+   event->Get(cdcHitVector);
 
    vector <const DChargedTrack *> chargedTrackVector;
-   loop->Get(chargedTrackVector);
+   event->Get(chargedTrackVector);
 
    unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
       135,135,146,146,158,158,170,170,182,182,197,197,
@@ -309,27 +305,24 @@ jerror_t JEventProcessor_FDCProjectionResiduals::evnt(JEventLoop *loop, uint64_t
          }
       }
    }
-   return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FDCProjectionResiduals::erun(void)
+void JEventProcessor_FDCProjectionResiduals::EndRun()
 {
    // This is called whenever the run number changes, before it is
    // changed to give you a chance to clean up before processing
    // events from the next run number.
-   return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FDCProjectionResiduals::fini(void)
+void JEventProcessor_FDCProjectionResiduals::Finish()
 {
    // Called before program exit after event processing is finished.
-   return NOERROR;
 }
 
 // Convert time to distance for the cdc

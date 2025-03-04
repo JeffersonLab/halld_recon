@@ -646,6 +646,7 @@ def AddDANA(env):
 	DANA_LIBS += " expat gfortran" 
 	env.PrependUnique(LIBS = DANA_LIBS.split())
 	env.Append(LIBS = 'DANA')
+	env.Append(LIBS = 'ECAL')
 	env.PrependUnique(OPTIONAL_PLUGIN_LIBS = DANA_LIBS.split())
 
 ##################################

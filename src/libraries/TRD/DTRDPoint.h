@@ -6,12 +6,12 @@
 #define DTRDPOINT_H
 
 #include <JANA/JObject.h>
-using namespace jana;
 
 #include "DTRDHit.h"
 #include "DTRDStripCluster.h"
 #include <vector>
 
+using namespace std;
 
 ///
 /// class DTRDPoint: definition for a reconstructed point in the FDC
@@ -34,15 +34,15 @@ class DTRDPoint : public JObject {
       double dE; /// < energy deposition 
       //int itrack; //?
 
-      void toStrings(vector<pair<string,string> > &items)const{ 
-         AddString(items,"x","%3.2f",x);
-         AddString(items,"y","%3.2f",y);
-	 	 AddString(items,"z","%3.2f",z);
-         AddString(items,"t_x","%3.2f",t_x);
-         AddString(items,"t_y","%3.2f",t_y);
-         AddString(items, "time", "%3.1f", time);
-         AddString(items, "status", "%d", status);
-         AddString(items, "dE", "%3.1f", dE);
+      void Summarize(JObjectSummary& summary) const override {
+         summary.add(x, "x", "%3.2f");
+         summary.add(y, "y", "%3.2f");
+         summary.add(z, "z", "%3.2f");
+         summary.add(t_x, "t_x", "%3.2f");
+         summary.add(t_y, "t_y", "%3.2f");
+         summary.add(time, "time", "%3.1f");
+         summary.add(status, "status", "%d");
+         summary.add(dE, "dE", "%3.1f");
       }
 
 };

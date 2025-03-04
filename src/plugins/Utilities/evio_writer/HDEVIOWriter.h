@@ -7,22 +7,19 @@
 #define _HDEVIOWriter_
 
 #include <pthread.h>
-
 #include <string>
 #include <vector>
-using namespace std;
-
-
 #include <deque>
-using namespace std;
 
+#include <JANA/JApplication.h>
+
+using namespace std;
 
 #ifdef HAVE_ET
 //#include <evioETChannel.hxx>
 #include <et.h>
 #endif // HAVE_ET
 
-#include <JANA/jerror.h>
 
 // C-style wrapper
 void* HDEVIOOutputThread(void *l3out);
@@ -36,7 +33,7 @@ class HDEVIOWriter{
 			kETSink
 		};
 
-		HDEVIOWriter(string sink_name);
+		HDEVIOWriter(string sink_name, JApplication* app);
 		virtual ~HDEVIOWriter();
 
         void* HDEVIOOutputThread(void);

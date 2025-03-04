@@ -13,7 +13,6 @@
 #include "KINFITTER/DKinFitConstraint.h"
 
 using namespace std;
-using namespace jana;
 
 class DKinFitResults : public DResettable
 {

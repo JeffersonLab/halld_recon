@@ -7,8 +7,8 @@
 
 #include "DReaction_factory_MilleKs.h"
 
-jerror_t DReaction_factory_MilleKs::evnt(JEventLoop* locEventLoop,
-                                            uint64_t locEventNumber) {
+void DReaction_factory_MilleKs::Process(const std::shared_ptr<const JEvent> &locEvent) {
+
   /** MilleKs Reaction Definition **/
   DReactionStep* locReactionStep = NULL;
 
@@ -126,7 +126,7 @@ jerror_t DReaction_factory_MilleKs::evnt(JEventLoop* locEventLoop,
   DHistogramAction_TrackVertexComparison(locReaction));
   */
 
-  _data.push_back(locReaction);  // Register the DReaction with the factory
+  Insert(locReaction);  // Register the DReaction with the factory
 
 
   /** KsKmPip **/
@@ -149,13 +149,10 @@ jerror_t DReaction_factory_MilleKs::evnt(JEventLoop* locEventLoop,
   locReaction->Set_KinFitType(d_P4AndVertexFit);
   locReaction->Set_NumPlusMinusRFBunches(0);  // 1: 3 bunches, -1, 0, 1
 
-  _data.push_back(locReaction);  // Register the DReaction with the factory
-
-  return NOERROR;
+  Insert(locReaction);  // Register the DReaction with the factory
 }
 
-jerror_t DReaction_factory_MilleKs::fini(void) {
+void DReaction_factory_MilleKs::Finish() {
   for (size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
     delete dReactionStepPool[loc_i];  // cleanup memory
-  return NOERROR;
 }

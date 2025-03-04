@@ -9,31 +9,31 @@
 
 #include "DFactoryGenerator.h"
 
-extern jerror_t BCAL_init(JEventLoop *loop);
-extern jerror_t CDC_init(JEventLoop *loop);
-extern jerror_t FDC_init(JEventLoop *loop);
-extern jerror_t FCAL_init(JEventLoop *loop);
-extern jerror_t ECAL_init(JEventLoop *loop);
-extern jerror_t CCAL_init(JEventLoop *loop);
-extern jerror_t RF_init(JEventLoop *loop);
-extern jerror_t START_COUNTER_init(JEventLoop *loop);
-extern jerror_t TAGGER_init(JEventLoop *loop);
-extern jerror_t TOF_init(JEventLoop *loop);
-extern jerror_t TRACKING_init(JEventLoop *loop);
-extern jerror_t HDDM_init(JEventLoop *loop);
-extern jerror_t PID_init(JEventLoop *loop);
-extern jerror_t ANALYSIS_init(JEventLoop *loop);
-extern jerror_t DAQ_init(JEventLoop *loop);
-extern jerror_t TTAB_init(JEventLoop *loop);
-extern jerror_t CERE_init(JEventLoop *loop);
-extern jerror_t DIRC_init(JEventLoop *loop);
-extern jerror_t TRIGGER_init(JEventLoop *loop);
-extern jerror_t PAIR_SPECTROMETER_init(JEventLoop *loop);
-extern jerror_t TPOL_init(JEventLoop *loop);
-extern jerror_t FMWPC_init(JEventLoop *loop);
-extern jerror_t EVENTSTORE_init(JEventLoop *loop);
-extern jerror_t TAC_init(JEventLoop *loop);
-extern jerror_t TRD_init(JEventLoop *loop);
+extern void BCAL_init(JFactorySet *factory_set);
+extern void CDC_init(JFactorySet *factory_set);
+extern void FDC_init(JFactorySet *factory_set);
+extern void FCAL_init(JFactorySet *factory_set);
+extern void ECAL_init(JFactorySet *factory_set);
+extern void CCAL_init(JFactorySet *factory_set);
+extern void RF_init(JFactorySet *factory_set);
+extern void START_COUNTER_init(JFactorySet *factory_set);
+extern void TAGGER_init(JFactorySet *factory_set);
+extern void TOF_init(JFactorySet *factory_set);
+extern void TRACKING_init(JFactorySet *factory_set);
+extern void HDDM_init(JFactorySet *factory_set);
+extern void PID_init(JFactorySet *factory_set);
+extern void ANALYSIS_init(JFactorySet *factory_set);
+extern void DAQ_init(JFactorySet *factory_set);
+extern void TTAB_init(JFactorySet *factory_set);
+extern void CERE_init(JFactorySet *factory_set);
+extern void DIRC_init(JFactorySet *factory_set);
+extern void TRIGGER_init(JFactorySet *factory_set);
+extern void PAIR_SPECTROMETER_init(JFactorySet *factory_set);
+extern void TPOL_init(JFactorySet *factory_set);
+extern void FMWPC_init(JFactorySet *factory_set);
+extern void EVENTSTORE_init(JFactorySet *factory_set);
+extern void TAC_init(JFactorySet *factory_set);
+extern void TRD_init(JFactorySet *factory_set);
 
 //---------------------------------
 // DFactoryGenerator    (Constructor)
@@ -54,33 +54,31 @@ DFactoryGenerator::~DFactoryGenerator()
 //---------------------------------
 // GenerateFactories
 //---------------------------------
-jerror_t DFactoryGenerator::GenerateFactories(JEventLoop *loop)
+void DFactoryGenerator::GenerateFactories(JFactorySet *factory_set)
 {
-	BCAL_init(loop);
-	CDC_init(loop);
-	FDC_init(loop);
-	FCAL_init(loop);
-	ECAL_init(loop);
-	CCAL_init(loop);
-	RF_init(loop);
-	START_COUNTER_init(loop);
-	TAGGER_init(loop);
-	TOF_init(loop);
-	TRACKING_init(loop);
-	HDDM_init(loop);
-	PID_init(loop);
-	ANALYSIS_init(loop);
-	DAQ_init(loop);
-	TTAB_init(loop);
-	CERE_init(loop);
-	DIRC_init(loop);
-	TRIGGER_init(loop);
-	PAIR_SPECTROMETER_init(loop);
-	TPOL_init(loop);
-	FMWPC_init(loop);
-	EVENTSTORE_init(loop);
-	TAC_init(loop);
-	TRD_init(loop);	
-
-	return NOERROR;
+	BCAL_init(factory_set);
+	CDC_init(factory_set);
+	FDC_init(factory_set);
+	FCAL_init(factory_set);
+	ECAL_init(factory_set);
+	CCAL_init(factory_set);
+	RF_init(factory_set);
+	START_COUNTER_init(factory_set);
+	TAGGER_init(factory_set);
+	TOF_init(factory_set);
+	TRACKING_init(factory_set);
+	HDDM_init(factory_set);
+	PID_init(factory_set);
+	ANALYSIS_init(factory_set);
+	DAQ_init(factory_set);
+	TTAB_init(factory_set);
+	CERE_init(factory_set);
+	DIRC_init(factory_set);
+	TRIGGER_init(factory_set);
+	PAIR_SPECTROMETER_init(factory_set);
+	TPOL_init(factory_set);
+	FMWPC_init(factory_set);
+	EVENTSTORE_init(factory_set);
+	TAC_init(factory_set);
+	TRD_init(factory_set);	
 }

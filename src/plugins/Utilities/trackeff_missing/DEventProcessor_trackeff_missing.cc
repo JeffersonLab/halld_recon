@@ -14,68 +14,60 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_trackeff_missing()); //register this plugin
-		locApplication->AddFactoryGenerator(new DFactoryGenerator_trackeff_missing()); //register the factory generator
+		locApplication->Add(new DEventProcessor_trackeff_missing()); //register this plugin
+		locApplication->Add(new DFactoryGenerator_trackeff_missing()); //register the factory generator
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_trackeff_missing::init(void)
+void DEventProcessor_trackeff_missing::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... create historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 	//
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_trackeff_missing::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void DEventProcessor_trackeff_missing::BeginRun(const std::shared_ptr<const JEvent>& t)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_trackeff_missing::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_trackeff_missing::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	//Optional: Get the analysis results for all DReactions. 
 		//Getting these objects triggers the analysis, if it wasn't performed already. 
 		//These objects contain the DParticleCombo objects that survived the DAnalysisAction cuts that were added to the DReactions
 	vector<const DAnalysisResults*> locAnalysisResultsVector;
-	locEventLoop->Get(locAnalysisResultsVector);
-
-	return NOERROR;
+	locEvent->Get(locAnalysisResultsVector);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_trackeff_missing::erun(void)
+void DEventProcessor_trackeff_missing::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_trackeff_missing::fini(void)
+void DEventProcessor_trackeff_missing::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }

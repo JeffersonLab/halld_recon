@@ -8,7 +8,7 @@
 #ifndef _DTrackCandidate_factory_FDCCathodes_
 #define _DTrackCandidate_factory_FDCCathodes_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DTrackCandidate.h"
 #include <DMatrix.h>
 #include "FDC/DFDCSegment_factory.h"
@@ -35,24 +35,24 @@
 /// These candidates will be merged with those from the FDC in
 /// the DTrackCandidate_factory class.
 
-class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
+class DTrackCandidate_factory_FDCCathodes:public JFactoryT<DTrackCandidate>{
  public:
   DTrackCandidate_factory_FDCCathodes(){
+  	SetTag("FDCCathodes");
     DEBUG_HISTS = false;
     //DEBUG_HISTS = true;
   };
   ~DTrackCandidate_factory_FDCCathodes(){};
-  const char* Tag(void){return "FDCCathodes";}
-  
+
  private:  
   const DMagneticFieldMap *bfield;
   DMagneticFieldStepper *stepper;
 		
-  //jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+  //void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
 
   jerror_t GetPositionAndMomentum(const DFDCSegment *segment);
   jerror_t GetPositionAndMomentum(DVector3 &pos,DVector3 &mom);

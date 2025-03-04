@@ -1,6 +1,9 @@
 
 #include "DTRDStripCluster_factory.h"
 
+#include <JANA/JEvent.h>
+#include "DTRDHit.h"
+
 static bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
   if (a->plane==b->plane){
     return a->t < b->t;
@@ -47,13 +50,15 @@ static bool DTRDStripCluster_gPlane_cmp(	const DTRDStripCluster* a,
 ///
 /// Initialization
 ///
-jerror_t DTRDStripCluster_factory::init(void)
+void DTRDStripCluster_factory::Init()
 {
+	auto app = GetApplication();
+
 	MINIMUM_HITS_FOR_CLUSTERING = 10;
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:MINIMUM_HITS_FOR_CLUSTERING",MINIMUM_HITS_FOR_CLUSTERING);
+    app->SetDefaultParameter("TRDCLUSTER:MINIMUM_HITS_FOR_CLUSTERING",MINIMUM_HITS_FOR_CLUSTERING);
 
 	CLUSTERING_THRESHOLD = 1.2;
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:CLUSTERING_THRESHOLD",CLUSTERING_THRESHOLD);
+    app->SetDefaultParameter("TRDCLUSTER:CLUSTERING_THRESHOLD",CLUSTERING_THRESHOLD);
 
 	MinClustSize=10;
 	MinClustWidth=0.001;
@@ -61,13 +66,13 @@ jerror_t DTRDStripCluster_factory::init(void)
 	zStart =  0.; // mm
 	zEnd   = 40.; // mm
 
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:MIN_CLUST_SIZE",MinClustSize);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:MIN_CLUST_WIDTH",MinClustWidth);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:MIN_CLUST_LENGTH",MinClustLength);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:ZSTART",zStart);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:ZEND",zEnd);
+    app->SetDefaultParameter("TRDCLUSTER:MIN_CLUST_SIZE",MinClustSize);
+    app->SetDefaultParameter("TRDCLUSTER:MIN_CLUST_WIDTH",MinClustWidth);
+    app->SetDefaultParameter("TRDCLUSTER:MIN_CLUST_LENGTH",MinClustLength);
+    app->SetDefaultParameter("TRDCLUSTER:ZSTART",zStart);
+    app->SetDefaultParameter("TRDCLUSTER:ZEND",zEnd);
 
-    return NOERROR;	
+    return;	
 }
 
 
@@ -96,20 +101,23 @@ double DTRDStripCluster_factory::StripToPosition(int iplane, const DTRDHit *hit)
 /// This (along with DTRDStripCluster_factory::pique()) 
 /// is the place cathode hits are associated into cathode clusters.  
 ///
-jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo) 
+void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& event) 
 {
+	vector<DTRDStripCluster*> results;
+
 	vector<const DTRDHit*> allHits;
 	vector<const DTRDHit*> planeHits[2];
 	
-	eventLoop->Get(allHits);
+	event->Get<DTRDHit>(allHits);
 	
 	if (allHits.size() == 0) 
-		return NOERROR;
+		return;
 
 
 	// require a minimum number of hits
-    if (allHits.size() < MINIMUM_HITS_FOR_CLUSTERING)   
-    	return NOERROR; 
+    if (allHits.size() < MINIMUM_HITS_FOR_CLUSTERING) {
+    	return;
+    }
 
 	// Sort hits by layer number and by time
 	sort(allHits.begin(),allHits.end(),DTRDHit_cmp);
@@ -224,16 +232,18 @@ jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo)
 	  //-------------  Cluster Filter -----------------
 	  if (clusters[k]->num_hits>= MinClustSize && zStart < clusters[k]->pos.z() && clusters[k]->pos.z() < zEnd 
 	  		&& clusters[k]->width.z()>MinClustWidth )
-		_data.push_back(clusters[k]);
+		results.push_back(clusters[k]);
  	  else 
 		delete clusters[k];
 
 	}
 
 	// Ensure that the data are still in order of planes.
-	std::sort(_data.begin(), _data.end(), DTRDStripCluster_gPlane_cmp);
+	std::sort(results.begin(), results.end(), DTRDStripCluster_gPlane_cmp);
 	
-	return NOERROR;	
+	Set(results);
+	
+	return;	
 }			
 
 //-----------------------------
@@ -268,7 +278,7 @@ void DTRDStripCluster_factory::cluster(vector<const DTRDHit*>& H)
 			newCluster->q_tot += H[i]->pulse_height;
 			newCluster->members.push_back(H[i]);
 		}
-		_data.push_back(newCluster);
+		Insert(newCluster);
 		
 		istart = iend-1;
 	}

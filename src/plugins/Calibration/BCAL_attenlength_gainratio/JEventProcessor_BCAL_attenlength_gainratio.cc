@@ -6,11 +6,10 @@
 //
 
 #include "JEventProcessor_BCAL_attenlength_gainratio.h"
-using namespace jana;
 
 #include "BCAL/DBCALPoint.h"
 #include "BCAL/DBCALDigiHit.h"
-#include "DANA/DApplication.h"
+#include <DANA/DEvent.h>
 #include "DANA/DStatusBits.h"
 #include "HistogramTools.h" // To make my life easier
 
@@ -20,12 +19,11 @@ using namespace jana;
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_BCAL_attenlength_gainratio());
+	app->Add(new JEventProcessor_BCAL_attenlength_gainratio());
 }
 } // "C"
 
@@ -35,14 +33,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_BCAL_attenlength_gainratio::JEventProcessor_BCAL_attenlength_gainratio()
 {
-	VERBOSE = 0; // 4: once per event, 5: multipple times per event
-	VERBOSEHISTOGRAMS = 0;
-
-	if(gPARMS){
-		gPARMS->SetDefaultParameter("BCAL_ALGR:VERBOSE", VERBOSE, "Verbosity level");
-		gPARMS->SetDefaultParameter("BCAL_ALGR:VERBOSEHISTOGRAMS", VERBOSEHISTOGRAMS, "Create more histograms (default 0 for monitoring)");
-	}
-
+	SetTypeName("JEventProcessor_BCAL_attenlength_gainratio");
 }
 
 //------------------
@@ -50,14 +41,21 @@ JEventProcessor_BCAL_attenlength_gainratio::JEventProcessor_BCAL_attenlength_gai
 //------------------
 JEventProcessor_BCAL_attenlength_gainratio::~JEventProcessor_BCAL_attenlength_gainratio()
 {
-
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_attenlength_gainratio::init(void)
+void JEventProcessor_BCAL_attenlength_gainratio::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
+	VERBOSE = 0; // 4: once per event, 5: multipple times per event
+	VERBOSEHISTOGRAMS = 0;
+
+	app->SetDefaultParameter("BCAL_ALGR:VERBOSE", VERBOSE, "Verbosity level");
+	app->SetDefaultParameter("BCAL_ALGR:VERBOSEHISTOGRAMS", VERBOSEHISTOGRAMS, "Create more histograms (default 0 for monitoring)");
 
 	// Set style
 	gStyle->SetTitleOffset(1, "Y");
@@ -197,42 +195,40 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::init(void)
 	// back to main dir
 	main->cd();
 	
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_attenlength_gainratio::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_BCAL_attenlength_gainratio::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
 
-	DApplication* app = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-	DGeometry* geom = app->GetDGeometry(runnumber);
+	DGeometry* geom = DEvent::GetDGeometry(event);
 	geom->GetTargetZ(z_target_center);
-	
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_BCAL_attenlength_gainratio::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_BCAL_attenlength_gainratio::Process(const std::shared_ptr<const JEvent>& event)
 {
+	auto eventnumber = event->GetEventNumber();
+
     // simulation is tagged by being an HDDM file
-    bool locIsHDDMEvent = loop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
+    bool locIsHDDMEvent = DEvent::GetStatusBit(event, kSTATUS_HDDM);
 
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	auto locBCALGeom = BCALGeomVec[0];
 
 	// Start with matched points
 	vector<const DBCALPoint*> dbcalpoints;
-	loop->Get(dbcalpoints);
+	event->Get(dbcalpoints);
 
 	// pull out the associated digihits
 	vector< vector<const DBCALDigiHit*> > digihits_vec;
@@ -246,7 +242,7 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::evnt(JEventLoop *loop, uint
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     if (VERBOSE>=4) printf("BCAL_attenlength_gainratio::evnt()  event %4lu points %3lu          \n", eventnumber, dbcalpoints.size());
 	for(unsigned int i=0; i<dbcalpoints.size(); i++) {
@@ -326,10 +322,7 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::evnt(JEventLoop *loop, uint
 		EvsZ_layer[layer-1]->Fill(zpos, pointE);
 	}
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-
-	return NOERROR;
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 
@@ -337,27 +330,26 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::evnt(JEventLoop *loop, uint
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_attenlength_gainratio::erun(void)
+void JEventProcessor_BCAL_attenlength_gainratio::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_attenlength_gainratio::fini(void)
+void JEventProcessor_BCAL_attenlength_gainratio::Finish()
 {
 	// Called before program exit after event processing is finished.
 
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	// for (int module=0; module<nummodule; module++) {
 	// 	if (VERBOSE>0) printf("M%i ",module);
@@ -467,10 +459,8 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::fini(void)
 	hist2D_intattenlength->SetBinContent(0,0,1);
 	hist2D_intgainratio->SetBinContent(0,0,1);
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
     //SortDirectories();    // THIS CRASHES SOMETIMES, SHOULD FIGURE OUT WHY
-
-	return NOERROR;
 }
 

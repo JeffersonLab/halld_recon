@@ -11,7 +11,7 @@
 #include <string>
 #include <iostream>
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "JANA/JApplication.h"
 
 #include "ANALYSIS/DAnalysisAction.h"
@@ -20,7 +20,6 @@
 #include "ANALYSIS/DAnalysisUtilities.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_CutExtraPi0 : public DAnalysisAction
 {
@@ -30,13 +29,13 @@ class DCustomAction_CutExtraPi0 : public DAnalysisAction
 		DAnalysisAction(locReaction, "Custom_CutExtraPi0", false, locActionUniqueString),
 		dLowMassCut(locLowMassCut), dHighMassCut(locHighMassCut) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop) { locEventLoop->GetSingle(dAnalysisUtilities); }
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) { locEvent->GetSingle(dAnalysisUtilities); }
 		void Reset_NewEvent(void){dPreviousSourceObjects.clear();}
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		// Cut away combos with pi0 invariant mass BETWEEN these bounds
 		double dLowMassCut;

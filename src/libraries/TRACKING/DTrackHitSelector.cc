@@ -19,12 +19,12 @@ extern bool CDCSortByRincreasing(const DCDCTrackHit* const &hit1, const DCDCTrac
 extern bool FDCSortByZincreasing(const DFDCPseudo* const &hit1, const DFDCPseudo* const &hit2);
 extern bool TRDSortByZincreasing(const DTRDPoint* const &hit1, const DTRDPoint* const &hit2);
 
+
 //---------------------
-// DTrackHitSelector  (Constructor)
+// Constructor
 //---------------------
-DTrackHitSelector::DTrackHitSelector(JEventLoop *loop)
-{
-	this->loop = loop;
+DTrackHitSelector::DTrackHitSelector(const std::shared_ptr<const JEvent>& event){
+	this->event = event;
 }
 
 //---------------------

@@ -19,30 +19,29 @@ extern "C"
 	void InitPlugin(JApplication *app)
 	{
 		InitJANAPlugin(app);
-		app->AddProcessor(new DEventProcessor_mcthrown_tree());
+		app->Add(new DEventProcessor_mcthrown_tree());
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_mcthrown_tree::init(void)
+void DEventProcessor_mcthrown_tree::Init()
 {
 	// require tagger hit for MCGEN beam photon by default to write event to TTree
 	dTagCheck = true;
 	numgoodevents=0;
-	gPARMS->SetDefaultParameter("MCTHROWN:TAGCHECK", dTagCheck);
-
-	return NOERROR;
+	auto app = GetApplication();
+	app->SetDefaultParameter("MCTHROWN:TAGCHECK", dTagCheck);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_mcthrown_tree::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void DEventProcessor_mcthrown_tree::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 	const DEventWriterROOT* locEventWriterROOT = NULL;
-	locEventLoop->GetSingle(locEventWriterROOT);
+	locEvent->GetSingle(locEventWriterROOT);
 
 	//This looks bad.  Really bad.  But relax, it's fine. 
 	//This was previously in brun(), but brun() is ONLY CALLED BY ONE THREAD (no matter how many threads you run with!)
@@ -52,27 +51,25 @@ jerror_t DEventProcessor_mcthrown_tree::evnt(JEventLoop *locEventLoop, uint64_t 
 	//And, only the FIRST CALL for each thread will setup the event writer
 	//Subsequent calls will auto-detect that everything is already done and bail early. 
 	//Ugly, yes. But it works, and it's too late now to have each thread call brun().
-	locEventWriterROOT->Create_ThrownTree(locEventLoop, "tree_thrown.root");
+	locEventWriterROOT->Create_ThrownTree(locEvent, "tree_thrown.root");
 
 	// only keep generated events which hit a tagger counter
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons, "TAGGEDMCGEN");
+	locEvent->Get(locBeamPhotons, "TAGGEDMCGEN");
 
 	// skip events where generated beam photon did not hit TAGM or TAGH counter
 	if(dTagCheck && locBeamPhotons.empty())
-		return NOERROR;
+		return;
 
-	locEventWriterROOT->Fill_ThrownTree(locEventLoop);
+	locEventWriterROOT->Fill_ThrownTree(locEvent);
 	numgoodevents++;
-
-	return NOERROR;
 }
 
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_mcthrown_tree::fini(void)
+void DEventProcessor_mcthrown_tree::Finish()
 {
 	// Called before program exit after event processing is finished.
 	if (numgoodevents==0) {
@@ -82,7 +79,5 @@ jerror_t DEventProcessor_mcthrown_tree::fini(void)
 		jerr << "\tIf the input file is directly from a generator, this requirement can be disabled\n";
 		jerr << "\tby using -PMCTHROWN:TAGCHECK=0\n";
 	}
-
-	return NOERROR;
 }
 

@@ -6,7 +6,6 @@
 //
 
 #include "JEventProcessor_TAGM_clusters.h"
-using namespace jana;
 
 #include <TH1.h>
 #include <TH2.h>
@@ -14,6 +13,9 @@ using namespace jana;
 
 #include <TAGGER/DTAGMGeometry.h>
 #include <TAGGER/DTAGMHit.h>
+
+using std::vector;
+using std::set;
 
 const int NCOLUMNS = DTAGMGeometry::kColumnCount;
 
@@ -28,11 +30,11 @@ static TH1I *h_E_a;		// energy after merging
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_TAGM_clusters());
+	app->Add(new JEventProcessor_TAGM_clusters());
 }
 } // "C"
 
@@ -42,7 +44,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_TAGM_clusters::JEventProcessor_TAGM_clusters()
 {
-
+	SetTypeName("JEventProcessor_TAGM_clusters");
 }
 
 //------------------
@@ -54,11 +56,13 @@ JEventProcessor_TAGM_clusters::~JEventProcessor_TAGM_clusters()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_TAGM_clusters::init(void)
+void JEventProcessor_TAGM_clusters::Init()
 {
-	// This is called once at program startup. 
+    // This is called once at program startup.
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
 
    TDirectory *mainDir = gDirectory;
    TDirectory *tagmDir = gDirectory->mkdir("TAGM_clusters");
@@ -88,44 +92,41 @@ jerror_t JEventProcessor_TAGM_clusters::init(void)
    h_occupancy_ind = new TH1D("occupancy_ind","Histogram of occupancy",20,1,21);
    // back to main dir
    mainDir->cd();
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_TAGM_clusters::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_TAGM_clusters::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_TAGM_clusters::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_TAGM_clusters::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootFillLock(this);
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootFillUnLock(this);
+	// lockService->RootUnLock();
 
    vector<const DTAGMHit*>	tagm_hits;
-   loop->Get(tagm_hits, "Calib");
+   event->Get(tagm_hits, "Calib");
    vector<const DTAGMHit*>	tagm_merged_hits;
-   loop->Get(tagm_merged_hits);
+   event->Get(tagm_merged_hits);
 
-   japp->RootFillLock(this);
+   lockService->RootWriteLock();
 
    // Get occupancies and multiplicities before merging
    int mult_b = 0;
@@ -214,28 +215,24 @@ jerror_t JEventProcessor_TAGM_clusters::evnt(JEventLoop *loop, uint64_t eventnum
       }
    }
 
-   japp->RootFillUnLock(this);
-
-	return NOERROR;
+   lockService->RootUnLock();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_TAGM_clusters::erun(void)
+void JEventProcessor_TAGM_clusters::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_TAGM_clusters::fini(void)
+void JEventProcessor_TAGM_clusters::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

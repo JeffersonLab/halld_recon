@@ -3,12 +3,13 @@
 //   https://halldsvn.jlab.org/repos/trunk/online/packages/monitoring/src/hdl3
 
 #include "DEVIOBufferWriter.h"
+#include "DANA/DEvent.h"
 
 
 //------------------
 // WriteEventToBuffer
 //------------------
-void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &buff) const
+void DEVIOBufferWriter::WriteEventToBuffer(const std::shared_ptr<const JEvent>& loop, vector<uint32_t> &buff) const
 {
     vector<const JObject *> objects_to_save_null;
     WriteEventToBuffer(loop, buff, objects_to_save_null);
@@ -17,16 +18,16 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 //------------------
 // WriteEventToBuffer
 //------------------
-void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &buff, vector<const JObject *> objects_to_save) const
+void DEVIOBufferWriter::WriteEventToBuffer(const std::shared_ptr<const JEvent>& event, vector<uint32_t> &buff, vector<const JObject *> objects_to_save) const
 {
 	/// This method will grab certain low-level objects and write them
 	/// into EVIO banks in a format compatible with the DAQ library.
 
     // Handle BOR events separately
     // These should only be at the beginning of a file or when the run changes
-	if( loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT) ){
+	if( GetStatusBit(event, kSTATUS_BOR_EVENT) ){
         buff.clear();
-		WriteBORData(loop, buff);
+		WriteBORData(event, buff);
 		return;
 	}
 	
@@ -57,38 +58,38 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
     // Optionally, allow the user to only save hits from specific objects
     if(objects_to_save.size()==0) {
         // If no special object list is passed, assume we should save everything
-        loop->Get(f250tts);
-        loop->Get(f250pulses);
-        loop->Get(f250pis);
-        loop->Get(f250wrds);
-        loop->Get(f125tts);
-        loop->Get(f125pis);
-        loop->Get(f125cdcpulses);
-        loop->Get(f125fdcpulses);
-        loop->Get(f125wrds);
-        loop->Get(f125configs);
-	loop->Get(dirctdchits);
-	loop->Get(dirctts);
-        loop->Get(caen1290hits);
-        loop->Get(caen1290configs);
-        loop->Get(F1hits);
-        loop->Get(F1tts);
-        loop->Get(F1configs);
-        loop->Get(epicsValues);
-        loop->Get(coda_events);
-        loop->Get(coda_rocinfos);
-        loop->Get(l1_info);
-	loop->Get(f250scalers);
+        event->Get(f250tts);
+        event->Get(f250pulses);
+        event->Get(f250pis);
+        event->Get(f250wrds);
+        event->Get(f125tts);
+        event->Get(f125pis);
+        event->Get(f125cdcpulses);
+        event->Get(f125fdcpulses);
+        event->Get(f125wrds);
+        event->Get(f125configs);
+	event->Get(dirctdchits);
+	event->Get(dirctts);
+        event->Get(caen1290hits);
+        event->Get(caen1290configs);
+        event->Get(F1hits);
+        event->Get(F1tts);
+        event->Get(F1configs);
+        event->Get(epicsValues);
+        event->Get(coda_events);
+        event->Get(coda_rocinfos);
+        event->Get(l1_info);
+	event->Get(f250scalers);
     } else {
         // only save hits that correspond to certain reconstructed objects
-        loop->Get(epicsValues);   // always read EPICS data
-        loop->Get(l1_info);       // always read extra trigger data
-	loop->Get(f250scalers);
-        loop->Get(coda_events);
-        loop->Get(coda_rocinfos);
-        loop->Get(f125configs);
-        loop->Get(F1configs);
-        loop->Get(caen1290configs);
+        event->Get(epicsValues);   // always read EPICS data
+        event->Get(l1_info);       // always read extra trigger data
+	event->Get(f250scalers);
+        event->Get(coda_events);
+        event->Get(coda_rocinfos);
+        event->Get(f125configs);
+        event->Get(F1configs);
+        event->Get(caen1290configs);
 
         // For ease-of-use, the list of reconstructed objects is passed as a vector<const JObject *>
         // to handle the storage of the many different types of objects: showers, tracks, TOF hits, etc.
@@ -185,11 +186,10 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 	// object already exists. This is because we may have skipped creating
 	// the object due to this being an unbiased event.
 	const DL3Trigger *l3trigger = NULL;
-	JFactory_base *fac = loop->GetFactory("DL3Trigger");
+	JFactory *fac = event->GetFactory("DL3Trigger", "");
 	if(fac){
-		int nobjs = fac->GetNrows(false, true); // don't create objects if not already existing
-		if(nobjs>0){
-			loop->GetSingle(l3trigger, "", false); // don't throw exception if nobjs>1
+		if (fac->GetCreationStatus() != JFactory::CreationStatus::NotCreatedYet) {
+			event->GetSingle(l3trigger, "", false); // don't throw exception if nobjs>1
 		}
 	}
 	
@@ -230,7 +230,10 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 		coda_rocinfos = my_coda_rocinfos;
 	}
 
-    unsigned int Nevents = loop->GetNevents();
+    unsigned int Nevents = event->GetEventNumber();
+	// NWB: This used to be `event->GetNevents()`, but this was dubious in JANA1 and definitely
+	//      not reliable in JANA2 because we don't have any guarantee that the previous event 'finished'
+	//      before the EventProcessor is called on the next event. TODO: Double-check that this still works
 		
     // Physics Bank Header
     buff.clear();
@@ -238,10 +241,11 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
     buff.push_back(0xFF701001);// 0xFF70=SEB in single event mode, 0x10=bank of banks, 0x01=1event
     
     // Write Built Trigger Bank
-    WriteBuiltTriggerBank(buff, loop, coda_rocinfos, coda_events);
+    WriteBuiltTriggerBank(buff, event, coda_rocinfos, coda_events);
     
     // Write EventTag
-    WriteEventTagData(buff, loop->GetJEvent().GetStatus(), l3trigger);
+	uint64_t eventStatus = event->GetSingle<DStatusBits>()->GetStatus();
+	WriteEventTagData(buff, eventStatus, l3trigger);
     
     // Write CAEN1290TDC hits
     WriteCAEN1290Data(buff, caen1290hits, caen1290configs, Nevents);
@@ -265,7 +269,7 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
     
     // Write out extra TS data if it exists ("sync event")
     if(l1_info.size() > 0) {
-      WriteTSSyncData(loop, buff, l1_info[0]);
+      WriteTSSyncData(event, buff, l1_info[0]);
     }
     
     // save any extra objects 
@@ -275,10 +279,10 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
         
         // first, see if these are low-level hit objects
         if(auto *vertex_ptr = dynamic_cast<const DVertex *>(obj_ptr)) {
-            WriteDVertexData(loop, buff, vertex_ptr);
+            WriteDVertexData(event, buff, vertex_ptr);
         }
         if(auto *vertex_ptr = dynamic_cast<const DEventRFBunch *>(obj_ptr)) {
-            WriteDEventRFBunchData(loop, buff, vertex_ptr);
+            WriteDEventRFBunchData(event, buff, vertex_ptr);
         }
     }
 
@@ -291,7 +295,7 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 // WriteBuiltTriggerBank
 //------------------
 void DEVIOBufferWriter::WriteBuiltTriggerBank(vector<uint32_t> &buff, 
-                                              JEventLoop *loop, 
+                                              const std::shared_ptr<const JEvent>& event,
                                               vector<const DCODAROCInfo*> &coda_rocinfos, 
                                               vector<const DCODAEventInfo*> &coda_events) const
 {
@@ -302,9 +306,9 @@ void DEVIOBufferWriter::WriteBuiltTriggerBank(vector<uint32_t> &buff,
 	
 	//--- Common Data Segments ---
 	// uint64_t segments for Event Number, avg. timestamp, Run Number, and Run Type 
-	uint32_t run_number = loop->GetJEvent().GetRunNumber();
+	uint32_t run_number = event->GetRunNumber();
 	uint32_t run_type = 1; // observed in run 2931. Not sure shat it should be
-	uint64_t event_number = loop->GetJEvent().GetEventNumber();
+	uint64_t event_number = event->GetEventNumber();
 	uint64_t avg_timestamp = time(NULL);
 	if(!coda_events.empty()){
 		run_number    = coda_events[0]->run_number;
@@ -1687,7 +1691,7 @@ void DEVIOBufferWriter::WriteBORSingle(vector<uint32_t> &buff, M m, F&& modFunc)
 //------------------
 // WriteBORData
 //------------------
-void DEVIOBufferWriter::WriteBORData(JEventLoop *loop, vector<uint32_t> &buff) const
+void DEVIOBufferWriter::WriteBORData(const std::shared_ptr<const JEvent>& event, vector<uint32_t> &buff) const
 {
     // Write the BOR data into EVIO format.
     
@@ -1696,10 +1700,10 @@ void DEVIOBufferWriter::WriteBORData(JEventLoop *loop, vector<uint32_t> &buff) c
     vector<const DF1TDCBORConfig*> vDF1TDCBORConfig;
     vector<const DCAEN1290TDCBORConfig*> vDCAEN1290TDCBORConfig;
 
-    loop->Get(vDf250BORConfig);
-    loop->Get(vDf125BORConfig);
-    loop->Get(vDF1TDCBORConfig);
-    loop->Get(vDCAEN1290TDCBORConfig);
+    event->Get(vDf250BORConfig);
+    event->Get(vDf125BORConfig);
+    event->Get(vDF1TDCBORConfig);
+    event->Get(vDCAEN1290TDCBORConfig);
     
     uint32_t Nconfig_objs = vDf250BORConfig.size() + vDf125BORConfig.size() + vDF1TDCBORConfig.size() + vDCAEN1290TDCBORConfig.size();
     if(Nconfig_objs == 0) return;
@@ -1735,7 +1739,7 @@ void DEVIOBufferWriter::WriteBORData(JEventLoop *loop, vector<uint32_t> &buff) c
 //------------------
 // WriteTSSyncData
 //------------------
-void DEVIOBufferWriter::WriteTSSyncData(JEventLoop *loop, vector<uint32_t> &buff, const DL1Info *l1info) const
+void DEVIOBufferWriter::WriteTSSyncData(const std::shared_ptr<const JEvent>& loop, vector<uint32_t> &buff, const DL1Info *l1info) const
 {
     // The Trigger Supervisor (TS) inserts information into the data stream
     // during periodic "sync events".  The data is stored in one bank
@@ -1784,7 +1788,7 @@ void DEVIOBufferWriter::WriteTSSyncData(JEventLoop *loop, vector<uint32_t> &buff
 //------------------
 // WriteDVertexData
 //------------------
-void DEVIOBufferWriter::WriteDVertexData(JEventLoop *loop, vector<uint32_t> &buff, const DVertex *vertex) const
+void DEVIOBufferWriter::WriteDVertexData(const std::shared_ptr<const JEvent>& loop, vector<uint32_t> &buff, const DVertex *vertex) const
 {
     // Physics Event's Data Bank
     uint32_t data_bank_len_idx = buff.size();
@@ -1839,7 +1843,7 @@ void DEVIOBufferWriter::WriteDVertexData(JEventLoop *loop, vector<uint32_t> &buf
 //------------------
 // WriteDEventRFBunchData
 //------------------
-void DEVIOBufferWriter::WriteDEventRFBunchData(JEventLoop *loop, vector<uint32_t> &buff, const DEventRFBunch *rftime) const
+void DEVIOBufferWriter::WriteDEventRFBunchData(const std::shared_ptr<const JEvent>& loop, vector<uint32_t> &buff, const DEventRFBunch *rftime) const
 {
     // Physics Event's Data Bank
     uint32_t data_bank_len_idx = buff.size();

@@ -1,6 +1,8 @@
 
 #include "DTRDStripCluster_factory_RAW.h"
 
+#include <JANA/JEvent.h>
+
 #include <DAQ/Df125PulseIntegral.h>
 #include <DAQ/Df125WindowRawData.h>
 #include <DAQ/Df125FDCPulse.h>
@@ -58,10 +60,12 @@ static bool DTRDStripCluster_gPlane_cmp(	const DTRDStripCluster* a,
 ///
 /// Initialization
 ///
-jerror_t DTRDStripCluster_factory_RAW::init(void)
+void DTRDStripCluster_factory_RAW::Init(void)
 {
 //   TIME_SLICE=200.0; //ns
-//   gPARMS->SetDefaultParameter("TRD:CLUSTER_TIME_SLICE",TIME_SLICE);
+//   app->SetDefaultParameter("TRD:CLUSTER_TIME_SLICE",TIME_SLICE);
+
+    auto app = GetApplication();
 
 	// hit detection algorithm parameters, in ADC units
 	TimeWindowStart = 45;
@@ -70,16 +74,16 @@ jerror_t DTRDStripCluster_factory_RAW::init(void)
 	THRESHOLD=600;
 	//THRESHOLD=50; 
 
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:THRESHOLD",THRESHOLD);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:TIME_WINDOW_START",TimeWindowStart);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:TIME_MIN",TimeMin);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:TIME_MAX",TimeMax);
+    app->SetDefaultParameter("TRDCLUSTERRAW:THRESHOLD",THRESHOLD);
+    app->SetDefaultParameter("TRDCLUSTERRAW:TIME_WINDOW_START",TimeWindowStart);
+    app->SetDefaultParameter("TRDCLUSTERRAW:TIME_MIN",TimeMin);
+    app->SetDefaultParameter("TRDCLUSTERRAW:TIME_MAX",TimeMax);
 	
 	MINIMUM_HITS_FOR_CLUSTERING = 100;
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:MINIMUM_HITS_FOR_CLUSTERING",MINIMUM_HITS_FOR_CLUSTERING);
+    app->SetDefaultParameter("TRDCLUSTERRAW:MINIMUM_HITS_FOR_CLUSTERING",MINIMUM_HITS_FOR_CLUSTERING);
 
 	CLUSTERING_THRESHOLD = 1.2;
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:CLUSTERING_THRESHOLD",CLUSTERING_THRESHOLD);
+    app->SetDefaultParameter("TRDCLUSTERRAW:CLUSTERING_THRESHOLD",CLUSTERING_THRESHOLD);
 
 	MinClustSize=10;
 	MinClustWidth=0.001;
@@ -87,33 +91,34 @@ jerror_t DTRDStripCluster_factory_RAW::init(void)
 	zStart =  0.; // mm
 	zEnd   = 40.; // mm
 
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:MIN_CLUST_SIZE",MinClustSize);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:MIN_CLUST_WIDTH",MinClustWidth);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:MIN_CLUST_LENGTH",MinClustLength);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:ZSTART",zStart);
-    gPARMS->SetDefaultParameter("TRDCLUSTERRAW:ZEND",zEnd);
+    app->SetDefaultParameter("TRDCLUSTERRAW:MIN_CLUST_SIZE",MinClustSize);
+    app->SetDefaultParameter("TRDCLUSTERRAW:MIN_CLUST_WIDTH",MinClustWidth);
+    app->SetDefaultParameter("TRDCLUSTERRAW:MIN_CLUST_LENGTH",MinClustLength);
+    app->SetDefaultParameter("TRDCLUSTERRAW:ZSTART",zStart);
+    app->SetDefaultParameter("TRDCLUSTERRAW:ZEND",zEnd);
 
-
-    return NOERROR;	
+    return;	
 }
 
 ///
 /// DTRDStripCluster_factory_RAW::evnt():
 /// is the place strip hits are associated into strip clusters.  
 ///
-jerror_t DTRDStripCluster_factory_RAW::evnt(JEventLoop *eventLoop, uint64_t eventNo) 
+void DTRDStripCluster_factory_RAW::Process(const std::shared_ptr<const JEvent>& event)  
 {
+	vector<DTRDStripCluster*> results;
+
 	vector<const DTRDHit*> allHits;
 	vector<const DTRDHit*> planeHits[2];
 	vector<vector<const DTRDHit*> >thisLayer;
 	
-	eventLoop->Get(allHits);
+	event->Get<DTRDHit>(allHits);
 	
 // 	jerr << "In DTRDStripCluster_factory_RAW::evnt() ..." << endl;
 // 	jerr << "  Total hits = " << allHits.size() << endl;
 	
 	if (allHits.size() == 0) 
-		return NOERROR;
+		return;
 
 	// initialize pulse data vector
 	vector< vector<double> > emptyPlaneVec;
@@ -205,7 +210,7 @@ jerror_t DTRDStripCluster_factory_RAW::evnt(JEventLoop *eventLoop, uint64_t even
 
 	// require a minimum number of hits
     if (num_good_hits < MINIMUM_HITS_FOR_CLUSTERING)   
-    	return NOERROR; //-- skip event !!!!!
+    	return; //-- skip event !!!!!
 
 	// do the clustering
 	vector<DTRDStripCluster *> clusters; 
@@ -310,7 +315,7 @@ jerror_t DTRDStripCluster_factory_RAW::evnt(JEventLoop *eventLoop, uint64_t even
 	  //-------------  Cluster Filter -----------------
 	  if (clusters[k]->num_hits>= MinClustSize && zStart < clusters[k]->pos.z() && clusters[k]->pos.z() < zEnd 
 	  		&& clusters[k]->width.z()>MinClustWidth )
-		_data.push_back(clusters[k]);
+		results.push_back(clusters[k]);
  	  else 
 		delete clusters[k];
 
@@ -353,14 +358,16 @@ jerror_t DTRDStripCluster_factory_RAW::evnt(JEventLoop *eventLoop, uint64_t even
 // 	}
 
 	// Ensure that the data are still in order of planes.
-	std::sort(_data.begin(), _data.end(), DTRDStripCluster_gPlane_cmp);
-	
+	std::sort(results.begin(), results.end(), DTRDStripCluster_gPlane_cmp);
+
+    Set(results);
+
 // 	delete hevt;
 // 	delete hevtc;
 	//delete hevtf;
 	
-	return NOERROR;	
-}			
+	return;	
+}
 
 // //-----------------------------
 // // pique

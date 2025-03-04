@@ -2,12 +2,10 @@
 #include <vector>
 
 #include "JEventProcessor_TRD_online.h"
-#include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 
 #include <TRIGGER/DL1Trigger.h>
 #include <TRD/DTRDDigiHit.h>
@@ -49,7 +47,7 @@ static TH1I *hHit_PulseHeight[NTRDplanes];
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_TRD_online());
+        app->Add(new JEventProcessor_TRD_online());
     }
 }
 
@@ -58,6 +56,7 @@ extern "C"{
 
 
 JEventProcessor_TRD_online::JEventProcessor_TRD_online() {
+	SetTypeName("JEventProcessor_TRD_online");
 }
 
 
@@ -70,7 +69,10 @@ JEventProcessor_TRD_online::~JEventProcessor_TRD_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_TRD_online::init(void) {
+void JEventProcessor_TRD_online::Init() {
+
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
 
     // create root folder for TRD and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
@@ -128,29 +130,26 @@ jerror_t JEventProcessor_TRD_online::init(void) {
     
     // back to main dir
     mainDir->cd();
-
-    return NOERROR;
 }
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRD_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_TRD_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
+    auto runnumber = event->GetRunNumber();
 
-    DApplication* dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-    const DGeometry *geom = dapp->GetDGeometry(runnumber);
+    const DGeometry *geom = GetDGeometry(event);
+
     vector<double> z_trd;
     geom->GetTRDZ(z_trd);
-
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& event) {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
     // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -162,7 +161,7 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
     const DL1Trigger *trig_words = nullptr;
     uint32_t trig_mask, fp_trig_mask;
     try {
-        eventLoop->GetSingle(trig_words);
+        event->GetSingle(trig_words);
     } catch(...) {};
     if (trig_words != nullptr) {
         trig_mask = trig_words->trig_mask;
@@ -175,14 +174,14 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
     int trig_bits = fp_trig_mask > 0 ? 10 + fp_trig_mask:trig_mask;
     // Select PS-triggered events
     if (trig_bits != 8) {
-        return NOERROR;
+        return;
     }
 */
 
     vector<const DTRDDigiHit*> digihits;
-    eventLoop->Get(digihits);
+    event->Get(digihits);
     vector<const DTRDHit*> hits;
-    eventLoop->Get(hits);
+    event->Get(hits);
 //     vector<const DTRDStripCluster*> clusters;
 //     eventLoop->Get(clusters);
 //     vector<const DTRDPoint*> points;
@@ -190,7 +189,7 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     ///////////////////////////
     // TRD DigiHits and Hits //
@@ -224,27 +223,23 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
 
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-    return NOERROR;
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRD_online::erun(void) {
+void JEventProcessor_TRD_online::EndRun() {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRD_online::fini(void) {
+void JEventProcessor_TRD_online::Finish() {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 
 //----------------------------------------------------------------------------------
