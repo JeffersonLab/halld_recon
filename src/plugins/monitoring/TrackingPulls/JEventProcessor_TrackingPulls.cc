@@ -288,9 +288,6 @@ void JEventProcessor_TrackingPulls::BeginRun(const std::shared_ptr<const JEvent>
 
 void JEventProcessor_TrackingPulls::Process(const std::shared_ptr<const JEvent> &event) {
   auto eventnumber = event->GetEventNumber();
-  unsigned int numstraws[28] = {
-      42,  42,  54,  54,  66,  66,  80,  80,  93,  93,  106, 106, 123, 123,
-      135, 135, 146, 146, 158, 158, 170, 170, 182, 182, 197, 197, 209, 209};
   static uint32_t evntCount = 0;
   evntCount++;
   // Loop over the tracks, get the tracking pulls, and fill some histograms.
