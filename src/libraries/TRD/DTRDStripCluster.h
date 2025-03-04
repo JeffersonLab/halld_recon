@@ -24,13 +24,19 @@ class DTRDStripCluster : public JObject
   vector<const DTRDHit*> members; ///< DTRDHits that make up this cluster
   int num_hits;               ///< number of hits (needed for raw analysis)
   int plane;			      ///< GEM X=1, GEM Y=2 
-
-  float q_tot;		          ///< total energy/charge deposited in the cluster
+  double q_tot;		          ///< total energy/charge deposited in the cluster
   double t_avg;               ///< average time for hits in cluster
 		
-  DVector3 pos;               /// center of cluster
-  DVector3 width;
-  DVector3 length;
+  DVector3 pos;               ///< position of the cluster in the plane
+  DVector3 pos_max;           ///< position of the maximum energy hit in the cluster
+
+  double q_max;
+  double t_max;
+ 
+
+  // can be removed if we don't use raw data clustering
+  DVector3 width;             ///< width of the cluster in the plane
+  DVector3 length;            ///< length of the cluster in the plane 
 		
   void Summarize(JObjectSummary& summary) const override {
     summary.add(members.size(), "Nmembers", "%d");
@@ -40,6 +46,11 @@ class DTRDStripCluster : public JObject
     summary.add(pos.x(), "x", "%f");
     summary.add(pos.y(), "y", "%f");
     summary.add(pos.z(), "z", "%f");
+    summary.add(q_max, "q_max", "%f");
+    summary.add(t_max, "t_max", "%f");
+    summary.add(pos_max.x(), "x_max", "%f");
+    summary.add(pos_max.y(), "y_max", "%f");
+    summary.add(pos_max.z(), "z_max", "%f");
   }
 
 };
