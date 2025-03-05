@@ -11,6 +11,8 @@
 #include "TH1F.h"
 #include "TTree.h"
 
+#include <JANA/JFactoryT.h>
+//#include <JANA/JEvent.h>
 #include <JANA/JEventProcessor.h>
 #include <mutex>
 #include <DAQ/DBeamHelicity.h>

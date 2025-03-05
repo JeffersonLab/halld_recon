@@ -9,9 +9,10 @@
 #include "JEventProcessor_HELI_online.h"
 using namespace std;
 
+
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+//#include <JANA/JFactory.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
@@ -43,7 +44,7 @@ JEventProcessor_HELI_online::~JEventProcessor_HELI_online(){
 // Init
 //------------------
 void JEventProcessor_HELI_online::Init(void){
-  // This is called once at program startup. 
+  // This is called once at program startup 
   
   
   fEventLatest    =  0;                                    //init all the stuff
@@ -171,6 +172,8 @@ void JEventProcessor_HELI_online::BeginRun(const std::shared_ptr<const JEvent>& 
 //------------------
 void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& event){
 
+ 
+
   auto eventnumber = event->GetEventNumber();
   vector<const DBeamHelicity*> locBH;
   event->Get(locBH);                                       //get the BH from the current evnt
@@ -178,7 +181,7 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
   if(locBH.empty()){ 
     return; //NOERROR;
   }
-  
+
   m_mtx.lock();                                           //lock this thread
 
   //do some event inits
