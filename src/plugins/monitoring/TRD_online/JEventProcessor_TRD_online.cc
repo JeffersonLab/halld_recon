@@ -249,7 +249,6 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
         hHit_TimeVsStrip[plane]->Fill(hit->strip, hit->t);
     }
 
-    // if (clusters.size() > 0) cout << "Event " << eventnumber << " has " << digihits.size() << " digihits, " << hits.size() << " hits, and " << clusters.size() << " clusters" << endl;
         for (const auto& cluster : clusters) {
             int plane = cluster->plane-1;
             double pos = 0.;
