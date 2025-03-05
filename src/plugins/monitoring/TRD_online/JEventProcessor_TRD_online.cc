@@ -248,6 +248,25 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	    hHit_PulseHeight[plane]->Fill(hit->pulse_height);
         hHit_TimeVsStrip[plane]->Fill(hit->strip, hit->t);
     }
+       if (clusters.size() > 10 && eventClusterCount < NEventsClusterMonitor) {
+        cout << "Event " << eventnumber << " has " << clusters.size() << " clusters, eventClusterCount = " << eventClusterCount << endl;
+        for (const auto& cluster : clusters) {
+            int plane = cluster->plane-1;
+            double pos = 0.;
+            if (plane == 0) pos = cluster->pos.x();
+            else pos = cluster->pos.y();
+
+            hCluster_TimeVsStripEvent[plane][eventClusterCount]->Fill(cluster->t_avg, pos);
+        }
+
+        for (const auto& hit : hits) {
+            int plane = hit->plane-1;
+            hClusterHits_TimeVsStripEvent[plane][eventClusterCount]->Fill(hit->t, hit->strip);
+        }
+
+        eventClusterCount++;
+    }
+
 
         for (const auto& cluster : clusters) {
             int plane = cluster->plane-1;
@@ -256,23 +275,13 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
             else pos = cluster->pos.y();
             
             hCluster_TimeVsStrip[plane]->Fill(cluster->t_avg, pos);
-    if (clusters.size() > 4 && eventClusterCount < NEventsClusterMonitor) {
-        cout << "my   Event " << eventnumber << " has " << clusters.size() << " clusters, eventClusterCount = " << eventClusterCount << endl;
-            hCluster_TimeVsStripEvent[plane][eventClusterCount]->Fill(cluster->t_avg, pos);
     }
-        }
 
         for (const auto& hit : hits) {
             int plane = hit->plane-1;
             hClusterHits_TimeVsStrip[plane]->Fill(hit->t, hit->strip);
-    if (clusters.size() > 4 && eventClusterCount < NEventsClusterMonitor) {
-            hClusterHits_TimeVsStripEvent[plane][eventClusterCount]->Fill(hit->t, hit->strip);
-    }
         }
         
-    if (clusters.size() > 4 && eventClusterCount < NEventsClusterMonitor) 
-        eventClusterCount++;
-    
 
     japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
