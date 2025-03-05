@@ -17,6 +17,7 @@ class DTRDDigiHit:public jana::JObject{
 		uint32_t strip;
 		uint32_t pulse_peak;           ///< identified pulse peak as returned by FPGA algorithm
 		uint32_t pulse_time;           ///< identified pulse time as returned by FPGA algorithm
+		uint32_t peak_time;           ///< identified pulse time as returned by FPGA algorithm
 		uint32_t pedestal;             ///< pedestal info used by FPGA (if any)
 		uint32_t QF;                   ///< Quality Factor from FPGA algorithms
 		uint32_t nsamples_integral;    ///< number of samples used in integral 
@@ -29,6 +30,7 @@ class DTRDDigiHit:public jana::JObject{
 			AddString(items, "strip", "%d", strip);
 			AddString(items, "pulse_peak", "%d", pulse_peak);
 			AddString(items, "pulse_time", "%d", pulse_time);
+			AddString(items, "peak_time", "%d", peak_time);
 			AddString(items, "pedestal", "%d", pedestal);
 			AddString(items, "QF", "%d", QF);
 			AddString(items, "nsamples_integral", "%d", nsamples_integral);

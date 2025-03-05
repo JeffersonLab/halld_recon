@@ -24,7 +24,9 @@ jerror_t DTRDHit_factory::init(void)
 
     /// set the base conversion scales
     a_scale      = 2.4E4/1.3E5;  // NOTE: currently fixed to FDC values, currently not used
+    a_scale=1.;                  // to test with real fADC pulses
     t_scale      = 8.0/10.0;     // 8 ns/count and integer time is in 1/10th of sample
+    t_scale=8.;
     t_base       = { 0.,  0.};   // ns, per plane
     
     PEAK_THRESHOLD = 100.;  // fADC units
@@ -137,7 +139,7 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    
 	    // initial firmware version generated a bunch of junk hits with pulse_time=179
 	    // explicitly reject these
-	    if(digihit->pulse_time == 179)
+	    if(digihit->peak_time == 179)
 	    	continue;
 	    
 		// The translation table has:
@@ -180,7 +182,7 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
          	}
 
 			// calculate the correct pulse peak and pedestal      	
-      		pulse_peak = FDCPulseObj->peak_amp << ABIT;
+      		pulse_peak = digihit->pulse_peak << ABIT;
       		scaled_ped = raw_ped << PBIT;
       	}
 		else {
@@ -195,7 +197,8 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    	continue;
 
 	    // Time cut now
-	    double T = (double)digihit->pulse_time * t_scale;
+	    //double T = (double)digihit->pulse_time * t_scale;
+	    double T = (double)digihit->peak_time * t_scale;
 	    if( (T < LOW_TCUT) || (T > HIGH_TCUT) )
 	    	continue;
 

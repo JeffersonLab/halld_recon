@@ -1474,6 +1474,7 @@ DTRDDigiHit* DTranslationTable::MakeTRDDigiHit(
 	h->strip             = idx.strip;
 	h->pulse_peak        = p->peak_amp;
 	h->pulse_time        = p->le_time;
+	h->peak_time         = p->peak_time;
 	h->pedestal          = p->pedestal;
 	h->QF                = p->time_quality_bit + (p->overflow_count<<1);
 	h->nsamples_integral = p->nsamples_integral;
