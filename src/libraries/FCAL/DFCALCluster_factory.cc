@@ -115,6 +115,7 @@ void DFCALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 
 	// fill user's hit list
         int nhits = 0;
+	oid_t id=1;
         DFCALCluster::userhits_t* hits = 
 	  (DFCALCluster::userhits_t*) malloc(sizeof(DFCALCluster::userhits_t)*FCAL_USER_HITS_MAX);
 
@@ -127,7 +128,7 @@ void DFCALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	       bad_blocks_list.size() > 0 &&
 	       0 <= fcalGeom->channel( (**hit).row, (**hit).column ) && fcalGeom->channel( (**hit).row, (**hit).column ) <= 2799 &&
 	       bad_blocks_list[fcalGeom->channel( (**hit).row, (**hit).column )] == 1) continue;
-           hits->hit[nhits].id = (**hit).id;
+           hits->hit[nhits].id = id++;
 	   hits->hit[nhits].ch = fcalGeom->channel( (**hit).row, (**hit).column );
            hits->hit[nhits].x = (**hit).x;
            hits->hit[nhits].y = (**hit).y;
@@ -148,7 +149,7 @@ void DFCALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	       hit != ecalhits.end(); hit++ ) {
 	    if ( (**hit).E <  1e-6 ) continue;
 	    
-	    hits->hit[nhits].id = (**hit).id;
+	    hits->hit[nhits].id = id++;
 	    hits->hit[nhits].E = (**hit).E; 
 	    hits->hit[nhits].t = (**hit).t;
 	    hits->hit[nhits].intOverPeak=(**hit).intOverPeak;
