@@ -424,7 +424,7 @@ void JEventProcessor_PSPair_online::Process(const std::shared_ptr<const JEvent>&
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     hPSC_NHitPairs->Fill(cpairs.size());
     hPS_NHitPairs->Fill(fpairs.size());
@@ -535,7 +535,7 @@ void JEventProcessor_PSPair_online::Process(const std::shared_ptr<const JEvent>&
         }
     }
     //
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 }
 

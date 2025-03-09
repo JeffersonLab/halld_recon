@@ -358,7 +358,7 @@ void JEventProcessor_bcal_calib_cosmic_cdc::Process(const std::shared_ptr<const 
 	//cout << "found " << upstream.size() << " upstream and " << downstream.size() << " downstream hits for map.\n";
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT LOCK
 	{
 		eventnum = event->GetEventNumber();
 		/// Loop over the intersected cells
@@ -390,7 +390,7 @@ void JEventProcessor_bcal_calib_cosmic_cdc::Process(const std::shared_ptr<const 
 			bcal_calib_cosmic_cdc_tree->Fill();
 		}
 	}
-	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
+	GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT LOCK
 }
 
 //------------------

@@ -55,10 +55,6 @@ void JEventProcessor_FCAL_invmass::Init()
 {
 	auto app = GetApplication();
 	lockService = app->GetService<JLockService>();
-	if(InvMass1 && InvMass2 != NULL){
-		lockService->RootUnLock();
-		return;
-	}
 
 	TDirectory *main = gDirectory;
 	gDirectory->mkdir("FCAL_invmass")->cd();
@@ -183,7 +179,7 @@ void JEventProcessor_FCAL_invmass::Process(const std::shared_ptr<const JEvent> &
 	}
 
 	// lockService->RootWriteLock();
-	lockService->RootWriteLock(); 
+	lockService->RootFillLock(this); 
 	if (locFCALShowers.size() >=2) {
 
 		for(unsigned int i=0; i<locFCALShowers.size(); i++)
@@ -295,7 +291,7 @@ void JEventProcessor_FCAL_invmass::Process(const std::shared_ptr<const JEvent> &
 	}
 	//lockService->RootUnLock();
 
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------

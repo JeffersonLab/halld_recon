@@ -299,7 +299,7 @@ void JEventProcessor_TrackingPulls::Process(const std::shared_ptr<const JEvent> 
 
   vector<const DChargedTrack *> chargedTrackVector;
   event->Get(chargedTrackVector);
-  DEvent::GetLockService(event)->RootWriteLock();
+  DEvent::GetLockService(event)->RootFillLock(this);
 
   for (size_t i = 0; i < chargedTrackVector.size(); i++) {
     // TODO: Should be changed to use PID FOM when ready
@@ -601,7 +601,7 @@ void JEventProcessor_TrackingPulls::Process(const std::shared_ptr<const JEvent> 
     if (MAKE_TREE)
       dTreeInterface->Fill(dTreeFillData);
   }
-  DEvent::GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK!!
+  DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT LOCK!!
 }
 
 void JEventProcessor_TrackingPulls::EndRun() {

@@ -61,9 +61,6 @@ void JEventProcessor_F250_mode8_pedestal::Init()
 	auto app = GetApplication();
 	app->SetDefaultParameter("F250_m8_ped:NSA_NSB", NSA_NSB, "The number of samples integrated in the signal.");
 
-	// lock all root operations
-	GetLockService(locEvent)->RootWriteLock();
-
 	gStyle->SetTitleOffset(1, "Y");
   	gStyle->SetTitleSize(0.05,"xyz");
 	gStyle->SetTitleSize(0.08,"h");
@@ -87,7 +84,6 @@ void JEventProcessor_F250_mode8_pedestal::Init()
 		}
 	}
 
-	GetLockService(locEvent)->RootUnLock();
 }
 
 //------------------

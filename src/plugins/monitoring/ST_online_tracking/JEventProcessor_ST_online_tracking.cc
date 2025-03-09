@@ -165,7 +165,7 @@ void JEventProcessor_ST_online_tracking::Process(const std::shared_ptr<const JEv
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   sc_track_position.clear();
  
@@ -265,7 +265,7 @@ void JEventProcessor_ST_online_tracking::Process(const std::shared_ptr<const JEv
       h2_y_vs_x->Fill(sc_track_position[i].x(),sc_track_position[i].y());
     }
 
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------

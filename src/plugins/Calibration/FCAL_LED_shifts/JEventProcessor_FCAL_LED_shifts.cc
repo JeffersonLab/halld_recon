@@ -360,6 +360,7 @@ void JEventProcessor_FCAL_LED_shifts::EndRun()
 		}
 
 		// calculate channel shifts
+		lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 		for (int i = 0; i < numChannels; ++i) {
 			// figure out detector location and indexing
 			int row = m_fcalGeom->row(i);
@@ -412,6 +413,7 @@ void JEventProcessor_FCAL_LED_shifts::EndRun()
 			
 			outf << (old_ADCoffsets[i] + adc_shift) << endl;
   		}
+		lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
   		
   		ref_file->Close();

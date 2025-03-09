@@ -228,7 +228,7 @@ void JEventProcessor_PS_online::Process(const std::shared_ptr<const JEvent>& eve
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     if (digihits.size() > 0) ps_num_events->Fill(1);
 
@@ -292,7 +292,7 @@ void JEventProcessor_PS_online::Process(const std::shared_ptr<const JEvent>& eve
     }
     hHit_NHitsVsArm->Fill(0.,NHits[0]); hHit_NHitsVsArm->Fill(1.,NHits[1]);
 
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 }
 

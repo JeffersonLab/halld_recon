@@ -152,9 +152,6 @@ void JEventProcessor_BCAL_point_calib::Init()
 		return;
 	}
 	
- 	// lock all root operations
- 	lockService->RootWriteLock();
-
 	 //	TDirectory *dir = new TDirectoryFile("BCAL","BCAL");
 	 //	dir->cd();
 	// create root folder for bcal and cd to it, store main dir
@@ -306,11 +303,6 @@ void JEventProcessor_BCAL_point_calib::Init()
 	// back to main dir
 	main->cd();
 
-	// japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-	
-	// unlock
-	lockService->RootUnLock();
-
 }
 
 //------------------
@@ -443,12 +435,14 @@ void JEventProcessor_BCAL_point_calib::Process(const std::shared_ptr<const JEven
 	double R4 = 0.5*(bcal_radii[3] + bcal_radii[4]); 
 
         // loop over matched showers
-        Int_t numshowers_per_event = matchedShowers.size();
+ 	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+       Int_t numshowers_per_event = matchedShowers.size();
 	if (numshowers_per_event > 0) 
 	  h1_Num_matched_showers->Fill(numshowers_per_event);
         Int_t numtracks_per_event = matchedTracks.size();
         if (numtracks_per_event > 0) 
 	  h1trk_Num_matched_tracks->Fill(numtracks_per_event);
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 	// cache points for each matched points to speed up the locked loop below
 	for(int i=0; i<numshowers_per_event; i++)  {

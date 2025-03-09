@@ -552,7 +552,7 @@ void JEventProcessor_BCAL_Hadronic_Eff::Process(const std::shared_ptr<const JEve
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	{
 		//Fill Hit Found
 		for(auto& locLayerPair : locHitMap_HitFound)
@@ -574,7 +574,7 @@ void JEventProcessor_BCAL_Hadronic_Eff::Process(const std::shared_ptr<const JEve
 			}
 		}
 	}
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 double JEventProcessor_BCAL_Hadronic_Eff::Calc_ProjectedSector(int locLayer, const map<int, map<int, set<const DBCALPoint*> > >& locSortedPoints)
