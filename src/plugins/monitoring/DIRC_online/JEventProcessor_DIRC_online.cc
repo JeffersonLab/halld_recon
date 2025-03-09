@@ -289,7 +289,7 @@ void JEventProcessor_DIRC_online::Process(const std::shared_ptr<const JEvent>& e
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     if (digihits.size() > 0) dirc_num_events->Fill(1);
 
@@ -387,7 +387,7 @@ void JEventProcessor_DIRC_online::Process(const std::shared_ptr<const JEvent>& e
     hHit_NHits[loc_itrig]->Fill(NHits[0]+NHits[1]);
     hHit_NHitsVsBox[loc_itrig]->Fill(0.,NHits[0]); hHit_NHitsVsBox[loc_itrig]->Fill(1.,NHits[1]);
 
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 

@@ -48,17 +48,7 @@ void JEventProcessor_BCAL_LED_time::Init() {
 
 	auto app = GetApplication();
 	lockService = app->GetService<JLockService>();
-	
-	// lock all root operations
-	lockService->RootWriteLock();
-	
-	// First thread to get here makes all histograms. If one pointer is
-	// already not NULL, assume all histograms are defined and return now
-	if(bcal_time_vevent != NULL){
-		lockService->RootUnLock();
-		return;
-	}
-	
+		
 	//NOtrig=0; FPtrig=0; GTPtrig=0; FPGTPtrig=0; trigUS=0; trigDS=0; trigCosmic=0;
 	//low_down_1_counter=0; low_down_2_counter=0; low_down_3_counter=0; low_down_4_counter=0; low_up_1_counter=0; low_up_2_counter=0; low_up_3_counter=0; 		low_up_4_counter=0; high_down_1_counter=0; high_down_2_counter=0; high_down_3_counter=0; high_down_4_counter=0; high_up_1_counter=0;
 	//high_up_2_counter=0; high_up_3_counter=0; high_up_4_counter=0;
@@ -249,10 +239,7 @@ void JEventProcessor_BCAL_LED_time::Init() {
 
 	// back to main dir
 	main->cd();
-	
-	// unlock
-	lockService->RootUnLock();
-	
+		
 }
 
 
@@ -328,7 +315,7 @@ void JEventProcessor_BCAL_LED_time::Process(const std::shared_ptr<const JEvent>&
 		//NOtrig++;
 	}	
 	// Lock ROOT
-	lockService->RootWriteLock();
+	lockService->RootFillLock(this);
 
 	float ledup_sector = 0;
 	int ledup_sector_int = 0;
@@ -779,7 +766,7 @@ void JEventProcessor_BCAL_LED_time::Process(const std::shared_ptr<const JEvent>&
 
 	}//if LEDUP || LEDDOWN    
 	// Unlock ROOT
-	lockService->RootUnLock();
+	lockService->RootFillUnLock(this);
 	
 }
 

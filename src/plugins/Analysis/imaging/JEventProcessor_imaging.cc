@@ -136,7 +136,7 @@ void JEventProcessor_imaging::Process(const std::shared_ptr<const JEvent>& event
     event->Get(mcthrowns);
   }
 
-  GetLockService(event)->RootWriteLock();
+  GetLockService(event)->RootFillLock(this);
 
   if (MC_RECON_CHECK && tracks.size()==2){
     // Check estimate of vertex position relative to thrown vertex for simple
@@ -226,7 +226,7 @@ void JEventProcessor_imaging::Process(const std::shared_ptr<const JEvent>& event
     } // first track 
   } // first loop over tracks
   
-  GetLockService(event)->RootUnLock();
+  GetLockService(event)->RootFillUnLock(this);
 }
 
 //------------------

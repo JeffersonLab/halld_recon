@@ -299,7 +299,7 @@ void JEventProcessor_TAGH_online::Process(const std::shared_ptr<const JEvent>& e
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     hBeamCurrent->Fill(beam_current);
     if (digihits.size() > 0 || tdcdigihits.size() > 0)
@@ -443,7 +443,7 @@ void JEventProcessor_TAGH_online::Process(const std::shared_ptr<const JEvent>& e
     hHit_NHits_us->Fill(NHits_hasADC_us);
     hHit_NHits_ds->Fill(NHits_hasADC_ds);
 
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 

@@ -193,7 +193,7 @@ void JEventProcessor_TPOL_online::Process(const std::shared_ptr<const JEvent>& e
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this);//ACQUIRE ROOT FILL LOCK
 
     int NHits = 0;
     for (const auto& wrd : windowrawdata) {
@@ -253,7 +253,7 @@ void JEventProcessor_TPOL_online::Process(const std::shared_ptr<const JEvent>& e
         hHit_TimeVsPeak->Fill(hit->pulse_peak,hit->t);
     }
 
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 }
 //----------------------------------------------------------------------------------

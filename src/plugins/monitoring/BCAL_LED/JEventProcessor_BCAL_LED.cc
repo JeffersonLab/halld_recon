@@ -141,10 +141,7 @@ void JEventProcessor_BCAL_LED::Init() {
     
     //REGISTER BRANCHES
      dTreeInterface->Create_Branches(locTreeBranchRegister);
-    
-    	// lock all root operations
-   	lockService->RootWriteLock();
- 
+     
  	bcal_vevent = new TProfile("bcal_vevent","Avg BCAL peak vs event;event num;peak",48,0.0,48.0);
 	
 	low_up_1 = new TProfile("low_bias_up_sector_1_peak_vchannel","Avg BCAL peak vs channel;channel ID;peak",1536,0,1536);
@@ -225,8 +222,6 @@ void JEventProcessor_BCAL_LED::Init() {
 	dHist_quad_occ_down  = new TH1F("dHist_quad_occ_down", "Quadrants triggered -  Downstream Pulser", 4, 0.5, 4.5);
 	// back to main dir
 	main->cd();
-	// unlock
-	lockService->RootUnLock();
 	
 }
 
@@ -308,9 +303,6 @@ void JEventProcessor_BCAL_LED::Process(const std::shared_ptr<const JEvent>& even
 	} else {
 		//NOtrig++;
 	}	
-	// Lock ROOT
-	lockService->RootWriteLock();
-
 	float ledup_sector = 0;
 	//int ledup_sector_int = 0;
 	float ledup_mean = 0;
@@ -328,6 +320,10 @@ void JEventProcessor_BCAL_LED::Process(const std::shared_ptr<const JEvent>& even
 		event->Get(dbcalhits);
 		event->Get(bcaldigihits);
 		event->Get(dbcalpoints);
+
+		// Lock ROOT
+		lockService->RootFillLock(this);
+
 		
       if (LED_US || LED_DS || dbcalhits.size() >= 1200.) {
 	        // float apedsubtime[1536] = { 0. };
@@ -881,7 +877,7 @@ else if (simultaneous == 1){//Pulsing all sectors simultaneously starting run 50
 		 
 	}//if LEDUP || LEDDOWN || 1200 hits   
 	// Unlock ROOT
-	lockService->RootUnLock();
+	lockService->RootFillUnLock(this);
 	
 
     return;

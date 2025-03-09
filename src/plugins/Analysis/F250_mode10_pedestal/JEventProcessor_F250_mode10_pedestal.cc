@@ -68,7 +68,6 @@ void JEventProcessor_F250_mode10_pedestal::Init()
 
 	// lock all root operations
 	auto lockSvc = GetApplication()->GetService<JLockService>();
-	lockSvc->RootWriteLock();
 
 	gStyle->SetTitleOffset(1, "Y");
   	gStyle->SetTitleSize(0.05,"xyz");
@@ -96,7 +95,6 @@ void JEventProcessor_F250_mode10_pedestal::Init()
 		}
 	}
 
-	lockSvc->RootUnLock();
 }
 
 //------------------

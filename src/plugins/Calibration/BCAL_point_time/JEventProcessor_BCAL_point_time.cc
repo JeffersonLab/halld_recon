@@ -94,9 +94,6 @@ void JEventProcessor_BCAL_point_time::Init()
 
 	app->SetDefaultParameter("BCAL_point_time:VERBOSE", VERBOSE, "BCAL_point_time verbosity level");
 	if (VERBOSE>=1) printf("JEventProcessor_pedestal_online::init()\n");
-
-	// lock all root operations
-	lockService->RootWriteLock();
 		
 	gStyle->SetTitleSize(0.06,"xyz");
 	gStyle->SetTitleSize(0.07,"h");
@@ -266,9 +263,6 @@ void JEventProcessor_BCAL_point_time::Init()
 	
 	// back to main dir
 	maindir->cd();
-	
-	// unlock
-	lockService->RootUnLock();
 }
 
 //------------------

@@ -290,10 +290,12 @@ void JEventProcessor_compton::Process(const std::shared_ptr<const JEvent>& event
 	uint32_t trigmask = trig->trig_mask;	
 	uint32_t fp_trigmask = trig->fp_trig_mask;
 	
+ 	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	for( int ibit = 0; ibit < 33; ibit++ ) {
 	  	if(trigmask & (1 << ibit)) hTrig->Fill(ibit);
 	  	if(fp_trigmask & (1 << ibit)) hfpTrig->Fill(ibit);
 	}
+ 	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	
 	if( fp_trigmask ) return;
 	

@@ -144,7 +144,7 @@ void JEventProcessor_pedestal_online::Process(const std::shared_ptr<const JEvent
 	event->Get(f125PIs);
 	
 	// Although we are only filling objects local to this plugin, the directory changes: Global ROOT lock
-	lockService->RootWriteLock();
+	lockService->RootFillLock(this);
 
 	if (peddir!=NULL) peddir->cd();
 	
@@ -336,7 +336,7 @@ void JEventProcessor_pedestal_online::Process(const std::shared_ptr<const JEvent
 
 	maindir->cd();
 	// Unlock ROOT
-	lockService->RootUnLock();
+	lockService->RootFillUnLock(this);
 }
 
 

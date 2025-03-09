@@ -97,7 +97,6 @@ void JEventProcessor_occupancy_online::Init()
 {
 	auto app = GetApplication();
 	lockService = app->GetService<JLockService>();
-	lockService->RootWriteLock();
 
 	// All histograms go in the "occupancy" directory
 	TDirectory *main = gDirectory;
@@ -292,8 +291,6 @@ void JEventProcessor_occupancy_online::Init()
 
 	// back to main dir
 	main->cd();
-  
-	lockService->RootUnLock();
 }
 
 //------------------
