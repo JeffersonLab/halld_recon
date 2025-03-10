@@ -55,7 +55,14 @@ void MyProcessor::BeginRun(const std::shared_ptr<const JEvent>& event)
 	cout << "Beginning run" << endl;
 	vector<string> factory_names;
 	for (auto factory : event->GetFactorySet()->GetAllFactories()) {
-		factory_names.push_back(factory->GetObjectName());
+		auto fac_name = factory->GetObjectName();
+		auto fac_tag = factory->GetTag();
+
+		if (!fac_tag.empty()) {
+			factory_names.push_back(fac_name + ":" + fac_tag);
+		} else {
+			factory_names.push_back(fac_name);
+		}
 	}
 
 	usleep(100000); //this just gives the Main thread a chance to finish printing the "Launching threads" message
