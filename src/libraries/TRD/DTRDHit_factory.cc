@@ -15,6 +15,15 @@ using namespace std;
 #include "TRD/DTRDHit_factory.h"
 
 
+static bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
+  if (a->plane==b->plane){
+    return a->t < b->t;
+  }
+  return a->plane < b->plane;
+}
+
+
+
 //------------------
 // Init
 //------------------
@@ -34,7 +43,11 @@ void DTRDHit_factory::Init()
 	app->SetDefaultParameter("TRD:XY_TIME_DIFF", XY_TIME_DIFF, 
 			      "Time difference between hits in X and Y planes to be considered a coincidence (default: 20.)");
 
-	return;
+	// Setting this flag makes it so that JANA does not delete the objects in _data.
+	// This factory will manage this memory.
+	SetFactoryFlag(NOT_OBJECT_OWNER);  // TODO: Make sure we don't need PERSISTENT as well
+  
+  	return;
 }
 
 //------------------
@@ -54,19 +67,40 @@ void DTRDHit_factory::Process(const std::shared_ptr<const JEvent>& event)
     vector<const DTRDHit*> hits;
     event->Get(hits, "Calib");
     
+//     cout << "DTRDHit_factory::Process() ..." << endl;
+//     cout << "  num input hits = " << hits.size() << endl;
+
     if(!IS_XY_TIME_DIFF_CUT) {
     	for(auto &hit : hits)
     		Insert(const_cast<DTRDHit*>(hit));
     	return;
     }
 
-	vector<DTRDHit*> hits_plane[2]; // one for each plane
+	vector<const DTRDHit*> hits_plane[2]; // one for each plane
     
+	// Sort hits by layer number and by time
+	sort(hits.begin(),hits.end(),DTRDHit_cmp);
+	
+	// Sift through all hits and select out X and Y hits.
+	for (vector<const DTRDHit*>::iterator i = hits.begin(); i != hits.end(); ++i) {
+		// sort hits
+		int stripPlane = (*i)->plane-1;
+		if( (stripPlane<0) || (stripPlane>=2) ) { // only two planes
+			static int Nwarn = 0;
+			if( Nwarn<10 ){
+				jerr << " stripPlane is outside of array bounds!! stripPlane="<< stripPlane << std::endl;
+				if( ++Nwarn==10 )jerr << " LAST WARNING!" << std::endl;
+			}
+			continue;
+		}
+		hits_plane[stripPlane].push_back(*i);
+	}
+
 	// loops to check the time coincidence of hits in the two planes and add them to the _data vector
 	for (unsigned int i=0; i < hits_plane[0].size(); i++) {
 		for (unsigned int j=0; j < hits_plane[1].size(); j++) {
 			if (abs(hits_plane[0][i]->t - hits_plane[1][j]->t) < XY_TIME_DIFF) {
-				Insert(hits_plane[0][i]);
+				Insert(const_cast<DTRDHit*>(hits_plane[0][i]));
 				break;
 			}
 		}
@@ -75,7 +109,7 @@ void DTRDHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 	for (unsigned int i=0; i < hits_plane[1].size(); i++) {
 		for (unsigned int j=0; j < hits_plane[0].size(); j++) {
 			if (abs(hits_plane[1][i]->t - hits_plane[0][j]->t) < XY_TIME_DIFF) {
-				Insert(hits_plane[1][i]);
+				Insert(const_cast<DTRDHit*>(hits_plane[1][i]));
 				break;
 			}
 		}

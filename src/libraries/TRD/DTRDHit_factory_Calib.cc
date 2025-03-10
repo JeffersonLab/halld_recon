@@ -127,7 +127,8 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
     vector<const DTRDDigiHit*> digihits;
     event->Get(digihits);
     
-    cout << "DTRDHit_factory_Calib::Process() ..." << endl;
+//     cout << "DTRDHit_factory_Calib::Process() ..." << endl;
+//     cout << "  num input hits = " << digihits.size() << endl;
 
     // make hits out of all DTRDDigiHit objects	
     for (unsigned int i=0; i < digihits.size(); i++) {
