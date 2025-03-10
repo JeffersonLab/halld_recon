@@ -103,7 +103,7 @@ class DTrackFitter: public JObject{
 		       const DCDCTrackHit *cdc_hit=NULL,
 		       const DFDCPseudo *fdc_hit=NULL, double docaphi=0.0,
 		       double z=0.0, double cosThetaRel=0.0,double tcorr=0.0,double resic=0.0,
-		       double errc=0.0):resi(resi),err(err),s(s),tdrift(tdrift),d(d),cdc_hit(cdc_hit),fdc_hit(fdc_hit),docaphi(docaphi),z(z),cosThetaRel(cosThetaRel),tcorr(tcorr),resic(resic),errc(errc){}
+		       double errc=0.0, int left_right=0):resi(resi),err(err),s(s),tdrift(tdrift),d(d),cdc_hit(cdc_hit),fdc_hit(fdc_hit),docaphi(docaphi),z(z),cosThetaRel(cosThetaRel),tcorr(tcorr),resic(resic),errc(errc),left_right(left_right){}
 		    double resi;	// residual of measurement
 		    double err;		// estimated error of measurement
 		    double s;
