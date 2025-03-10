@@ -20,6 +20,7 @@ private:
     std::shared_ptr<JLockService> lockService;
 
     int wirePlaneOffset;
+    int eventClusterCount; ///< Counter for number of events processed for cluster monitoring
 };
 
 #endif // _JEventProcessor_TRD_online_

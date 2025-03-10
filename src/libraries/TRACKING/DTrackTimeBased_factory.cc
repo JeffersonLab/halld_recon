@@ -169,6 +169,10 @@ void DTrackTimeBased_factory::Init()
   SAVE_TRUNCATED_DEDX = false;
   app->SetDefaultParameter("TRK:SAVE_TRUNCATED_DEDX",SAVE_TRUNCATED_DEDX);
 
+  COUNT_POTENTIAL_HITS = true;
+  app->SetDefaultParameter("TRK:COUNT_POTENTIAL_HITS",COUNT_POTENTIAL_HITS);
+
+
 	return;
 }
 
@@ -247,8 +251,9 @@ void DTrackTimeBased_factory::BeginRun(const std::shared_ptr<const JEvent>& even
   // extract the "mean" radius of each ring from the wire data
   cdc_rmid.clear();
   for(uint ring=0; ring<cdcwires.size(); ring++)
-    cdc_rmid.push_back( cdcwires[ring][0]->origin.Perp() );
-  
+    if (COUNT_POTENTIAL_HITS){ 
+      cdc_rmid.push_back( cdcwires[ring][0]->origin.Perp() );
+    }
   
 	if(DEBUG_HISTS){
 		root_lock->RootWriteLock();
@@ -389,69 +394,71 @@ void DTrackTimeBased_factory::Process(const std::shared_ptr<const JEvent>& event
     }
   }
 
-  // figure out the number of expected hits for this track based on the final fit
-  for (size_t j=0; j<mData.size();j++){
-    set<const DCDCWire *> expected_hit_straws;
-    set<int> expected_hit_fdc_planes;
+  if (COUNT_POTENTIAL_HITS){
+    // figure out the number of expected hits for this track based on the final fit
+    for (size_t j=0; j<mData.size();j++){
+      set<const DCDCWire *> expected_hit_straws;
+      set<int> expected_hit_fdc_planes;
     
-    vector<DTrackFitter::Extrapolation_t>cdc_extraps=mData[j]->extrapolations.at(SYS_CDC);
-    for(uint i=0; i<cdc_extraps.size(); i++) {
-      // figure out the radial position of the point to see which ring it's in
-      DVector3 track_pos=cdc_extraps[i].position;
-      double r = track_pos.Perp();
-      uint ring=0;
-      for(; ring<cdc_rmid.size(); ring++) {
-	//_DBG_ << "Rs = " << r << " " << cdc_rmid[ring] << endl;
-	if( (r<cdc_rmid[ring]-0.78) || (fabs(r-cdc_rmid[ring])<0.78) )
-	  break;
-      }
-      if(ring == cdc_rmid.size()) ring--;
-      //_DBG_ << "ring = " << ring << endl;
-      //_DBG_ << "ring = " << ring << "  stereo = " << cdcwires[ring][0]->stereo << endl;
-      int best_straw=0;
-      double best_dist_diff2=(track_pos - cdcwires[ring][0]->origin).Mag2();
-      // match based on straw center
-      for(uint straw=1; straw<cdcwires[ring].size(); straw++) {
-	const DCDCWire *wire=cdcwires[ring][straw];
-	DVector3 wire_position = wire->origin;  // start with the nominal wire center
-	// now take into account the z dependence due to the stereo angle
-	double dz = track_pos.Z() - wire_position.Z();
-	double ds = dz*tan(wire->stereo);
-	double phi=wire_position.Phi();
-	wire_position += DVector3(-ds*sin(phi), ds*cos(phi), dz);
-	double diff2 = (track_pos - wire_position).Mag2();
-	if( diff2 < best_dist_diff2 ){
-	  best_straw = straw;
-	  best_dist_diff2=diff2;
+      vector<DTrackFitter::Extrapolation_t>cdc_extraps=mData[j]->extrapolations.at(SYS_CDC);
+      for(uint i=0; i<cdc_extraps.size(); i++) {
+	// figure out the radial position of the point to see which ring it's in
+	DVector3 track_pos=cdc_extraps[i].position;
+	double r = track_pos.Perp();
+	uint ring=0;
+	for(; ring<cdc_rmid.size(); ring++) {
+	  //_DBG_ << "Rs = " << r << " " << cdc_rmid[ring] << endl;
+	  if( (r<cdc_rmid[ring]-0.78) || (fabs(r-cdc_rmid[ring])<0.78) )
+	    break;
 	}
-      }
-      
-      expected_hit_straws.insert(cdcwires[ring][best_straw]);
-    }
-    
-    vector<DTrackFitter::Extrapolation_t>fdc_extraps=mData[j]->extrapolations.at(SYS_FDC);
-    for(uint i=0; i<fdc_extraps.size(); i++) {
-      // check to make sure that the track goes through the sensitive region of the FDC
-      // assume one hit per plane
-      double z = fdc_extraps[i].position.Z();
-      double r = fdc_extraps[i].position.Perp();
-      
-      // see if we're in the "sensitive area" of a package
-      for(uint plane=0; plane<fdc_z_wires.size(); plane++) {
-	int package = plane/6;
-	if(fabs(z-fdc_z_wires[plane]) < fdc_package_size) {
-	  if( r<fdc_rmax && r>fdc_rmin_packages[package]) {
-	    expected_hit_fdc_planes.insert(plane);
+	if(ring == cdc_rmid.size()) ring--;
+	//_DBG_ << "ring = " << ring << endl;
+	//_DBG_ << "ring = " << ring << "  stereo = " << cdcwires[ring][0]->stereo << endl;
+	int best_straw=0;
+	double best_dist_diff2=(track_pos - cdcwires[ring][0]->origin).Mag2();
+	// match based on straw center
+	for(uint straw=1; straw<cdcwires[ring].size(); straw++) {
+	  const DCDCWire *wire=cdcwires[ring][straw];
+	  DVector3 wire_position = wire->origin;  // start with the nominal wire center
+	  // now take into account the z dependence due to the stereo angle
+	  double dz = track_pos.Z() - wire_position.Z();
+	  double ds = dz*tan(wire->stereo);
+	  double phi=wire_position.Phi();
+	  wire_position += DVector3(-ds*sin(phi), ds*cos(phi), dz);
+	  double diff2 = (track_pos - wire_position).Mag2();
+	  if( diff2 < best_dist_diff2 ){
+	    best_straw = straw;
+	    best_dist_diff2=diff2;
 	  }
+	}
+	
+	expected_hit_straws.insert(cdcwires[ring][best_straw]);
+      }
+    
+      vector<DTrackFitter::Extrapolation_t>fdc_extraps=mData[j]->extrapolations.at(SYS_FDC);
+      for(uint i=0; i<fdc_extraps.size(); i++) {
+	// check to make sure that the track goes through the sensitive region of the FDC
+	// assume one hit per plane
+	double z = fdc_extraps[i].position.Z();
+	double r = fdc_extraps[i].position.Perp();
+	
+	// see if we're in the "sensitive area" of a package
+	for(uint plane=0; plane<fdc_z_wires.size(); plane++) {
+	  int package = plane/6;
+	  if(fabs(z-fdc_z_wires[plane]) < fdc_package_size) {
+	    if( r<fdc_rmax && r>fdc_rmin_packages[package]) {
+	      expected_hit_fdc_planes.insert(plane);
+	    }
 	  break; // found the right plane
+	  }
 	}
       }
+      
+      mData[j]->potential_cdc_hits_on_track = expected_hit_straws.size();
+      mData[j]->potential_fdc_hits_on_track = expected_hit_fdc_planes.size();
     }
-    
-    mData[j]->potential_cdc_hits_on_track = expected_hit_straws.size();
-    mData[j]->potential_fdc_hits_on_track = expected_hit_fdc_planes.size();
-  }
-
+  } // if COUNT_POTENTIAL_HITS
+  
   return;
 }
 
