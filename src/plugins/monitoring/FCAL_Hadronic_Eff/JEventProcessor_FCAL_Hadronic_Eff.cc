@@ -220,7 +220,7 @@ void JEventProcessor_FCAL_Hadronic_Eff::Process(const std::shared_ptr<const JEve
 
 		// FILL HISTOGRAMS
 		// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+		lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 		{
 			//TOFPoint
 			dHist_TrackFCALYVsX_TotalHit->Fill(locProjectedFCALIntersection.X(), locProjectedFCALIntersection.Y());
@@ -233,7 +233,7 @@ void JEventProcessor_FCAL_Hadronic_Eff::Process(const std::shared_ptr<const JEve
 				dHist_TrackFCALRowVsColumn_HasHit->Fill(locProjectedFCALColumn, locProjectedFCALRow);
 			}
 		}
-		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+		lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 		//TRACK
 		Particle_t locPID = (locChargedTrackHypothesis->t1_detector() == SYS_TOF) ? locChargedTrackHypothesis->PID() : UnknownParticle;

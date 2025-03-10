@@ -242,7 +242,7 @@ void JEventProcessor_SC_Eff::Process(const std::shared_ptr<const JEvent> &locEve
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	{
 		//Fill Found
 		for(auto& locHitPair : locHitMap_HitFound)
@@ -252,7 +252,7 @@ void JEventProcessor_SC_Eff::Process(const std::shared_ptr<const JEvent> &locEve
 		for(auto& locHitPair : locHitMap_HitTotal)
 			dHist_HitTotal->Fill(locHitPair.second, locHitPair.first);
 	}
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 bool JEventProcessor_SC_Eff::Cut_PIDDeltaT(const DChargedTrackHypothesis* locChargedTrackHypothesis)

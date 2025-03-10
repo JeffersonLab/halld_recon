@@ -170,7 +170,7 @@ void JEventProcessor_ST_online_Tresolution::Process(const std::shared_ptr<const 
   
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   for (uint32_t i = 0; i < chargedTrackVector.size(); i++)
     {   
@@ -265,7 +265,7 @@ void JEventProcessor_ST_online_Tresolution::Process(const std::shared_ptr<const 
 	}
     } // sc charged tracks
 
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------

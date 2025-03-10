@@ -343,7 +343,7 @@ void JEventProcessor_CCAL_online::Process(const std::shared_ptr<const JEvent>& e
 	//----------   Fill Histograms   ----------//
 	
 	
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	
 	
 	//-----   DigiHit Plots   -----//
@@ -639,7 +639,7 @@ void JEventProcessor_CCAL_online::Process(const std::shared_ptr<const JEvent>& e
 	
 	
 	
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 

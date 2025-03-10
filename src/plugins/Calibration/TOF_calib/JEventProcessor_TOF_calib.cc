@@ -249,6 +249,7 @@ void JEventProcessor_TOF_calib::Process(const std::shared_ptr<const JEvent>& eve
     float indx = bar-1 + plane*locTOFGeometry->Get_NBars()*2 + end*locTOFGeometry->Get_NBars();
     //cout<<plane<<"  "<<bar<<"  "<<end<<endl;
 
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     if (hit->pedestal){
       TOFPedestal->Fill(indx, (float)hit->pedestal);
       TOFEnergy->Fill(indx, (float)hit->pulse_integral);
@@ -261,6 +262,8 @@ void JEventProcessor_TOF_calib::Process(const std::shared_ptr<const JEvent>& eve
 
     th[plane][bar-1][end] = 1;
     TOFADCtime->Fill(time,indx);
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
     if (fabsf(time-ADCTLOC)<ADCTimeCut){
       // test for overflow if raw data available
       vector <const Df250PulseIntegral*> PulseIntegral;

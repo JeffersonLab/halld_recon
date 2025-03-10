@@ -421,7 +421,7 @@ void JEventProcessor_CDC_expert::Process(const std::shared_ptr<const JEvent>& ev
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   for(uint32_t i=0; i<hits.size(); i++) {
 
@@ -594,7 +594,7 @@ void JEventProcessor_CDC_expert::Process(const std::shared_ptr<const JEvent>& ev
   }
 
 
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 

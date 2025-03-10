@@ -318,7 +318,7 @@ void JEventProcessor_PS_flux::Process(const std::shared_ptr<const JEvent>& event
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     psflux_num_events->Fill(1);
     if(!beamCurrent.empty()) {
 	    hBeamCurrentTime->Fill(beamCurrent[0]->t);
@@ -451,7 +451,7 @@ void JEventProcessor_PS_flux::Process(const std::shared_ptr<const JEvent>& event
         }
     }
     //
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------

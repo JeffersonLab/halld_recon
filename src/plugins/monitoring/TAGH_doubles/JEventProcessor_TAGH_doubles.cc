@@ -131,7 +131,7 @@ void JEventProcessor_TAGH_doubles::Process(const std::shared_ptr<const JEvent>& 
 
     const DTAGHGeometry& taghGeom = *(taghGeomVect[0]);
 
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     // Before merging doubles
     int BM_NHits = 0;
     for (const auto& hit : hits_c) {
@@ -181,7 +181,7 @@ void JEventProcessor_TAGH_doubles::Process(const std::shared_ptr<const JEvent>& 
             hAM_tdiffVsIDdiff->Fill(abs(hit1->counter_id-hit2->counter_id),hit1->t-hit2->t);
         }
     }
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------

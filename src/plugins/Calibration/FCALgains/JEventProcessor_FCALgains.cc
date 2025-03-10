@@ -41,10 +41,8 @@ void JEventProcessor_FCALgains::Init()
   // ROOT mutex like this:
   auto app = GetApplication();
   lockService = app->GetService<JLockService>();
-  lockService->RootWriteLock();
 
   if(InvMass1 && InvMass2 != NULL){
-    lockService->RootUnLock();
     return;
   }
 
@@ -109,8 +107,9 @@ void JEventProcessor_FCALgains::Init()
 			  m_event = 0;
 			  m_TotPastCuts = 0;
 
-			  lockService->RootUnLock();
 }
+
+
 int JEventProcessor_FCALgains::XYtoAbsNum(int my_x, int my_y)
 {
   return m_fcalgeom->channel( my_y/4 +29, my_x/4 +29 );

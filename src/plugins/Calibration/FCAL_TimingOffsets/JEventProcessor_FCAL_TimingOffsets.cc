@@ -179,7 +179,7 @@ void JEventProcessor_FCAL_TimingOffsets::Process(const std::shared_ptr<const JEv
 
 
    
-  
+	DEvent::GetLockService(locEvent)->RootFillLock(); 
 
     for(unsigned int k=0; k<locFCALShowers.size(); k++)
       {
@@ -223,7 +223,7 @@ const DFCALShower *s1 = locFCALShowers[k];
     }
 	
 
-
+	DEvent::GetLockService(locEvent)->RootFillUnLock(); 
 
 
 }

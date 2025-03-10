@@ -73,6 +73,9 @@ void JEventProcessor_FDC_InternalAlignment::BeginRun(const std::shared_ptr<const
    // Get curent cathode alignment constants
 
    JCalibration * jcalib = GetJCalibration(event);
+
+   GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+   
    vector<map<string,double> >vals;
    if (jcalib->Get("FDC/cathode_alignment",vals)==false){
       for(unsigned int i=0; i<vals.size(); i++){
@@ -110,6 +113,9 @@ void JEventProcessor_FDC_InternalAlignment::BeginRun(const std::shared_ptr<const
          HistCurrentConstants->Fill(i*2+402,row["yshift"]);
       }
    }
+
+   GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
 }
 
 //------------------
@@ -124,9 +130,9 @@ void JEventProcessor_FDC_InternalAlignment::Process(const std::shared_ptr<const 
       const DFDCPseudo* thisPseudo = fdcPseudoVector[i];
       if (thisPseudo->status != 6) continue;
 
-      GetLockService(event)->RootWriteLock();
+      GetLockService(event)->RootFillLock(this);
       Hist3D[thisPseudo->wire->layer - 1]->Fill(thisPseudo->w, thisPseudo->s, thisPseudo->w_c - thisPseudo->w);
-      GetLockService(event)->RootUnLock();
+      GetLockService(event)->RootFillUnLock(this);
 
       // Plot the wire times
       char thisName[256];

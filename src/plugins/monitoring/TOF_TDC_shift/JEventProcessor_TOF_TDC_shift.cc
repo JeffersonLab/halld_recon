@@ -94,7 +94,7 @@ void JEventProcessor_TOF_TDC_shift::Process(const std::shared_ptr<const JEvent>&
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   // Fill histogram of TI % 6 vs (ADC time - TDC time)
   for(UInt_t tof = 0;tof<dtofdigihits.size();tof++){
@@ -118,7 +118,7 @@ void JEventProcessor_TOF_TDC_shift::Process(const std::shared_ptr<const JEvent>&
       hrocTimeRemainder_AdcTdcTimeDiff_corrected->Fill(diff, TriggerBIT);
   }
 
-  lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+  lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 //----------------------------------------------------------------------------------
 void JEventProcessor_TOF_TDC_shift::EndRun() {

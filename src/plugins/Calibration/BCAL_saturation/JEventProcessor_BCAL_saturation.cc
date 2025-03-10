@@ -76,7 +76,6 @@ JEventProcessor_BCAL_saturation::~JEventProcessor_BCAL_saturation() {
 void JEventProcessor_BCAL_saturation::Init() {
 
 	lockService = GetApplication()->GetService<JLockService>();
-	lockService->RootWriteLock();
 
 	// First thread to get here makes all histograms. If one pointer is
 	// already not NULL, assume all histograms are defined and return now
@@ -126,7 +125,6 @@ void JEventProcessor_BCAL_saturation::Init() {
 			waveformCounterDS[locSaturate][locLayer] = 0;
 		}
 	}
-	lockService->RootUnLock();
 }
 
 

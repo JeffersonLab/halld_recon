@@ -375,7 +375,7 @@ void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &loc
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	{
 		// Event count used by RootSpy->RSAI so it knows how many events have been seen.
 		rf_itself_num_events->Fill(0.5);
@@ -560,7 +560,7 @@ void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &loc
 			}
 		}
 	}
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 void JEventProcessor_RF_online::EndRun()

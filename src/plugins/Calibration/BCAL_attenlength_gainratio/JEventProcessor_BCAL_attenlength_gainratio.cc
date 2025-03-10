@@ -349,7 +349,7 @@ void JEventProcessor_BCAL_attenlength_gainratio::Finish()
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	//lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	// for (int module=0; module<nummodule; module++) {
 	// 	if (VERBOSE>0) printf("M%i ",module);
@@ -459,7 +459,7 @@ void JEventProcessor_BCAL_attenlength_gainratio::Finish()
 	hist2D_intattenlength->SetBinContent(0,0,1);
 	hist2D_intgainratio->SetBinContent(0,0,1);
 
-	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	//lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
     //SortDirectories();    // THIS CRASHES SOMETIMES, SHOULD FIGURE OUT WHY
 }

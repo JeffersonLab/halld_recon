@@ -256,9 +256,9 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
     const DFDCHit * locHit = locFDCHitVector[hitNum];
     if (locHit->plane != 2) continue; // only wires!
     
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     hWireTime[locHit->gLayer]->Fill(locHit->t);
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
     // cut on timing of hits
     //if (-100 > locHit->t || locHit->t > 300) continue;
@@ -274,11 +274,11 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
     const DFDCPseudo * locPseudo = locFDCPseudoVector[hitNum];
     locSortedFDCPseudos[locPseudo->wire->layer].insert(locPseudo);
 
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     hPseudoTime[locPseudo->wire->layer]->Fill(locPseudo->time);
     hCathodeTime[locPseudo->wire->layer]->Fill(locPseudo->t_u);
     hCathodeTime[locPseudo->wire->layer]->Fill(locPseudo->t_v);
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
   }
   
@@ -333,14 +333,14 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
     double tmom = thisTimeBasedTrack->pmag();
     
     // Fill Histograms for all Tracks    
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     hCellsHit->Fill(cells);
     hRingsHit->Fill(rings);
     hChi2OverNDF->Fill(thisTimeBasedTrack->FOM);
     hMom->Fill(tmom);
     hTheta->Fill(theta_deg);
     hPhi->Fill(phi_deg);
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
     // All Cuts on Track Quality:
     
@@ -386,7 +386,7 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
     if (packageHit[0] < minCells && packageHit[1] < minCells && packageHit[2] < minCells && packageHit[3] < minCells) continue;
     
     // Fill Histograms for accepted Tracks
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     hCellsHit_accepted->Fill(cells);
     //if (tmom < 2)
     hRingsHit_accepted->Fill(rings);
@@ -395,7 +395,7 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
     hTheta_accepted->Fill(theta_deg);
     hPhi_accepted->Fill(phi_deg);
     hRingsHit_vs_P->Fill(rings, tmom);
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
     
     // Start efficiency computation with these tracks
     
@@ -474,10 +474,10 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 	  Double_t w, v;
 	  if(fdc_wire_expected_cell[cellNum] != NULL && cellNum < 25){
 	    // FILL HISTOGRAMS
-	    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	    w = fdc_wire_expected_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
 	    fdc_wire_expected_cell[cellNum]->SetBinContent(wireNum, 1, w);
-	    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	  }
 	  
 	  // look in the presorted FDC Hits for a match
@@ -490,10 +490,10 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 	      // Loop over multiple hits in the wire
 	      for(set<const DFDCHit*>::iterator locIterator = locSortedFDCHits[cellNum][wireNum].begin();  locIterator !=  locSortedFDCHits[cellNum][wireNum].end(); ++locIterator){
 	      	const DFDCHit* locHit = * locIterator;
-		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+		lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 		hWireTime_accepted[cellNum]->Fill(locHit->t);
 		hResVsT[cellNum]->Fill(distanceToWire, locHit->t);
-		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+		lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	      }
 	    }
 
@@ -512,10 +512,10 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 	    // hMeasuredHitsVsHitCells->Fill(cells);
 	    // lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-	    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	    v = fdc_wire_measured_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
 	    fdc_wire_measured_cell[cellNum]->SetBinContent(wireNum, 1, v);
-	    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	  }
 
 	  break; // break if 1 expected hit was found, 2 are geometrically not possible (speedup!)
@@ -532,9 +532,9 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
       
       if(fdc_pseudo_expected_cell[cellNum] != NULL && cellNum < 25){
 	// FILL HISTOGRAMS
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	fdc_pseudo_expected_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
       }
 
       bool foundPseudo = false;
@@ -561,7 +561,7 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 	    double residualV = -1*(residual2D.Rotate(wire->angle)).Y();
 
 	    // these can be used for background studies/correction
-	    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	    hPseudoRes->Fill(residualR);
 	    // hPseudoResX[cellNum]->Fill(residualX);
 	    // hPseudoResY[cellNum]->Fill(residualY);
@@ -570,7 +570,7 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 	    unsigned int radius = interPosition2D.Mod()/(45/rad);
 	    if (radius<rad)
 	      hPseudoResUvsV[cellNum][radius]->Fill(residualU, residualV);
-	    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	    
 	    if (foundPseudo) continue; 
 	    // to avoid double conting
@@ -581,7 +581,7 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 	      
 	      if(fdc_pseudo_measured_cell[cellNum] != NULL && cellNum < 25){
 		// fill histogramms with the predicted, not with the measured position
-		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+		lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 		fdc_pseudo_measured_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
 		hPseudoTime_accepted[cellNum]->Fill(locPseudo->time);
 		hCathodeTime_accepted[cellNum]->Fill(locPseudo->t_u);
@@ -589,7 +589,7 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 		hDeltaTime[cellNum]->Fill(locPseudo->time - locPseudo->t_u);
 		hDeltaTime[cellNum]->Fill(locPseudo->time - locPseudo->t_v);
 		hPseudoResVsT[cellNum]->Fill(residualU, locPseudo->time);
-		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+		lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	      }
 	    }
 	    

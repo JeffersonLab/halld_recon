@@ -167,7 +167,7 @@ void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& even
 
     if (dedx > 0) {
 
-      lockService->RootWriteLock();
+      lockService->RootFillLock(this);
 
       dedx_p->Fill(p,dedx);
     
@@ -177,7 +177,7 @@ void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& even
         dedx_p_neg->Fill(p,dedx);
       } 
 
-      lockService->RootUnLock();
+      lockService->RootFillUnLock(this);
 
     }
 
@@ -187,7 +187,7 @@ void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& even
 
     if (dedx > 0) {
 
-      lockService->RootWriteLock();
+      lockService->RootFillLock(this);
 
       intdedx_p->Fill(p,dedx);
     
@@ -197,7 +197,7 @@ void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& even
         intdedx_p_neg->Fill(p,dedx);
       } 
 
-      lockService->RootUnLock();
+      lockService->RootFillUnLock(this);
 
     }
 
