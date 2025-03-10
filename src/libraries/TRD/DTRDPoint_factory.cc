@@ -55,27 +55,33 @@ void DTRDPoint_factory::EndRun(){
 /// DTRDPoint_factory::evnt():
 /// this is the place that produces points from wire hits and GEM strips
 ///
-void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event) {
+void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event) 
+{
 
 	// Get strip clusters
 	vector<const DTRDStripCluster*> stripClus;
 	event->Get(stripClus);
 
+//     cout << "DTRDPoint_factory::Process() ..." << endl;
+//     cout << "  num input clusters = " << stripClus.size() << endl;
+
 	// Sift through clusters and select out X and Y plane wires
 	vector<const DTRDStripCluster*> stripClusX,stripClusY;
 	for (unsigned int i=0; i < stripClus.size(); i++) {
-		if (stripClus[i]->plane == 0)
+		// TODO: make some enums so it's more clear what plane 1 and 2 are...
+		if (stripClus[i]->plane == 1)
 			stripClusX.push_back(stripClus[i]);
-		else if (stripClus[i]->plane == 1)
+		else if (stripClus[i]->plane == 2)
 			stripClusY.push_back(stripClus[i]);
 	}
+
 	
 	// match clusters in X and Y planes
 	for(uint i=0; i<stripClusX.size(); i++){
 		for(uint j=0; j<stripClusY.size(); j++){
 	
 			// calculate strip cluster time and position
-			double t_diff = stripClusX[i]->t_avg - stripClusY[i]->t_avg;
+			double t_diff = stripClusX[i]->t_avg - stripClusY[j]->t_avg;
 			double dE = stripClusX[i]->q_tot + stripClusY[j]->q_tot;
 
 			// some requirements for a good point
@@ -84,14 +90,15 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event) {
 				// save new point
 				DTRDPoint* newPoint = new DTRDPoint;     
 				newPoint->x = stripClusX[i]->pos.x();
-				newPoint->y = stripClusY[i]->pos.x();
+				newPoint->y = stripClusY[j]->pos.x();
 				newPoint->t_x = stripClusX[i]->t_avg;
-				newPoint->t_y = stripClusY[i]->t_avg;
-				newPoint->time = (stripClusX[i]->t_avg*stripClusX[i]->q_tot + stripClusY[i]->t_avg*stripClusY[j]->q_tot) / dE;
+				newPoint->t_y = stripClusY[j]->t_avg;
+				newPoint->time = (stripClusX[i]->t_avg*stripClusX[i]->q_tot + stripClusY[j]->t_avg*stripClusY[j]->q_tot) / dE;
 				newPoint->dE = dE;
 				newPoint->status = 1;
 				//newPoint->itrack = 0;
-				newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[i]->pos.z()*stripClusY[j]->q_tot) / dE + dTRDz[0];
+				//newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE + dTRDz[0];
+				newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE;  // FOR TESTING
 
 				newPoint->AddAssociatedObject(stripClusX[i]);
 				newPoint->AddAssociatedObject(stripClusY[j]);
