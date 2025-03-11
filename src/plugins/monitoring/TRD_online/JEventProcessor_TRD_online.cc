@@ -41,8 +41,10 @@ static TH1I *hHit_PulseHeight[NTRDplanes];
 static TH2I *hHit_TimeVsStrip[NTRDplanes];
 
 const int NEventsClusterMonitor = 10;
-static TH2I *hClusterHits_TimeVsStrip[NTRDplanes][NEventsClusterMonitor];
-static TH2I *hCluster_TimeVsStrip[NTRDplanes][NEventsClusterMonitor];
+static TH2I *hClusterHits_TimeVsStrip[NTRDplanes];
+static TH2I *hCluster_TimeVsStrip[NTRDplanes];
+static TH2I *hClusterHits_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
+static TH2I *hCluster_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
 
 //----------------------------------------------------------------------------------
 
@@ -101,10 +103,10 @@ void JEventProcessor_TRD_online::Init() {
 		hDigiHit_Occupancy[i] = new TH1I(Form("DigiHit_Occupancy_Plane%d", i),Form("Plane %d TRD hit occupancy;strip;raw hits / counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
 		hDigiHit_QualityFactor[i] = new TH1I(Form("DigiHit_QualityFactor_Plane%d", i),Form("Plane %d TRD quality factor;quality factor;raw hits",i),4,-0.5,3.5);
 		hDigiHit_PeakVsStrip[i] = new TH2I(Form("DigiHit_PeakVsStrip_Plane%d", i),Form("Plane %d TRD pulse peak vs. strip;strip;pulse peak",i),NTRDstrips,-0.5,-0.5+NTRDstrips,410,0.0,4100.0);
-		hDigiHit_PulseTime[i] = new TH1I(Form("DigiHit_PulseTime_Plane%d", i),Form("Plane %d TRD pulse time;pulse time [62.5 ps];raw hits",i),1000,0.0,5000.0);
-		hDigiHit_Time[i] = new TH1I(Form("DigiHit_Time_Plane%d", i),Form("Plane %d TRD pulse time;pulse time [ns];raw hits / 2 ns",i),2500,0.0,5000.0);
-		hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_Plane%d", i),Form("Plane %d TRD pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,200,0.0,1000.0);
-		hDigiHit_TimeVsPeak[i] = new TH2I(Form("DigiHit_TimeVsPeak_Plane%d", i),Form("Plane %d TRD time vs. peak;pulse peak;time [ns]",i),410,0.0,4100.0,200,0.0,1000.0);
+		hDigiHit_PulseTime[i] = new TH1I(Form("DigiHit_PulseTime_Plane%d", i),Form("Plane %d TRD pulse time;pulse time [62.5 ps];raw hits",i),250,0.0,2000.0);
+		hDigiHit_Time[i] = new TH1I(Form("DigiHit_Time_Plane%d", i),Form("Plane %d TRD pulse time;pulse time [ns];raw hits / 2 ns",i),250,0.0,2000.0);
+		hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_Plane%d", i),Form("Plane %d TRD pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,250,0.0,2000.0);
+		hDigiHit_TimeVsPeak[i] = new TH2I(Form("DigiHit_TimeVsPeak_Plane%d", i),Form("Plane %d TRD time vs. peak;pulse peak;time [ns]",i),410,0.0,4100.0,250,0.0,2000.0);
 		
 	}
 		
@@ -122,9 +124,9 @@ void JEventProcessor_TRD_online::Init() {
 			NTRDstrips = NTRD_ystrips;
 
 		hHit_Occupancy[i] = new TH1I(Form("Hit_Occupancy_Plane%d", i),Form("Plane %d TRD hit occupancy;strip;calibrated hits / counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
-		hHit_Time[i] = new TH1I(Form("Hit_Time_Plane%d", i),Form("Plane %d TRD pulse time;pulse time [ns];calibrated hits / 2 ns",i),1000,-500.0,1500.0);
+		hHit_Time[i] = new TH1I(Form("Hit_Time_Plane%d", i),Form("Plane %d TRD pulse time;pulse time [ns];calibrated hits / 2 ns",i),250,0.0,2000.0);
 		hHit_PulseHeight[i] = new TH1I(Form("Hit_PulseHeight_Plane%d", i),Form("Plane %d TRD pulse height;pulse height [fADC units];calibrated hits / 1 unit",i),600,-100.0,500.0);
-        hHit_TimeVsStrip[i] = new TH2I(Form("Hit_TimeVsStrip_Plane%d", i),Form("Plane %d TRD pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,200,0.0,1000.0);
+        hHit_TimeVsStrip[i] = new TH2I(Form("Hit_TimeVsStrip_Plane%d", i),Form("Plane %d TRD pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,250,0.0,2000.0);
 
 	}
     
@@ -140,13 +142,15 @@ void JEventProcessor_TRD_online::Init() {
     for(int i=0; i<NTRDplanes; i++) {
         int NTRDstrips = 0.;
         if(i==0)
-            NTRDstrips = NTRD_xstrips;
+	{    NTRDstrips = NTRD_xstrips;}
         else
-            NTRDstrips = NTRD_ystrips;
+	{    NTRDstrips = NTRD_ystrips;}
 
+            hClusterHits_TimeVsStrip[i] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d", i),Form("Plane %d TRD cluster hits pulse time vs. strip;pulse time [ns];strip",i),250,0,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+            hCluster_TimeVsStrip[i] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d", i),Form("Plane %d TRD cluster pulse time vs. strip;pulse time [ns];strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
         for(int j=0; j<NEventsClusterMonitor; j++) {
-            hClusterHits_TimeVsStrip[i][j] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d_Event%d", i, j),Form("Plane %d TRD cluster hits pulse time vs. strip;pulse time [ns];strip",i),200,100,1100.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
-            hCluster_TimeVsStrip[i][j] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d_Event%d", i, j),Form("Plane %d TRD cluster pulse time vs. strip;pulse time [ns];strip",i),200,100,1100.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+            hClusterHits_TimeVsStripEvent[i][j] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d_Event%d", i, j),Form("Plane %d TRD cluster hits pulse time vs. strip;pulse time [ns];strip",i),250,0,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+            hCluster_TimeVsStripEvent[i][j] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d_Event%d", i, j),Form("Plane %d TRD cluster pulse time vs. strip;pulse time [ns];strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
         }
     }   
     
@@ -213,7 +217,7 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     ///////////////////////////
     // TRD DigiHits and Hits //
@@ -229,7 +233,7 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 	    hDigiHit_QualityFactor[plane]->Fill(hit->QF);
 	    hDigiHit_PeakVsStrip[plane]->Fill(strip,hit->pulse_peak);
 	    hDigiHit_PulseTime[plane]->Fill(hit->pulse_time);
-	    double t_ns = 0.8*hit->pulse_time;
+	    double t_ns = 8.*hit->peak_time;
 	    hDigiHit_Time[plane]->Fill(t_ns);
 	    hDigiHit_TimeVsStrip[plane]->Fill(strip,t_ns);
 	    hDigiHit_TimeVsPeak[plane]->Fill(hit->pulse_peak,t_ns);
@@ -245,28 +249,44 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 	    hHit_PulseHeight[plane]->Fill(hit->pulse_height);
         hHit_TimeVsStrip[plane]->Fill(hit->strip, hit->t);
     }
-
-    // if (clusters.size() > 0) cout << "Event " << eventnumber << " has " << digihits.size() << " digihits, " << hits.size() << " hits, and " << clusters.size() << " clusters" << endl;
-    if (clusters.size() > 10 && eventClusterCount < NEventsClusterMonitor) {
+       if (clusters.size() > 10 && eventClusterCount < NEventsClusterMonitor) {
         cout << "Event " << eventnumber << " has " << clusters.size() << " clusters, eventClusterCount = " << eventClusterCount << endl;
         for (const auto& cluster : clusters) {
             int plane = cluster->plane-1;
             double pos = 0.;
             if (plane == 0) pos = cluster->pos.x();
             else pos = cluster->pos.y();
-            
-            hCluster_TimeVsStrip[plane][eventClusterCount]->Fill(cluster->t_avg, pos);
+
+            hCluster_TimeVsStripEvent[plane][eventClusterCount]->Fill(cluster->t_avg, pos);
         }
 
         for (const auto& hit : hits) {
             int plane = hit->plane-1;
-            hClusterHits_TimeVsStrip[plane][eventClusterCount]->Fill(hit->t, hit->strip);
+            hClusterHits_TimeVsStripEvent[plane][eventClusterCount]->Fill(hit->t, hit->strip);
         }
-        
+
         eventClusterCount++;
     }
 
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+
+    for (const auto& cluster : clusters) {
+            int plane = cluster->plane-1;
+            double pos = 0.;
+            if (plane == 0) pos = cluster->pos.x();
+            else pos = cluster->pos.y();
+            
+            hCluster_TimeVsStrip[plane]->Fill(cluster->t_avg, pos);
+    }
+
+        for (const auto& hit : hits) {
+            int plane = hit->plane-1;
+            hClusterHits_TimeVsStrip[plane]->Fill(hit->t, hit->strip);
+        }
+        
+
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
+	return;
 }
 //----------------------------------------------------------------------------------
 
