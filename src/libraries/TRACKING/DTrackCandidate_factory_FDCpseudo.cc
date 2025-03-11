@@ -404,8 +404,8 @@ void DTrackCandidate_factory_FDCpseudo::FindTheta(DFDCSeed &seed, double target_
 	double &r0 = seed.r0;
 	for(unsigned int i=0; i<seed.hits.size(); i++){
 		DFDCTrkHit *trkhit = seed.hits[i];
-		if(!trkhit->flags&VALID_HIT)continue;
-		if(!trkhit->flags&ON_CIRCLE)continue;
+		if(!(trkhit->flags&VALID_HIT)) continue;
+		if(!(trkhit->flags&ON_CIRCLE)) continue;
 		
 		// Calculate upper and lower limits in theta
 		double alpha = r0*trkhit->phi_hit;
@@ -469,10 +469,10 @@ void DTrackCandidate_factory_FDCpseudo::FindTheta(DFDCSeed &seed, double target_
 	for(unsigned int i=0; i<seed.hits.size(); i++){
 		DFDCTrkHit *trkhit = seed.hits[i];
 		trkhit->flags &= ~IN_THETA_RANGE;
-		if(!trkhit->flags&VALID_HIT)continue;
-		if(!trkhit->flags&ON_CIRCLE)continue;
-		if(trkhit->theta_min > seed.theta)continue;
-		if(trkhit->theta_max < seed.theta)continue;
+		if(!(trkhit->flags&VALID_HIT)) continue;
+		if(!(trkhit->flags&ON_CIRCLE)) continue;
+		if(trkhit->theta_min > seed.theta) continue;
+		if(trkhit->theta_max < seed.theta) continue;
 		trkhit->flags |= IN_THETA_RANGE;
 	}
 
@@ -525,9 +525,9 @@ void DTrackCandidate_factory_FDCpseudo::FindZ(DFDCSeed &seed, double theta_min, 
 	if(tan_alpha_min<0.0)tan_alpha_min=0.0;
 	for(unsigned int i=0; i<seed.hits.size(); i++){
 		DFDCTrkHit *trkhit = seed.hits[i];
-		if(!trkhit->flags&VALID_HIT)continue;
-		if(!trkhit->flags&ON_CIRCLE)continue;
-		if(!trkhit->flags&IN_THETA_RANGE)continue;
+		if(!(trkhit->flags&VALID_HIT)) continue;
+		if(!(trkhit->flags&ON_CIRCLE)) continue;
+		if(!(trkhit->flags&IN_THETA_RANGE)) continue;
 		
 		// Calculate upper and lower limits in z
 		double q_sign = seed.q>0.0 ? +1.0:-1.0;
@@ -597,11 +597,11 @@ void DTrackCandidate_factory_FDCpseudo::FindZ(DFDCSeed &seed, double theta_min, 
 	for(unsigned int i=0; i<seed.hits.size(); i++){
 		DFDCTrkHit *trkhit = seed.hits[i];
 		trkhit->flags &= ~IN_Z_RANGE;
-		if(!trkhit->flags&VALID_HIT)continue;
-		if(!trkhit->flags&ON_CIRCLE)continue;
-		if(!trkhit->flags&IN_THETA_RANGE)continue;
-		if(trkhit->zmin > seed.z_vertex)continue;
-		if(trkhit->zmax < seed.z_vertex)continue;
+		if(!(trkhit->flags&VALID_HIT)) continue;
+		if(!(trkhit->flags&ON_CIRCLE)) continue;
+		if(!(trkhit->flags&IN_THETA_RANGE)) continue;
+		if(trkhit->zmin > seed.z_vertex) continue;
+		if(trkhit->zmax < seed.z_vertex) continue;
 		trkhit->flags |= IN_Z_RANGE;
 	}
 }

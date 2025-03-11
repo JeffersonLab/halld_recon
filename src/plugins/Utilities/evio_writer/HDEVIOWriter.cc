@@ -262,7 +262,7 @@ void HDEVIOWriter::ConnectToET(string sink_name)
 }
 
 //---------------------------------
-// L3OutputThread (C-style wrapper for method)
+// HDEVIOOutputThread (C-style wrapper for method)
 //---------------------------------
 void* HDEVIOOutputThread(void *evioout)
 {
@@ -273,7 +273,7 @@ void* HDEVIOOutputThread(void *evioout)
 }
 
 //---------------------------------
-// L3OutputThread
+// HDEVIOOutputThread
 //---------------------------------
 void* HDEVIOWriter::HDEVIOOutputThread(void)
 {
@@ -416,7 +416,10 @@ void HDEVIOWriter::FlushOutput(uint32_t Nwords, deque< vector<uint32_t>* > &my_o
 	output_block[7] = 0xc0da0100; // Magic number
 
     //jout << "Writing out " << my_output_deque.size() << " events with " << Nwords << " words " << endl;
-
+	
+	// used for sanity checking
+	uint32_t Noutput_words = 8;
+	
 	// Write all event buffers into output buffer
 	deque< vector<uint32_t>* >::iterator it;
 	for(it=my_output_deque.begin(); it!=my_output_deque.end(); it++){
@@ -441,6 +444,8 @@ void HDEVIOWriter::FlushOutput(uint32_t Nwords, deque< vector<uint32_t>* > &my_o
 
 		// copy and swap at same time
 		swap_bank_out(outbuff, inbuff, len); 
+		
+		Noutput_words += buff->size();
 
 //		output_block.insert(output_block.end(), buff->begin(), buff->end());
 		
@@ -450,7 +455,7 @@ void HDEVIOWriter::FlushOutput(uint32_t Nwords, deque< vector<uint32_t>* > &my_o
 	
 	// Write output buffer to output channel ET or file
 	uint32_t *buff = &output_block[0];
-	uint32_t buff_size_bytes = Nwords*sizeof(uint32_t);
+	uint32_t buff_size_bytes = Noutput_words*sizeof(uint32_t);
 	
 	// Integrity check on overall length word
 	if( buff[0]*sizeof(uint32_t) != buff_size_bytes){
