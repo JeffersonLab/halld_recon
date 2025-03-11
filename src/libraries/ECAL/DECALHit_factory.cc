@@ -41,23 +41,19 @@ void DECALHit_factory::Init(void)
     app->SetDefaultParameter("ECAL:HIT_DEBUG",    HIT_DEBUG);
     app->SetDefaultParameter("ECAL:DB_PEDESTAL",  DB_PEDESTAL);
 
-    m_numActiveBlocks=0;
+    unsigned int ch=0;
     for (int row=0;row<kECALBlocksTall;row++){
       for (int col=0;col<kECALBlocksWide;col++){
-        if (col>=kECALMidBlock-1 && col<=kECALMidBlock
-      && row>=kECALMidBlock-1 && row<=kECALMidBlock){
-    m_activeBlock[row][col]=false;
+	m_row[ch]=row;
+	m_column[ch]=col;
+	m_channelNumber[row][col]=ch;
+	m_activeBlock[row][col]=true;
+	if (col>=kECALMidBlock-1 && col<=kECALMidBlock
+	    && row>=kECALMidBlock-1 && row<=kECALMidBlock){
+	  m_activeBlock[row][col]=false;
         }
-        else{
-    m_row[m_numActiveBlocks]=row;
-    m_column[m_numActiveBlocks]=col;
-    m_channelNumber[row][col]=m_numActiveBlocks;
-    m_activeBlock[row][col]=true;
-
-    m_numActiveBlocks++;
-        }
+	ch++;
       }
-
     }
   
     // initialize calibration tables
@@ -91,7 +87,6 @@ void DECALHit_factory::Init(void)
 //------------------
 void DECALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
     int runnumber = event->GetRunNumber();
@@ -253,7 +248,7 @@ void DECALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 
 
 	if(HIT_DEBUG == 1)
-	  cout << "Row = " << digihit->row << "Column = " << digihit->column << 
+	  cout << "Row = " << digihit->row << " Column = " << digihit->column << 
 	    "  pulse_int =  "   << pulse_int <<  "  integratedPedestal = " << integratedPedestal << 
 	    "  Pedestal  =  " << pedestal <<  endl;
 	
@@ -307,24 +302,10 @@ void DECALHit_factory::Finish(void)
 
 void  DECALHit_factory::LoadECALConst(ecal_constants_t &table, const vector<double> &ecal_const_ch){
   for (int ch = 0; ch < static_cast<int>(ecal_const_ch.size()); ch++) {
-
     int row = m_row[ch];
     int col = m_column[ch];
-    
-    // results from DECALGeometry should be self consistent, but add in some
-    // sanity checking just to be sure
-
-    if (isBlockActive(row,col) == false) {
-      char str[256];
-
-      sprintf(str, "DECALHit: Loading ECAL constant for inactive channel!  "
-              "row=%d, col=%d", row, col);
-      throw JException(str);
-    }    
-    
     table[row][col] = ecal_const_ch[ch];
   }
-  
 }
 
 

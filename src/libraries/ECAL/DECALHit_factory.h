@@ -64,7 +64,6 @@ public:
   int    m_channelNumber[kECALBlocksTall][kECALBlocksWide];
   int    m_row[kECALMaxChannels];
   int    m_column[kECALMaxChannels];
-  int    m_numActiveBlocks;
 };
 
 #endif // _DECALHit_factory_
