@@ -27,8 +27,9 @@ void DTRDHit_factory_Calib::Init()
 	auto app = GetApplication();
 
     /// set the base conversion scales
-    a_scale      = 2.4E4/1.3E5;  // NOTE: currently fixed to FDC values, currently not used
-    t_scale      = 8.0/10.0;     // 8 ns/count and integer time is in 1/10th of sample
+    //a_scale      = 2.4E4/1.3E5;  // NOTE: currently fixed to FDC values, currently not used
+    a_scale=1.;                  // to test with real fADC pulses
+    t_scale      = 8.0;          // 8 ns/count
     t_base       = { 0.,  0.};   // ns, per plane
     
     PEAK_THRESHOLD = 150.;  // fADC units
@@ -194,7 +195,7 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 	    	continue;
 
 	    // Time cut now
-	    double T = (double)digihit->pulse_time * t_scale;
+	    double T = (double)digihit->peak_time * t_scale;
 	    if( (T < LOW_TCUT) || (T > HIGH_TCUT) )
 	    	continue;
 
