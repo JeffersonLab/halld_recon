@@ -44,7 +44,11 @@ void DTRDPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   auto dgeom = geo_manager->GetDGeometry(runnumber);
 
   // Get GEM geometry from xml (CCDB or private HDDS)
-  dgeom->GetTRDZ(dTRDz);
+  dgeom->GetGEMTRDz(dTRDz);
+  vector<double>xvec,yvec;
+  dgeom->GetGEMTRDxy_vec(xvec,yvec);
+  dTRDx=xvec[0];
+  dTRDy=yvec[0];
 
   return;
 }
@@ -89,8 +93,8 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 		
 				// save new point
 				DTRDPoint* newPoint = new DTRDPoint;     
-				newPoint->x = stripClusX[i]->pos.x();
-				newPoint->y = stripClusY[j]->pos.x();
+				newPoint->x = dTRDx+stripClusX[i]->pos.x();
+				newPoint->y = dTRDy+stripClusY[j]->pos.x();
 				newPoint->t_x = stripClusX[i]->t_avg;
 				newPoint->t_y = stripClusY[j]->t_avg;
 				newPoint->time = (stripClusX[i]->t_avg*stripClusX[i]->q_tot + stripClusY[j]->t_avg*stripClusY[j]->q_tot) / dE;
@@ -98,7 +102,7 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 				newPoint->status = 1;
 				//newPoint->itrack = 0;
 				//newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE + dTRDz[0];
-				newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE;  // FOR TESTING
+				newPoint->z = dTRDz+(stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE;  // FOR TESTING
 
 				newPoint->AddAssociatedObject(stripClusX[i]);
 				newPoint->AddAssociatedObject(stripClusY[j]);

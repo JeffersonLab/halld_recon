@@ -37,7 +37,7 @@ class DTRDPoint_factory : public JFactoryT<DTRDPoint> {
   		double TIME_DIFF_MAX;
 //   		double DIST_DIFF_MAX;
 
-		vector<double>dTRDz;
+  double dTRDx,dTRDy,dTRDz;
 
 };
 
