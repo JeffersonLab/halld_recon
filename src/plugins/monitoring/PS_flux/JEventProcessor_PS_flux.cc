@@ -335,7 +335,7 @@ void JEventProcessor_PS_flux::Process(const std::shared_ptr<const JEvent>& event
         const DPSCHit* clhit = cpairs[0]->ee.first; // left hit in coarse PS
         const DPSCHit* crhit = cpairs[0]->ee.second;// right hit in coarse PS
         double PSC_tdiff = clhit->t-crhit->t;
-	if (fabs(PSC_tdiff) > 6.) {lockService->RootUnLock(); return;}
+	if (fabs(PSC_tdiff) > 6.) {lockService->RootFillUnLock(this); return;}
 	psflux_num_events->Fill(2);
 
         // PSC,PS coincidences
@@ -346,8 +346,8 @@ void JEventProcessor_PS_flux::Process(const std::shared_ptr<const JEvent>& event
             const DPSPair::PSClust* frhit = fpairs[0]->ee.second; // right hit in fine PS
 
 	    // geometry check for PS/PSC matching
-	    if(flhit->column < geomModuleColumn[clhit->module-1][0] || flhit->column > geomModuleColumn[clhit->module-1][1]) {lockService->RootUnLock(); return;}
-	    if(frhit->column < geomModuleColumn[crhit->module-1][0] || frhit->column > geomModuleColumn[crhit->module-1][1]) {lockService->RootUnLock(); return;}
+	    if(flhit->column < geomModuleColumn[clhit->module-1][0] || flhit->column > geomModuleColumn[clhit->module-1][1]) {lockService->RootFillUnLock(this); return;}
+	    if(frhit->column < geomModuleColumn[crhit->module-1][0] || frhit->column > geomModuleColumn[crhit->module-1][1]) {lockService->RootFillUnLock(this); return;}
 
 	    // energy variables with random spread in energy bite
 	    // left  - arm 0
