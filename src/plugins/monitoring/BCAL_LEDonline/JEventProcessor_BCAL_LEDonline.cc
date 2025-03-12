@@ -618,6 +618,7 @@ void JEventProcessor_BCAL_LEDonline::EndRun() {
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
 
+	lockService->RootWriteLock(); //GRAB ROOT LOCK
 	printf("\nTrigger statistics");
 	printf("------------------------\n");
 	printf("%20s: %10i\n","no triggers",NOtrig);
@@ -636,6 +637,7 @@ void JEventProcessor_BCAL_LEDonline::EndRun() {
 	bcal_fadc_digi_pedestal_vchannel->SetMinimum(bcal_fadc_digi_pedestal_vchannel->GetMinimum(0.1));
 	bcal_fadc_digi_integral_vchannel->SetMinimum(bcal_fadc_digi_integral_vchannel->GetMinimum(0.1));	
 	bcal_fadc_digi_peak_vchannel->SetMinimum(bcal_fadc_digi_peak_vchannel->GetMinimum(0.1));	
+	lockService->RootUnLock(); //RELEASE ROOT LOCK
 
 	return;
 }

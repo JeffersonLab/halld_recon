@@ -50,6 +50,10 @@ void JEventProcessor_ST_online_Tresolution::Init()
 	//  ... fill historgrams or trees ...
 	// lockService->RootUnLock();
 	//
+
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
+
   // **************** define histograms *************************
 
   TDirectory *main = gDirectory;

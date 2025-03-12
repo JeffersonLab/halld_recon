@@ -290,7 +290,8 @@ void JEventProcessor_FCAL_LED_shifts::EndRun()
   	// changed to give you a chance to clean up before processing
   	// events from the next run number.
  
-   
+	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK
+ 
   	if(CALC_NEW_CONSTANTS_BEAM) {
   		// calculate time shifts
   		//cerr << "opening " << REFERENCE_FILE_NAME << endl;
@@ -360,7 +361,6 @@ void JEventProcessor_FCAL_LED_shifts::EndRun()
 		}
 
 		// calculate channel shifts
-		lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 		for (int i = 0; i < numChannels; ++i) {
 			// figure out detector location and indexing
 			int row = m_fcalGeom->row(i);
@@ -413,7 +413,6 @@ void JEventProcessor_FCAL_LED_shifts::EndRun()
 			
 			outf << (old_ADCoffsets[i] + adc_shift) << endl;
   		}
-		lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
   		
   		ref_file->Close();
@@ -509,6 +508,8 @@ void JEventProcessor_FCAL_LED_shifts::EndRun()
   		outf.close();
 
   	}
+
+	lockService->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
