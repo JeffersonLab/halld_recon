@@ -345,7 +345,7 @@ void JEventProcessor_CDC_expert_2::Process(const std::shared_ptr<const JEvent>& 
   event->Get(digihits);
 
 
-  lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
 
 
@@ -531,7 +531,7 @@ void JEventProcessor_CDC_expert_2::Process(const std::shared_ptr<const JEvent>& 
   } //end for each digihit
 
 
-  lockService->RootUnLock(); //RELEASE ROOT LOCK!!
+  lockService->RootFillUnLock(this); //RELEASE ROOT LOCK!!
 
 }
 

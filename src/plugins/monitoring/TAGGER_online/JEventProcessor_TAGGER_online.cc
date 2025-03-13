@@ -77,10 +77,10 @@ void JEventProcessor_TAGGER_online::Process(const std::shared_ptr<const JEvent>&
 	  if(locTAGMHit != NULL) { 
 		// FILL HISTOGRAMS
 		// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+		lockService->RootFillLock(this);//ACQUIRE ROOT FILL LOCK
 		dTAGMPulsePeak_Column->Fill(locTAGMHit->column, locTAGMHit->pulse_peak);
 		dTAGMIntegral_Column->Fill(locTAGMHit->column, locTAGMHit->integral);
-		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+		lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 		
 		// add threshold on TAGM hits
 		if(locTAGMHit->integral < 500.) continue;
@@ -90,9 +90,9 @@ void JEventProcessor_TAGGER_online::Process(const std::shared_ptr<const JEvent>&
 	    Double_t locDeltaT = locBeamPhotons[loc_i]->time() - locSCHits[loc_j]->t;
 		// FILL HISTOGRAMS
 		// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+		lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	    dTaggerEnergy_DeltaTSC->Fill(locDeltaT, locBeamPhotons[loc_i]->momentum().Mag());
-		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+		lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 	  }
 	}

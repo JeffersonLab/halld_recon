@@ -394,9 +394,9 @@ void JEventProcessor_CDC_Efficiency::Process(const std::shared_ptr<const JEvent>
    for (unsigned int iTrack = 0; iTrack < bestTimeBasedTracks.size(); iTrack++){
       auto thisTimeBasedTrack = bestTimeBasedTracks[iTrack];
 
-      lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       hChi2OverNDF->Fill(thisTimeBasedTrack->FOM);
-      lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
       if (thisTimeBasedTrack->FOM < dMinTrackingFOM)
          continue;
@@ -708,7 +708,7 @@ void JEventProcessor_CDC_Efficiency::Fill_MeasuredHit(bool withdEdx, int ringNum
    if (distanceToWire < DOCACUT)
    {
       //printf("Matching Hit!!!!!\n");
-      lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       {
          Double_t v = cdc_measured_ring[ringNum]->GetBinContent(wireNum, 1) + 1.0;
          cdc_measured_ring[ringNum]->SetBinContent(wireNum, 1, v);
@@ -725,28 +725,28 @@ void JEventProcessor_CDC_Efficiency::Fill_MeasuredHit(bool withdEdx, int ringNum
          // ?	Double_t w = cdc_expected_ring[ringNum]->GetBinContent(wireNum, 1) + 1.0;
          // ?    cdc_measured_ring[ringNum]->SetBinContent(wireNum, 1, w);
       }
-      lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
    }
 
    int locDOCABin = (int) (distanceToWire * 10) % 8;
    TH2D* locHistToFill = cdc_measured_ringmap[locDOCABin][ringNum];
-   lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+   lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
    {
       Double_t w = locHistToFill->GetBinContent(wireNum, 1) + 1.0;
       locHistToFill->SetBinContent(wireNum, 1, w);
    }
-   lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+   lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
    if (FILL_DEDX_HISTOS) {
      if (withdEdx) {
 
        TH2D* locHistToFill = cdc_measured_with_dedx_ringmap[locDOCABin][ringNum];
-       lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+       lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
        {
 	 Double_t w = locHistToFill->GetBinContent(wireNum, 1) + 1.0;
 	 locHistToFill->SetBinContent(wireNum, 1, w);
        }
-       lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+       lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
      }
    }

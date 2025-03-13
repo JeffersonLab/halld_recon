@@ -123,7 +123,7 @@ void JEventProcessor_EVNT_online::Process(const std::shared_ptr<const JEvent>& e
     // loop over data banks and hist bank sizes, etc.
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     ntot=0;
     for(auto bank : *bankList.get()) {
       nword=bank->getSize();
@@ -131,7 +131,7 @@ void JEventProcessor_EVNT_online::Process(const std::shared_ptr<const JEvent>& e
       ntot+=nword;
     }
     evntdata->Fill(ntot);
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   }
   
   

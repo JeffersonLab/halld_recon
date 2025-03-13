@@ -72,7 +72,7 @@ void JEventProcessor_pedestals::Process(const std::shared_ptr<const JEvent>& eve
 	event->Get(df125pis);
 
 	// Lock ROOT mutex	
-	GetLockService(event)->RootWriteLock();
+	GetLockService(event)->RootFillLock(true);
 
 	for(unsigned int i=0; i<df250dats.size(); i++){
 		TH2D *h = GetHist(df250dats[i]);
@@ -91,7 +91,7 @@ void JEventProcessor_pedestals::Process(const std::shared_ptr<const JEvent>& eve
 	}
 	
 	// Unlock ROOT mutex	
-	GetLockService(event)->RootUnLock();
+	GetLockService(event)->RootFillLock(true);
 }
 
 //------------------
