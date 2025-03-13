@@ -421,7 +421,7 @@ void JEventProcessor_L1_online::Process(const std::shared_ptr<const JEvent>& eve
 
 
       // FILL HISTOGRAMS
-      lockService->RootWriteLock();    //ACQUIRE ROOT FILL LOCK
+      lockService->RootFillLock(this);    //ACQUIRE ROOT FILL LOCK
 
 
       if( l1trig.size() > 0 ){
@@ -525,7 +525,7 @@ void JEventProcessor_L1_online::Process(const std::shared_ptr<const JEvent>& eve
 
 
 
-      lockService->RootUnLock();   //RELEASE ROOT FILL LOCK
+      lockService->RootFillUnLock(this);   //RELEASE ROOT FILL LOCK
 }
 
 //------------------

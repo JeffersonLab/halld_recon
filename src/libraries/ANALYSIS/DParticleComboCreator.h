@@ -99,7 +99,6 @@ class DParticleComboCreator
 		vector<DParticleComboStep*> dCreated_ParticleComboStep;
 		vector<DChargedTrackHypothesis*> dCreated_ChargedHypo;
 		vector<DNeutralParticleHypothesis*> dCreated_NeutralHypo;
-		vector<DBeamPhoton*> dCreated_BeamPhoton;
 
 		DParticleCombo* Get_ParticleComboResource(void)
 		{

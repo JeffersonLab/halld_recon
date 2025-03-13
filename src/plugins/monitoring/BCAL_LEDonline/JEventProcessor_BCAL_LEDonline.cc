@@ -402,7 +402,7 @@ void JEventProcessor_BCAL_LEDonline::Process(const std::shared_ptr<const JEvent>
 	
 		// FILL HISTOGRAMS
 		// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+		lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 		if( (dbcaldigihits.size() > 0) || (dbcaltdcdigihits.size() > 0) )
 			bcal_num_events->Fill(1);
@@ -603,7 +603,7 @@ void JEventProcessor_BCAL_LEDonline::Process(const std::shared_ptr<const JEvent>
 			}
 		}
 
-		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+		lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
     }
 	
 	return;
@@ -618,6 +618,7 @@ void JEventProcessor_BCAL_LEDonline::EndRun() {
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
 
+	lockService->RootWriteLock(); //GRAB ROOT LOCK
 	printf("\nTrigger statistics");
 	printf("------------------------\n");
 	printf("%20s: %10i\n","no triggers",NOtrig);
@@ -636,6 +637,7 @@ void JEventProcessor_BCAL_LEDonline::EndRun() {
 	bcal_fadc_digi_pedestal_vchannel->SetMinimum(bcal_fadc_digi_pedestal_vchannel->GetMinimum(0.1));
 	bcal_fadc_digi_integral_vchannel->SetMinimum(bcal_fadc_digi_integral_vchannel->GetMinimum(0.1));	
 	bcal_fadc_digi_peak_vchannel->SetMinimum(bcal_fadc_digi_peak_vchannel->GetMinimum(0.1));	
+	lockService->RootUnLock(); //RELEASE ROOT LOCK
 
 	return;
 }

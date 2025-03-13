@@ -66,7 +66,7 @@ void DParticleComboCreator::Reset(void)
 		cout << "Total # of Particle Combos Allocated (All threads): " << dResourcePool_ParticleCombo.Get_NumObjectsAllThreads() << endl;
 		cout << "Total # of Charged Hypos (All threads): " << dChargedTrackHypothesisFactory->Get_NumObjectsAllThreads() << endl;
 		cout << "Total # of Neutral Hypos (All threads): " << dNeutralParticleHypothesisFactory->Get_NumObjectsAllThreads() << endl;
-		cout << "Total # of Beam Photons (All threads): " << dBeamPhotonfactory->Get_NumObjectsAllThreads() << endl;
+		// cout << "Total # of Beam Photons (All threads): " << dBeamPhotonfactory->Get_NumObjectsAllThreads() << endl;
 		cout << "Total # of KinematicDatas (All threads): " << dResourcePool_KinematicData.Get_NumObjectsAllThreads() << endl;
 	}
 
@@ -88,7 +88,6 @@ void DParticleComboCreator::Reset(void)
 	dNeutralHypoMap.clear();
 	dKinFitNeutralHypoMap.clear();
 
-	dBeamPhotonfactory->Recycle_Resources(dCreated_BeamPhoton);
 	dKinFitBeamPhotonMap.clear();
 
 	dResourcePool_KinematicData.Recycle(dCreated_KinematicData);
@@ -99,7 +98,6 @@ void DParticleComboCreator::Reset(void)
 	decltype(dCreated_ParticleComboStep)().swap(dCreated_ParticleComboStep);
 	decltype(dCreated_ChargedHypo)().swap(dCreated_ChargedHypo);
 	decltype(dCreated_NeutralHypo)().swap(dCreated_NeutralHypo);
-	decltype(dCreated_BeamPhoton)().swap(dCreated_BeamPhoton);
 }
 
 bool DParticleComboCreator::Get_CreateNeutralErrorMatrixFlag_Combo(const DReactionVertexInfo* locReactionVertexInfo, DKinFitType locKinFitType)
@@ -647,8 +645,7 @@ const DBeamPhoton* DParticleComboCreator::Create_BeamPhoton_KinFit(const DBeamPh
 	if(locBeamIterator != dKinFitBeamPhotonMap.end())
 		return locBeamIterator->second;
 
-	DBeamPhoton* locNewBeamPhoton = dBeamPhotonfactory->Get_Resource();
-	dCreated_BeamPhoton.push_back(locNewBeamPhoton);
+	DBeamPhoton* locNewBeamPhoton = new DBeamPhoton();
 	dKinFitBeamPhotonMap.emplace(locKinFitParticle, locNewBeamPhoton);
 
 	locNewBeamPhoton->dCounter = locBeamPhoton->dCounter;

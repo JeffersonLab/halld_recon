@@ -756,7 +756,8 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     vector<const DEPICSvalue *> epicsValues;
     event->Get(epicsValues);
     
-	DEvent::GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+	
     for(unsigned int j = 0; j < epicsValues.size(); j++){
         const DEPICSvalue *thisValue = epicsValues[j];
         if (strcmp((thisValue->name).c_str(), "IBCAD00CRCUR6") == 0){
@@ -772,7 +773,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     if (BEAM_CURRENT < 10.0) {
     	dHistBeamEvents->Fill(0);
         if (REQUIRE_BEAM){
-			DEvent::GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK!!
+			DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT LOCK!!
             return; // Skip events where we can't verify the beam current
         }
     }
@@ -780,7 +781,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     	dHistBeamEvents->Fill(1);
         fBeamEventCounter++;
     }
-	DEvent::GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT LOCK!!
 
     if (fBeamEventCounter >= BEAM_EVENTS_TO_KEEP) { // Able to specify beam ON events instead of just events
         cout<< "Maximum number of Beam Events reached" << endl;
@@ -867,7 +868,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     }
 
 
-	DEvent::GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 	// Start by filling individual hit times
 	// 
 	// The detectors with both TDCs and ADCs need these two to be aligned
@@ -1288,7 +1289,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     // Certainly good enough to take a pass at the time based tracking
     // This will be the final alignment step for now
 
-    if (thisRFBunch->dNumParticleVotes < 2) { DEvent::GetLockService(event)->RootUnLock(); return; }
+    if (thisRFBunch->dNumParticleVotes < 2) { DEvent::GetLockService(event)->RootFillUnLock(this); return; }
     auto dRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime", ""));
 
     // Loop over TAGM hits
@@ -1416,9 +1417,9 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     
     // we went this far just to align the tagger with the RF time, nothing else to do without tracks
     if(NO_TRACKS) 
-	    { DEvent::GetLockService(event)->RootUnLock();  return; }
+	    { DEvent::GetLockService(event)->RootFillUnLock(this);  return; }
 
-    if (!DO_TRACK_BASED && !DO_VERIFY ) { DEvent::GetLockService(event)->RootUnLock();  return; }   // Before this stage we aren't really ready yet, so just return
+    if (!DO_TRACK_BASED && !DO_VERIFY ) { DEvent::GetLockService(event)->RootFillUnLock(this);  return; }   // Before this stage we aren't really ready yet, so just return
 
     // Try using the detector matches
     // Loop over the charged tracks
@@ -1649,7 +1650,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 		}
     } // End of loop over time based tracks
 		
-   DEvent::GetLockService(event)->RootUnLock();
+   DEvent::GetLockService(event)->RootFillUnLock(this);
 
 
     return;

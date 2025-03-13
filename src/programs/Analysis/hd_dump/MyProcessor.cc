@@ -224,7 +224,7 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 		cout<<endl;
 		switch(toupper(c)){
 			case 'Q':
-				GetApplication()->Quit();
+				GetApplication()->Stop(false);
 				break;
 			case 'P':
 				//event->GotoEvent(eventnumber-1);

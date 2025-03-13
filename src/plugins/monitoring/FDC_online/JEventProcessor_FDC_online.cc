@@ -216,7 +216,7 @@ void JEventProcessor_FDC_online::Process(const std::shared_ptr<const JEvent>& ev
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     if( (anodedigis.size()>0) || (cathodedigis.size()>0) )
         fdc_num_events->Fill(1);
@@ -313,7 +313,7 @@ void JEventProcessor_FDC_online::Process(const std::shared_ptr<const JEvent>& ev
         } //end cell loop
     } //end package loop
 
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 

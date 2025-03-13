@@ -290,7 +290,8 @@ void JEventProcessor_FCAL_LED_shifts::EndRun()
   	// changed to give you a chance to clean up before processing
   	// events from the next run number.
  
-   
+	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK
+ 
   	if(CALC_NEW_CONSTANTS_BEAM) {
   		// calculate time shifts
   		//cerr << "opening " << REFERENCE_FILE_NAME << endl;
@@ -507,6 +508,8 @@ void JEventProcessor_FCAL_LED_shifts::EndRun()
   		outf.close();
 
   	}
+
+	lockService->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------

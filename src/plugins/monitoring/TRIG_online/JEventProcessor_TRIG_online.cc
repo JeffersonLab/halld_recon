@@ -207,7 +207,7 @@ void JEventProcessor_TRIG_online::Process(const std::shared_ptr<const JEvent> &l
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	h1trig_trgbits->Fill(trig_bits);
         h2trig_fcalVSbcal->Fill(bcal_energy,fcal_energy);
@@ -229,7 +229,7 @@ void JEventProcessor_TRIG_online::Process(const std::shared_ptr<const JEvent> &l
 		}
 	}
 
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 
