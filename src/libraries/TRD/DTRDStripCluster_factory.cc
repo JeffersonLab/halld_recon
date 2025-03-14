@@ -78,19 +78,11 @@ void DTRDStripCluster_factory::Init()
 ///
 double DTRDStripCluster_factory::StripToPosition(int iplane, const DTRDHit *hit)
 {
-	// better to pull this from CCDB, also probably the pitch as well
-	double ny = 0;
-	if(iplane == 0) {
-		ny = NUM_X_PLANES;
-	} else if(iplane == 1) {
-		ny = NUM_Y_PLANES;
-	} 
-	double ymi = 0.;     double yma = ny;
-	double biny = (yma-ymi)/ny;
-
-	//return double(hit->strip)/double(ny)*(yma-ymi)+ymi-biny/2.;
-	cout << "pos " << 0.1*hit->strip-ny*0.1*0.5<<endl;
-	return 0.1*hit->strip-ny*0.1*0.5;
+  // better to pull this from CCDB, also probably the pitch as well
+  if(iplane == 0) {
+    return STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip);
+  }
+  return STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip);
 }
 
 
@@ -165,7 +157,6 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
 	time_slices[time_slice].emplace_back(hit, x1, y1, c1);
       }
       for (auto const& ts: time_slices){
-	cout << "Time slice " << ts.first << " Number of hits " << ts.second.size() << endl;
 	vector<Point>points=ts.second;
 	DBSCAN(points, eps, minPts);
 	const int NClusters = GetNCluster(points);
