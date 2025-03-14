@@ -94,7 +94,7 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 				// save new point
 				DTRDPoint* newPoint = new DTRDPoint;     
 				newPoint->x = dTRDx+stripClusX[i]->pos.x();
-				newPoint->y = dTRDy+stripClusY[j]->pos.x();
+				newPoint->y = dTRDy+stripClusY[j]->pos.y();
 				newPoint->t_x = stripClusX[i]->t_avg;
 				newPoint->t_y = stripClusY[j]->t_avg;
 				newPoint->time = (stripClusX[i]->t_avg*stripClusX[i]->q_tot + stripClusY[j]->t_avg*stripClusY[j]->q_tot) / dE;
