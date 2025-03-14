@@ -82,8 +82,10 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 		// double zStart;
 		// double zEnd;
 
-		const int NUM_X_PLANES = 720;
-		const int NUM_Y_PLANES = 432;
+  const int NUM_X_STRIPS = 720;
+  //const int NUM_Y_STRIPS = 432;
+  const int NUM_Y_STRIPS = 528; // but only 432 are instrumented?
+  const double STRIP_PITCH=0.1;
 
 };
 
