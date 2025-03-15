@@ -104,7 +104,7 @@ void JEventProcessor_TRD_hists::Init() {
 void JEventProcessor_TRD_hists::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
 
-    auto runnumber = event->GetRunNumber();
+    //auto runnumber = event->GetRunNumber();
 
     const DGeometry *geom = DEvent::GetDGeometry(event);
 
@@ -213,15 +213,15 @@ void JEventProcessor_TRD_hists::Process(const std::shared_ptr<const JEvent>& eve
     	// make cuts based on locChargedTrackHypothesis->PID() ?
     	auto locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
     	
-	    int locCharge = locChargedTrackHypothesis->charge();
-    	Particle_t locPID = locChargedTrackHypothesis->PID();
+	    //int locCharge = locChargedTrackHypothesis->charge();
+    	//Particle_t locPID = locChargedTrackHypothesis->PID();
 		double locP = locTrackTimeBased->momentum().Mag();
-		double locTheta = locTrackTimeBased->momentum().Theta()*180.0/TMath::Pi();
+		//double locTheta = locTrackTimeBased->momentum().Theta()*180.0/TMath::Pi();
     	
     	auto locFCALShowerMatchParams = locChargedTrackHypothesis->Get_FCALShowerMatchParams();
     	auto locTOFHitMatchParams = locChargedTrackHypothesis->Get_TOFHitMatchParams();
 
-	    int charge = locChargedTrackHypothesis->charge();
+	    //int charge = locChargedTrackHypothesis->charge();
 	    vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased->extrapolations.at(SYS_TRD);
 	    //cout<<"found straight track with "<<extrapolations.size()<<" extrapolations"<<endl;
 

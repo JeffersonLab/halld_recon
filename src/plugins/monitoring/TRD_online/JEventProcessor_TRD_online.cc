@@ -163,7 +163,7 @@ void JEventProcessor_TRD_online::Init() {
 
 void JEventProcessor_TRD_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
-    auto runnumber = event->GetRunNumber();
+    //auto runnumber = event->GetRunNumber();
 
     const DGeometry *geom = GetDGeometry(event);
 
