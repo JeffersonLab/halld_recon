@@ -397,6 +397,8 @@ void JEventProcessor_BEAM_online::Process(const std::shared_ptr<const JEvent>& e
     event->Get(Beam);
     int NBeamPhotons = Beam.size();
 
+	DEvent::GetLockService(event)->RootFillLock(this); 
+        
     for (int j=0; j<50; j++) {
       
       double TIME = -16.*RFWidth + j*RFWidth;
@@ -419,8 +421,6 @@ void JEventProcessor_BEAM_online::Process(const std::shared_ptr<const JEvent>& e
 	double Ncnts = 0;
 	double NcntsA = 0;
 	
-	DEvent::GetLockService(event)->RootFillLock(this); 
-
 	for (int k=0 ;k<NBeamPhotons; k++){
 	  const DBeamPhoton* g = Beam[k];
 	  if (g->dSystem == SYS_TAGM){
