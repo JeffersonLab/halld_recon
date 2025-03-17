@@ -751,45 +751,6 @@ void DTranslationTable::ApplyTranslationTable(const std::shared_ptr<const JEvent
       }
    }
 
-   // DGEMSRSWindowRawData
-   vector<const DGEMSRSWindowRawData*> gemsrswindowrawdata;
-   event->Get(gemsrswindowrawdata);
-   if (VERBOSE > 2) ttout << "  Number DGEMSRSWindowRawData objects: " << gemsrswindowrawdata.size() << std::endl;
-   for (uint32_t i=0; i<gemsrswindowrawdata.size(); i++) {
-      const DGEMSRSWindowRawData *hit = gemsrswindowrawdata[i];
-
-      // Apply optional rocid translation
-      uint32_t rocid = hit->rocid;
-      map<uint32_t, uint32_t>::iterator rocid_iter = Get_ROCID_Map().find(rocid);
-      if (rocid_iter != Get_ROCID_Map().end()) rocid = rocid_iter->second;
-
-      if (VERBOSE > 4)
-         ttout << "    Looking for rocid:" << rocid << " slot:" << hit->slot
-               << " chan:" << hit->channel << std::endl;
-      
-      // Create crate,slot,channel index and find entry in Translation table.
-      // If none is found, then just quietly skip this hit.
-      csc_t csc = {rocid, hit->slot, hit->channel};
-      map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
-      if (iter == Get_TT().end()) {
-          if (VERBOSE > 6)
-             ttout << "     - Didn't find it" << std::endl;
-          continue;
-      }
-      const DChannelInfo &chaninfo = iter->second;
-      if (VERBOSE > 6)
-	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
-               << std::endl;
-      
-      // Create the appropriate hit type based on detector type
-      switch (chaninfo.det_sys) {
-         case TRD:    MakeGEMDigiWindowRawData(chaninfo.trd, hit); break;
-         default:     
-             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
-             break;
-      }
-   }
-
    // Optionally overwrite nsamples_integral and/or nsamples_pedestal if 
    // user specified via config. parameters.
    OverwriteNsamples();
@@ -1500,6 +1461,7 @@ DTRDDigiHit* DTranslationTable::MakeTRDDigiHit(
 	h->strip             = idx.strip;
 	h->pulse_peak        = p->peak_amp;
 	h->pulse_time        = p->le_time;
+	h->peak_time         = p->peak_time;
 	h->pedestal          = p->pedestal;
 	h->QF                = p->time_quality_bit + (p->overflow_count<<1);
 	h->nsamples_integral = p->nsamples_integral;
@@ -1537,23 +1499,6 @@ DFMWPCDigiHit* DTranslationTable::MakeFMWPCDigiHit(const FMWPCIndex_t &idx,
 }
 
 
-//---------------------------------
-// MakeDigiWindowRawData
-//---------------------------------
-DGEMDigiWindowRawData* DTranslationTable::MakeGEMDigiWindowRawData(
-                                       const TRDIndex_t &idx,
-                                       const DGEMSRSWindowRawData *p) const
-{
-	DGEMDigiWindowRawData *h = new DGEMDigiWindowRawData();
-	h->plane             = idx.plane;
-	h->strip             = idx.strip;
-
-	h->AddAssociatedObject(p);
-
-	vDGEMDigiWindowRawData.push_back(h);
-   
-	return h;
-}
 
 //---------------------------------
 // MakeBCALTDCDigiHit
