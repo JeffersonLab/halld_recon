@@ -30,6 +30,8 @@ void DTRDPoint_factory::Init()
 
   app->SetDefaultParameter("TRDPOINT:TIME_DIFF_MAX",TIME_DIFF_MAX);
 //   app->SetDefaultParameter("TRDPOINT:DIST_DIFF_MAX",DIST_DIFF_MAX);
+
+  DRIFT_VELOCITY=0.0033; // cm/ns
 }
 
 
@@ -102,7 +104,8 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 				newPoint->status = 1;
 				//newPoint->itrack = 0;
 				//newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE + dTRDz[0];
-				newPoint->z = dTRDz+(stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE;  // FOR TESTING
+				//newPoint->z = dTRDz+(stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE;  // FOR TESTING
+				newPoint->z=dTRDz-DRIFT_VELOCITY*newPoint->time;
 
 				newPoint->AddAssociatedObject(stripClusX[i]);
 				newPoint->AddAssociatedObject(stripClusY[j]);
