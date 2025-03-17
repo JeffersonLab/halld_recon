@@ -11,11 +11,13 @@ using namespace std;
 #include <TRD/DTRDDigiHit.h>
 #include <TRD/DTRDHit.h>
 #include <TRD/DTRDStripCluster.h>
-// #include <TRD/DTRDPoint.h>
+#include <TRD/DTRDPoint.h>
+#include <TRD/DTRDPoint_Hit.h>
 
 #include <TDirectory.h>
 #include <TH1.h>
 #include <TH2.h>
+#include <TH3.h>
 #include <TProfile.h>
 
 // root hist pointers
@@ -45,6 +47,22 @@ static TH2I *hClusterHits_TimeVsStrip[NTRDplanes];
 static TH2I *hCluster_TimeVsStrip[NTRDplanes];
 static TH2I *hClusterHits_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
 static TH2I *hCluster_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
+
+static TH3I *hPoint_XYT;
+static TH1I *hPoint_NHits;
+static TH1I *hPoint_Time;
+static TH1I *hPoint_dE;
+static TH1I *hPoint_dEDiff;
+static TH1I *hPoint_dERatio;
+static TH1I *hPoint_TimeDiff;
+static TH1I *hPoint_OccupancyX;
+static TH1I *hPoint_OccupancyY;
+static TH2I *hPoint_TimeVsX;
+static TH2I *hPoint_TimeVsY;
+static TH2I *hPoint_XYDisplay;
+static TH2I *hPoint_dE_XY;
+static TH2I *hPoint_TimeVsdEX;
+static TH2I *hPoint_TimeVsdEY;
 
 //----------------------------------------------------------------------------------
 
@@ -77,9 +95,9 @@ JEventProcessor_TRD_online::~JEventProcessor_TRD_online() {
 
 void JEventProcessor_TRD_online::Init() {
 
-    auto app = GetApplication();
-    lockService = app->GetService<JLockService>();
-
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+	
     // create root folder for TRD and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
     TDirectory *trdDir = gDirectory->mkdir("TRD");
@@ -114,7 +132,6 @@ void JEventProcessor_TRD_online::Init() {
     trdDir->cd();
     gDirectory->mkdir("Hit")->cd();
     hHit_NHits = new TH1I("Hit_NHits","TRD calibrated hit multiplicity;calibrated hits;events",100,0.5,0.5+200);
-    
     // histograms for each plane
     for(int i=0; i<NTRDplanes; i++) {
 		int NTRDstrips = 0.;
@@ -125,12 +142,30 @@ void JEventProcessor_TRD_online::Init() {
 
 		hHit_Occupancy[i] = new TH1I(Form("Hit_Occupancy_Plane%d", i),Form("Plane %d TRD hit occupancy;strip;calibrated hits / counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
 		hHit_Time[i] = new TH1I(Form("Hit_Time_Plane%d", i),Form("Plane %d TRD pulse time;pulse time [ns];calibrated hits / 2 ns",i),250,0.0,2000.0);
-		hHit_PulseHeight[i] = new TH1I(Form("Hit_PulseHeight_Plane%d", i),Form("Plane %d TRD pulse height;pulse height [fADC units];calibrated hits / 1 unit",i),600,-100.0,500.0);
+		hHit_PulseHeight[i] = new TH1I(Form("Hit_PulseHeight_Plane%d", i),Form("Plane %d TRD pulse height;pulse height [fADC units];calibrated hits / 1 unit",i),260,400.0,3000.0);
         hHit_TimeVsStrip[i] = new TH2I(Form("Hit_TimeVsStrip_Plane%d", i),Form("Plane %d TRD pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,250,0.0,2000.0);
 
 	}
     
-
+	// point-level hists
+    trdDir->cd();
+    gDirectory->mkdir("Point")->cd();
+	hPoint_NHits = new TH1I("Point_NHits","TRD calibrated point multiplicity;calibrated points;events",100,0.5,0.5+200);
+    hPoint_XYT = new TH3I("Point_XYT","TRD 3D Points;X Strip;Y Strip;Pulse Time [ns]",720,-0.5,719.5,360,-0.5,359.5,200,0.,200.*8.);
+	hPoint_Time = new TH1I("Point_Time","TRD Point Time;Pulse Time [ns]; ",200,0.,200.*8.);
+	hPoint_dE = new TH1I("Point_dE","TRD Point dE;Average dE [q]; ",260,400.,3000.);
+	hPoint_dEDiff = new TH1I("Point_dEDiff","TRD Point dE X,Y Weighted Diff.;(dE_x - dE_y)/(dE_x + dE_y); ",100,-1.,1.);
+	hPoint_dERatio = new TH1I("Point_dERatio","TRD Point dE_x / dE_y;(dE_x / dE_y); ",100,-0.,6.);
+	hPoint_dE_XY = new TH2I("Point_dE_XY","TRD Point dE Corr. in X,Y;X Strip dE [q]; Y Strip dE [q]",390,400.,3000.,1300,400.,3000.);
+	hPoint_TimeVsdEX= new TH2I("Point_TimeVsdEX","TRD Point dE of X in Time;X Strip dE [q];Pulse Time [ns]",390,400.,3000.,200,0.,200.*8.);
+	hPoint_TimeVsdEY= new TH2I("Point_TimeVsdEY","TRD Point dE of Y in Time;Y Strip dE [q];Pulse Time [ns]",390,400.,3000.,200,0.,200.*8.);
+	hPoint_OccupancyX = new TH1I("Point_OccupancyX","TRD Point X;X Strip; ",720,-0.5,719.5);
+	hPoint_OccupancyY = new TH1I("Point_OccupancyY","TRD Point Y;Y Strip; ",360,-0.5,359.5);
+	hPoint_XYDisplay = new TH2I("Point_XYDisplay","TRD Point Display;X Strip;Y Strip",720,-0.5,719.5,360,-0.5,359.5);
+	hPoint_TimeVsX= new TH2I("Point_TimeVsX","TRD Point X in Time;X Strip;Pulse Time [ns]",720,-0.5,719.5,200,0.,200.*8.);
+	hPoint_TimeVsY= new TH2I("Point_TimeVsY","TRD Point Y in Time;Y Strip;Pulse Time [ns]",360,-0.5,359.5,200,0.,200.*8.);
+	hPoint_TimeDiff = new TH1I("Point_TimeDiff","TRD Point Time Difference;abs(X Time - Y Time) [ns]; ",80,-40.,40.);
+	
     trdDir->cd();
 
     eventClusterCount = 0;
@@ -163,11 +198,11 @@ void JEventProcessor_TRD_online::Init() {
 
 void JEventProcessor_TRD_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
+
     //auto runnumber = event->GetRunNumber();
-
     const DGeometry *geom = GetDGeometry(event);
-
-    vector<double> z_trd;
+	
+	vector<double> z_trd;
     geom->GetTRDZ(z_trd);
 }
 
@@ -181,15 +216,15 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     // loop-Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
-
-    auto eventnumber = event->GetEventNumber();
-
+	
+	auto eventnumber = event->GetEventNumber();
+	
 /*
     // Get trigger words and filter on PS trigger (if it exists?)
     const DL1Trigger *trig_words = nullptr;
     uint32_t trig_mask, fp_trig_mask;
     try {
-        event->GetSingle(trig_words);
+        eventLoop->GetSingle(trig_words);
     } catch(...) {};
     if (trig_words != nullptr) {
         trig_mask = trig_words->trig_mask;
@@ -202,7 +237,7 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     int trig_bits = fp_trig_mask > 0 ? 10 + fp_trig_mask:trig_mask;
     // Select PS-triggered events
     if (trig_bits != 8) {
-        return;
+        return NOERROR;
     }
 */
 
@@ -212,9 +247,11 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     event->Get(hits);
     vector<const DTRDStripCluster*> clusters;
     event->Get(clusters);
-//     vector<const DTRDPoint*> points;
-//     eventLoop->Get(points);
-
+	vector<const DTRDPoint*> points;
+    event->Get(points);
+	vector<const DTRDPoint_Hit*> pointhits;
+    event->Get(pointhits);
+	
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
     lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -243,12 +280,12 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     hHit_NHits->Fill(hits.size());
     for (const auto& hit : hits) {
 	    int plane = hit->plane-1;
-
 	    hHit_Occupancy[plane]->Fill(hit->strip);
 	    hHit_Time[plane]->Fill(hit->t);
 	    hHit_PulseHeight[plane]->Fill(hit->pulse_height);
         hHit_TimeVsStrip[plane]->Fill(hit->strip, hit->t);
     }
+	
        if (clusters.size() > 10 && eventClusterCount < NEventsClusterMonitor) {
         cout << "Event " << eventnumber << " has " << clusters.size() << " clusters, eventClusterCount = " << eventClusterCount << endl;
         for (const auto& cluster : clusters) {
@@ -267,9 +304,26 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 
         eventClusterCount++;
     }
-
-
-    for (const auto& cluster : clusters) {
+	
+	hPoint_NHits->Fill(pointhits.size());
+    for (const auto& point : pointhits) {
+        hPoint_XYT->Fill(point->x,point->y,point->time);
+		hPoint_Time->Fill(point->time);
+		hPoint_TimeDiff->Fill(abs(point->t_x - point->t_y));
+		hPoint_OccupancyX->Fill(point->x);
+		hPoint_OccupancyY->Fill(point->y);
+		hPoint_dE->Fill(point->dE);
+		hPoint_dE_XY->Fill(point->dE_x,point->dE_y);
+		hPoint_TimeVsdEX->Fill(point->dE_x,point->t_x);
+		hPoint_TimeVsdEY->Fill(point->dE_y,point->t_y);
+		hPoint_dEDiff->Fill((point->dE_x - point->dE_y)/(point->dE_x + point->dE_y));
+		hPoint_dERatio->Fill((point->dE_x / point->dE_y));
+		hPoint_TimeVsX->Fill(point->x,point->time);
+		hPoint_TimeVsY->Fill(point->y,point->time);
+		hPoint_XYDisplay->Fill(point->x,point->y);
+	}
+	
+        for (const auto& cluster : clusters) {
             int plane = cluster->plane-1;
             double pos = 0.;
             if (plane == 0) pos = cluster->pos.x();
@@ -277,16 +331,15 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
             
             hCluster_TimeVsStrip[plane]->Fill(cluster->t_avg, pos);
     }
-
+	
         for (const auto& hit : hits) {
             int plane = hit->plane-1;
             hClusterHits_TimeVsStrip[plane]->Fill(hit->t, hit->strip);
         }
-        
-
+	
     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return;
+	
+    return;
 }
 //----------------------------------------------------------------------------------
 
@@ -297,9 +350,7 @@ void JEventProcessor_TRD_online::EndRun() {
     // events from the next run number.
 }
 
-
 //----------------------------------------------------------------------------------
-
 
 void JEventProcessor_TRD_online::Finish() {
     // Called before program exit after event processing is finished.

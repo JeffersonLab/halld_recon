@@ -28,8 +28,8 @@ void DTRDHit_factory_Calib::Init()
 
     /// set the base conversion scales
     //a_scale      = 2.4E4/1.3E5;  // NOTE: currently fixed to FDC values, currently not used
-    a_scale=1.;                  // to test with real fADC pulses
-    t_scale      = 8.0;          // 8 ns/count
+    a_scale=1.;					// to test with real fADC pulses
+	t_scale      = 8.0;     // 8 ns/count
     t_base       = { 0.,  0.};   // ns, per plane
     
     PEAK_THRESHOLD = 150.;  // fADC units
@@ -128,8 +128,7 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
     vector<const DTRDDigiHit*> digihits;
     event->Get(digihits);
     
-//     cout << "DTRDHit_factory_Calib::Process() ..." << endl;
-//     cout << "  num input hits = " << digihits.size() << endl;
+    //cout << "DTRDHit_factory_Calib::Process() ..." << endl;
 
     // make hits out of all DTRDDigiHit objects	
     for (unsigned int i=0; i < digihits.size(); i++) {

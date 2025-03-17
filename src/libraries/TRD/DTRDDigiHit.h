@@ -15,12 +15,13 @@ class DTRDDigiHit : public JObject {
 		uint32_t plane;
 		uint32_t strip;
 		uint32_t pulse_peak;           ///< identified pulse peak as returned by FPGA algorithm
-		uint32_t pulse_time;           ///< identified leading edge pulse time as returned by FPGA algorithm
+		uint32_t pulse_time;           ///< identified pulse time as returned by FPGA algorithm
 		uint32_t peak_time;            ///< identified peak time as returned by FPGA algorithm
 		uint32_t pedestal;             ///< pedestal info used by FPGA (if any)
 		uint32_t QF;                   ///< Quality Factor from FPGA algorithms
 		uint32_t nsamples_integral;    ///< number of samples used in integral 
 		uint32_t nsamples_pedestal;    ///< number of samples used in pedestal
+
 
 		void Summarize(JObjectSummary& summary) const override {
 			summary.add(plane, NAME_OF(plane), "%4d");
