@@ -55,9 +55,6 @@ void JEventProcessor_FCALLEDTree::Init()
   app->SetDefaultParameter( "FCALLED:Tree", btree );
 
   lockService = app->GetService<JLockService>();
-
-  // This is called once at program startup.
-  lockService->RootWriteLock();
   
   if (btree == 1) {
   
@@ -91,8 +88,6 @@ void JEventProcessor_FCALLEDTree::Init()
   hinteg = new TH2F("m_integ", ";channel;integ;Counts", 2800, 0, 2800, 4096, 0., 4096.);
 
   main->cd();
-  
- lockService->RootUnLock();
   
   return; //NOERROR;
 }

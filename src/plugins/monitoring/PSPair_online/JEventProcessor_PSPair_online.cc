@@ -424,7 +424,7 @@ void JEventProcessor_PSPair_online::Process(const std::shared_ptr<const JEvent>&
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     hPSC_NHitPairs->Fill(cpairs.size());
     hPS_NHitPairs->Fill(fpairs.size());
@@ -510,16 +510,16 @@ void JEventProcessor_PSPair_online::Process(const std::shared_ptr<const JEvent>&
                 hPSTAGM_timeVsE->Fill(E_pair,clhit->t-tag->t);
             }
             // PSC,PS,TPOL coincidences
-            if (fabs(PS_Ediff) > 1.75) {lockService->RootUnLock(); return;}
-            if (fabs(PSC_tdiff) > 1.3) {lockService->RootUnLock(); return;}
-            if (E_pair < 8.4 || E_pair > 9.0) {lockService->RootUnLock(); return;}
+            if (fabs(PS_Ediff) > 1.75) {lockService->RootFillUnLock(this); return;}
+            if (fabs(PSC_tdiff) > 1.3) {lockService->RootFillUnLock(this); return;}
+            if (E_pair < 8.4 || E_pair > 9.0) {lockService->RootFillUnLock(this); return;}
             double ph_cut = 100.0;
             int N_TPOL = 0;
             for(unsigned int i=0; i<tpolhits.size(); i++) {
                 if (tpolhits[i]->pulse_peak>=ph_cut) N_TPOL++;
             }
             hPSTPOL_NHits->Fill(N_TPOL);
-            if (N_TPOL>1) {lockService->RootUnLock(); return;}
+            if (N_TPOL>1) {lockService->RootFillUnLock(this); return;}
             for(unsigned int i=0; i<tpolhits.size(); i++) {
                 const DTPOLHit* hit = tpolhits[i];
                 hPSTPOL_peak->Fill(hit->pulse_peak);
@@ -535,7 +535,7 @@ void JEventProcessor_PSPair_online::Process(const std::shared_ptr<const JEvent>&
         }
     }
     //
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 }
 

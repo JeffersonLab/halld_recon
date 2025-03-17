@@ -210,9 +210,9 @@ void JEventProcessor_TS_scaler::Process(const std::shared_ptr<const JEvent>& loc
 	}
 		
 	int trig_bits = fp_trig_mask > 0? 128 + fp_trig_mask/256: trig_mask;
-	lockService->RootWriteLock();
+	lockService->RootFillLock(this);
 	dHistTS_trgbits->Fill(trig_bits);
-	lockService->RootUnLock();
+	lockService->RootFillUnLock(this);
 
 	// check if scalers are filled to identify SYNC events
 	//if(locL1Trigger->gtp_sc.size() <= 0)
@@ -247,13 +247,13 @@ void JEventProcessor_TS_scaler::Process(const std::shared_ptr<const JEvent>& loc
 	//printf ("Event=%d int_count=%d livetime=%d busytime=%d time=%d live_inst=%d\n",(int)locEventNumber,int_count,livetime,busytime,(int)timestamp,live_inst);
 	
 	double livetime_integrated = (double)livetime/(livetime+busytime);
-	lockService->RootWriteLock();
+	lockService->RootFillLock(this);
 	dHistTS_livetime_tot->Fill(livetime_integrated);
 	dHistTS_liveinst_tot->Fill((float)live_inst/1000.);
 	dHistTS_livetimeEvents->Fill(locEventNumber, livetime_integrated);
 	dHistTS_SyncEvents->Fill(locEventNumber);
 	dHistTS_Current->Fill(dEventNumber, dCurrent);
-	lockService->RootUnLock();
+	lockService->RootFillUnLock(this);
 	
 	//STAGE DATA FOR TREE FILL
 	dTreeFillData.Fill_Single<bool>("IsFirstInterval", dIsFirstInterval);
@@ -274,7 +274,7 @@ void JEventProcessor_TS_scaler::Process(const std::shared_ptr<const JEvent>& loc
 	dSyncEventUnixTime = timestamp;
 
 	// set info for each trigger bit and fill histograms
-	lockService->RootWriteLock();
+	lockService->RootFillLock(this);
 	for (int j=0; j<kScalers; j++) {
 		gtp_rec[j] = dTrigCount[j] - dRecordedTriggerBitPrevious[j];
 		gtp_sc[j] = locL1Info->gtp_sc[j] - dScalerTriggerBitPrevious[j];
@@ -317,7 +317,7 @@ void JEventProcessor_TS_scaler::Process(const std::shared_ptr<const JEvent>& loc
 			}
 		}
 	}
-	lockService->RootUnLock();
+	lockService->RootFillUnLock(this);
 
 	//FILL TTREE
 	dTreeInterface->Fill(dTreeFillData);

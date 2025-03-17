@@ -65,20 +65,20 @@ set<uint32_t> ROCIDS_TO_PARSE;
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 // If EVIO support is not available, define dummy methods
 #ifndef HAVE_EVIO
-JEventSource_EVIO::JEventSource_EVIO(std::string source_name, JApplication* app):JEventSource(source_name){
-	cerr << endl;
-	cerr << "You are trying to use code requiring EVIO when support" << endl;
-	cerr << "for EVIO was not built into this binary. Set your" << endl;
-	cerr << "EVIOROOT *and* your ETROOT environment variables to" << endl;
-	cerr << "point to your EVIO installation and recompile." << endl;
-	cerr << endl;
-	exit(-1);
-}
-         JEventSource_EVIO::~JEventSource_EVIO(){}
+    JEventSource_EVIO::JEventSource_EVIO(std::string source_name, JApplication* app):JEventSource(source_name) {
+        cerr << endl;
+        cerr << "You are trying to use code requiring EVIO when support" << endl;
+        cerr << "for EVIO was not built into this binary. Set your" << endl;
+        cerr << "EVIOROOT *and* your ETROOT environment variables to" << endl;
+        cerr << "point to your EVIO installation and recompile." << endl;
+        cerr << endl;
+        exit(-1);
+    }
+    JEventSource_EVIO::~JEventSource_EVIO(){}
     void JEventSource_EVIO::GetEvent(std::shared_ptr<JEvent> event) {}
-    void JEventSource_EVIO::FinishEvent(JEvent &event) {};
+    void JEventSource_EVIO::FinishEvent(JEvent &event) {}
     bool JEventSource_EVIO::GetObjects(const std::shared_ptr<const JEvent> &event, JFactory *factory) {return false;}
-jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buf){return NOERROR;}
+    jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buf){return NOERROR;}
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 #else  // HAVE_EVIO

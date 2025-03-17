@@ -334,7 +334,6 @@ void JEventProcessor_CCAL_ComptonGains::Process(const std::shared_ptr<const JEve
 	if( n_fcal_showers != 1 || n_ccal_showers != 1 ) {
 		DEvent::GetLockService(locEvent)->RootFillUnLock(this);  // Release root lock
 		return;
-		
 	}
 	
 	
@@ -377,8 +376,10 @@ void JEventProcessor_CCAL_ComptonGains::Process(const std::shared_ptr<const JEve
 	
 	//----------   Apply a Coplanarity cut:
 	
-	if( fabs( deltaPhi - 180. )  >  COPL_CUT ) return; // NOERROR;
-	
+	if( fabs( deltaPhi - 180. )  >  COPL_CUT ) {
+		DEvent::GetLockService(locEvent)->RootFillUnLock(this);  // Release root lock
+		return; // NOERROR;
+	}	
 	
 	
 	
