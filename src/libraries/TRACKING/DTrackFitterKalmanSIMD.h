@@ -15,7 +15,6 @@
 #include "CDC/DCDCTrackHit.h"
 #include "FDC/DFDCPseudo.h"
 #include <TRD/DTRDPoint.h>
-#include <TRD/DGEMPoint.h>
 #include <TH3.h>
 #include <TH2.h>
 #include <TH1I.h>
@@ -184,7 +183,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void AddCDCHit(const DCDCTrackHit *cdchit);
   void AddFDCHit(const DFDCPseudo *fdchit);
   void AddTRDHit(const DTRDPoint *trdhit);
-  void AddGEMHit(const DGEMPoint *gemhit);
 
   jerror_t KalmanLoop(void);
   virtual kalman_error_t KalmanReverse(double fdc_anneal,double cdc_anneal,
@@ -263,7 +261,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
     bad_hit,
     late_hit,
     trd_hit,
-    gem_hit,
   };
   enum fit_region{
     kForward,
@@ -543,8 +540,8 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   bool ALIGNMENT,ALIGNMENT_CENTRAL,ALIGNMENT_FORWARD;
   double COVARIANCE_SCALE_FACTOR_FORWARD, COVARIANCE_SCALE_FACTOR_CENTRAL;
 
-  bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS,USE_GEM_HITS;
-  bool got_trd_gem_hits;
+  bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS;
+  bool got_trd_gem_hits; // CHECK
 
   // Maximum number of sigma's away from the predicted position to include hit
   double NUM_CDC_SIGMA_CUT,NUM_FDC_SIGMA_CUT;

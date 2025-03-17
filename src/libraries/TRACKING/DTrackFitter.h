@@ -21,7 +21,6 @@
 #include <FDC/DFDCPseudo.h>
 #include <TRACKING/DReferenceTrajectory.h>
 #include <TRD/DTRDPoint.h>
-#include <TRD/DGEMPoint.h>
 
 using namespace std;
 
@@ -137,8 +136,6 @@ class DTrackFitter: public JObject{
 		void AddHits(vector<const DFDCPseudo*> fdchits);
 		void AddHit(const DTRDPoint* trdhit);
 		void AddHits(vector<const DTRDPoint*> trdhits);
-		void AddHit(const DGEMPoint* gemhit);
-		void AddHits(vector<const DGEMPoint*> gemhits);
 		const vector<const DCDCTrackHit*>& GetCDCInputHits(void) const {return cdchits;}
 		const vector<const DFDCPseudo*>&   GetFDCInputHits(void) const {return fdchits;}
 		const vector<const DCDCTrackHit*>& GetCDCFitHits(void) const {return cdchits_used_in_fit;}
@@ -233,7 +230,6 @@ class DTrackFitter: public JObject{
 		vector<const DCDCTrackHit*> cdchits;	//< Hits in the CDC
 		vector<const DFDCPseudo*> fdchits;		//< Hits in the FDC
 		vector<const DTRDPoint*> trdhits;
-		vector<const DGEMPoint*> gemhits;
 
 	DTrackingData input_params;				//< Starting parameters for the fit
 		fit_type_t fit_type;							//< kWireBased or kTimeBased

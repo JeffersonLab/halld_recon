@@ -30,14 +30,13 @@ class DTRDPoint_factory : public JFactoryT<DTRDPoint> {
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
 		void EndRun() override;
 
-		double calcClusterTime(const DTRDStripCluster *clus);
-		double calcClusterPosition(const DTRDStripCluster *clus);
+// 		double calcClusterTime(const DTRDStripCluster *clus);
+// 		double calcClusterPosition(const DTRDStripCluster *clus);
  		
 	private:		
-		double wireX0, stripY0, wireX_pitch, stripY_pitch;
-		double wire_time_max;
-		double gemX0, gemY0, gem_pitch;
-		double gem_time_max, gem_dE_max;
+  		double TIME_DIFF_MAX;
+//   		double DIST_DIFF_MAX;
+
 		vector<double>dTRDz;
 
 };
