@@ -1766,6 +1766,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					}
 					if( ((*iptr>>31) & 0x1) != 0 ){
 						jerr << " Truncated f125 CDC hit (missing continuation word!)" << endl;
+						--iptr;
 						continue;
 					}
 					uint32_t word2      = *iptr;
@@ -1820,11 +1821,12 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					      ++iptr;
 					      if(iptr>=iend){
 						    jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
-						    continue;
+						    break;
 					      }
 					      if( ((*iptr>>31) & 0x1) != 0 ){
-						    jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
-						    continue;
+						    jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
+						    --iptr; 
+						    break;
 					      }
 					      uint32_t word2      = *iptr;
 					      uint32_t pulse_peak = 0;
@@ -1908,11 +1910,12 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					      ++iptr;
 					      if(iptr>=iend){
 						    jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
-						    continue;
+						    break;
 					      }
-					      if( ((*iptr>>31) & 0x1) != 0 ){
-						    jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
-						    continue;
+					      if( ((*iptr>>31) & 0x1) != 0 ){						 
+ 						    jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
+						    --iptr;
+						    break;
 					      }
 					      uint32_t word2      = *iptr;
 					      uint32_t pulse_peak = (*iptr>>19) & 0xFFF;
