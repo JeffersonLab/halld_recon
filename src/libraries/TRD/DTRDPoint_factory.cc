@@ -24,7 +24,7 @@ void DTRDPoint_factory::Init()
 	auto app = GetApplication();
   
   // Some parameters for defining matching
-  TIME_DIFF_MAX = 50.;
+  TIME_DIFF_MAX = 1.;
 //   DIST_DIFF_MAX = 10.;
   //DE_DIFF_MAX = 1.0;
 
@@ -47,6 +47,7 @@ void DTRDPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 
   // Get GEM geometry from xml (CCDB or private HDDS)
   dgeom->GetGEMTRDz(dTRDz);
+
   vector<double>xvec,yvec;
   dgeom->GetGEMTRDxy_vec(xvec,yvec);
   dTRDx=xvec[0];
