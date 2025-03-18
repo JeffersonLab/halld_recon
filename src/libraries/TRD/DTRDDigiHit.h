@@ -15,7 +15,7 @@ class DTRDDigiHit : public JObject {
 		uint32_t plane;
 		uint32_t strip;
 		uint32_t pulse_peak;           ///< identified pulse peak as returned by FPGA algorithm
-		uint32_t pulse_time;           ///< identified pulse time as returned by FPGA algorithm
+		uint32_t pulse_time;           ///< identified leading edge pulse time as returned by FPGA algorithm
 		uint32_t peak_time;            ///< identified peak time as returned by FPGA algorithm
 		uint32_t pedestal;             ///< pedestal info used by FPGA (if any)
 		uint32_t QF;                   ///< Quality Factor from FPGA algorithms

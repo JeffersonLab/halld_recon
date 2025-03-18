@@ -43,14 +43,6 @@ void DTRDHit_factory_Calib::Init()
     app->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
 			      "Throw away hits which come after this time (default: 10000.)");
 	
-	//IS_XY_TIME_CUT = true;
-	//app->SetDefaultParameter("TRD:IS_XY_TIME_CUT", IS_XY_TIME_CUT, 
-    //              "Apply time difference cut between X and Y hits (default: true)");
-
-	//XY_TIME_DIFF = 20.;
-	//app->SetDefaultParameter("TRD:XY_TIME_DIFF", XY_TIME_DIFF, 
-    //             "Time difference between hits in X and Y planes to be considered a coincidence (default: 20.)");	
-	
 	return;
 }
 
@@ -136,8 +128,6 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
     vector<const DTRDDigiHit*> digihits;
     event->Get(digihits);
     
-    //cout << "DTRDHit_factory_Calib::Process() ..." << endl;
-
     // make hits out of all DTRDDigiHit objects	
     for (unsigned int i=0; i < digihits.size(); i++) {
 	    const DTRDDigiHit *digihit = digihits[i];
@@ -187,8 +177,8 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
          	}
 
 			// calculate the correct pulse peak and pedestal      	
-      		/////////////////////pulse_peak = FDCPulseObj->peak_amp << ABIT;
-      		pulse_peak = digihit->pulse_peak << ABIT;
+      		pulse_peak = FDCPulseObj->peak_amp << ABIT;
+      		//pulse_peak = digihit->pulse_peak << ABIT;
       		scaled_ped = raw_ped << PBIT;
       	}
 		else {

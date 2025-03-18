@@ -71,13 +71,9 @@ void DTRDHit_factory::Process(const std::shared_ptr<const JEvent>& event)
     vector<const DTRDHit*> hits;
     event->Get(hits, "Calib");
     
-//     cout << "DTRDHit_factory::Process() ..." << endl;
-//     cout << "  num input hits = " << hits.size() << endl;
-
     if(!IS_XY_TIME_DIFF_CUT) {
     	for(auto &hit : hits)
     		Insert(const_cast<DTRDHit*>(hit));
-			//cout << "  **** Insert(hit) - NO XY TIME CUT " << endl;
     	return;
     }
 
@@ -99,7 +95,6 @@ void DTRDHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 			continue;
 		}
 		hits_plane[stripPlane].push_back(*i);
-		//cout << "  **** push_back()"<<i<<" (hits_plane[])" << endl;
 	}
 
 	// loops to check the time coincidence of hits in the two planes and add them to the _data vector
