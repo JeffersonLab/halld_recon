@@ -32,9 +32,9 @@ void DTRDHit_factory_Calib::Init()
 	t_scale      = 8.0;     // 8 ns/count
     t_base       = { 0.,  0.};   // ns, per plane
     
-    PEAK_THRESHOLD = 150.;  // fADC units
+    PEAK_THRESHOLD = 100.;  // fADC units
     app->SetDefaultParameter("TRD:PEAK_THRESHOLD", PEAK_THRESHOLD, 
-			      "Threshold in fADC units for hit amplitudes");
+			      "Threshold in fADC units for hit amplitudes (default: 100.)");
 
   	LOW_TCUT = -10000.;
   	HIGH_TCUT = 10000.;
@@ -42,7 +42,15 @@ void DTRDHit_factory_Calib::Init()
 			      "Throw away hits which come before this time (default: -10000.)");
     app->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
 			      "Throw away hits which come after this time (default: 10000.)");
+	
+	//IS_XY_TIME_CUT = true;
+	//app->SetDefaultParameter("TRD:IS_XY_TIME_CUT", IS_XY_TIME_CUT, 
+    //              "Apply time difference cut between X and Y hits (default: true)");
 
+	//XY_TIME_DIFF = 20.;
+	//app->SetDefaultParameter("TRD:XY_TIME_DIFF", XY_TIME_DIFF, 
+    //             "Time difference between hits in X and Y planes to be considered a coincidence (default: 20.)");	
+	
 	return;
 }
 
@@ -179,7 +187,8 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
          	}
 
 			// calculate the correct pulse peak and pedestal      	
-      		pulse_peak = FDCPulseObj->peak_amp << ABIT;
+      		/////////////////////pulse_peak = FDCPulseObj->peak_amp << ABIT;
+      		pulse_peak = digihit->pulse_peak << ABIT;
       		scaled_ped = raw_ped << PBIT;
       	}
 		else {
