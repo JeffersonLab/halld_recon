@@ -13,7 +13,9 @@ using namespace std;
 
 #include "DPSCPair_factory.h"
 #include "DPSCHit.h"
-using namespace jana;
+
+#include <JANA/JEvent.h>
+
 
 inline bool DPSCPair_SortByTimeDifference(const DPSCPair* pair1, const DPSCPair* pair2)
 {
@@ -23,33 +25,32 @@ inline bool DPSCPair_SortByTimeDifference(const DPSCPair* pair1, const DPSCPair*
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DPSCPair_factory::init(void)
+void DPSCPair_factory::Init()
 {
+  auto app = GetApplication();
   DELTA_T_PAIR_MAX = 10.0; // ns
-  gPARMS->SetDefaultParameter("PSCPair:DELTA_T_PAIR_MAX",DELTA_T_PAIR_MAX,
+  app->SetDefaultParameter("PSCPair:DELTA_T_PAIR_MAX",DELTA_T_PAIR_MAX,
 			      "Maximum difference in ns between a pair of hits"
 			      " in left and right arm of coarse PS");
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DPSCPair_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DPSCPair_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DPSCPair_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DPSCPair_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   // get coarse pair spectrometer hits
   vector<const DPSCHit*> hits;
-  loop->Get(hits);
+  event->Get(hits);
   // form PSC left-right hit pairs and sort by time difference
   pair<const DPSCHit*,const DPSCHit*> ee;
   if (hits.size()>1) {
@@ -68,29 +69,25 @@ jerror_t DPSCPair_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  }
 	  DPSCPair *pair = new DPSCPair;
 	  pair->ee = ee;
-	  _data.push_back(pair);
+	  Insert(pair);
 	}
       }
     }
   }
-  sort(_data.begin(),_data.end(),DPSCPair_SortByTimeDifference);
-
-  return NOERROR;
+  sort(mData.begin(),mData.end(),DPSCPair_SortByTimeDifference);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DPSCPair_factory::erun(void)
+void DPSCPair_factory::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DPSCPair_factory::fini(void)
+void DPSCPair_factory::Finish()
 {
-  return NOERROR;
 }
 

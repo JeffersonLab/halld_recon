@@ -8,12 +8,11 @@
 #ifndef _DParticleID_PID1_
 #define _DParticleID_PID1_
 
-#include <JANA/jerror.h>
 #include "DParticleID.h"
 
 class DParticleID_PID1:public DParticleID{
  public:
-  DParticleID_PID1(JEventLoop *loop); // require JEventLoop in constructor;
+  DParticleID_PID1(const std::shared_ptr<const JEvent>& loop); // require JEventLoop in constructor;
   ~DParticleID_PID1();
 
 	jerror_t GetdEdxMean_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const;

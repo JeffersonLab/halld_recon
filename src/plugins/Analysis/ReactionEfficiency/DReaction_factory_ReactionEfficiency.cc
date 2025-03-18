@@ -35,29 +35,31 @@ DReaction_factory_ReactionEfficiency::registerReaction(
 	}
 	if (locReactionsToWrite.empty()) {
 		// process all reactions
-		_data.push_back(locReaction);
+		Insert(locReaction);
 	} else {
 		// process only selected reactions
 		const string locReactionName = locReaction->Get_ReactionName();
 		if (find(locReactionsToWrite.begin(), locReactionsToWrite.end(), locReactionName) != locReactionsToWrite.end()) {
-			_data.push_back(locReaction);
+			Insert(locReaction);
 		}
 	}
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DReaction_factory_ReactionEfficiency::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
+	auto app = GetApplication();
+
 	// Make as many DReaction objects as desired
 	DReactionStep* locReactionStep = NULL;
 	DReaction* locReaction = NULL; //create with a unique name for each DReaction object. CANNOT (!) be "Thrown"
 
 	double locMinKinFitFOM = 1e-4;
-	gPARMS->SetDefaultParameter("REACTIONEFFIC:MINKINFITFOM", locMinKinFitFOM);
+	app->SetDefaultParameter("REACTIONEFFIC:MINKINFITFOM", locMinKinFitFOM);
 	string locOnlyReactions = "";  // default: process all reactions
-	gPARMS->SetDefaultParameter("REACTIONEFFIC:ONLY_REACTIONS", locOnlyReactions);  // define reactions to process as semicolon-separated list
+	app->SetDefaultParameter("REACTIONEFFIC:ONLY_REACTIONS", locOnlyReactions);  // define reactions to process as semicolon-separated list
 	                                                                                // e.g. REACTIONEFFIC:ONLY_REACTIONS pi0pipmisspim__B1_T1_U1_Effic;pi0pimmisspip__B1_T1_U1_Effic
 	const vector<string> locReactionsToWrite = tokenizeString(locOnlyReactions, ';');
 
@@ -823,16 +825,16 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 
 	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_ReactionEfficiency::fini(void)
+void DReaction_factory_ReactionEfficiency::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
+	return;
 }
 

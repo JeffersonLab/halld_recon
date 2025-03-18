@@ -11,8 +11,11 @@
 #include <cmath>
 using namespace std;
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include "DTAGHHit_factory.h"
-using namespace jana;
+
 
 inline bool DTAGHHit_SortByID(const DTAGHHit* h1, const DTAGHHit* h2)
 {
@@ -21,50 +24,53 @@ inline bool DTAGHHit_SortByID(const DTAGHHit* h1, const DTAGHHit* h2)
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTAGHHit_factory::init(void)
+void DTAGHHit_factory::Init()
 {
+	auto app = GetApplication();
+
     // Set default config. parameters
     MERGE_DOUBLES = true; // Merge double hits?
-    gPARMS->SetDefaultParameter("TAGHHit:MERGE_DOUBLES", MERGE_DOUBLES,
+    app->SetDefaultParameter("TAGHHit:MERGE_DOUBLES", MERGE_DOUBLES,
     "Merge double hits?");
     DELTA_T_DOUBLES_MAX = 1.0; // ns
-    gPARMS->SetDefaultParameter("TAGHHit:DELTA_T_DOUBLES_MAX", DELTA_T_DOUBLES_MAX,
+    app->SetDefaultParameter("TAGHHit:DELTA_T_DOUBLES_MAX", DELTA_T_DOUBLES_MAX,
     "Maximum time difference in ns between hits in adjacent counters"
     " for them to be merged into a single hit");
     DELTA_ID_DOUBLES_MAX = 1; // counters
-    gPARMS->SetDefaultParameter("TAGHHit:DELTA_ID_DOUBLES_MAX", DELTA_ID_DOUBLES_MAX,
+    app->SetDefaultParameter("TAGHHit:DELTA_ID_DOUBLES_MAX", DELTA_ID_DOUBLES_MAX,
     "Maximum counter id difference of merged hits");
     ID_DOUBLES_MAX = 274;
-    gPARMS->SetDefaultParameter("TAGHHit:ID_DOUBLES_MAX", ID_DOUBLES_MAX,
+    app->SetDefaultParameter("TAGHHit:ID_DOUBLES_MAX", ID_DOUBLES_MAX,
     "Maximum counter id of a double hit");
     USE_SIDEBAND_DOUBLES = false;
-    gPARMS->SetDefaultParameter("TAGHHit:USE_SIDEBAND_DOUBLES", USE_SIDEBAND_DOUBLES,
+    app->SetDefaultParameter("TAGHHit:USE_SIDEBAND_DOUBLES", USE_SIDEBAND_DOUBLES,
     "Use sideband to estimate accidental coincidences between neighbors?");
 
     // Setting this flag makes it so that JANA does not delete the objects in _data.
     SetFactoryFlag(NOT_OBJECT_OWNER);
-
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTAGHHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTAGHHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	auto run_number = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+
     //RF Period
     vector<double> locBeamPeriodVector;
-    eventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+    calibration->Get("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
     dBeamBunchPeriod = locBeamPeriodVector[0];
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTAGHHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTAGHHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
     // A scattered (brems.) electron can hit multiple TAGH counters, due
     // to multiple scattering and small geometric overlap between certain counters.
@@ -72,11 +78,11 @@ jerror_t DTAGHHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     // This factory outputs hits after merging double hits (doubles).
 
     // Clear hit vector for next event
-    _data.clear();
+    mData.clear();
 
     // Get (calibrated) TAGH hits
     vector<const DTAGHHit*> hits;
-    loop->Get(hits, "Calib");
+    event->Get(hits, "Calib");
 
     // Sort TAGH hits by counter id
     sort(hits.begin(),hits.end(),DTAGHHit_SortByID);
@@ -86,7 +92,7 @@ jerror_t DTAGHHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
         if (!hit1->has_fADC) continue;
         if (!MERGE_DOUBLES || hit1->counter_id > ID_DOUBLES_MAX) {
-            _data.push_back(hit1);
+            mData.push_back(hit1);
             continue;
         }
         if (hit1->is_double) continue;
@@ -105,10 +111,8 @@ jerror_t DTAGHHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
                 hit1->is_double = true;
             }
         }
-        _data.push_back(hit1);
+        mData.push_back(hit1);
     }
-
-    return NOERROR;
 }
 
 bool DTAGHHit_factory::IsDoubleHit(double tdiff)
@@ -122,17 +126,15 @@ bool DTAGHHit_factory::IsDoubleHit(double tdiff)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTAGHHit_factory::erun(void)
+void DTAGHHit_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTAGHHit_factory::fini(void)
+void DTAGHHit_factory::Finish()
 {
-    return NOERROR;
 }

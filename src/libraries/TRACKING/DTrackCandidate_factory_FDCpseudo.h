@@ -12,9 +12,7 @@
 #include <TH2F.h>
 #include <TH3F.h>
 
-#include <JANA/JFactory.h>
-#include <JANA/JGeometry.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
 #include "DQuickFit.h"
 #include "DTrackCandidate.h"
@@ -35,12 +33,11 @@ class DMagneticFieldMap;
 /// reconstruction. It is no longer maintained, but is kept around as an independent
 /// check against the default FDC finder in DTrackCandiate_factory_FDCpseudo .
 
-class DTrackCandidate_factory_FDCpseudo:public JFactory<DTrackCandidate>{
+class DTrackCandidate_factory_FDCpseudo:public JFactoryT<DTrackCandidate>{
 	public:
 		DTrackCandidate_factory_FDCpseudo();
 		~DTrackCandidate_factory_FDCpseudo(){};
 		const string toString(void);
-		virtual const char* Tag(void){return "FDCpseudo";}
 
 		enum trk_flags_t{
 			NONE					= 0x000,
@@ -98,16 +95,16 @@ class DTrackCandidate_factory_FDCpseudo:public JFactory<DTrackCandidate>{
 
 
 	protected:
-		virtual jerror_t init(void);
-		virtual jerror_t brun(JEventLoop *loop, int32_t runnumber);
-		virtual jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via JEventProcessor virtual method
-		virtual jerror_t fini(void);	///< Invoked via JEventProcessor virtual method
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void Finish() override;
 
 		DHoughFind hough;
 
 		vector<DFDCTrkHit*> fdctrkhits;
 
-		void GetTrkHits(JEventLoop *loop);
+		void GetTrkHits(const std::shared_ptr<const JEvent>& loop);
 		void FindSeeds(vector<DFDCSeed> &seeds);
 		void FillSeedHits(DFDCSeed &seed);
 		unsigned int NumAvailableHits(void);
@@ -120,6 +117,7 @@ class DTrackCandidate_factory_FDCpseudo:public JFactory<DTrackCandidate>{
 		double MAX_HIT_DIST;
 		double MAX_HIT_DIST2;
 
+		int debug_level;
 };
 
 #endif // _DTrackCandidate_factory_FDCpseudo_

@@ -2,9 +2,8 @@
 #define _DL1MCTrigger_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DL1MCTrigger:public jana::JObject{
+class DL1MCTrigger: public JObject{
  public:
   JOBJECT_PUBLIC(DL1MCTrigger);
   
@@ -30,24 +29,22 @@ class DL1MCTrigger:public jana::JObject{
 
 
   // the second argument to AddString is printf style format
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items,  "trig_mask",       "0x%08x", trig_mask );
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(trig_mask , "trig_mask", "0x%08x");
     
-    AddString(items,  "FCAL E(GeV)",     "%6.3f",  fcal_en);
-    AddString(items,  "FCAL ADC E(cnt)", "%d",     fcal_adc);
-    AddString(items,  "FCAL ADC E(GeV)", "%6.3f",  fcal_adc_en);
-    AddString(items,  "FCAL GTP E(cnt)", "%d",     fcal_gtp);
-    AddString(items,  "FCAL GTP E(GeV)", "%6.3f",  fcal_gtp_en);
+    summary.add(fcal_en, "FCAL E(GeV)", "%6.3f");
+    summary.add(fcal_adc, "FCAL ADC E(cnt)", "%d");
+    summary.add(fcal_adc_en, "FCAL ADC E(GeV)", "%6.3f");
+    summary.add(fcal_gtp, "FCAL GTP E(cnt)", "%d");
+    summary.add(fcal_gtp_en, "FCAL GTP E(GeV)", "%6.3f");
     
-    AddString(items,  "BCAL E(GeV)",     "%6.3f",  bcal_en);
-    AddString(items,  "BCAL ADC E(cnt)", "%d",     bcal_adc);
-    AddString(items,  "BCAL ADC E(GeV)", "%6.3f",  bcal_adc_en);
-    AddString(items,  "BCAL GTP E(cnt)", "%d",     bcal_gtp);
-    AddString(items,  "BCAL GTP E(GeV)", "%6.3f",  bcal_gtp_en);
+    summary.add(bcal_en, "BCAL E(GeV)", "%6.3f");
+    summary.add(bcal_adc, "BCAL ADC E(cnt)", "%d");
+    summary.add(bcal_adc_en, "BCAL ADC E(GeV)", "%6.3f");
+    summary.add(bcal_gtp, "BCAL GTP E(cnt)", "%d");
+    summary.add(bcal_gtp_en, "BCAL GTP E(GeV)", "%6.3f");
 
-    AddString(items,  "Trig Time (samp)", "%d",    trig_time[0]);
-    
-
+    summary.add(trig_time[0], "Trig Time (samp)", "%d");
   }
   
 };

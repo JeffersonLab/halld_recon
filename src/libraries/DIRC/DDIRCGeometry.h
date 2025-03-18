@@ -6,11 +6,9 @@
 #ifndef _DDIRCGeometry_
 #define _DDIRCGeometry_
 
-#include <JANA/JFactory.h>
 #include <JANA/JObject.h>
-#include <JANA/JCalibration.h>
-
-using namespace jana;
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibration.h>
 
 class DDIRCGeometry : public JObject {
 
@@ -18,8 +16,13 @@ public:
 	
 	JOBJECT_PUBLIC(DDIRCGeometry);
 
-	DDIRCGeometry(int runnumber);
+	DDIRCGeometry(){}
 	~DDIRCGeometry(){}
+
+	// We put the dependency on JEvent in Initialize so that we
+	// have other ways of creating DDIRCGeometry objects.
+	// This improves testability
+	void Initialize(const std::shared_ptr<const JEvent>& event);
 
 	// these numbers are fixed for the DIRC as constructed
 	// it probably doesn't make sense to retrieve them
@@ -49,18 +52,14 @@ public:
 	int GetPixelX       ( int channel ) const;
 	int GetPixelY       ( int channel ) const;
 
-	void toStrings(vector<pair<string,string> > &items) const {
-		//AddString(items, "kBlocksWide", "%d", (int)kBlocksWide);
-		//AddString(items, "kBlocksTall", "%d", (int)kBlocksTall);
-		//AddString(items, "kMaxChannels", "%d", (int)kMaxChannels);
-		//AddString(items, "kBeamHoleSize", "%2.3f", (int)kBeamHoleSize);
+	void Summarize(JObjectSummary& summary) const override {
+		// summary.add((int)kBlocksWide, "kBlocksWide", "%d");
+		// summary.add((int)kBlocksTall, "kBlocksTall", "%d");
+		// summary.add((int)kMaxChannels, "kMaxChannels", "%d");
+		// summary.add((int)kBeamHoleSize, "kBeamHoleSize", "%2.3f");
 	}
-	
+
 private:
-
-	DDIRCGeometry(); // forbid default constructor
-	void Initialize(int runnumber);
-
 	int CHANNEL_PER_PMT, PMT_ROWS, PMT_COLUMNS;
 
 	double DIRC_BAR_END[kBars], DIRC_BAR_Y[kBars], DIRC_BAR_L[kBars];

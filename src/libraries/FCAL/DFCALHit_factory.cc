@@ -10,20 +10,26 @@
 #include <iomanip>
 using namespace std;
 
+#include "FCAL/DFCALHit_factory.h"
+
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include "FCAL/DFCALDigiHit.h"
 #include "FCAL/DFCALGeometry.h"
-#include "FCAL/DFCALHit_factory.h"
 #include "DAQ/Df250PulseIntegral.h"
 #include "DAQ/Df250PulsePedestal.h"
 #include "DAQ/Df250Config.h"
 #include "TTAB/DTTabUtilities.h"
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DFCALHit_factory::init(void)
+void DFCALHit_factory::Init()
 {
+    auto app = GetApplication();
+
     // initialize calibration tables
     vector< vector<double > > new_gains(DFCALGeometry::kBlocksTall, 
             vector<double>(DFCALGeometry::kBlocksWide));
@@ -52,16 +58,18 @@ jerror_t DFCALHit_factory::init(void)
     t_base  = 0.;       // ns
 
     CHECK_FADC_ERRORS = true;
-    gPARMS->SetDefaultParameter("FCAL:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
-
-    return NOERROR;
+    app->SetDefaultParameter("FCAL:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DFCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DFCALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+    auto runnumber = event->GetRunNumber();
+    auto app = event->GetJApplication();
+    auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
     static set<int> runs_announced;
@@ -75,9 +83,9 @@ jerror_t DFCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
     // extract the FCAL Geometry
     vector<const DFCALGeometry*> fcalGeomVect;
-    eventLoop->Get( fcalGeomVect );
+    event->Get( fcalGeomVect );
     if (fcalGeomVect.size() < 1)
-        return OBJECT_NOT_AVAILABLE;
+        return; // OBJECT_NOT_AVAILABLE;
     const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
 
     /// Read in calibration constants
@@ -91,7 +99,7 @@ jerror_t DFCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
     // load scale factors
     map<string,double> scale_factors;
-    if (eventLoop->GetCalib("/FCAL/digi_scales", scale_factors))
+    if (calibration->Get("/FCAL/digi_scales", scale_factors))
         jout << "Error loading /FCAL/digi_scales !" << endl;
     if (scale_factors.find("FCAL_ADC_ASCALE") != scale_factors.end())
         a_scale = scale_factors["FCAL_ADC_ASCALE"];
@@ -104,7 +112,7 @@ jerror_t DFCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
     // load base time offset
     map<string,double> base_time_offset;
-    if (eventLoop->GetCalib("/FCAL/base_time_offset",base_time_offset))
+    if (calibration->Get("/FCAL/base_time_offset",base_time_offset))
         jout << "Error loading /FCAL/base_time_offset !" << endl;
     if (base_time_offset.find("FCAL_BASE_TIME_OFFSET") != base_time_offset.end())
         t_base = base_time_offset["FCAL_BASE_TIME_OFFSET"];
@@ -112,15 +120,15 @@ jerror_t DFCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
         jerr << "Unable to get FCAL_BASE_TIME_OFFSET from /FCAL/base_time_offset !" << endl;
 
     // load constant tables
-    if (eventLoop->GetCalib("/FCAL/gains", raw_gains))
+    if (calibration->Get("/FCAL/gains", raw_gains))
         jout << "Error loading /FCAL/gains !" << endl;
-    if (eventLoop->GetCalib("/FCAL/pedestals", raw_pedestals))
+    if (calibration->Get("/FCAL/pedestals", raw_pedestals))
         jout << "Error loading /FCAL/pedestals !" << endl;
-    if (eventLoop->GetCalib("/FCAL/timing_offsets", raw_time_offsets))
+    if (calibration->Get("/FCAL/timing_offsets", raw_time_offsets))
         jout << "Error loading /FCAL/timing_offsets !" << endl;
-    if (eventLoop->GetCalib("/FCAL/block_quality", raw_block_qualities))
+    if (calibration->Get("/FCAL/block_quality", raw_block_qualities))
         jout << "Error loading /FCAL/block_quality !" << endl;
-    if (eventLoop->GetCalib("/FCAL/ADC_Offsets", raw_ADCoffsets))
+    if (calibration->Get("/FCAL/ADC_Offsets", raw_ADCoffsets))
         jout << "Error loading /FCAL/ADC_Offsets !" << endl;
 
     FillCalibTable(gains, raw_gains, fcalGeom);
@@ -128,14 +136,12 @@ jerror_t DFCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     FillCalibTable(time_offsets, raw_time_offsets, fcalGeom);
     FillCalibTable(block_qualities, raw_block_qualities, fcalGeom);
     FillCalibTable(ADC_Offsets, raw_ADCoffsets, fcalGeom);
-
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DFCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DFCALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
     /// Generate DFCALHit object for each DFCALDigiHit object.
     /// This is where the first set of calibration constants
@@ -149,16 +155,16 @@ jerror_t DFCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     // extract the FCAL Geometry (for positionOnFace())
     vector<const DFCALGeometry*> fcalGeomVect;
-    eventLoop->Get( fcalGeomVect );
+    event->Get( fcalGeomVect );
     if (fcalGeomVect.size() < 1)
-        return OBJECT_NOT_AVAILABLE;
+        return; // OBJECT_NOT_AVAILABLE;
     const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
 
     const DTTabUtilities* locTTabUtilities = nullptr;
-    loop->GetSingle(locTTabUtilities);
+    event->GetSingle(locTTabUtilities);
 
     vector<const DFCALDigiHit*> digihits;
-    loop->Get(digihits);
+    event->Get(digihits);
     for (unsigned int i=0; i < digihits.size(); i++) {
 
         const DFCALDigiHit *digihit = digihits[i];
@@ -196,7 +202,7 @@ jerror_t DFCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
         if(pedestal == 0) {
             // nsamples_pedestal should always be positive for valid data - err on the side of caution for now
             if(nsamples_pedestal == 0) {
-                jerr << "DFCALDigiHit with nsamples_pedestal == 0 !   Event = " << eventnumber << endl;
+                jerr << "DFCALDigiHit with nsamples_pedestal == 0 !   Event = " << event->GetEventNumber() << endl;
                 continue;
             }
 
@@ -238,29 +244,25 @@ jerror_t DFCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
         if( ( hit->E > 0 ) &&
             ( digihit->pulse_time > 0 )  ) {
             hit->AddAssociatedObject(digihit);
-            _data.push_back(hit);
+            Insert(hit);
         } else {
             delete hit;
         }
     }
-
-    return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DFCALHit_factory::erun(void)
+void DFCALHit_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DFCALHit_factory::fini(void)
+void DFCALHit_factory::Finish()
 {
-    return NOERROR;
 }
 
 //------------------

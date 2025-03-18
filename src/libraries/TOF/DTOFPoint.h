@@ -21,9 +21,7 @@
 #define _DTOFPoint_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 #include <DVector3.h>
-using namespace jana;
 
 class DTOFPoint : public JObject
 {
@@ -67,19 +65,18 @@ class DTOFPoint : public JObject
     return ((dHorizontalBar != 0) || (dVerticalBarStatus == 3));
   }
   
-  void toStrings(vector<pair<string,string> > &items) const
-  {
-    AddString(items, "H-Bar", "%d", dHorizontalBar);
-    AddString(items, "V-Bar", "%d", dVerticalBar);
-    AddString(items, "x", "%1.3f", pos.x());
-    AddString(items, "y", "%1.3f", pos.y());
-    AddString(items, "z", "%1.3f", pos.z());
-    AddString(items, "t", "%1.3f", t);
-    AddString(items, "dE", "%1.6f", dE);    //dE average
-    AddString(items, "dE1", "%1.6f", dE1);  //dE form first plane
-    AddString(items, "dE2", "%1.6f", dE2);  //dE from second plane
-    AddString(items, "H-Status", "%d", dHorizontalBarStatus);
-    AddString(items, "V-Status", "%d", dVerticalBarStatus);
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(dHorizontalBar, "H-Bar", "%d");
+    summary.add(dVerticalBar, "V-Bar", "%d");
+    summary.add(pos.x(), "x", "%1.3f");
+    summary.add(pos.y(), "y", "%1.3f");
+    summary.add(pos.z(), "z", "%1.3f");
+    summary.add(t, "t", "%1.3f");
+    summary.add(dE, "dE", "%1.6f");    //dE average
+    summary.add(dE1, "dE1", "%1.6f");  //dE form first plane
+    summary.add(dE2, "dE2", "%1.6f");  //dE from second plane
+    summary.add(dHorizontalBarStatus, "H-Status", "%d");
+    summary.add(dVerticalBarStatus, "V-Status", "%d");
   }
 };
 

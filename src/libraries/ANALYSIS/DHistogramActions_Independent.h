@@ -17,7 +17,7 @@
 #include "TH2D.h"
 #include "TTree.h"
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "particleType.h"
 #include "DResourcePool.h"
 
@@ -74,7 +74,6 @@
 #include "TRIGGER/DTrigger.h"
 
 using namespace std;
-using namespace jana;
 
 class DParticleCombo_factory_PreKinFit;
 class DAnalysisResults;
@@ -108,15 +107,15 @@ class DHistogramAction_ObjectMemory : public DAnalysisAction
 		DAnalysisAction(NULL, "Hist_ObjectMemory", false, ""), 
 		dMaxNumEvents(50000), dEventCounter(0) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 		void Read_MemoryUsage(double& vm_usage, double& resident_set);
 
 		unsigned int dMaxNumEvents;
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
 
 		unsigned int dEventCounter; //not the same as event #: running with multiple threads over many files, possibly starting at event # != 1
 
@@ -195,8 +194,8 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 			dTargetCenter.SetXYZ(0.0, 0.0, -9.9E9);
 		}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 		unsigned int dNumFCALTOFXYBins, dNumShowerEnergyBins, dNumPhiBins, dNum2DBCALZBins, dNum2DPhiBins;
 		unsigned int dNumHitEnergyBins, dNum2DHitEnergyBins, dNum2DThetaBins, dNumFOMBins, dNum2DFOMBins, dNum2DPBins, dNum2DDeltaTBins;
@@ -206,7 +205,7 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 		double dGoodTrackFOM, dHighTrackFOM;
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
 
 		DVector3 dTargetCenter;
 
@@ -296,8 +295,8 @@ class DHistogramAction_DetectorMatching : public DAnalysisAction
 		dMinDeltaPhi(-30.0), dMaxDeltaPhi(30.0), dMinDeltaZ(-50.0), dMaxDeltaZ(50.0),
 		dMinTrackingFOM(0.0027), dMinTOFPaddleMatchDistance(9.0), dMinHitRingsPerCDCSuperlayer(2), dMinHitPlanesPerFDCPackage(4) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 		unsigned int dNum2DThetaBins, dNumPBins, dNum2DPBins, dNum2DPhiBins, dNum2DDeltaPhiBins, dNum2DDeltaZBins;
 		unsigned int dNum2DTrackDOCABins, dNumTrackDOCABins, dNumFCALTOFXYBins, dNum2DBCALZBins, dNum2DSCZBins, dNumTOFRBins;
@@ -308,8 +307,8 @@ class DHistogramAction_DetectorMatching : public DAnalysisAction
 		unsigned int dMinHitRingsPerCDCSuperlayer, dMinHitPlanesPerFDCPackage;
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
-		void Fill_MatchingHists(JEventLoop* locEventLoop, bool locIsTimeBased);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
+		void Fill_MatchingHists(const std::shared_ptr<const JEvent>& locEvent, bool locIsTimeBased);
 
 		bool Get_Extrapolations(const DKinematicData* locTrack,map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >&extrapolations) const{
 		  const DTrackTimeBased* locTrackTimeBased = dynamic_cast<const DTrackTimeBased*>(locTrack);
@@ -455,8 +454,8 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 			SYS_CDC_AMP = static_cast<DetectorSystem_t>(SYS_CDC + SYS_FDC);
 		}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop) {}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) {}
 
 		unsigned int dNum2DPBins, dNum2DdEdxBins, dNum2DBetaBins, dNum2DBCALThetaBins, dNum2DFCALThetaBins, dNum2DCCALThetaBins;
 		unsigned int dNum2DEOverPBins, dNum2DDeltaBetaBins, dNum2DDeltadEdxBins, dNum2DDeltaTBins, dNum2DPullBins, dNum2DFOMBins;
@@ -468,7 +467,7 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
                 double dDIRCMinLikelihood, dDIRCMaxLikelihood;
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
 
 		DetectorSystem_t SYS_CDC_AMP;
 		vector<Particle_t> dFinalStatePIDs;
@@ -530,14 +529,14 @@ class DHistogramAction_Neutrals : public DAnalysisAction
 			dTargetCenter.SetXYZ(0.0, 0.0, -9.9E9);
 		}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 		unsigned int dNumTrackDOCABins, dNumDeltaPhiBins, dNumShowerEnergyBins, dNumDeltaTBins, dNum2DShowerEnergyBins, dNum2DDeltaTBins, dNum2DBCALZBins;
 		double dMinTrackDOCA, dMaxTrackDOCA, dMinDeltaPhi, dMaxDeltaPhi, dMinShowerEnergy, dMaxShowerEnergy, dMaxBCALP, dMinDeltaT, dMaxDeltaT;
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
 
 		DVector3 dTargetCenter;
 
@@ -600,8 +599,8 @@ class DHistogramAction_DetectorMatchParams : public DAnalysisAction
 			dTargetCenterZ = -9.9E9;
 		}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 		unsigned int dNumShowerEnergyBins, dNumShowerDepthBins, dNum2DPBins, dNum2DThetaBins, dNum2DHitEnergyBins;
 		double dMinShowerEnergy, dMaxShowerEnergy, dMaxBCALP, dMinShowerDepth, dMaxShowerDepth, dMinP, dMaxP;
@@ -611,8 +610,8 @@ class DHistogramAction_DetectorMatchParams : public DAnalysisAction
 		vector<Particle_t> dTrackingPIDs;
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
-		void Fill_Hists(JEventLoop* locEventLoop, bool locUseTruePIDFlag);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
+		void Fill_Hists(const std::shared_ptr<const JEvent>& locEvent, bool locUseTruePIDFlag);
 
 		double dTargetCenterZ;
 
@@ -672,11 +671,11 @@ class DHistogramAction_EventVertex : public DAnalysisAction
 
 		deque<Particle_t> dFinalStatePIDs;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		TH1I* dRFTrackDeltaT = nullptr;
 		TH1I* dEventVertexZ_AllEvents = nullptr;
@@ -742,11 +741,11 @@ class DHistogramAction_DetectedParticleKinematics : public DAnalysisAction
 
 		deque<Particle_t> dFinalStatePIDs;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		TH1I* dBeamParticle_P = nullptr;
 
@@ -814,11 +813,11 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 
 		deque<Particle_t> dFinalStatePIDs;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		//tracks
 		map<Particle_t, TH2I*> dHistMap_TrackPxErrorVsP;
@@ -885,11 +884,11 @@ class DHistogramAction_NumReconstructedObjects : public DAnalysisAction
 		unsigned int dMaxNumTOFCalorimeterHits;
 		unsigned int dMaxNumBeamPhotons;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
 
 		TH2D* dHist_NumHighLevelObjects = nullptr;
 
@@ -980,11 +979,11 @@ class DHistogramAction_TrackMultiplicity : public DAnalysisAction
 
 		deque<Particle_t> dFinalStatePIDs;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
 
 		TH2D* dHist_NumReconstructedParticles = nullptr;
 		TH2D* dHist_NumGoodReconstructedParticles = nullptr;
@@ -1011,11 +1010,11 @@ class DHistogramAction_TriggerStudies : public DAnalysisAction
 		
 		double dKinFitCLCut;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
 
 		TH2D* dHist_Trigger_FCALBCAL_Energy = nullptr;
 };

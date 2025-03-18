@@ -9,13 +9,12 @@
 #define _DTrackTimeBased_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
+#include <DANA/DObjectID.h>
 #include "DTrackingData.h"
 #include "DTrackFitter.h"
 #include "CDC/DCDCTrackHit.h"
 #include "FDC/DFDCPseudo.h"
 
-using namespace jana;
 using namespace std;
 
 class DTrackTimeBased:public DTrackingData{
@@ -29,6 +28,7 @@ class DTrackTimeBased:public DTrackingData{
 		unsigned int potential_fdc_hits_on_track;
 		unsigned int potential_cdc_hits_on_track;
 
+		oid_t id = reinterpret_cast<oid_t>(this);
 		oid_t trackid;			///< id of DTrackWireBased corresponding to this track
 		oid_t candidateid;   ///< id of DTrackCandidate corresponding to this track
 		float chisq;			///< Chi-squared for the track (not chisq/dof!)
@@ -87,26 +87,24 @@ class DTrackTimeBased:public DTrackingData{
 		int dMCThrownMatchMyID; //MC track match myid (-1 if somehow no match)
 		int dNumHitsMatchedToThrown;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			DKinematicData::toStrings(items);
-			AddString(items, "candidate","%d",candidateid);
-			//AddString(items, "wirebased","%d",trackid);
-			AddString(items, "chisq", "%f", chisq);
-			AddString(items, "Ndof", "%d", Ndof);
-			AddString(items, "FOM", "%f",(float)FOM);
-			AddString(items, "Flags","%d",flags);
-			//AddString(items, "MCMatchID", "%d",dMCThrownMatchMyID);
-			//AddString(items, "#HitsMCMatched", "%d",dNumHitsMatchedToThrown);
+		void Summarize(JObjectSummary& summary) const override {
+			DKinematicData::Summarize(summary);
+			summary.add(candidateid, "candidate", "%d");
+			//summary.add(trackid, "wirebased", "%d");
+			summary.add(chisq, "chisq", "%f");
+			summary.add(Ndof, "Ndof", "%d");
+			summary.add((float)FOM, "FOM", "%f");
+			summary.add(flags, "Flags", "%d");
+			//summary.add(dMCThrownMatchMyID, "MCMatchID", "%d");
+			//summary.add(dNumHitsMatchedToThrown, "#HitsMCMatched", "%d");
 		}
 };
 
 size_t Get_NumTrackHits(const DTrackTimeBased* locTrackTimeBased);
 inline size_t Get_NumTrackHits(const DTrackTimeBased* locTrackTimeBased)
 {
-	vector<const DCDCTrackHit*> locCDCHits;
-	locTrackTimeBased->Get(locCDCHits);
-	vector<const DFDCPseudo*> locFDCHits;
-	locTrackTimeBased->Get(locFDCHits);
+	vector<const DCDCTrackHit*> locCDCHits = locTrackTimeBased->Get<DCDCTrackHit>();
+	vector<const DFDCPseudo*> locFDCHits = locTrackTimeBased->Get<DFDCPseudo>();
 
 	size_t locNumHits = locCDCHits.size() + locFDCHits.size();
 	if(locNumHits > 0)

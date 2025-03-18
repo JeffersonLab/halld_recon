@@ -8,10 +8,15 @@
 /// by projecting through the field from one package to the next.
 
 #include "DTrackCandidate_factory_FDCCathodes.h"
-#include "DANA/DApplication.h"
-#include <JANA/JCalibration.h>
-#include "FDC/DFDCPseudo_factory.h"
-#include "FDC/DFDCSegment_factory.h"
+
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/Services/JLockService.h>
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
+
+#include "FDC/DFDCPseudo.h"
+#include "FDC/DFDCSegment.h"
 #include "DHelicalFit.h"
 #include <TROOT.h>
 #include <TH1F.h>
@@ -28,37 +33,38 @@ static map<string, prof_time::time_diffs> cand_prof_times;
 using namespace std::chrono;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrackCandidate_factory_FDCCathodes::init(void)
+void DTrackCandidate_factory_FDCCathodes::Init(void)
 { 
 #ifdef PROFILE_TRK_TIMES
   // Use a special entry to hold the number of events
    prof_time::time_diffs tdiff_zero;
    cand_prof_times["Nevents"] = tdiff_zero;
 #endif
-
-   return NOERROR;
 }
 
 ///
-/// DTrackCandidate_factory_FDCCathodes::brun():
+/// DTrackCandidate_factory_FDCCathodes::BeginRun
 ///
-jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop, 
-						   int32_t runnumber) {
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  bfield = dapp->GetBfield(runnumber);
+void DTrackCandidate_factory_FDCCathodes::BeginRun(const std::shared_ptr<const JEvent>& event) {
+
+  auto run_number = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+  auto root_lock = app->GetService<JLockService>();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto dgeom = geo_manager->GetDGeometry(run_number);
+  bfield = geo_manager->GetBfield(run_number);
+
   FactorForSenseOfRotation=(bfield->GetBz(0.,0.,65.)>0.)?-1.:1.;
 
-  const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
-  
   USE_FDC=true;
   if (!dgeom->GetFDCZ(z_wires)){
     _DBG_<< "FDC geometry not available!" <<endl;
     USE_FDC=false;
   }
 
-  JCalibration *jcalib = dapp->GetJCalibration(runnumber);
   map<string, double> targetparms;
   if (jcalib->Get("TARGET/target_parms",targetparms)==false){
     TARGET_Z = targetparms["TARGET_Z_POSITION"];
@@ -68,16 +74,17 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
   }
 
   DEBUG_HISTS=false;
-  gPARMS->SetDefaultParameter("TRKFIND:DEBUG_HISTS", DEBUG_HISTS);
+  app->SetDefaultParameter("TRKFIND:DEBUG_HISTS", DEBUG_HISTS);
 
   BEAM_VAR=1.;
-  gPARMS->SetDefaultParameter("TRKFIND:BEAM_VAR",BEAM_VAR);
+  app->SetDefaultParameter("TRKFIND:BEAM_VAR",BEAM_VAR);
 
   ADD_VERTEX_POINT=true;
-  gPARMS->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
+  app->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
  
   if(DEBUG_HISTS) {
-    dapp->Lock();
+    root_lock->RootWriteLock();
+    
     match_dist_fdc=(TH2F*)gROOT->FindObject("match_dist_fdc");
     if (!match_dist_fdc){ 
       match_dist_fdc=new TH2F("match_dist_fdc",
@@ -90,44 +97,41 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
       match_center_dist2->SetXTitle("rc [cm]");
       match_center_dist2->SetYTitle("(#Deltad)^{2} [cm^{2}]");
     }
-    
-    dapp->Unlock();
-  }
 
+    root_lock->RootUnLock();
+  }
+  
   // For profiling
   PROFILE_TIME=false;
-  gPARMS->SetDefaultParameter("TRK:PROFILE_TIME", PROFILE_TIME);
+  app->SetDefaultParameter("TRK:PROFILE_TIME", PROFILE_TIME);
   NUM_PROFILE_FDC_CANDIDATES=0;
-  gPARMS->SetDefaultParameter("TRKFIND:NUM_PROFILE_FDC_CANDIDATES",
+  app->SetDefaultParameter("TRKFIND:NUM_PROFILE_FDC_CANDIDATES",
 			      NUM_PROFILE_FDC_CANDIDATES);
 
   // For matching
-  gPARMS->SetDefaultParameter("TRKFIND:SEGMENT_MATCH_SCALE",
+  app->SetDefaultParameter("TRKFIND:SEGMENT_MATCH_SCALE",
 			      SEGMENT_MATCH_SCALE);
-  gPARMS->SetDefaultParameter("TRKFIND:SEGMENT_MATCH_HI_CUT",
+  app->SetDefaultParameter("TRKFIND:SEGMENT_MATCH_HI_CUT",
 			      SEGMENT_MATCH_HI_CUT);
-  gPARMS->SetDefaultParameter("TRKFIND:SEGMENT_MATCH_LO_CUT",
+  app->SetDefaultParameter("TRKFIND:SEGMENT_MATCH_LO_CUT",
 			      SEGMENT_MATCH_LO_CUT);
-  gPARMS->SetDefaultParameter("TRKFIND:CENTER_MATCH_CUT",
+  app->SetDefaultParameter("TRKFIND:CENTER_MATCH_CUT",
 			      CENTER_MATCH_CUT);
-
-  return NOERROR;
 }
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrackCandidate_factory_FDCCathodes::erun(void)
+void DTrackCandidate_factory_FDCCathodes::EndRun()
 {
-  return NOERROR;
 }
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTrackCandidate_factory_FDCCathodes::fini(void)
+void DTrackCandidate_factory_FDCCathodes::Finish()
 {
-if (PROFILE_TIME){
+  if (PROFILE_TIME){
     cout << "Average segment linking time = "
 	 << 1000.*cumulative_time/cumulative_events << " ms";
     if (NUM_PROFILE_FDC_CANDIDATES>0){
@@ -149,10 +153,7 @@ if (PROFILE_TIME){
 	<< endl;
   }
 #endif
-  
-  return NOERROR;
 }
-
 
 // Local routine for sorting segments by charge and curvature
 inline bool DTrackCandidate_segment_cmp(const DFDCSegment *a, const DFDCSegment *b){
@@ -172,32 +173,31 @@ inline bool DTrackCandidate_segment_cmp_by_z(const DFDCSegment *a,
 
 
 //------------------
-// evnt:  main segment linking routine
+// Process:  main segment linking routine
 //------------------
-jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JEvent>& event)
 {
-  if (!USE_FDC) return NOERROR;
+  if (!USE_FDC) return;
 
 #ifdef PROFILE_TRK_TIMES
   prof_time start_time;
 #endif
   
   vector<const DFDCSegment*>segments;
-  eventLoop->Get(segments);
+  event->Get(segments);
 
   // abort if there are no segments
-  if (segments.size()==0.) return NOERROR;
-  
+  if (segments.size()==0.) return;
+ 
   high_resolution_clock::time_point t0,t1;
   if (PROFILE_TIME){
     t0 = high_resolution_clock::now();
   }
   
-
 #ifdef PROFILE_TRK_TIMES
   cand_prof_times["Nevents"].real += 1.0;
 #endif
-
+  
   std::stable_sort(segments.begin(), segments.end(), DTrackCandidate_segment_cmp);
 
   // Group segments by package
@@ -239,7 +239,6 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
       }  
     }
   } 
-  
   
   // Link triplets with pairs to form groups of four linked segments
   vector<int>is_quadrupled(triplets.size());
@@ -294,27 +293,27 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
 	if (mytracks[j][0]->package > mytracks[i][1]->package){
 	  // Try to connect the track stubs together
 	  const DFDCPseudo *myhit=mytracks[j][0]->hits[0];
-	  unsigned int index=_data.size()-1;
-	  double doca2=DocaSqToHelix(_data[index],myhit);
-	  bool got_match=(doca2<MatchR(_data[index]->rc));
+	  unsigned int index=mData.size()-1;
+	  double doca2=DocaSqToHelix(mData[index],myhit);
+	  bool got_match=(doca2<MatchR(mData[index]->rc));
 	  // if this does not work, try to match using the centers of the
 	  // circles
 	  if (got_match==false){
-	    double dx=mytracks[j][0]->xc-_data[index]->xc;
-	    double dy=mytracks[j][0]->yc-_data[index]->yc;
+	    double dx=mytracks[j][0]->xc-mData[index]->xc;
+	    double dy=mytracks[j][0]->yc-mData[index]->yc;
 	    if (dx*dx+dy*dy<CENTER_MATCH_CUT) got_match=true;
 	  }
 	  if (got_match==false){
-	    double dx=mytracks[j][1]->xc-_data[index]->xc;
-	    double dy=mytracks[j][1]->yc-_data[index]->yc;
+	    double dx=mytracks[j][1]->xc-mData[index]->xc;
+	    double dy=mytracks[j][1]->yc-mData[index]->yc;
 	    if (dx*dx+dy*dy<CENTER_MATCH_CUT) got_match=true;
 	  }
 	  if (got_match){
 	    is_matched[j]=1;
 
-	    // Add the new segments as associated objects to _data[index]
-	    _data[index]->AddAssociatedObject(mytracks[j][0]);
-	    _data[index]->AddAssociatedObject(mytracks[j][1]);
+	    // Add the new segments as associated objects to mData[index]
+	    mData[index]->AddAssociatedObject(mytracks[j][0]);
+	    mData[index]->AddAssociatedObject(mytracks[j][1]);
 
 	    vector<const DFDCSegment*>segments=mytracks[i];
 	    segments.insert(segments.end(),mytracks[j].begin(),mytracks[j].end());
@@ -324,19 +323,19 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
 	    DoHelicalFit(segments,fit);
     
 	    //circle fit parameters
-	    _data[index]->rc=rc;
-	    _data[index]->xc=xc;
-	    _data[index]->yc=yc;
+	    mData[index]->rc=rc;
+	    mData[index]->xc=xc;
+	    mData[index]->yc=yc;
 
 	    // Get position and momentum just upstream of first hit
 	    DVector3 pos,mom;
 	    GetPositionAndMomentum(segments,pos,mom);
 	    
-	    _data[index]->chisq=fit.chisq;
-	    _data[index]->Ndof=fit.ndof;
-	    _data[index]->setPID((q > 0.0) ? PiPlus : PiMinus);
-	    _data[index]->setPosition(pos);
-	    _data[index]->setMomentum(mom);
+	    mData[index]->chisq=fit.chisq;
+	    mData[index]->Ndof=fit.ndof;
+	    mData[index]->setPID((q > 0.0) ? PiPlus : PiMinus);
+	    mData[index]->setPosition(pos);
+	    mData[index]->setMomentum(mom);
 	  }
 	}
       }
@@ -377,7 +376,7 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
       
 	track->AddAssociatedObject(segment);
 	
-	_data.push_back(track);
+	Insert(track);
       }
     }
   }
@@ -386,7 +385,7 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
   start_time.TimeDiffNow(cand_prof_times, "Track finding");
 #endif
 
-  if (PROFILE_TIME && (_data.size()==NUM_PROFILE_FDC_CANDIDATES
+  if (PROFILE_TIME && (mData.size()==NUM_PROFILE_FDC_CANDIDATES
 		       || NUM_PROFILE_FDC_CANDIDATES==0)){
     // NUM_PROFILE_FDC_CANDIDATES=0 means do profiling for all events with
     // FDC candidates
@@ -396,7 +395,7 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
     cumulative_events+=1.0;
   }
 
-  return NOERROR;
+  return;
 }
 
 
@@ -659,7 +658,6 @@ void DTrackCandidate_factory_FDCCathodes::LinkSegments(unsigned int pack1,
       is_paired[pack2][match_id]=1;
       is_paired[pack1][i]=1;
     }
-  
   }
 }
 
@@ -667,12 +665,12 @@ void DTrackCandidate_factory_FDCCathodes::LinkSegments(unsigned int pack1,
 // candidate
 bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *segment){
   // Loop over existing candidates looking for potential holes
-  for (unsigned int i=0;i<_data.size();i++){
+  for (unsigned int i=0;i<mData.size();i++){
     bool got_segment_in_package=false;
 
     // Get the segments already associated with this track 
     vector<const DFDCSegment*>segments;
-    _data[i]->GetT(segments);
+    mData[i]->GetT(segments);
     // Flag if segment is in a package that has already been used for this 
     // candidate
     for (unsigned int j=0;j<segments.size();j++){
@@ -689,17 +687,17 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
       if (segment->package<segments[0]->package 
 	  || segment->package>segments[max_i]->package){
 	const DFDCPseudo *myhit=segment->hits[0];
-	double doca2=DocaSqToHelix(_data[i],myhit);
-	bool got_match=(doca2<MatchR(_data[i]->rc));
+	double doca2=DocaSqToHelix(mData[i],myhit);
+	bool got_match=(doca2<MatchR(mData[i]->rc));
 	// if this does not work, try to match using the centers of the circles
 	if (got_match==false){
-	  double dx=segment->xc-_data[i]->xc;
-	  double dy=segment->yc-_data[i]->yc;
+	  double dx=segment->xc-mData[i]->xc;
+	  double dy=segment->yc-mData[i]->yc;
 	  if (dx*dx+dy*dy<CENTER_MATCH_CUT) got_match=true;
 	}
 	if (got_match){
-	  // Add the segment as an associated object to _data[i]
-	  _data[i]->AddAssociatedObject(segment);
+	  // Add the segment as an associated object to mData[i]
+	  mData[i]->AddAssociatedObject(segment);
 	  
 	  // Add the new segment and sort by z
 	  segments.push_back(segment);
@@ -710,19 +708,19 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	  DoHelicalFit(segments,fit);
 	     
 	  //circle fit parameters
-	  _data[i]->rc=rc;
-	  _data[i]->xc=xc;
-	  _data[i]->yc=yc;
+	  mData[i]->rc=rc;
+	  mData[i]->xc=xc;
+	  mData[i]->yc=yc;
 	
 	  // Get position and momentum just upstream of first hit
 	  DVector3 pos,mom;
 	  GetPositionAndMomentum(segments,pos,mom);
 	  
-	  _data[i]->chisq=fit.chisq;
-	  _data[i]->Ndof=fit.ndof;
-	  _data[i]->setPID((q > 0.0) ? PiPlus : PiMinus);
-	  _data[i]->setPosition(pos);
-	  _data[i]->setMomentum(mom); 
+	  mData[i]->chisq=fit.chisq;
+	  mData[i]->Ndof=fit.ndof;
+	  mData[i]->setPID((q > 0.0) ? PiPlus : PiMinus);
+	  mData[i]->setPosition(pos);
+	  mData[i]->setMomentum(mom); 
 	
 	  return true;
 	} // got a match to a stray segment
@@ -762,7 +760,7 @@ void DTrackCandidate_factory_FDCCathodes::MakeCandidate(vector<const DFDCSegment
     track->AddAssociatedObject(mytrack[m]);
   }
   
-  _data.push_back(track); 
+  Insert(track); 
 }
 
 // Perform a Riemann Helical fit using the set of hits in the track candidate 

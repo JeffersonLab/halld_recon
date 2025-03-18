@@ -82,6 +82,7 @@
         <CDCdEdxTrunc minOccurs="0" maxOccurs="unbounded" ntrunc="int" dx="float" dEdx="float" dxAmp="float" dEdxAmp="float" lunit="cm" dEdx_unit="GeV/cm"/>
         <FDCdEdxTrunc minOccurs="0" maxOccurs="unbounded" ntrunc="int" dx="float" dEdx="float" dxAmp="float" dEdxAmp="float" lunit="cm" dEdx_unit="GeV/cm"/>
       </dEdxDC>
+      <fdcTrackPos maxOccurs="4" minOccurs="0" x="float" y="float" z="float" lunit="cm"/>
       <exitParams maxOccurs="1" minOccurs="0" 
 		  x1="float" y1="float" z1="float"
                   px1="float" py1="float" pz1="float"

@@ -11,7 +11,7 @@
 #include <limits>
 #include <iostream>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "TTAB/DTTabUtilities.h"
 
 #include "DRFTime.h"
@@ -19,27 +19,28 @@
 #include "DRFTDCDigiTime.h"
 
 using namespace std;
-using namespace jana;
 
-class DRFTime_factory_FDC : public jana::JFactory<DRFTime>
+
+class DRFTime_factory_FDC : public JFactoryT<DRFTime>
 {
 	public:
-		DRFTime_factory_FDC(){};
+		DRFTime_factory_FDC(){
+			SetTag("FDC");
+		};
 		~DRFTime_factory_FDC(){};
-		const char* Tag(void){return "FDC";}
 
 		double Step_TimeToNearInputTime(double locTimeToStep, double locTimeToStepTo) const;
 		double Step_TimeToNearInputTime(double locTimeToStep, double locTimeToStepTo, double locPeriod) const;
 
 		double Convert_TDCToTime(const DRFTDCDigiTime* locRFTDCDigiTime, const DTTabUtilities* locTTabUtilities) const;
 
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
 	
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		double Calc_WeightedAverageRFTime(vector<double>& locRFTimes, double& locRFTimeVariance) const;
 

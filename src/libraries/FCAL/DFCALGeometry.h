@@ -8,15 +8,13 @@
 #ifndef _DFCALGeometry_
 #define _DFCALGeometry_
 
-#include <JANA/JFactory.h>
 #include <JANA/JObject.h>
-using namespace jana;
 
 #include "DVector2.h"
 #include "units.h"
 #include <HDGEOMETRY/DGeometry.h>
 
-class DFCALGeometry : public JObject {
+class DFCALGeometry: public JObject {
 
   /*
 #define kBlocksWide 59
@@ -84,11 +82,11 @@ public:
 	int row   ( float y, bool in_insert=false ) const;
 	int column( float x, bool in_insert=false ) const;
 
-	void toStrings(vector<pair<string,string> > &items) const {
-	  AddString(items, "kBlocksWide", "%d", (int)kBlocksWide);
-	  AddString(items, "kBlocksTall", "%d", (int)kBlocksTall);
-	  AddString(items, "kMaxChannels", "%d", (int)kMaxChannels);
-	  AddString(items, "kBeamHoleSize", "%2.3f", (int)kBeamHoleSize);
+	void Summarize(JObjectSummary& summary) const override {
+	  summary.add((int)kBlocksWide, "kBlocksWide", "%d");
+	  summary.add((int)kBlocksTall, "kBlocksTall", "%d");
+	  summary.add((int)kMaxChannels, "kMaxChannels", "%d");
+	  summary.add((int)kBeamHoleSize, "kBeamHoleSize", "%2.3f");
 	}
 	
 

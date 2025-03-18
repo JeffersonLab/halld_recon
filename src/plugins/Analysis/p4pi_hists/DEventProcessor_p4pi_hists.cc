@@ -6,6 +6,7 @@
 //
 
 #include "DEventProcessor_p4pi_hists.h"
+#include <JANA/JEventSource.h>
 
 // Routine used to create our DEventProcessor
 
@@ -14,15 +15,15 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_p4pi_hists()); //register this plugin
-		locApplication->AddFactoryGenerator(new DFactoryGenerator_p4pi_hists()); //register the factory generator
+		locApplication->Add(new DEventProcessor_p4pi_hists()); //register this plugin
+		locApplication->Add(new DFactoryGenerator_p4pi_hists()); //register the factory generator
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_p4pi_hists::init(void)
+void DEventProcessor_p4pi_hists::Init()
 {
 	// This is called once at program startup.
 
@@ -32,28 +33,24 @@ jerror_t DEventProcessor_p4pi_hists::init(void)
 	dEventStoreSkimStream.open(locSkimFileName.c_str());
 	dEventStoreSkimStream << "IDXA" << endl;
 	*/
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_p4pi_hists::brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber)
+void DEventProcessor_p4pi_hists::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_p4pi_hists::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_p4pi_hists::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
@@ -71,8 +68,8 @@ jerror_t DEventProcessor_p4pi_hists::evnt(jana::JEventLoop* locEventLoop, uint64
 	//The event writer gets the DAnalysisResults objects from JANA, performing the analysis. 
 	// string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
 	const DEventWriterROOT* locEventWriterROOT = NULL;
-	locEventLoop->GetSingle(locEventWriterROOT);
-	locEventWriterROOT->Fill_DataTrees(locEventLoop, "p4pi_hists");
+	locEvent->GetSingle(locEventWriterROOT);
+	locEventWriterROOT->Fill_DataTrees(locEvent, "p4pi_hists");
 	
 
 	/*
@@ -80,26 +77,23 @@ jerror_t DEventProcessor_p4pi_hists::evnt(jana::JEventLoop* locEventLoop, uint64
 		//Getting these objects triggers the analysis, if it wasn't performed already. 
 		//These objects contain the DParticleCombo objects that survived the DAnalysisAction cuts that were added to the DReactions
 	vector<const DAnalysisResults*> locAnalysisResultsVector;
-	locEventLoop->Get(locAnalysisResultsVector);
+	locEvent->Get(locAnalysisResultsVector);
 	*/
-
-
-	return NOERROR;
 }
 
-int DEventProcessor_p4pi_hists::Get_FileNumber(JEventLoop* locEventLoop) const
+int DEventProcessor_p4pi_hists::Get_FileNumber(const std::shared_ptr<const JEvent>& locEvent) const
 {
 	//Assume that the file name is in the format: *_X.ext, where:
 		//X is the file number (a string of numbers of any length)
 		//ext is the file extension (probably .evio or .hddm)
 
 	//get the event source
-	JEventSource* locEventSource = locEventLoop->GetJEvent().GetJEventSource();
+	JEventSource* locEventSource = locEvent->GetJEventSource();
 	if(locEventSource == NULL)
 		return -1;
 
 	//get the source file name (strip the path)
-	string locSourceFileName = locEventSource->GetSourceName();
+	string locSourceFileName = locEventSource->GetResourceName();
 
 	//find the last "_" & "." indices
 	size_t locUnderscoreIndex = locSourceFileName.rfind("_");
@@ -118,24 +112,24 @@ int DEventProcessor_p4pi_hists::Get_FileNumber(JEventLoop* locEventLoop) const
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_p4pi_hists::erun(void)
+void DEventProcessor_p4pi_hists::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_p4pi_hists::fini(void)
+void DEventProcessor_p4pi_hists::Finish()
 {
 	// Called before program exit after event processing is finished.
 	if(dEventStoreSkimStream.is_open())
 		dEventStoreSkimStream.close();
-	return NOERROR;
+	return;
 }
 

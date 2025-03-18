@@ -38,10 +38,14 @@
 using namespace std;
 
 #include "DTrackCandidate_factory.h"
-#include "DTrackCandidate_factory_CDC.h"
+
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/Services/JLockService.h>
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
+
 #include "START_COUNTER/DSCHit.h"
-#include "DANA/DApplication.h"
-#include <JANA/JCalibration.h>
 #include <TRACKING/DHoughFind.h>
 
 #include <TROOT.h>
@@ -115,22 +119,26 @@ inline bool FDCHitSortByLayerincreasing(const DFDCPseudo* const &hit1, const DFD
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrackCandidate_factory::init(void)
+void DTrackCandidate_factory::Init()
 {
 	MAX_NUM_TRACK_CANDIDATES = 20;
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackCandidate_factory::brun(JEventLoop* eventLoop,int32_t runnumber){
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
-  bfield = dapp->GetBfield(runnumber);
+void DTrackCandidate_factory::BeginRun(const std::shared_ptr<const JEvent>& event){
+
+  auto run_number = event->GetRunNumber();
+  auto app = GetApplication();
+  auto root_lock = app->GetService<JLockService>();
+  auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto dgeom = geo_manager->GetDGeometry(run_number);
+  bfield = geo_manager->GetBfield(run_number);
+
   FactorForSenseOfRotation=(bfield->GetBz(0.,0.,65.)>0.)?-1.:1.;
 
   // Get start counter geometry;
@@ -139,7 +147,7 @@ jerror_t DTrackCandidate_factory::brun(JEventLoop* eventLoop,int32_t runnumber){
   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(bfield) != NULL);
   if(dIsNoFieldFlag)
   {
-    //Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory.
+    //Setting this flag makes it so that JANA does not delete the objects in mData.  This factory will manage this memory.
       //This is all of these pointers are just copied from the "StraightLine" factory, and should not be re-deleted.
     SetFactoryFlag(NOT_OBJECT_OWNER);
   }
@@ -152,9 +160,8 @@ jerror_t DTrackCandidate_factory::brun(JEventLoop* eventLoop,int32_t runnumber){
   cdc_endplate.SetZ(endplate_z+endplate_dz);
 
   dParticleID = NULL;
-  eventLoop->GetSingle(dParticleID);
+  event->GetSingle(dParticleID);
 
-  JCalibration *jcalib = dapp->GetJCalibration(runnumber);
   map<string, double> targetparms;
   if (jcalib->Get("TARGET/target_parms",targetparms)==false){
     TARGET_Z = targetparms["TARGET_Z_POSITION"];
@@ -168,10 +175,10 @@ jerror_t DTrackCandidate_factory::brun(JEventLoop* eventLoop,int32_t runnumber){
   stepper->SetStepSize(1.0);
 
   DEBUG_HISTS=false;
-  gPARMS->SetDefaultParameter("TRKFIND:DEBUG_HISTS",DEBUG_HISTS);
+  app->SetDefaultParameter("TRKFIND:DEBUG_HISTS",DEBUG_HISTS);
 
   if(DEBUG_HISTS){
-    dapp->Lock();
+    root_lock->RootWriteLock();
     /*
     match_center_dist2=(TH2F*)gROOT->FindObject("match_center_dist2");
     if (!match_center_dist2){
@@ -194,72 +201,68 @@ jerror_t DTrackCandidate_factory::brun(JEventLoop* eventLoop,int32_t runnumber){
       match_dist_vs_p->SetYTitle("#Deltar (cm)");
       match_dist_vs_p->SetXTitle("p (GeV/c)");
     }
-    dapp->Unlock();
+      root_lock->RootUnLock();
   }
 
-  gPARMS->SetDefaultParameter("TRKFIND:MAX_NUM_TRACK_CANDIDATES", MAX_NUM_TRACK_CANDIDATES); 
+  app->SetDefaultParameter("TRKFIND:MAX_NUM_TRACK_CANDIDATES", MAX_NUM_TRACK_CANDIDATES); 
 
   //  MIN_NUM_HITS=6;
-  //gPARMS->SetDefaultParameter("TRKFIND:MIN_NUM_HITS", MIN_NUM_HITS);
+  //app->SetDefaultParameter("TRKFIND:MIN_NUM_HITS", MIN_NUM_HITS);
   
   DEBUG_LEVEL=0;
-  gPARMS->SetDefaultParameter("TRKFIND:DEBUG_LEVEL", DEBUG_LEVEL);
+  app->SetDefaultParameter("TRKFIND:DEBUG_LEVEL", DEBUG_LEVEL);
 
   ADD_VERTEX_POINT=true;
-  gPARMS->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
+  app->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
    
-  return NOERROR;
+  return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrackCandidate_factory::erun(void)
+void DTrackCandidate_factory::EndRun()
 {
   if (stepper) {
     delete stepper;
     stepper = nullptr;
   }
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrackCandidate_factory::fini(void)
+void DTrackCandidate_factory::Finish()
 {
   if (stepper) {
     delete stepper;
     stepper = nullptr;
   }
-
-  return NOERROR;
 }
 
 
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   if(dIsNoFieldFlag)
   {
     //Clear previous objects: //JANA doesn't do it because NOT_OBJECT_OWNER was set
 	  //It DID delete them though, in the "StraightLine" factory
-    _data.clear();
+    mData.clear();
 
     vector<const DTrackCandidate*> locStraightLineCandidates;
-    loop->Get(locStraightLineCandidates, "StraightLine");
+    event->Get(locStraightLineCandidates, "StraightLine");
     for(size_t loc_i = 0; loc_i < locStraightLineCandidates.size(); ++loc_i)
-      _data.push_back(const_cast<DTrackCandidate*>(locStraightLineCandidates[loc_i]));
-    return NOERROR;
+      mData.push_back(const_cast<DTrackCandidate*>(locStraightLineCandidates[loc_i]));
+    return;
   }
   
    // Start counter hits
   vector<const DSCHit *>schits;
-  loop->Get(schits);
+  event->Get(schits);
 
 
   // Clear private vectors
@@ -269,11 +272,11 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   mycdchits.clear();
 
   // Get the track candidates from the CDC and FDC candidate finders
-  loop->Get(cdctrackcandidates, "CDC");
-  loop->Get(fdctrackcandidates, "FDCCathodes");
+  event->Get(cdctrackcandidates, "CDC");
+  event->Get(fdctrackcandidates, "FDCCathodes");
 
   // List of cdc hits
-  loop->Get(mycdchits);
+  event->Get(mycdchits);
 
   // Vectors for keeping track of cdc matches and projections to the endplate
   vector<unsigned int> cdc_forward_ids;
@@ -778,36 +781,34 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     candidate->GetT(mycdchits);
     
     if (mycdchits.size()>=3 || myfdchits.size()>=3){
-      _data.push_back(candidate);
+      Insert(candidate);
     }
     else delete candidate;
   }
 
-  if((int(_data.size()) > MAX_NUM_TRACK_CANDIDATES) && (MAX_NUM_TRACK_CANDIDATES >= 0))
+  if((int(mData.size()) > MAX_NUM_TRACK_CANDIDATES) && (MAX_NUM_TRACK_CANDIDATES >= 0))
 	{
-	  if (DEBUG_LEVEL>0) _DBG_ << "Number of candidates = " << _data.size()
+	  if (DEBUG_LEVEL>0) _DBG_ << "Number of candidates = " << mData.size()
 				   << " > " <<  MAX_NUM_TRACK_CANDIDATES
 				   << " --- skipping track fitting! " << endl;
-	  for(size_t loc_i = 0; loc_i < _data.size(); ++loc_i)
-	    delete _data[loc_i];
-	  _data.clear();
+	  for(size_t loc_i = 0; loc_i < mData.size(); ++loc_i)
+	    delete mData[loc_i];
+	  mData.clear();
   	}
 
 
   // Set CDC ring & FDC plane hit patterns
-  for(size_t loc_i = 0; loc_i < _data.size(); ++loc_i)
+  for(size_t loc_i = 0; loc_i < mData.size(); ++loc_i)
   {
     vector<const DCDCTrackHit*> locCDCTrackHits;
-    _data[loc_i]->Get(locCDCTrackHits);
+    mData[loc_i]->Get(locCDCTrackHits);
 
     vector<const DFDCPseudo*> locFDCPseudos;
-    _data[loc_i]->Get(locFDCPseudos);
+    mData[loc_i]->Get(locFDCPseudos);
 
-    _data[loc_i]->dCDCRings = dParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
-    _data[loc_i]->dFDCPlanes = dParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+    mData[loc_i]->dCDCRings = dParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+    mData[loc_i]->dFDCPlanes = dParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
   }
-  
-  return NOERROR;
 }
 
 
@@ -956,7 +957,6 @@ jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
   double ratio=(pos0-pos).Perp()/tworc;
   double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
   pos.SetZ(pos0.z()-sperp*tanl);
-  
   return NOERROR;
 }
 

@@ -246,6 +246,7 @@
 	      </fmwpcTruthHit>
           <fmwpcHit dE="float" maxOccurs="unbounded" t="float">
 	        <fmwpcHitQ q="float" maxOccurs="unbounded"/>
+ 	        <fmwpcDigiHit minOccurs="0" amp="float" qf="int" ped="float" />
 	      </fmwpcHit>
         </fmwpcChamber>
         <fmwpcTruthPoint E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">

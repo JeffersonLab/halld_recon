@@ -15,7 +15,6 @@
 #include <iostream>
 using namespace std;
 
-#include <JANA/jerror.h>
 
 #ifdef HAVE_ET
 #include <et.h>

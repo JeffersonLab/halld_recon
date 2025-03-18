@@ -12,7 +12,8 @@
 using namespace std;
 
 #include <JANA/JEvent.h>
-using namespace jana;
+#include "DANA/DEvent.h"
+
 
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALCluster_factory.h"
@@ -43,79 +44,91 @@ const DFCALHit *GetDFCALHitFromClusterHit(const DFCALCluster::DFCALClusterHit_t 
 //----------------
 // Constructor
 //----------------
-DFCALCluster_factory::DFCALCluster_factory()
+void DFCALCluster_factory::Init()
 {
 	// Set defaults
-        MIN_CLUSTER_BLOCK_COUNT = 2;
-        MIN_CLUSTER_SEED_ENERGY = 0.035; // GeV
+	MIN_CLUSTER_BLOCK_COUNT = 2;
+	MIN_CLUSTER_SEED_ENERGY = 0.035; // GeV
 	TIME_CUT = 15.0 ; //ns
 	MAX_HITS_FOR_CLUSTERING = 250;
-
-	gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
-	gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY", MIN_CLUSTER_SEED_ENERGY);
-	gPARMS->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
-	gPARMS->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
-
+	REMOVE_BAD_BLOCK = 0;
+	
+	auto app = GetApplication();
+	app->SetDefaultParameter("FCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
+	app->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY", MIN_CLUSTER_SEED_ENERGY);
+	app->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
+	app->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
+	app->SetDefaultParameter("FCAL:REMOVE_BAD_BLOCK",REMOVE_BAD_BLOCK,"remove bad block");
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DFCALCluster_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DFCALCluster_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	double targetZ;
 	double fcalFrontFaceZ;
-	
-	DGeometry *dgeom = NULL;
-	DApplication *dapp = dynamic_cast< DApplication* >( eventLoop->GetJApplication() );
-	if( dapp ) dgeom = dapp->GetDGeometry( runnumber );
-   
-	if( dgeom ){
 
+	// Get geometry
+	auto runnumber = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto geo_manager = app->GetService<DGeometryManager>();
+	auto dgeom = geo_manager->GetDGeometry(runnumber);
+
+	if( dgeom ){
 	  dgeom->GetTargetZ( targetZ );
 	  dgeom->GetFCALZ( fcalFrontFaceZ );
 	}
 	else{
 
-	  cerr << "No geometry accessbile." << endl;
-	  return RESOURCE_UNAVAILABLE;
+	  cerr << "No geometry accessible." << endl;
+	  return; // RESOURCE_UNAVAILABLE;
 	}
 
 	fcalFaceZ_TargetIsZeq0 = fcalFrontFaceZ - targetZ;
 
-	return NOERROR;
+	bad_blocks_list.clear();
+	if (DEvent::GetCalib(event, "/FCAL/bad_block", bad_blocks_list))
+	  jout << "Error loading /FCAL/bad_block !" << endl;
+	
 }
 
 //------------------
-// evnt
+// Process
 //    Implementation of UConn LGD clusterizer (M. Kornicer)
 //------------------
-jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void DFCALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 	vector<const DFCALHit*> fcalhits;
-	eventLoop->Get(fcalhits);
+	event->Get(fcalhits);
 	// Hits in PWO insert
 	vector<const DECALHit*> ecalhits;
-	eventLoop->Get(ecalhits);
+	event->Get(ecalhits);
 	
 	// LED events will have hits in nearly every channel. Do NOT
 	// try clusterizing if more than 250 hits in FCAL
-	if(fcalhits.size()+ecalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
+	if(fcalhits.size()+ecalhits.size() > MAX_HITS_FOR_CLUSTERING) return; //NOERROR;
 	
 	const DFCALGeometry* fcalGeom=NULL;
-	eventLoop->GetSingle(fcalGeom);
+	event->GetSingle(fcalGeom);
 
 	// fill user's hit list
         int nhits = 0;
+	oid_t id=1;
         DFCALCluster::userhits_t* hits = 
 	  (DFCALCluster::userhits_t*) malloc(sizeof(DFCALCluster::userhits_t)*FCAL_USER_HITS_MAX);
 
 	// Fill the structure that used to be used by clusterizers in Radphi 
 	for (vector<const DFCALHit*>::const_iterator hit  = fcalhits.begin(); 
                                                      hit != fcalhits.end(); hit++ ) {
-           if ( (**hit).E <  1e-6 ) continue;
-           hits->hit[nhits].id = (**hit).id;
+
+	   if ( (**hit).E <  1e-6 ) continue;
+	   if (REMOVE_BAD_BLOCK == 1 &&
+	       bad_blocks_list.size() > 0 &&
+	       0 <= fcalGeom->channel( (**hit).row, (**hit).column ) && fcalGeom->channel( (**hit).row, (**hit).column ) <= 2799 &&
+	       bad_blocks_list[fcalGeom->channel( (**hit).row, (**hit).column )] == 1) continue;
+           hits->hit[nhits].id = id++;
 	   hits->hit[nhits].ch = fcalGeom->channel( (**hit).row, (**hit).column );
            hits->hit[nhits].x = (**hit).x;
            hits->hit[nhits].y = (**hit).y;
@@ -136,7 +149,7 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	       hit != ecalhits.end(); hit++ ) {
 	    if ( (**hit).E <  1e-6 ) continue;
 	    
-	    hits->hit[nhits].id = (**hit).id;
+	    hits->hit[nhits].id = id++;
 	    hits->hit[nhits].E = (**hit).E; 
 	    hits->hit[nhits].t = (**hit).t;
 	    hits->hit[nhits].intOverPeak=(**hit).intOverPeak;
@@ -285,7 +298,7 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
                       clusterList[c]->AddAssociatedObject( clusterHit );
               }
 
-              _data.push_back( clusterList[c] );
+              Insert( clusterList[c] );
 	   }
         }
   
@@ -294,8 +307,5 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
            free(hits);
            hits=0;
         }
-
-	return NOERROR;
-
 }
 

@@ -13,7 +13,7 @@ using namespace std;
 #include <stdlib.h>
 
 #include <DANA/DApplication.h>
-#include <JANA/JParameterManager.h>
+#include <JANA/JEvent.h>
 
 #include <DAQ/DBeamCurrent_factory.h>
 
@@ -43,24 +43,29 @@ int main(int narg, char *argv[])
 	// Parse command line arguments and then create a DApplication
 	ParseCommandLineArgs(narg, argv);
 	DApplication *dapp = new DApplication(0, NULL);
-	//dapp->Init();
-	
-	// Create a JEventLoop so we'll have a DBeamCurrent_factory
-	JEventLoop *loop = new JEventLoop(dapp);
-	loop->GetJEvent().SetRunNumber(RUN);
+	auto app = dapp->GetJApp();
+
+	auto params = app->GetJParameterManager();
+	params->SetParameter("BEAM_ON_MIN_nA",  BEAM_ON_MIN_nA);
+	params->SetParameter("BEAM_TRIP_MIN_T", BEAM_TRIP_MIN_T);
+
+	// app->Initialize(); // TODO: NWB: We might need to uncomment this?
+
+	// Create a JEvent so we'll have a DBeamCurrent_factory
+	auto event = std::make_shared<JEvent>(app);
+	event->SetRunNumber(RUN);
 
 	// Get factory
-	DBeamCurrent_factory *fac = (DBeamCurrent_factory*)loop->GetFactory("DBeamCurrent");
+	DBeamCurrent_factory *fac = (DBeamCurrent_factory*) event->GetFactory("DBeamCurrent","");
 	if(!fac){
 		cerr << "Unable to find DBeamCurrent_factory!" << endl;
 		return -1;
 	}
 	
 	// Read in trip map from CCDB
-	gPARMS->SetParameter("BEAM_ON_MIN_nA",  BEAM_ON_MIN_nA);
-	gPARMS->SetParameter("BEAM_TRIP_MIN_T", BEAM_TRIP_MIN_T);
-	fac->init();
-	fac->brun(loop, RUN);
+
+	fac->Init();
+	fac->BeginRun(event);
 	
 	// Get some values from factory
 	double t_total = fac->IntegratedTime();

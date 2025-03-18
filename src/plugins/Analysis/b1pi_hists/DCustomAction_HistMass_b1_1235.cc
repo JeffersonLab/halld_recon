@@ -7,7 +7,7 @@
 
 #include "DCustomAction_HistMass_b1_1235.h"
 
-void DCustomAction_HistMass_b1_1235::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_HistMass_b1_1235::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Optional: Create histograms and/or modify member variables.
 	//Create any histograms/trees/etc. within a ROOT lock. 
@@ -15,11 +15,11 @@ void DCustomAction_HistMass_b1_1235::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		// Optional: Useful utility functions.
-		//locEventLoop->GetSingle(dAnalysisUtilities);
-		Run_Update(locEventLoop);
+		//locEvent->GetSingle(dAnalysisUtilities);
+		Run_Update(locEvent);
 
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
@@ -41,10 +41,10 @@ void DCustomAction_HistMass_b1_1235::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_HistMass_b1_1235::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_HistMass_b1_1235::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//Optional: check whether the user wanted to use the kinematic fit results when performing this action
 //	bool locUseKinFitResultsFlag = Get_UseKinFitResultsFlag();

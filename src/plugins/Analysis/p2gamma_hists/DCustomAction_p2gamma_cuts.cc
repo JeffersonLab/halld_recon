@@ -7,12 +7,12 @@
 
 #include "DCustomAction_p2gamma_cuts.h"
 
-void DCustomAction_p2gamma_cuts::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_p2gamma_cuts::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 
 }
 
-bool DCustomAction_p2gamma_cuts::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_p2gamma_cuts::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(0);
 

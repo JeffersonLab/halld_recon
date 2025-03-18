@@ -6,7 +6,6 @@
 //
 
 #include "JEventProcessor_scanf250.h"
-using namespace jana;
 
 #include <vector>
 
@@ -18,12 +17,10 @@ using namespace jana;
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_scanf250());
+	app->Add(new JEventProcessor_scanf250());
 }
 } // "C"
 
@@ -35,7 +32,7 @@ thread_local DTreeFillData JEventProcessor_scanf250::dTreeFillData;
 //------------------
 JEventProcessor_scanf250::JEventProcessor_scanf250()
 {
-
+	SetTypeName("JEventProcessor_scanf250");
 }
 
 //------------------
@@ -43,13 +40,12 @@ JEventProcessor_scanf250::JEventProcessor_scanf250()
 //------------------
 JEventProcessor_scanf250::~JEventProcessor_scanf250()
 {
-
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_scanf250::init(void)
+void JEventProcessor_scanf250::Init()
 {
 	// This is called once at program startup. 
 
@@ -74,43 +70,40 @@ jerror_t JEventProcessor_scanf250::init(void)
 
  //REGISTER BRANCHES
   dTreeInterface->Create_Branches(locTreeBranchRegister);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_scanf250::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_scanf250::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_scanf250::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_scanf250::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootFillLock(this);
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootFillUnLock(this);
+	// lockService->RootUnLock();
 
 
-
+  auto eventnumber = event->GetEventNumber();
 
   vector<const Df250WindowRawData*> wrdvector;
-  loop->Get(wrdvector);
+  event->Get(wrdvector);
 
 
   uint32_t nw = (uint32_t)wrdvector.size();
@@ -169,30 +162,25 @@ jerror_t JEventProcessor_scanf250::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   }   // if (nw)
 
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_scanf250::erun(void)
+void JEventProcessor_scanf250::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
 
   delete dTreeInterface;
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_scanf250::fini(void)
+void JEventProcessor_scanf250::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

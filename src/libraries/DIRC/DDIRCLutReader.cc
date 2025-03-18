@@ -9,12 +9,13 @@
 using namespace std;
 
 #include "DDIRCLutReader.h"
-#include "DANA/DApplication.h"
+
+#include <JANA/Calibrations/JCalibrationManager.h>
 
 //---------------------------------
 // DDIRCLutReader    (Constructor)
 //---------------------------------
-DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number) 
+DDIRCLutReader::DDIRCLutReader(JApplication *app, unsigned int run_number)
 {
 	/////////////////////////////////////////
 	// retrieve from LUT from file or CCDB //
@@ -22,29 +23,29 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
         const int luts = DDIRCGeometry::kBars;
 
         string lut_file;
-        gPARMS->SetDefaultParameter("DIRC_LUT", lut_file, "DIRC LUT root file (will eventually be moved to resource)");
+        app->SetDefaultParameter("DIRC_LUT", lut_file, "DIRC LUT root file (will eventually be moved to resource)");
 
 	string lutcorr_file;
-        gPARMS->SetDefaultParameter("DIRC_LUT_CORR", lutcorr_file, "DIRC LUT correction root file (will eventually be moved to resource)");
+        app->SetDefaultParameter("DIRC_LUT_CORR", lutcorr_file, "DIRC LUT correction root file (will eventually be moved to resource)");
 	
 	// follow similar procedure as other resources (DMagneticFieldMapFineMesh)
 	map<string,string> lut_map_name;
-	jcalib = japp->GetJCalibration(run_number);
+	jcalib = japp->GetService<JCalibrationManager>()->GetJCalibration(run_number);
 	if(jcalib->GetCalib("/DIRC/LUT/lut_map", lut_map_name)) 
-		jout << "Can't find requested /DIRC/LUT/lut_map in CCDB for this run!" << endl;
+		jout << "Can't find requested /DIRC/LUT/lut_map in CCDB for this run!" << jendl;
 	else if(lut_map_name.find("map_name") != lut_map_name.end() && lut_map_name["map_name"] != "None" && lut_file.empty()) {
-		jresman = japp->GetJResourceManager(run_number);
+		jresman = japp->GetService<JCalibrationManager>()->GetResource(run_number);
 		lut_file = jresman->GetResource(lut_map_name["map_name"]);
 	}
 	
 	// only create reader if have tree from CCDB or command-line parameter is set
 	if(!lut_file.empty()) {
-		jout<<"Reading DIRC LUT TTree from "<<lut_file<<" ..."<<endl;
+		jout<<"Reading DIRC LUT TTree from "<<lut_file<<" ..."<<jendl;
 		
 		TDirectory *saveDir = gDirectory;
 		TFile *fLut = new TFile(lut_file.c_str());
 		if( !fLut->IsOpen() ){
-			jerr << "Unable to open " << lut_file << "!!" << endl;
+			jerr << "Unable to open " << lut_file << "!!" << jendl;
 			_exit(-1);
 		}
 		TTree *tLut=(TTree*) fLut->Get("lut_dirc_flat");
@@ -98,7 +99,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 		if(jcalib->GetCalib("/DIRC/LUT/lutcorr_map", lutcorr_map_name)) 
 		  jout << "Can't find requested /DIRC/LUT/lutcorr_map in CCDB for this run!" << endl;
 		else if(lutcorr_map_name.find("map_name") != lutcorr_map_name.end() && lutcorr_map_name["map_name"] != "None" && lutcorr_file.empty()) {
-		  jresman = japp->GetJResourceManager(run_number);
+                  jresman = japp->GetService<JCalibrationManager>()->GetResource(run_number);
 		  lutcorr_file = jresman->GetResource(lutcorr_map_name["map_name"]);
 		}
 		if(!lutcorr_file.empty()) {

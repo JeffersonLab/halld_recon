@@ -2,7 +2,8 @@
 using namespace std;
 
 #include <JANA/JApplication.h>
-using namespace jana;
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 
 #include "BCAL/DBCALUnifiedHit_factory.h"
 
@@ -11,7 +12,7 @@ using namespace jana;
 //----------------
 // init
 //----------------
-jerror_t DBCALUnifiedHit_factory::init(void)
+void DBCALUnifiedHit_factory::Init()
 {
 
     if (enable_debug_output) {
@@ -25,10 +26,13 @@ jerror_t DBCALUnifiedHit_factory::init(void)
         bcal_points_tree->Branch("end",&end_tree,"end/O");
     }
 
-    USE_TDC = false;
-    if (gPARMS){
-        gPARMS->SetDefaultParameter("BCAL:USE_TDC", USE_TDC, "Set to 1 to use TDC times");
-    }
+	auto app = GetApplication();
+
+	USE_TDC = false;
+	app->SetDefaultParameter("BCAL:USE_TDC", USE_TDC, "Set to 1 to use TDC times");
+
+	VERBOSE = 0;
+	app->SetDefaultParameter("BCALUNIFIEDHIT:VERBOSE", VERBOSE, "Set level of verbosity.");
 
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
     static bool printMessage = true;
@@ -44,20 +48,20 @@ jerror_t DBCALUnifiedHit_factory::init(void)
     printMessage = false;
     pthread_mutex_unlock(&print_mutex);
 
-    return NOERROR;
 }
 
-jerror_t DBCALUnifiedHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber) {
+void DBCALUnifiedHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event) {
 
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	eventLoop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	dBCALGeom = BCALGeomVec[0];
 
     //get timewalk corrections from CCDB
-    JCalibration *jcalib = eventLoop->GetJCalibration();
+    JCalibration *jcalib = GetApplication()->GetService<JCalibrationManager>()->GetJCalibration(event->GetRunNumber());
+
     //these tables hold: module layer sector end c0 c1 c2 c3 threshold
     vector<vector<float> > tdc_timewalk_table;
     
@@ -110,20 +114,18 @@ jerror_t DBCALUnifiedHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runn
             }
         }
     }
-    
-    return NOERROR;
 }
 
 //----------------
 // evnt
 //----------------
-jerror_t DBCALUnifiedHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void DBCALUnifiedHit_factory::Process(const std::shared_ptr<const JEvent>& event) {
     vector<const DBCALHit*> hits;
     vector<const DBCALTDCHit*> tdc_hits;
-    loop->Get(hits);
-    loop->Get(tdc_hits);
-    if (hits.size() + tdc_hits.size() <= 0) return NOERROR;
-	if (VERBOSE>=3)  jout << eventnumber << " " << hits.size() << " ADC hits, " << tdc_hits.size() << " TDC hits" << endl;
+    event->Get(hits);
+    event->Get(tdc_hits);
+    if (hits.size() + tdc_hits.size() <= 0) return;
+	if (VERBOSE>=3)  jout << event->GetEventNumber() << " " << hits.size() << " ADC hits, " << tdc_hits.size() << " TDC hits" << endl;
 
     // first arrange the list of hits so they are grouped by cell
     map<readout_channel, cellHits> cellHitMap;
@@ -176,7 +178,7 @@ jerror_t DBCALUnifiedHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber) {
 			if (VERBOSE>=1) {
 				if (tdc_hits.size()!=0) {
 					static uint64_t Nwarnings = 0;
-					if(++Nwarnings <= 10) cout << "DBCALUnifiedHit_factory (event " << eventnumber << "): TDC hits without ADC hits" << endl;
+					if(++Nwarnings <= 10) cout << "DBCALUnifiedHit_factory (event " << event->GetEventNumber() << "): TDC hits without ADC hits" << endl;
 					if(  Nwarnings == 10) cout << "DBCALUnifiedHit_factory: LAST WARNING (others will be suppressed)" <<endl;
 				}
 			}
@@ -189,7 +191,7 @@ jerror_t DBCALUnifiedHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber) {
             if (hits[i]->t < hits[firstIndex]->t) firstIndex = i;
 			if (VERBOSE>=4 && hits.size()>=2) {
 				printf("DBCALUnifiedHit_factory  event %5llu (%2i,%i,%i,%i) peak %4i, ADC %i %6.1f\n",
-					   (unsigned long long int)eventnumber, module, layer, sector, chan.end, hits[i]->pulse_peak, i, hits[i]->t);
+					   (unsigned long long int)event->GetEventNumber(), module, layer, sector, chan.end, hits[i]->pulse_peak, i, hits[i]->t);
 			}
         }
 
@@ -232,14 +234,14 @@ jerror_t DBCALUnifiedHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber) {
 			}
 			if (VERBOSE>=4 || (VERBOSE>=3&&tdc_hits.size()>1)) {
 				printf("DBCALUnifiedHit_factory  event %5llu (%2i,%i,%i,%i) peak %4.0f, ADC 0 %6.1f, TDC %i %6.1f  diff %6.1f    best %2i %6.1f\n",
-					   (unsigned long long int)eventnumber, module, layer, sector, chan.end, pulse_peak, t_ADC, i, tdc_hit_t, tdc_adc_diff, goodTDCindex, t_diff);
+					   (unsigned long long int)event->GetEventNumber(), module, layer, sector, chan.end, pulse_peak, t_ADC, i, tdc_hit_t, tdc_adc_diff, goodTDCindex, t_diff);
 			}
 		}
 		if (VERBOSE>=4 && !haveTDChit) {
 			// printf("DBCALUnifiedHit_factory  event %5llu (%2i,%i,%i,%i) peak %4.0f, ADC 0 %6.1f, TDC           diff           best %2i %6.1f\n",
-			// 	   (unsigned long long int)eventnumber, module, layer, sector, chan.end, pulse_peak, hit->t, goodTDCindex, t_diff);
+			// 	   (unsigned long long int)event->GetEventNumber(), module, layer, sector, chan.end, pulse_peak, hit->t, goodTDCindex, t_diff);
 			printf("DBCALUnifiedHit_factory  event %5llu (%2i,%i,%i,%i) peak %4.0f, ADC 0 %6.1f\n",
-				   (unsigned long long int)eventnumber, module, layer, sector, chan.end, pulse_peak, hit->t);
+				   (unsigned long long int)event->GetEventNumber(), module, layer, sector, chan.end, pulse_peak, hit->t);
 		}
 		// Decide whether to use TDC time
 		if (pulse_peak>tdc_coeff.thresh && USE_TDC==1 && goodTDCindex>=0 && fabs(t_diff)<2 && good_timewalk_params) {
@@ -264,8 +266,8 @@ jerror_t DBCALUnifiedHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber) {
 		uhit->AddAssociatedObject(hit);
 		if (goodTDCindex>=0) uhit->AddAssociatedObject(tdc_hits[goodTDCindex]);
 
-		_data.push_back(uhit);
-    } // end loop over cells
+		Insert(uhit);
+    } // end event over cells
 
-    return NOERROR;
+    
 }

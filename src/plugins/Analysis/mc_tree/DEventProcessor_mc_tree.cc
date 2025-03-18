@@ -24,7 +24,7 @@
 extern "C" {
 void InitPlugin(JApplication *app) {
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_mc_tree());
+	app->Add(new DEventProcessor_mc_tree());
 }
 } // "C"
 
@@ -43,9 +43,9 @@ DEventProcessor_mc_tree::~DEventProcessor_mc_tree() {
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_mc_tree::init(void) {
+void DEventProcessor_mc_tree::Init() {
 	// create directory
 	TDirectory *dir = new TDirectoryFile("DMC", "DMC");
 	dir->cd();
@@ -58,14 +58,12 @@ jerror_t DEventProcessor_mc_tree::init(void) {
 	tree_thrown->Branch("T", &evt_thrown);
 
 	dir->cd("../");
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_mc_tree::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void DEventProcessor_mc_tree::Process(const std::shared_ptr<const JEvent>& event) {
 	vector<const DBeamPhoton*> beam_photons;
 	vector<const DMCThrown*> mcthrowns;
 	vector<const DMCTrackHit*> mctrackhits;
@@ -73,12 +71,12 @@ jerror_t DEventProcessor_mc_tree::evnt(JEventLoop *loop, uint64_t eventnumber) {
 	vector<const DCereHit*> cerehits;
 	vector<const DRichTruthHit*> richtruthhits;
 
-	loop->Get(beam_photons);
-	loop->Get(mcthrowns);
-	loop->Get(mctrackhits);
-	loop->Get(richhits);
-	loop->Get(cerehits);
-	loop->Get(richtruthhits);
+	event->Get(beam_photons);
+	event->Get(mcthrowns);
+	event->Get(mctrackhits);
+	event->Get(richhits);
+	event->Get(cerehits);
+	event->Get(richtruthhits);
 
 	TVector3 VertexGen = TVector3(mcthrowns[0]->position().X(),
 			mcthrowns[0]->position().Y(), mcthrowns[0]->position().Z());
@@ -95,7 +93,7 @@ jerror_t DEventProcessor_mc_tree::evnt(JEventLoop *loop, uint64_t eventnumber) {
 	/*
 	 // Count FDC anode hits
 	 vector<const DFDCHit*> fdchits;
-	 loop->Get(fdchits);
+	 event->Get(fdchits);
 	 unsigned int Nfdc_anode = 0;
 	 for(unsigned int i=0; i<fdchits.size(); i++){
 	 if(fdchits[i]->type==0){
@@ -105,7 +103,7 @@ jerror_t DEventProcessor_mc_tree::evnt(JEventLoop *loop, uint64_t eventnumber) {
 
 	 // Count CDC hits
 	 vector<const DCDCTrackHit*> cdctrackhits;
-	 loop->Get(cdctrackhits);
+	 event->Get(cdctrackhits);
 	 unsigned int Ncdc_anode = 0;
 	 Ncdc_anode = cdctrackhits.size();
 	 */
@@ -273,7 +271,7 @@ jerror_t DEventProcessor_mc_tree::evnt(JEventLoop *loop, uint64_t eventnumber) {
 				MakeRichTruthHit((DRichTruthHit*) richtruthhits[j]));
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	// Fill in Event objects
 	evt_thrown->Clear();
@@ -291,9 +289,9 @@ jerror_t DEventProcessor_mc_tree::evnt(JEventLoop *loop, uint64_t eventnumber) {
 	evt_thrown->event = eventnumber;
 	tree_thrown->Fill();
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 
-	return NOERROR;
+	return;
 }
 
 /*
@@ -548,15 +546,13 @@ bool DEventProcessor_mc_tree::IsFiducial(const DKinematicData *kd) {
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_mc_tree::erun(void) {
-	return NOERROR;
+void DEventProcessor_mc_tree::EndRun() {
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_mc_tree::fini(void) {
-	return NOERROR;
+void DEventProcessor_mc_tree::Finish() {
 }

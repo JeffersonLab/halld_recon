@@ -16,7 +16,7 @@ using namespace std;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new DEventProcessor_1p1pi1pi0());
+    app->Add(new DEventProcessor_1p1pi1pi0());
   }
 } // "C"
 
@@ -24,17 +24,19 @@ extern "C"{
 thread_local DTreeFillData DEventProcessor_1p1pi1pi0::dTreeFillData;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_1p1pi1pi0::init(void)
+void DEventProcessor_1p1pi1pi0::Init()
 {
+  auto app = GetApplication();
+  mLockService = app->GetService<JLockService>();
  
   //TTREE INTERFACE
   //MUST DELETE WHEN FINISHED: OR ELSE DATA WON'T BE SAVED!!!
   string treeName = "tree_1p1pi1pi0";
   string treeFile = "tree_1p1pi1pi0.root";
-  gPARMS->SetDefaultParameter("SRC_1P1PI1PI0:TREENAME", treeName);
-  gPARMS->SetDefaultParameter("SRC_1P1PI1PI0:TREEFILE", treeFile);
+  app->SetDefaultParameter("SRC_1P1PI1PI0:TREENAME", treeName);
+  app->SetDefaultParameter("SRC_1P1PI1PI0:TREEFILE", treeFile);
   dTreeInterface = DTreeInterface::Create_DTreeInterface(treeName, treeFile);
 
   //TTREE BRANCHES
@@ -102,25 +104,21 @@ jerror_t DEventProcessor_1p1pi1pi0::init(void)
   h_m2pi = new TH1D("h_m2pi",";m2pi [GeV];",250,0.,5.);
 
   main->cd();
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_1p1pi1pi0::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_1p1pi1pi0::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
-  dKinFitUtils = new DKinFitUtils_GlueX(eventLoop);
+  dKinFitUtils = new DKinFitUtils_GlueX(locEvent);
   dKinFitter = new DKinFitter(dKinFitUtils);
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_1p1pi1pi0::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 
   // Pulling detector information
@@ -134,17 +132,17 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   vector<const DMCReaction*> reaction;
 
-  loop->Get(beam_ph);
+  locEvent->Get(beam_ph);
 
-  loop->Get(ch_tracks);
+  locEvent->Get(ch_tracks);
 
-  loop->Get(showers);
+  locEvent->Get(showers);
 
-  loop->Get(mcthrown);
+  locEvent->Get(mcthrown);
 
-  loop->Get(reaction);
+  locEvent->Get(reaction);
 
-  dTreeFillData.Fill_Single<Int_t>("eventNumber", eventnumber);
+  dTreeFillData.Fill_Single<Int_t>("eventNumber", locEvent->GetEventNumber());
 
   double E_shower[2];
   double x_shower[2];
@@ -176,7 +174,7 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   fcal_y_cl   = 0;
 
   if ((ch_tracks.size() != 2) || (showers.size() != 2))
-    return NOERROR;
+    return; // NOERROR;
 
   map<Particle_t, int> targetParticles = {
     {Proton,1},
@@ -216,7 +214,7 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
       BCAL_shower[ii] = (shower->dDetectorSystem == SYS_BCAL);
 
       // Filling shower positions
-      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      mLockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       if (BCAL_shower[ii])
 	{
 	  h_BCAL->Fill(z_shower[ii],shower->dSpacetimeVertex.Perp());
@@ -225,14 +223,14 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
 	{
 	  h_FCAL->Fill(z_shower[ii],shower->dSpacetimeVertex.Perp());
 	}
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      mLockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
       
     }
 
   if (nHyp != 1)
-    return NOERROR;
+    return; // NOERROR;
       
-  LockState(); //ACQUIRE PROCESSOR LOCK
+  std::lock_guard<std::mutex> guard(mMutex); //ACQUIRE PROCESSOR LOCK
 
   map<Particle_t, vector<const DChargedTrackHypothesis*> > thisHyp = hypothesisList[0];
   const DChargedTrackHypothesis * hyp_pr = thisHyp[Proton][0];
@@ -268,8 +266,7 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   
   dTreeFillData.Fill_Single<Double_t>("CL",dKinFitter->Get_ConfidenceLevel());
   if (dKinFitter->Get_ConfidenceLevel() == 0){
-    UnlockState(); //RELEASE PROCESSOR LOCK
-    return NOERROR;
+    return; // NOERROR;
   }
   
   TVector3 vertex;
@@ -346,10 +343,10 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   TLorentzVector vPhoton0(fitPhoton0->Get_Momentum(),fitPhoton0->Get_Momentum().Mag());
   TLorentzVector vPi0 = vPhoton0 + vPhoton1;
   
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  mLockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   h_m2gamma->Fill(sqrt(m2gammaSq));
   h_m2pi->Fill((vPi0+vPiMinus).M());
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  mLockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   
   dTreeFillData.Fill_Single<Double_t>("pX_Proton", vProton.X());
   dTreeFillData.Fill_Single<Double_t>("pY_Proton", vProton.Y());
@@ -380,31 +377,23 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   //FILL TTREE
   dTreeInterface->Fill(dTreeFillData);
   
-  UnlockState(); //RELEASE PROCESSOR LOCK
-
-  return NOERROR;
-
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_1p1pi1pi0::erun(void)
+void DEventProcessor_1p1pi1pi0::EndRun()
 {
   // Any final calculations on histograms (like dividing them)
   // should be done here. This may get called more than once.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_1p1pi1pi0::fini(void)
+void DEventProcessor_1p1pi1pi0::Finish()
 {
-
   delete dTreeInterface; //saves trees to file, closes file
-
-  return NOERROR;
 }
 
 // Recursive function for determining possible particle assignments

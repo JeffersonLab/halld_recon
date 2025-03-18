@@ -4,17 +4,16 @@
 //
 
 #include "JEventProcessor_es_test.h"
-using namespace jana;
 
 #include "EVENTSTORE/DESSkimData.h"
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_es_test());
+        app->Add(new JEventProcessor_es_test());
     }
 } // "C"
 
@@ -24,7 +23,7 @@ extern "C"{
 //------------------
 JEventProcessor_es_test::JEventProcessor_es_test()
 {
-
+	SetTypeName("JEventProcessor_es_test");
 }
 
 //------------------
@@ -32,60 +31,52 @@ JEventProcessor_es_test::JEventProcessor_es_test()
 //------------------
 JEventProcessor_es_test::~JEventProcessor_es_test()
 {
-
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_es_test::init(void)
+void JEventProcessor_es_test::Init()
 {
-
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_es_test::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_es_test::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // This is called whenever the run number changes
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_es_test::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_es_test::Process(const std::shared_ptr<const JEvent>& event)
 {
   //const DESSkimData *es_data = NULL;
-  //loop->GetSingle(es_data);
+  //event->GetSingle(es_data);
   vector<const DESSkimData *> es_data;
-  loop->Get(es_data);
+  event->Get(es_data);
 
-  cout << "Event " << eventnumber << endl;
+  cout << "Event " << event->GetEventNumber() << endl;
   es_data[0]->Print();
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_es_test::erun(void)
+void JEventProcessor_es_test::EndRun()
 {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_es_test::fini(void)
+void JEventProcessor_es_test::Finish()
 {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 

@@ -11,10 +11,8 @@
 #include "BCAL/DBCALGeometry.h"
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
-class DBCALIncidentParticle:public JObject{
+class DBCALIncidentParticle: public JObject {
 
 	/// This class holds data originating from the fADC250
 	/// modules connected to the BCAL
@@ -30,14 +28,14 @@ class DBCALIncidentParticle:public JObject{
 		float y;
 		float z;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "ptype", "%d", ptype);
-			AddString(items, "px[GeV]", "%7.5f", px);
-			AddString(items, "py[GeV]", "%7.5f", py);
-			AddString(items, "pz[GeV]", "%7.5f", pz);
-			AddString(items, "x[GeV]", "%7.5f", x);
-			AddString(items, "y[GeV]", "%7.5f", y);
-			AddString(items, "z[GeV]", "%7.5f", z);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(ptype, "ptype", "%d");
+			summary.add(px, "px[GeV]", "%7.5f");
+			summary.add(py, "py[GeV]", "%7.5f");
+			summary.add(pz, "pz[GeV]", "%7.5f");
+			summary.add(x, "x[GeV]", "%7.5f");
+			summary.add(y, "y[GeV]", "%7.5f");
+			summary.add(z, "z[GeV]", "%7.5f");
 		}
 };
 

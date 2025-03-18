@@ -226,15 +226,15 @@ class DDetectorMatches : public JObject
 		inline void Set_DistanceToNearestTrack(const DFCALShower* locFCALShower, double locDistanceToNearestTrack);
 		inline void Set_FlightTimePCorrelation(const DTrackingData* locTrack, DetectorSystem_t locDetectorSystem, double locCorrelation);
 
-		void toStrings(vector<pair<string,string> >& items) const
+		void Summarize(JObjectSummary& summary) const override
 		{
-			AddString(items, "#_Track_BCAL_Matches", "%d", Get_NumTrackBCALMatches());
-			AddString(items, "#_Track_FCAL_Matches", "%d", Get_NumTrackFCALMatches());
-			AddString(items, "#_Track_TOF_Matches", "%d", Get_NumTrackTOFMatches());
-			AddString(items, "#_Track_SC_Matches", "%d", Get_NumTrackSCMatches());
-			AddString(items, "#_Track_DIRC_Matches", "%d", Get_NumTrackDIRCMatches());	
-			AddString(items, "#_Track_CTOF_Matches", "%d", Get_NumTrackCTOFMatches());	
-			AddString(items, "#_Track_FMWPC_Matches", "%d", Get_NumTrackFMWPCMatches());
+			summary.add(Get_NumTrackBCALMatches(), "#_Track_BCAL_Matches", "%d");
+			summary.add(Get_NumTrackFCALMatches(), "#_Track_FCAL_Matches", "%d");
+			summary.add(Get_NumTrackTOFMatches(), "#_Track_TOF_Matches", "%d");
+			summary.add(Get_NumTrackSCMatches(), "#_Track_SC_Matches", "%d");
+			summary.add(Get_NumTrackDIRCMatches(), "#_Track_DIRC_Matches", "%d");
+			summary.add(Get_NumTrackCTOFMatches(), "#_Track_CTOF_Matches", "%d");
+			summary.add(Get_NumTrackFMWPCMatches(), "#_Track_FMWPC_Matches", "%d");
 		}
 
 	private:

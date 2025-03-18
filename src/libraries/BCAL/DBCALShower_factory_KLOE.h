@@ -5,13 +5,11 @@
 // Creator: Matthew Shepherd
 //
 
-
 #ifndef _DBCALShower_factory_KLOE_
 #define _DBCALShower_factory_KLOE_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+
+#include <JANA/JFactoryT.h>
 
 #include <BCAL/DBCALShower.h>
 #include <BCAL/DBCALPoint.h>
@@ -30,24 +28,24 @@ using namespace jana;
 ///  DBCALShower_factory_KLOE
 ///
 
-class DBCALShower_factory_KLOE:public JFactory<DBCALShower>{
+class DBCALShower_factory_KLOE: public JFactoryT<DBCALShower>{
     
 public:
     
-  DBCALShower_factory_KLOE(){}
+  DBCALShower_factory_KLOE(){
+  	SetTag("KLOE");
+  }
   ~DBCALShower_factory_KLOE(){}
-  
-  const char* Tag(void){return "KLOE";}
-    
-private:
-    jerror_t init();
-    jerror_t brun(JEventLoop *loop, int32_t runnumber);
-    jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via JEventProcessor virtual method
 
-    void FindPointsInShower(int indx, JEventLoop *loop, vector<const DBCALPoint*> &pointsInShower);
-    void CellRecon(JEventLoop *loop);
+private:
+    void Init() override;
+    void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+    void Process(const std::shared_ptr<const JEvent>& event) override;
+
+    void FindPointsInShower(int indx, const std::shared_ptr<const JEvent>& event, vector<const DBCALPoint*> &pointsInShower);
+    void CellRecon(const std::shared_ptr<const JEvent>& event);
     void CeleToArray(void);            
-    void PreCluster(JEventLoop *loop);
+    void PreCluster(const std::shared_ptr<const JEvent>& event);
     void Connect(int,int);
     void ClusNorm(void);
     void ClusAnalysis();

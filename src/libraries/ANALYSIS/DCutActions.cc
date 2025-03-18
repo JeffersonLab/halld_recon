@@ -4,14 +4,14 @@
 
 #include "ANALYSIS/DCutActions.h"
 
-void DCutAction_MinTrackHits::Initialize(JEventLoop* locEventLoop)
+void DCutAction_MinTrackHits::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 }
 
-void DCutAction_MinTrackHits::Run_Update(JEventLoop* locEventLoop)
+void DCutAction_MinTrackHits::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dParticleID);
+	locEvent->GetSingle(dParticleID);
 }
 
 
@@ -22,7 +22,7 @@ string DCutAction_MinTrackHits::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_MinTrackHits::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_MinTrackHits::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_Charged);
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
@@ -47,22 +47,22 @@ string DCutAction_ThrownTopology::Get_ActionName(void) const
 	return locStream.str();
 }
 
-void DCutAction_ThrownTopology::Initialize(JEventLoop* locEventLoop)
+void DCutAction_ThrownTopology::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 }
 
-void DCutAction_ThrownTopology::Run_Update(JEventLoop* locEventLoop)
+void DCutAction_ThrownTopology::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 }
 
-bool DCutAction_ThrownTopology::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_ThrownTopology::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
-	return dAnalysisUtilities->Check_ThrownsMatchReaction(locEventLoop, Get_Reaction(), dExclusiveMatchFlag);
+	return dAnalysisUtilities->Check_ThrownsMatchReaction(locEvent, Get_Reaction(), dExclusiveMatchFlag);
 }
 
-bool DCutAction_AllTracksHaveDetectorMatch::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_AllTracksHaveDetectorMatch::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_Charged);
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
@@ -88,17 +88,17 @@ string DCutAction_PIDFOM::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_PIDFOM::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_PIDFOM::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locSteps = locParticleCombo->Get_ParticleComboSteps();
 	for(size_t loc_i = 0; loc_i < locSteps.size(); ++loc_i)
 	{
-		if((dStepPID != Unknown) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dStepPID))
+		if((dStepPID != UnknownParticle) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dStepPID))
 			continue;
 		auto locParticles = locSteps[loc_i]->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
 		for(size_t loc_j = 0; loc_j < locParticles.size(); ++loc_j)
 		{
-			if((locParticles[loc_j]->PID() != dParticleID) && (dParticleID != Unknown))
+			if((locParticles[loc_j]->PID() != dParticleID) && (dParticleID != UnknownParticle))
 				continue;
 			if(ParticleCharge(dParticleID) == 0)
 			{
@@ -128,7 +128,7 @@ string DCutAction_EachPIDFOM::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_EachPIDFOM::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_EachPIDFOM::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_AllCharges);
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
@@ -160,7 +160,7 @@ string DCutAction_CombinedPIDFOM::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_CombinedPIDFOM::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_CombinedPIDFOM::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_AllCharges);
 
@@ -195,7 +195,7 @@ string DCutAction_CombinedTrackingFOM::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_CombinedTrackingFOM::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_CombinedTrackingFOM::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	unsigned int locTotalNDF = 0;
 	double locTotalChiSq = 0.0;
@@ -218,17 +218,17 @@ string DCutAction_MissingMass::Get_ActionName(void) const
 	return locStream.str();
 }
 
-void DCutAction_MissingMass::Initialize(JEventLoop* locEventLoop)
+void DCutAction_MissingMass::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 }
 
-void DCutAction_MissingMass::Run_Update(JEventLoop* locEventLoop)
+void DCutAction_MissingMass::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 }
 
-bool DCutAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_MissingMass::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//build all possible combinations of the included pids
 	set<set<size_t> > locIndexCombos = dAnalysisUtilities->Build_IndexCombos(Get_Reaction()->Get_ReactionStep(dMissingMassOffOfStepIndex), dMissingMassOffOfPIDs);
@@ -253,18 +253,18 @@ string DCutAction_MissingMassSquared::Get_ActionName(void) const
 	return locStream.str();
 }
 
-void DCutAction_MissingMassSquared::Initialize(JEventLoop* locEventLoop)
+void DCutAction_MissingMassSquared::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 }
 
-void DCutAction_MissingMassSquared::Run_Update(JEventLoop* locEventLoop)
+void DCutAction_MissingMassSquared::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 }
 
 
-bool DCutAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_MissingMassSquared::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//build all possible combinations of the included pids
 	set<set<size_t> > locIndexCombos = dAnalysisUtilities->Build_IndexCombos(Get_Reaction()->Get_ReactionStep(dMissingMassOffOfStepIndex), dMissingMassOffOfPIDs);
@@ -289,22 +289,22 @@ string DCutAction_InvariantMass::Get_ActionName(void) const
 	return locStream.str();
 }
 
-void DCutAction_InvariantMass::Initialize(JEventLoop* locEventLoop)
+void DCutAction_InvariantMass::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 }
 
-void DCutAction_InvariantMass::Run_Update(JEventLoop* locEventLoop)
+void DCutAction_InvariantMass::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 }
 
-bool DCutAction_InvariantMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_InvariantMass::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	for(size_t loc_i = 0; loc_i < locParticleCombo->Get_NumParticleComboSteps(); ++loc_i)
 	{
 		const DReactionStep* locReactionStep = Get_Reaction()->Get_ReactionStep(loc_i);
-		if((dInitialPID != Unknown) && (locReactionStep->Get_InitialPID() != dInitialPID))
+		if((dInitialPID != UnknownParticle) && (locReactionStep->Get_InitialPID() != dInitialPID))
 			continue;
 		if((dStepIndex != -1) && (int(loc_i) != dStepIndex))
 			continue;
@@ -338,7 +338,7 @@ string DCutAction_AllVertexZ::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_AllVertexZ::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_AllVertexZ::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_Charged);
 	double locVertexZ;
@@ -358,7 +358,7 @@ string DCutAction_ProductionVertexZ::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_ProductionVertexZ::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_ProductionVertexZ::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	const DParticleComboStep* locStep = locParticleCombo->Get_ParticleComboStep(0);
 	double locVertexZ = locStep->Get_Position().Z();
@@ -372,23 +372,23 @@ string DCutAction_MaxTrackDOCA::Get_ActionName(void) const
 	return locStream.str();
 }
 
-void DCutAction_MaxTrackDOCA::Initialize(JEventLoop* locEventLoop)
+void DCutAction_MaxTrackDOCA::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 }
 
-void DCutAction_MaxTrackDOCA::Run_Update(JEventLoop* locEventLoop)
+void DCutAction_MaxTrackDOCA::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 }
 
-bool DCutAction_MaxTrackDOCA::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_MaxTrackDOCA::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//should be improved...: the particles at a given vertex may span several steps
 	auto locSteps = locParticleCombo->Get_ParticleComboSteps();
 	for(size_t loc_i = 0; loc_i < locSteps.size(); ++loc_i)
 	{
-		if((dInitialPID != Unknown) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dInitialPID))
+		if((dInitialPID != UnknownParticle) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dInitialPID))
 			continue;
 		auto locParticles = locSteps[loc_i]->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_Charged);
 		for(size_t loc_j = 0; loc_j < locParticles.size(); ++loc_j)
@@ -411,7 +411,7 @@ string DCutAction_KinFitFOM::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_KinFitFOM::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_KinFitFOM::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	const DKinFitResults* locKinFitResults = locParticleCombo->Get_KinFitResults();
 	if(locKinFitResults == NULL)
@@ -426,7 +426,7 @@ string DCutAction_KinFitChiSq::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_KinFitChiSq::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_KinFitChiSq::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	const DKinFitResults* locKinFitResults = locParticleCombo->Get_KinFitResults();
 	if(locKinFitResults == NULL)
@@ -434,46 +434,46 @@ bool DCutAction_KinFitChiSq::Perform_Action(JEventLoop* locEventLoop, const DPar
 	return (locKinFitResults->Get_ChiSq()/locKinFitResults->Get_NDF() < dMaximumChiSq);
 }
 
-void DCutAction_BDTSignalCombo::Initialize(JEventLoop* locEventLoop)
+void DCutAction_BDTSignalCombo::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	if(dCutAction_TrueBeamParticle == nullptr)
 		dCutAction_TrueBeamParticle = new DCutAction_TrueBeamParticle(Get_Reaction());
-	dCutAction_TrueBeamParticle->Initialize(locEventLoop);
-	Run_Update(locEventLoop);
+	dCutAction_TrueBeamParticle->Initialize(locEvent);
+	Run_Update(locEvent);
 }
 
-void DCutAction_BDTSignalCombo::Run_Update(JEventLoop* locEventLoop)
+void DCutAction_BDTSignalCombo::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 }
 
-bool DCutAction_BDTSignalCombo::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_BDTSignalCombo::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 #ifdef VTRACE
 	VT_TRACER("DCutAction_BDTSignalCombo::Perform_Action()");
 #endif
 
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 	if(locMCThrownMatchingVector.empty())
 		return false; //not a simulated event
 	const DMCThrownMatching* locMCThrownMatching = locMCThrownMatchingVector[0];
 
 	//Check DReaction vs thrown (i.e. not combo contents)
-	if(!dAnalysisUtilities->Check_IsBDTSignalEvent(locEventLoop, Get_Reaction(), dExclusiveMatchFlag, dIncludeDecayingToReactionFlag))
+	if(!dAnalysisUtilities->Check_IsBDTSignalEvent(locEvent, Get_Reaction(), dExclusiveMatchFlag, dIncludeDecayingToReactionFlag))
 		return false;
 
 	//Do we need to pick the beam photon? If so, look for it
 	Particle_t locPID = Get_Reaction()->Get_ReactionStep(0)->Get_InitialPID();
 	if(locPID == Gamma)
 	{
-		if(!(*dCutAction_TrueBeamParticle)(locEventLoop, locParticleCombo))
+		if(!(*dCutAction_TrueBeamParticle)(locEvent, locParticleCombo))
 			return false; //needed the true beam photon, didn't have it
 	}
 
 	//get & organize throwns
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	map<int, const DMCThrown*> locMCThrownMyIDMap; //map of myid -> thrown
 	for(size_t loc_i = 0; loc_i < locMCThrowns.size(); ++loc_i)
@@ -540,7 +540,7 @@ bool DCutAction_BDTSignalCombo::Perform_Action(JEventLoop* locEventLoop, const D
 
 				const DMCThrown* locMCThrownParent = locMCThrownMyIDMap[locParentID];
 				Particle_t locPID = locMCThrownParent->PID();
-				if((locPID == Unknown) || IsResonance(locPID) || (locPID == omega) || (locPID == phiMeson))
+				if((locPID == UnknownParticle) || IsResonance(locPID) || (locPID == omega) || (locPID == phiMeson))
 				{
 					//intermediate (unknown, resonance, phi, or omega) particle: go to its parent
 					locParentID = locMCThrownParent->parentid;
@@ -578,47 +578,47 @@ DCutAction_BDTSignalCombo::~DCutAction_BDTSignalCombo(void)
 		delete dCutAction_TrueBeamParticle;
 }
 
-void DCutAction_TrueCombo::Initialize(JEventLoop* locEventLoop)
+void DCutAction_TrueCombo::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	if(dCutAction_TrueBeamParticle == nullptr)
 		dCutAction_TrueBeamParticle = new DCutAction_TrueBeamParticle(Get_Reaction());
-	dCutAction_TrueBeamParticle->Initialize(locEventLoop);
+	dCutAction_TrueBeamParticle->Initialize(locEvent);
 	if(dCutAction_ThrownTopology == nullptr)
 		dCutAction_ThrownTopology = new DCutAction_ThrownTopology(Get_Reaction(), dExclusiveMatchFlag);
-	dCutAction_ThrownTopology->Initialize(locEventLoop);
+	dCutAction_ThrownTopology->Initialize(locEvent);
 }
 
-void DCutAction_TrueCombo::Run_Update(JEventLoop* locEventLoop)
+void DCutAction_TrueCombo::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	dCutAction_TrueBeamParticle->Run_Update(locEventLoop);
-	dCutAction_ThrownTopology->Run_Update(locEventLoop);
+	dCutAction_TrueBeamParticle->Run_Update(locEvent);
+	dCutAction_ThrownTopology->Run_Update(locEvent);
 }
 
-bool DCutAction_TrueCombo::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_TrueCombo::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 #ifdef VTRACE
 	VT_TRACER("DCutAction_TrueCombo::Perform_Action()");
 #endif
 
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 	if(locMCThrownMatchingVector.empty())
 		return false; //not a simulated event
 	const DMCThrownMatching* locMCThrownMatching = locMCThrownMatchingVector[0];
 
-	if(!(*dCutAction_ThrownTopology)(locEventLoop, locParticleCombo))
+	if(!(*dCutAction_ThrownTopology)(locEvent, locParticleCombo))
 		return false; //not the thrown topology: bail
 
 	//Do we need to pick the beam photon? If so, look for it
 	if(DAnalysis::Get_IsFirstStepBeam(Get_Reaction()))
 	{
-		if(!(*dCutAction_TrueBeamParticle)(locEventLoop, locParticleCombo))
+		if(!(*dCutAction_TrueBeamParticle)(locEvent, locParticleCombo))
 			return false; //needed the true beam photon, didn't have it
 	}
 
 	//get & organize throwns
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	map<int, const DMCThrown*> locMCThrownMyIDMap; //map of myid -> thrown
 	for(size_t loc_i = 0; loc_i < locMCThrowns.size(); ++loc_i)
@@ -676,7 +676,7 @@ bool DCutAction_TrueCombo::Perform_Action(JEventLoop* locEventLoop, const DParti
 
 				const DMCThrown* locMCThrownParent = locMCThrownMyIDMap[locParentID];
 				Particle_t locPID = locMCThrownParent->PID();
-				if((locPID == Unknown) || IsResonance(locPID))
+				if((locPID == UnknownParticle) || IsResonance(locPID))
 				{
 					//intermediate (unknown or resonance) particle: go to its parent
 					locParentID = locMCThrownParent->parentid;
@@ -713,10 +713,10 @@ DCutAction_TrueCombo::~DCutAction_TrueCombo(void)
 		delete dCutAction_ThrownTopology;
 }
 
-bool DCutAction_TrueBeamParticle::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_TrueBeamParticle::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons, "TAGGEDMCGEN");
+	locEvent->Get(locBeamPhotons, "TAGGEDMCGEN");
 	if(locBeamPhotons.empty())
 		return false; //true not tagged
 
@@ -732,21 +732,21 @@ bool DCutAction_TrueBeamParticle::Perform_Action(JEventLoop* locEventLoop, const
 	return ((locBeamPhoton->dSystem == locBeamPhotons[0]->dSystem) && (locBeamPhoton->dCounter == locBeamPhotons[0]->dCounter) && (locDeltaT < 1.0));
 }
 
-bool DCutAction_TruePID::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_TruePID::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 	const DMCThrownMatching* locMCThrownMatching = locMCThrownMatchingVector[0];
 
 	auto locSteps = locParticleCombo->Get_ParticleComboSteps();
 	for(size_t loc_i = 0; loc_i < locSteps.size(); ++loc_i)
 	{
-		if((dInitialPID != Unknown) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dInitialPID))
+		if((dInitialPID != UnknownParticle) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dInitialPID))
 			continue;
 		auto locParticles = locSteps[loc_i]->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
 		for(size_t loc_j = 0; loc_j < locParticles.size(); ++loc_j)
 		{
-			if((locParticles[loc_j]->PID() != dTruePID) && (dTruePID != Unknown))
+			if((locParticles[loc_j]->PID() != dTruePID) && (dTruePID != UnknownParticle))
 				continue;
 
 			for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
@@ -777,10 +777,10 @@ bool DCutAction_TruePID::Perform_Action(JEventLoop* locEventLoop, const DParticl
 	return true;
 }
 
-bool DCutAction_AllTruePID::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_AllTruePID::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 	const DMCThrownMatching* locMCThrownMatching = locMCThrownMatchingVector[0];
 	const DMCThrown* locMCThrown;
 
@@ -818,7 +818,7 @@ string DCutAction_GoodEventRFBunch::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_GoodEventRFBunch::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_GoodEventRFBunch::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
 	return (locEventRFBunch->dTime == locEventRFBunch->dTime);
@@ -831,7 +831,7 @@ string DCutAction_TransverseMomentum::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_TransverseMomentum::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_TransverseMomentum::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_AllCharges);
 
@@ -849,12 +849,12 @@ string DCutAction_TrackHitPattern::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_TrackHitPattern::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_TrackHitPattern::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_AllCharges);
 
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
 	{
@@ -942,9 +942,9 @@ bool DCutAction_TrackHitPattern::Cut_TrackHitPattern(const DParticleID* locParti
 	return true;
 }
 
-void DCutAction_dEdx::Initialize(JEventLoop* locEventLoop)
+void DCutAction_dEdx::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!! //I have no idea why this is needed, but without it it crashes.  Sigh. 
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!! //I have no idea why this is needed, but without it it crashes.  Sigh.
 	{
 		if(dCutMap.find(Proton) == dCutMap.end())
 		{
@@ -962,10 +962,10 @@ void DCutAction_dEdx::Initialize(JEventLoop* locEventLoop)
 			dCutMap[PiPlus].second->SetParameters(6.0, 2.80149, 2.55);
 		}
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCutAction_dEdx::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_dEdx::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_Charged);
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
@@ -1003,7 +1003,7 @@ string DCutAction_BeamEnergy::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_BeamEnergy::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_BeamEnergy::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	const DKinematicData* locInitParticle = NULL;
 	if(Get_UseKinFitResultsFlag())
@@ -1024,7 +1024,7 @@ string DCutAction_TrackFCALShowerEOverP::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_TrackFCALShowerEOverP::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_TrackFCALShowerEOverP::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	// For all charged tracks except e+/e-, cuts those with E/p > input value
 	// For e+/e-, cuts those with E/p < input value
@@ -1061,7 +1061,7 @@ string DCutAction_TrackShowerEOverP::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_TrackShowerEOverP::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_TrackShowerEOverP::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	// For all charged tracks except e+/e-, cuts those with E/p > input value
 	// For e+/e-, cuts those with E/p < input value
@@ -1118,15 +1118,15 @@ string DCutAction_PIDDeltaT::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_PIDDeltaT::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_PIDDeltaT::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 	//if dSystem = SYS_NULL, apply cut to all systems
 
 	auto locParticles = Get_UseKinFitResultsFlag() ? locParticleCombo->Get_FinalParticles(Get_Reaction(), false, false, d_AllCharges) : locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_AllCharges);
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
 	{
-		if((dPID != Unknown) && (locParticles[loc_i]->PID() != dPID))
+		if((dPID != UnknownParticle) && (locParticles[loc_i]->PID() != dPID))
 			continue;
 
 		auto locChargedHypo = dynamic_cast<const DChargedTrackHypothesis*>(locParticles[loc_i]);
@@ -1162,15 +1162,15 @@ string DCutAction_PIDTimingBeta::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_PIDTimingBeta::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_PIDTimingBeta::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 	//if dSystem = SYS_NULL, apply cut to all systems
 
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_AllCharges);
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
 	{
-		if((dPID != Unknown) && (locParticles[loc_i]->PID() != dPID))
+		if((dPID != UnknownParticle) && (locParticles[loc_i]->PID() != dPID))
 			continue;
 
 		auto locChargedHypo = dynamic_cast<const DChargedTrackHypothesis*>(locParticles[loc_i]);
@@ -1205,14 +1205,14 @@ string DCutAction_NoPIDHit::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_NoPIDHit::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_NoPIDHit::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_Charged);
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
 	{
-		if((dPID != Unknown) && (locParticles[loc_i]->PID() != dPID))
+		if((dPID != UnknownParticle) && (locParticles[loc_i]->PID() != dPID))
 			continue;
 		auto locChargedHypo = static_cast<const DChargedTrackHypothesis*>(locParticles[loc_i]);
 		if(locChargedHypo->t1_detector() == SYS_NULL)
@@ -1229,9 +1229,9 @@ string DCutAction_FlightDistance::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_FlightDistance::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_FlightDistance::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
   // unused variable	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
 
 	// for now, require a kinematic fit to make these selections, assuming that the common decay vertex
@@ -1240,7 +1240,7 @@ bool DCutAction_FlightDistance::Perform_Action(JEventLoop* locEventLoop, const D
 		return true;
 
 	vector<const DReactionVertexInfo*> locVertexInfos;
-	locEventLoop->Get(locVertexInfos);
+	locEvent->Get(locVertexInfos);
 	
 	// figure out what the right DReactionVertexInfo is
 	const DReactionVertexInfo *locReactionVertexInfo = nullptr;
@@ -1258,7 +1258,7 @@ bool DCutAction_FlightDistance::Perform_Action(JEventLoop* locEventLoop, const D
 		const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(loc_i);
 		//auto locParticles = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_FinalParticles(Get_Reaction()->Get_ReactionStep(loc_i), false, false, d_AllCharges) : locParticleComboStep->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
 
-		if((dPID != Unknown) && (locParticleComboStep->Get_InitialParticle()->PID() != dPID))
+		if((dPID != UnknownParticle) && (locParticleComboStep->Get_InitialParticle()->PID() != dPID))
 			continue;
 
 		// fill info on decaying particles, which is on the particle combo step level
@@ -1296,9 +1296,9 @@ string DCutAction_FlightSignificance::Get_ActionName(void) const
 	return locStream.str();
 }
 
-bool DCutAction_FlightSignificance::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_FlightSignificance::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
   // unused variable	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
 
 	// for now, require a kinematic fit to make these selections, assuming that the common decay vertex
@@ -1307,7 +1307,7 @@ bool DCutAction_FlightSignificance::Perform_Action(JEventLoop* locEventLoop, con
 		return true;
 
 	vector<const DReactionVertexInfo*> locVertexInfos;
-	locEventLoop->Get(locVertexInfos);
+	locEvent->Get(locVertexInfos);
 	
 	// figure out what the right DReactionVertexInfo is
 	const DReactionVertexInfo *locReactionVertexInfo = nullptr;
@@ -1325,7 +1325,7 @@ bool DCutAction_FlightSignificance::Perform_Action(JEventLoop* locEventLoop, con
 		const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(loc_i);
 		//auto locParticles = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_FinalParticles(Get_Reaction()->Get_ReactionStep(loc_i), false, false, d_AllCharges) : locParticleComboStep->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
 
-		if((dPID != Unknown) && (locParticleComboStep->Get_InitialParticle()->PID() != dPID))
+		if((dPID != UnknownParticle) && (locParticleComboStep->Get_InitialParticle()->PID() != dPID))
 			continue;
 
 		// fill info on decaying particles, which is on the particle combo step level
@@ -1360,18 +1360,18 @@ bool DCutAction_FlightSignificance::Perform_Action(JEventLoop* locEventLoop, con
 
 
 
-void DCutAction_OneVertexKinFit::Initialize(JEventLoop* locEventLoop)
+void DCutAction_OneVertexKinFit::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// Optional: Useful utility functions.
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
-	dKinFitUtils = new DKinFitUtils_GlueX(locEventLoop);
+	dKinFitUtils = new DKinFitUtils_GlueX(locEvent);
 	dKinFitter = new DKinFitter(dKinFitUtils);
 	dKinFitUtils->Set_UpdateCovarianceMatricesFlag(false);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 		//If another thread has already created the folder, it just changes to it. 
@@ -1381,17 +1381,17 @@ void DCutAction_OneVertexKinFit::Initialize(JEventLoop* locEventLoop)
 		dHist_VertexZ = GetOrCreate_Histogram<TH1I>("VertexZ", "Vertex Kinematic Fit;Vertex-Z (cm)", 500, 0.0, 200.0);
 		dHist_VertexYVsX = GetOrCreate_Histogram<TH2I>("VertexYVsX", "Vertex Kinematic Fit;Vertex-X (cm);Vertex-Y (cm)", 300, -10.0, 10.0, 300, -10.0, 10.0);
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DCutAction_OneVertexKinFit::Run_Update(JEventLoop* locEventLoop)
+void DCutAction_OneVertexKinFit::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
-	dKinFitUtils->Set_RunDependent_Data(locEventLoop);
-	dKinFitter->Set_RunDependent_Data(locEventLoop);
+	locEvent->GetSingle(dAnalysisUtilities);
+	dKinFitUtils->Set_RunDependent_Data(locEvent);
+	dKinFitter->Set_RunDependent_Data(locEvent);
 }
 
-bool DCutAction_OneVertexKinFit::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCutAction_OneVertexKinFit::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//need to call prior to use in each event (cleans up memory allocated from last event)
 		//this call invalidates memory from previous fits (but that's OK, we aren't saving them anywhere)

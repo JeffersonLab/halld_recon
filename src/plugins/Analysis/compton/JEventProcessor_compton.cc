@@ -9,11 +9,13 @@
 **************************************************************************/
 
 #include "JEventProcessor_compton.h"
+#include <TDirectoryFile.h>
+#include <DANA/DEvent.h>
 
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-    	app->AddProcessor(new JEventProcessor_compton());
+    	app->Add(new JEventProcessor_compton());
 }
 } // "C"
 
@@ -21,9 +23,9 @@ void InitPlugin(JApplication *app){
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_compton::init(void)
+void JEventProcessor_compton::Init()
 {
   	
         TDirectory *main = gDirectory;
@@ -235,74 +237,67 @@ jerror_t JEventProcessor_compton::init(void)
 	
 	main->cd();
 	
-	
-	
-	
-  	return NOERROR;
 }
 
 
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_compton::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_compton::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	
-	DGeometry*   dgeom = NULL;
-  	DApplication* dapp = dynamic_cast< DApplication* >( eventLoop->GetJApplication() );
-  	if( dapp )   dgeom = dapp->GetDGeometry( runnumber );
-   	
+
+	DGeometry*   dgeom = DEvent::GetDGeometry(event);
+
 	if( dgeom ){
     	  	dgeom->GetTargetZ( m_beamZ );
 		dgeom->GetFCALPosition( m_fcalX, m_fcalY, m_fcalZ );
 		dgeom->GetCCALPosition( m_ccalX, m_ccalY, m_ccalZ );
   	} else{
     	  	cerr << "No geometry accessbile to compton_analysis plugin." << endl;
-    	  	return RESOURCE_UNAVAILABLE;
+    	  	throw JException("No geometry accessible to compton_analysis plugin");
   	}
-	
-	
-	jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+
+	JCalibration *jcalib = DEvent::GetJCalibration(event);
   	std::map<string, float> beam_spot;
   	jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   	m_beamX  =  beam_spot.at("x");
   	m_beamY  =  beam_spot.at("y");
 	
-	
-	
-  	return NOERROR;
 }
 
 
 
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_compton::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void JEventProcessor_compton::Process(const std::shared_ptr<const JEvent>& event)
 {
+	auto lockService = DEvent::GetLockService(event);
 	
 	
 	//----------   Reject front panel triggers   ----------//
 	
 	const DL1Trigger *trig = NULL;
   	try {
-      	  	eventLoop->GetSingle(trig);
+      	  	event->GetSingle(trig);
   	} catch (...) {}
-	if (trig == NULL) { return NOERROR; }
+	if (trig == NULL) { return; }
 	
 	
 	uint32_t trigmask = trig->trig_mask;	
 	uint32_t fp_trigmask = trig->fp_trig_mask;
 	
+ 	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	for( int ibit = 0; ibit < 33; ibit++ ) {
 	  	if(trigmask & (1 << ibit)) hTrig->Fill(ibit);
 	  	if(fp_trigmask & (1 << ibit)) hfpTrig->Fill(ibit);
 	}
+ 	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	
-	if( fp_trigmask ) return NOERROR;
+	if( fp_trigmask ) return;
 	
 	
 	
@@ -310,10 +305,10 @@ jerror_t JEventProcessor_compton::evnt(JEventLoop *eventLoop, uint64_t eventnumb
 	
 	const DEventRFBunch *locRFBunch = NULL;
 	try { 
-	  	eventLoop->GetSingle( locRFBunch, "CalorimeterOnly" );
-	} catch (...) { return NOERROR; }
+	  	event->GetSingle( locRFBunch, "CalorimeterOnly" );
+	} catch (...) { return; }
 	double rfTime = locRFBunch->dTime;
-	if( locRFBunch->dNumParticleVotes < 2 ) return NOERROR;
+	if( locRFBunch->dNumParticleVotes < 2 ) return;
 	
 	
 	
@@ -322,22 +317,22 @@ jerror_t JEventProcessor_compton::evnt(JEventLoop *eventLoop, uint64_t eventnumb
 	//-----   Get FCAL and CCAL Geometry objects   -----//
 	
 	vector< const DFCALGeometry* > fcalGeomVec;
-  	eventLoop->Get( fcalGeomVec );
+  	event->Get( fcalGeomVec );
 	
   	if( fcalGeomVec.size() != 1 ) {
     		cerr << "No FCAL geometry accessbile." << endl;
-    		return RESOURCE_UNAVAILABLE;
+    		throw JException("No FCAL geometry accessible");
   	}
 	
 	const DFCALGeometry *fcalGeom = fcalGeomVec[0];
 	
 	
 	vector< const DCCALGeometry* > ccalGeomVec;
-  	eventLoop->Get( ccalGeomVec );
+  	event->Get( ccalGeomVec );
 	
   	if( ccalGeomVec.size() != 1 ) {
     		cerr << "No CCAL geometry accessbile." << endl;
-    		return RESOURCE_UNAVAILABLE;
+    		throw JException("No CCAL geometry accessible");
   	}
 	
 	const DCCALGeometry *ccalGeom = ccalGeomVec[0];
@@ -357,17 +352,15 @@ jerror_t JEventProcessor_compton::evnt(JEventLoop *eventLoop, uint64_t eventnumb
 	vector< const DCCALShower* > ccal_showers;
 	vector< const DFCALShower* > fcal_showers;
 	
-	eventLoop->Get( beam_photons );
-	eventLoop->Get( ccal_showers );
-	eventLoop->Get( fcal_showers );
+	event->Get( beam_photons );
+	event->Get( ccal_showers );
+	event->Get( fcal_showers );
 	
 	vector< const DFCALShower* > CompShowers_fcal;
 	vector< const DCCALShower* > CompShowers_ccal;
-	
-	
-	
-	
-	japp->RootFillLock(this);  // Acquire root lock
+
+
+	lockService->RootFillLock(this);  // Acquire root lock
 	
 	
 	
@@ -435,8 +428,8 @@ jerror_t JEventProcessor_compton::evnt(JEventLoop *eventLoop, uint64_t eventnumb
 	
 	
 	if( !CompShowers_fcal.size() || !CompShowers_ccal.size() ) {
-		japp->RootFillUnLock(this);
-		return NOERROR;
+		lockService->RootFillUnLock(this);
+		return;
 	}
 	
 	
@@ -590,38 +583,32 @@ jerror_t JEventProcessor_compton::evnt(JEventLoop *eventLoop, uint64_t eventnumb
 	
 	
 	
-	japp->RootFillUnLock(this);  // Release root lock
+	lockService->RootFillUnLock(this);  // Release root lock
 	
 	
 	
 	
 	
-	
-  	return NOERROR;
 }
 
 
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_compton::erun(void)
+void JEventProcessor_compton::EndRun()
 {
-  	
-  	return NOERROR;
 }
 
 
 
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_compton::fini(void)
+void JEventProcessor_compton::Finish()
 {
-	
-  	return NOERROR;
 }
 
 
@@ -910,13 +897,9 @@ void JEventProcessor_compton::fill_histograms( vector< ComptonCandidate_t > Comp
 		
 		
 	}
-	
-	
-	
-	
-	
-	
-	return;
+
+
+
 }
 
 

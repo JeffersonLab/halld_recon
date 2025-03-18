@@ -1,7 +1,7 @@
 #ifndef _DL1MCTrigger_factory_DATA_
 #define _DL1MCTrigger_factory_DATA_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 #include "DL1MCTrigger.h"
 
@@ -21,12 +21,12 @@
 
 typedef  vector< vector<double> >  fcal_constants_t;
 
-class DL1MCTrigger_factory_DATA:public jana::JFactory<DL1MCTrigger>{
+class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 	public:
-		DL1MCTrigger_factory_DATA(){};
+		DL1MCTrigger_factory_DATA(){
+			SetTag("DATA");
+		};
 		~DL1MCTrigger_factory_DATA(){};
-
-		const char* Tag(void){return "DATA";}
 
 		static const int  sample        =  125;
 		static const int  time_stamp    =  4.;
@@ -204,7 +204,7 @@ class DL1MCTrigger_factory_DATA:public jana::JFactory<DL1MCTrigger>{
 		int simu_gain_bcal;
 
 
-		int Read_RCDB(int32_t runnumber, bool print_messages=true);		
+		int Read_RCDB(const std::shared_ptr<const JEvent>& event, bool print_messages=true);		
 		int SignalPulse(double en, double time, double amp_array[sample], int type);
 
 		void AddBaseline(double adc_amp[sample], double pedestal, DRandom2 &gDRandom);
@@ -219,12 +219,12 @@ class DL1MCTrigger_factory_DATA:public jana::JFactory<DL1MCTrigger>{
 
 		float  BCAL_ADC_PER_MEV_CORRECT;
 		
- private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+	private:
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;					///< Called after last event of last event source has been processed.
 		
 		
 		void LoadFCALConst( fcal_constants_t &table, 
@@ -232,7 +232,7 @@ class DL1MCTrigger_factory_DATA:public jana::JFactory<DL1MCTrigger>{
 				    const DFCALGeometry  &fcalGeom);	
 
 
-		void GetSeeds(JEventLoop *loop,  uint64_t eventnumber, UInt_t &seed1, UInt_t &seed2, UInt_t &seed3);
+		void GetSeeds(const std::shared_ptr<const JEvent>& event, UInt_t &seed1, UInt_t &seed2, UInt_t &seed3);
 
 		TH1F *hfcal_gains;
 		TH2F *hfcal_gains2;

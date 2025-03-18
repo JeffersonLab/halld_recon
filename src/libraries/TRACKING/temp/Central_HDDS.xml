@@ -1,0 +1,941 @@
+#eliminate overlaps
+  <?xml version="1.0" encoding="UTF-8"?>
+<!--DOCTYPE HDDS>
+
+  Hall D Geometry Data Base: Central DC
+  *************************************
+
+     version 1.0: Initial version	-rtj
+     version 1.1: Modified straw tube layout -cam
+                  Stereo angle is 6.000 not 6.016 degrees.
+                  Cathode layers removed.
+                  Material in the end plates of the CDC is Aluminum,
+                  not mylar.
+     version 1.2: Cleanup of previous version.
+ 
+     version 1.3: Fix typos in CDC. Previously the gas volume was
+                  filled with scintillator in mcfast!.
+
+                  Changed resolution from 200 micron to 150 micron in
+                  the CDC.
+
+     version 1.4: a) Reduce the downstream gas plenum thickness to 2.5cm 
+                     with Aluminized mylar window 0.1mm thick
+                     this changes the total length of the CDC and the
+                     straws are not in the center of the CDC volume anymore
+                  b) Fill the CDC gas volume with Ar/CO2 instead of Air, same
+                     for the gas plenums.
+                  c) Upstream gas plenum with thick plexiglass cover and aluminum shell
+                  d) Aluminum support rods 12 in total round the outer perifery
+                  e) Carbon fiber downstream endplate is 6mm thick (was 4mm)
+                  f) Removed the PCB upstream and downstream gas plenum
+                  g) Center of the straws is 3.29cm downstream of the CDC volume center
+                  h) Remove all references to geomtry-option-2
+
+     version 3.1: updates for compatibility with geant4 -rtj
+                  a) Remove redundant composition "centralDC_gasvol" (CDCG) and
+                     move its former contents into the outer "centralDC" (CDC)
+                     container.
+                  b) Move the "cdcLayers" volume slightly in z to eliminate
+                     overlaps with the upstream and downstream gas plenums.
+                  c) Move the aluminum mesh (CSAM) volume to align with the 
+                     center of the straw volume.
+                  d) Remove extra copies of the upstream and downstream plates
+                     in the gas volume, moved to another geometry layer.
+                  e) Add the upstream (CDPU) and downstream (CDPD) end plates
+                     to the "cdcLayers" (DCLS) volume, set geometry_layer=1.
+                  f) Increase the length of the "cdcLayers" (DCLS) volume to
+                     make room for the two end plates and feedthroughs.
+                  g) Complete rewrite of the straw end sections to get a
+                     more accurate description of the end plate regions.
+                  g) Decrease slightly the outer radius of the readout cables
+                     to prevent extrusion from the envelope of the CDC.
+
+     version 3.2: fix problems with incorrect embedding and overlaps -rtj
+
+     version 3.3: fix problems with overlap of CDG2 with inner straw ring -rtj
+
+<HDDS specification="v1.1" xmlns="http://www.gluex.org/hdds">
+-->
+
+<section name        = "CentralDC"
+         version     = "3.3"
+         date        = "2015-07-15"
+         author      = "R.T. Jones, C.A.Meyer"
+         top_volume  = "CDC"
+         specification = "v1.1">
+
+<!-- Origin of CentralDC is center of upstream end of the active region,
+     ie. the inside surface of the upstream plate.  -->
+
+  <composition name="CentralDC">
+    <posXYZ volume="centralDC" X_Y_Z="0.0  0.0  71.71" />
+    <posXYZ volume="CDCB" X_Y_Z="0.0 0.0 -9.75" />    <!-- upstream cables  -->
+  </composition>
+
+  <composition name="centralDC" envelope="CDC">
+    <mposPhi volume="CDCSupportRod" ncopy="12" 
+             Phi0="15.0" dPhi="30.0"
+             R_Z="56.7055 3.29"/>                <!-- aluminum support rods -->
+    <mposPhi volume="CDSS" ncopy="12"
+             Phi0="15.0" dPhi="30.0"
+             R_Z="56.7055 -74.25"/>              <!-- stainless steel studs -->
+    <posXYZ volume="CDClayers"
+                          X_Y_Z="0.0 0.0 3.29" />  <!-- straw container -->
+    <posXYZ volume="CDCI" X_Y_Z="0.0 0.0 3.29"/>   <!-- inner shell -->
+    <posXYZ volume="CDCO" X_Y_Z="0.0 0.0 3.29"/>   <!-- outer shell -->
+    <posXYZ volume="CDOC" X_Y_Z="0.0 0.0 -70.45"/> <!-- upstream outer collar -->
+    <posXYZ volume="CDOC" X_Y_Z="0.0 0.0 77.03"/>  <!-- downstream outer collar -->
+    <posXYZ volume="CDIU" X_Y_Z="0.0 0.0 -70.45"/> <!-- upstream inner collar -->
+    <posXYZ volume="CDID" X_Y_Z="0.0 0.0 77.03"/>  <!-- downstream inner collar -->
+    <posXYZ volume="CDGD" X_Y_Z="0.0 0.0 +80.165"/> <!-- downstream rhoacell outer ring -->
+    <posXYZ volume="CDGI" X_Y_Z="0.0 0.0 +80.165"/> <!-- downstream rhoacell inner ring #1 --> 
+    <!--posXYZ volume="CDG2" X_Y_Z="0.0 0.0 +79.399"/> <downstream rhoacell inner ring #2, moved to DCLS volume -->
+    <posXYZ volume="CDGW" X_Y_Z="0.0 0.0 +81.441"/> <!-- downstream mylar gas window -->
+    <posXYZ volume="CDGU" X_Y_Z="0.0 0.0 -76.6425"/> <!-- upstream plexiglass gas plate -->
+    <posXYZ volume="CDGS" X_Y_Z="0.0 0.0 -74.26"/> <!-- upstream gas plenum shell -->  
+    <posXYZ volume="CDIS" X_Y_Z="0.0 0.0 -74.26"/> <!-- upstream gas plenum inner shell -->
+    <posXYZ volume="CDRO" X_Y_Z="0.0 0.0 -79.440"/> <!-- CDC readout cables outside plexiglas -->  
+    <posXYZ volume="CDHU" X_Y_Z="0.0 0.0 -75.0"/>  <!-- CDC readout cables inside gas volume-->
+    <posXYZ volume="CSAM" X_Y_Z="0.0 0.0 3.29" />  <!-- aluminum mesh -->   
+ </composition>
+
+  <composition name="CDClayers" envelope="DCLS">
+    <posXYZ volume="CDG2" X_Y_Z="0.0 0.0 +76.108"
+                          geometry_layer="1"/>     <!-- downstream rhoacell inner ring #2 -->
+    <posXYZ volume="CDPD" X_Y_Z="0.0 0.0 +75.300" 
+                          geometry_layer="1"/>     <!-- downstream end plate -->
+    <posXYZ volume="CDPU" X_Y_Z="0.0 0.0 -75.47625"
+                          geometry_layer="1"/>     <!-- upstream end plate -->
+
+    <mposPhi volume="CDCstrawShort" ncopy="42" Phi0="0.0" R_Z="10.7218 0.0" dPhi="8.571428">
+      <ring value="1" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawShort" ncopy="42" Phi0="4.285714" R_Z="12.0797 0.0" dPhi="8.571428">
+      <ring value="2" />
+      <sector value="1" step="1" />
+    </mposPhi>
+
+    <mposPhi volume="CDCstrawShort" ncopy="54" Phi0="2.18133" R_Z="13.7803 0.0" dPhi="6.6666667">
+      <ring value="3" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawShort" ncopy="54" Phi0="5.51466" R_Z="15.1448 0.0" dPhi="6.6666667">
+      <ring value="4" />
+      <sector value="1" step="1" />
+    </mposPhi>
+
+<!-- FIRST AND SECOND STEREO SUPER LAYERS 4+ and 4- -->
+
+    <mposPhi volume="CDCstrawLong" ncopy="66" R_Z="16.9320 0.0" Phi0="-21.81818182"
+                        unit_length="cm" rot="+6.0 0 0" unit_angle="deg">
+      <ring value="5" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="66" R_Z="18.3087 0.0" Phi0="-24.54542727"
+                        unit_length="cm" rot="+6.4838 0 0" unit_angle="deg">
+      <ring value="6" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="80" R_Z="20.5213 0.0" Phi0="-18.923"
+                         unit_length="cm" rot="+6.0 0 0" unit_angle="deg">
+      <ring value="7" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="80" R_Z="21.9010 0.0" Phi0="-21.173"
+                         unit_length="cm" rot="+6.4001 0 0" unit_angle="deg">
+      <ring value="8" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="93" R_Z="23.8544 0.0" Phi0="19.35483871"
+                         unit_length="cm" rot="-6.0 0 0" unit_angle="deg">
+      <ring value="9" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="93" R_Z="25.2362 0.0" Phi0="21.29033871"
+                         unit_length="cm" rot="-6.3448 0 0" unit_angle="deg">
+      <ring value="10" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="106" R_Z="27.1876 0.0" Phi0="16.47703208"
+                         unit_length="cm" rot="-6.0 0 0" unit_angle="deg">
+      <ring value="11" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="106" R_Z="28.5712 0.0" Phi0="18.17513208"
+                         unit_length="cm" rot="-6.3029 0 0" unit_angle="deg">
+      <ring value="12" />
+      <sector value="1" step="1" />
+    </mposPhi>
+
+<!-- Second set of axial wires -->
+
+    <mposPhi volume="CDCstrawShort" ncopy="123" Phi0="2.331799268" R_Z="31.3799 0.0" dPhi="2.926829">
+      <ring value="13" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawShort" ncopy="123" Phi0="0.86857" R_Z="32.7576 0.0" dPhi="2.926829">
+      <ring value="14" />
+      <sector value="1" step="1" />
+    </mposPhi>
+
+    <mposPhi volume="CDCstrawShort" ncopy="135" Phi0="0.38671" R_Z="34.4343 0.0" dPhi="2.6666667">
+      <ring value="15" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawShort" ncopy="135" Phi0="1.72001" R_Z="35.8127 0.0" dPhi="2.6666667">
+      <ring value="16" />
+      <sector value="1" step="1" />
+    </mposPhi>
+
+<!-- THIRD AND FOURTH STEREO LAYER -->
+
+    <mposPhi volume="CDCstrawLong" ncopy="146" R_Z="37.4446 0.0" Phi0="13.16176712"
+                         unit_length="cm" rot="-6.0 0 0" unit_angle="deg">
+      <ring value="17" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="146" R_Z="38.8313 0.0" Phi0="11.9289137"
+                         unit_length="cm" rot="-6.2205 0 0" unit_angle="deg">
+      <ring value="18" />
+      <sector value="1" step="1" />
+    </mposPhi>
+
+    <mposPhi volume="CDCstrawLong" ncopy="158" R_Z="40.5368 0.0" Phi0="11.06290506"
+                         unit_length="cm" rot="-6.0 0 0" unit_angle="deg">
+      <ring value="19" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="158" R_Z="41.9247 0.0" Phi0="12.20210506"
+                         unit_length="cm" rot="-6.2039 0 0" unit_angle="deg">
+      <ring value="20" />
+      <sector value="1" step="1" />
+    </mposPhi>
+
+    <mposPhi volume="CDCstrawLong" ncopy="170" R_Z="43.6152 0.0" Phi0="-10.15973529"
+                         unit_length="cm" rot="+6.0 0 0" unit_angle="deg">
+      <ring value="21" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="170" R_Z="45.0038 0.0" Phi0="-9.100935294"
+                         unit_length="cm" rot="+6.1896 0 0" unit_angle="deg">
+      <ring value="22" />
+      <sector value="1" step="1" />
+    </mposPhi>
+ 
+    <mposPhi volume="CDCstrawLong" ncopy="182" R_Z="46.6850 0.0" Phi0="-8.578587912"
+                         unit_length="cm" rot="+6.0 0 0" unit_angle="deg">
+      <ring value="23" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawLong" ncopy="182" R_Z="48.0736 0.0" Phi0="-9.56760989"
+                         unit_length="cm" rot="6.1771 0 0" unit_angle="deg">
+      <ring value="24" />
+      <sector value="1" step="1" />
+    </mposPhi>
+
+<!-- LAST FOUR AXIAL LAYERS -->
+
+    <mposPhi volume="CDCstrawShort" ncopy="197" Phi0="1.221291168" R_Z="50.3747 0.0" dPhi="1.827411168">
+      <ring value="25" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawShort" ncopy="197" Phi0="0.30760" R_Z="51.7596 0.0" dPhi="1.827411168">
+      <ring value="26" />
+      <sector value="1" step="1" />
+    </mposPhi>
+
+    <mposPhi volume="CDCstrawShort" ncopy="209" Phi0="0.34281" R_Z="53.3631 0.0" dPhi="1.722488">
+      <ring value="27" />
+      <sector value="1" step="1" />
+    </mposPhi>
+    <mposPhi volume="CDCstrawShort" ncopy="209" Phi0="1.20403" R_Z="54.7464 0.0" dPhi="1.722488">
+      <ring value="28" />
+      <sector value="1" step="1" />
+    </mposPhi>
+
+  </composition>
+
+  <composition name="CDCstrawShort" envelope="STRM">
+    <posXYZ volume="STRA" X_Y_Z="0. 0.   0.0"/>
+    <posXYZ volume="STRW" X_Y_Z="0. 0.   0.0"/>
+    <posXYZ volume="WIRE" X_Y_Z="0. 0.  -0.17625"/>
+    <posXYZ volume="DPLG" X_Y_Z="0. 0.  74.5237"/>
+    <posXYZ volume="DFTH" X_Y_Z="0. 0.  75.6000"/>
+    <posXYZ volume="UPLG" X_Y_Z="0. 0. -74.5235"/>
+    <posXYZ volume="UFTH" X_Y_Z="0. 0. -75.9525"/>
+    <posXYZ volume="PHLD" X_Y_Z="0. 0. -75.9525"/>
+    <posXYZ volume="PHLD" X_Y_Z="0. 0.  75.600" rot="0 180 0"/>
+    <posXYZ volume="CRPI" X_Y_Z="0. 0. -76.800"/>
+    <posXYZ volume="CRPI" X_Y_Z="0. 0.  76.453"/>
+  </composition>
+  <composition name="CDCstrawLong" envelope="STLM">
+    <posXYZ volume="STLA" X_Y_Z="0. 0.   0.0"/>
+    <posXYZ volume="STLW" X_Y_Z="0. 0.   0.0"/>
+    <posXYZ volume="WILE" X_Y_Z="0. 0.  -0.17625"/>
+    <posXYZ volume="DPLG" X_Y_Z="0. 0.  74.9235"/>
+    <posXYZ volume="DFTH" X_Y_Z="0. 0.  76.050"/>
+    <posXYZ volume="UPLG" X_Y_Z="0. 0. -74.9235"/>
+    <posXYZ volume="UFTH" X_Y_Z="0. 0. -76.3750"/>
+    <posXYZ volume="PHLD" X_Y_Z="0. 0. -76.3750"/>
+    <posXYZ volume="PHLD" X_Y_Z="0. 0.  76.050" rot="0 180 0"/>
+    <posXYZ volume="CRPI" X_Y_Z="0. 0. -77.220"/> 
+    <posXYZ volume="CRPI" X_Y_Z="0. 0.  76.873"/>
+  </composition>
+ 
+  <composition name="CDCSupportRod" envelope="CDTI">
+     <posXYZ volume="CDTF" />
+     <posXYZ volume="CDTP" X_Y_Z="0.0 0.0 73.73" />
+     <posXYZ volume="CDTP" X_Y_Z="0.0 0.0 -73.73" />
+  </composition>
+
+  <!-- set outer diameter of CDC to 57.0 cm (was 57.6cm)-->
+  <!-- Sat Sep 27 15:00:14 EDT 2008 B.Z. -->
+  <!-- CDC volume 5cm shorter and fill it with Ar/CO2 gas-->
+
+  <pcon name="CDC" material="Air" comment="CDC mother volume">
+    <polyplane Rio_Z="10.2 60.5663 -81.45"/>
+    <polyplane Rio_Z="10.2 60.5663 -80.45"/>
+    <polyplane Rio_Z="8.75 60.5663 -80.45"/>
+    <polyplane Rio_Z="8.75 60.5663 -69.0"/>
+    <polyplane Rio_Z="9.18 60.5663 -69.0"/>
+    <polyplane Rio_Z="9.18 60.5663 75.5"/>
+    <polyplane Rio_Z="8.75 60.5663 75.5"/>
+    <polyplane Rio_Z="8.75 60.5663 78.91"/>
+    <polyplane Rio_Z="8.75 57.9374 78.91"/>
+    <polyplane Rio_Z="8.75 57.9374 81.45"/>
+  </pcon>
+
+  <!--tubs name="CDC" Rio_Z="8.75   60.5663   162.9" material="Air"
+	                           comment="CDC mother volume"/-->
+  <tubs name="CDCI" Rio_Z="9.1821  9.2329 149.999" material="E-fiberGlass"
+	                           comment="CDC inner cylinder"/>
+  <tubs name="CDOC" Rio_Z="57.6326  57.8612 2.5" material="E-fiberGlass"
+	                           comment="CDC outer collar" />
+  <tubs name="CDCO" Rio_Z="57.8612  57.9374 149.999" material="Aluminum"
+	                           comment="CDC outer Aluminum shell" />
+  <tubs name="CDIU" Rio_Z="8.96  9.1821 2.5" material="Aluminum"
+	                           comment="CDC upstream inner collar" />  
+  <tubs name="CDID" Rio_Z="9.074  9.1821 2.5" material="Aluminum"
+	                           comment="CDC downstream inner collar" />
+  <tubs name="CDPU" Rio_Z="8.75   59.741    0.9525" material="Aluminum"
+                                   comment="CDC upstream endplate" />
+  <tubs name="CDPD" Rio_Z="8.75   59.741    0.6" material="CarbonFiberEpoxy"
+                                   comment="CDC downstream endplate" />
+  <tubs name="CDGU" Rio_Z="8.75   57.785    1.5875" material="Plexiglas"
+	                           comment="CDC upstream gas plenum" />
+  <tubs name="CDGS" Rio_Z="55.42  56.02    3.175" material="Aluminum"
+	                           comment="CDC upstream gas plenum shell" /> 
+  <tubs name="CDIS" Rio_Z="8.75   8.85     3.175" material="Aluminum"
+	                           comment="CDC upstream gas plenum inner shell" />
+  <tubs name="CDGD" Rio_Z="55.5374  57.9374    2.54" material="MediumDensityROHACELL"
+	                           comment="CDC downstream gas plenum ring" />
+  <tubs name="CDGI" Rio_Z="8.8392  10.033  2.54" material="MediumDensityROHACELL"
+	                           comment="first part of CDC downstream gas plenum inner ring" /> 
+  <tubs name="CDG2" Rio_Z="10.04  11.1252  1.016" material="MediumDensityROHACELL"
+	                           comment="second part of CDC downstream gas plenum inner ring" />
+  <tubs name="CDGW" Rio_Z="8.8392   57.9374    0.01" material="AluminizedMylar"
+	                           comment="CDC downstream gas plenum window" />
+  <tubs name="CDTF" Rio_Z="0.6289 0.794 150.0" material="Aluminum"
+                                   comment="Aluminum tubes for chamber support"/>
+  <tubs name="CDTI" Rio_Z="0.0 0.794 150.0" material="Air"
+                                   comment="Aluminum tube center for chamber support"/>
+  <tubs name="CDTP" Rio_Z="0.25 0.6289 2.54" material="Aluminum"
+                                   comment="Aluminum plug in chamber support tube"/>
+  <pcon name="CDCB" material="SignalCables" comment="CDC readout cables">
+    <polyplane Rio_Z="74.0 120. -75.2" />
+    <polyplane Rio_Z="71.0 120. -72.2" />
+    <polyplane Rio_Z="71.0 75.2 -72.2" />
+    <polyplane Rio_Z="67.0 68.0 -65.0" />
+    <polyplane Rio_Z="54.5 55.5 -3.31" />
+    <polyplane Rio_Z="23.0 55.5 -0.53" />
+    <polyplane Rio_Z="8.5 55.5 0.0" />
+  </pcon>
+  <tubs name="CSAM" Rio_Z="60.325 60.5663 150." material="AluminumMesh"
+        comment="Aluminum mesh for FDC cable support"/>
+
+  <pcon name="STRM" material="CDchamberGas" comment="mother volume for straight straws">
+    <polyplane Rio_Z="0.000  0.6350  -77.4385"/>
+    <polyplane Rio_Z="0.000  0.6350  -75.9525"/>
+    <polyplane Rio_Z="0.000  0.4750  -75.9525"/>
+    <polyplane Rio_Z="0.000  0.4750  -75.0000"/>
+    <polyplane Rio_Z="0.000  0.7874  -75.0000"/>
+    <polyplane Rio_Z="0.000  0.7874   75.0000"/>
+    <polyplane Rio_Z="0.000  0.4750   75.0000"/>
+    <polyplane Rio_Z="0.000  0.4750   75.6000"/>
+    <polyplane Rio_Z="0.000  0.6350   75.6000"/>
+    <polyplane Rio_Z="0.000  0.6350   77.0860"/>
+  </pcon>
+  <pcon name="STLM" material="CDchamberGas" comment="mother volume for stereo straws">
+    <polyplane Rio_Z="0.000  0.6350  -77.8660"/>
+    <polyplane Rio_Z="0.000  0.6350  -76.3750"/>
+    <polyplane Rio_Z="0.000  0.4750  -76.3750"/>
+    <polyplane Rio_Z="0.000  0.4750  -75.4000"/>
+    <polyplane Rio_Z="0.000  0.7874  -75.4000"/>
+    <polyplane Rio_Z="0.000  0.7874   75.4000"/>
+    <polyplane Rio_Z="0.000  0.4750   75.4000"/>
+    <polyplane Rio_Z="0.000  0.4750   76.0500"/>
+    <polyplane Rio_Z="0.000  0.6350   76.0500"/>
+    <polyplane Rio_Z="0.000  0.6350   77.5110"/>
+  </pcon>
+
+  <tubs name="STRA" Rio_Z="0.0010 0.7760 146.0" material="CDchamberGas"
+                    sensitive="true" comment="Straw sensitive volume"/>
+  <tubs name="STLA" Rio_Z="0.0010 0.7760 146.8" material="CDchamberGas"
+                    sensitive="true" comment="Straw sensitive volume"/>
+  <tubs name="STRW" Rio_Z="0.7760  0.7874  150.0" material="CDCStrawMaterial" />
+  <tubs name="STLW" Rio_Z="0.7760  0.7874  150.7" material="CDCStrawMaterial" />
+  <tubs name="WIRE" Rio_Z="0.000  0.0010  154.5" material="Tungsten" />
+  <tubs name="WILE" Rio_Z="0.000  0.0010  155.3" material="Tungsten" />
+  <tubs name="UPLG" Rio_Z="0.5556  0.7760  0.9525" material="Aluminum" />
+  <tubs name="DPLG" Rio_Z="0.5556  0.7760  0.9525" material="Delrin" /> 
+  <pcon name="UFTH" material="Aluminum" comment="upstream endplate feedthrough">
+    <polyplane Rio_Z="0.3175  0.6350 -0.280"/>
+    <polyplane Rio_Z="0.3175  0.6350  0.000"/>
+    <polyplane Rio_Z="0.3175  0.4750  0.000"/>
+    <polyplane Rio_Z="0.3175  0.4750  1.880"/>
+  </pcon>
+  <pcon name="DFTH" material="Delrin" comment="downstream endplate feedthrough"> 
+    <polyplane Rio_Z="0.3175  0.4750 -1.880"/>
+    <polyplane Rio_Z="0.3175  0.4750  0.000"/>
+    <polyplane Rio_Z="0.3175  0.6350  0.000"/>
+    <polyplane Rio_Z="0.3175  0.6350  0.280"/>
+  </pcon>
+  <pcon name="PHLD" material="Noryl" comment="straw crimp pin holder">
+    <polyplane Rio_Z="0.0735 0.394 -0.674"/>
+    <polyplane Rio_Z="0.0735 0.394 -0.280"/>
+    <polyplane Rio_Z="0.0735 0.3175 -0.280"/>
+    <polyplane Rio_Z="0.0735 0.3175 -0.250"/>
+    <polyplane Rio_Z="0.2400 0.3175 -0.250"/>
+    <polyplane Rio_Z="0.2400 0.3175  2.481"/>
+  </pcon>
+  <tubs name="CRPI" Rio_Z="0.01  0.0735  1.206" material="Copper" /> 
+
+  <pcon name="DCLS" material="CDchamberGas" comment="CDC straw container">
+    <polyplane Rio_Z="9.934 55.420 -77.55" />
+    <polyplane Rio_Z="9.934 55.420 -75.9526" />
+    <polyplane Rio_Z="8.75  59.741 -75.9525" />
+    <polyplane Rio_Z="8.75  59.741 -75.0000" />
+    <polyplane Rio_Z="9.934 55.534 -74.9999" />
+    <polyplane Rio_Z="9.934 55.534 +74.9999" />
+    <polyplane Rio_Z="8.75  59.741 +75.0000" />
+    <polyplane Rio_Z="8.75  59.741 +75.6000" />
+    <polyplane Rio_Z="10.04 55.534 +75.6001" />
+    <polyplane Rio_Z="10.04 55.534 +77.1200" />
+    <polyplane Rio_Z="11.14 55.534 +77.1200" />
+    <polyplane Rio_Z="11.14 55.534 +77.2000" />
+  </pcon>
+ 
+  <tubs name="CDSS" Rio_Z="0.0 0.635 3.174" material="StainlessSteel"/>
+  <tubs name="CDRO" Rio_Z="10.2 55.5 4.0" material="SignalCables"/>  
+  <tubs name="CDHU" Rio_Z="10.2 55.3 1.4" material="CDCHookupCables"/>
+
+  <!-- The following elements describe an early rendition of the GlueX
+       detector simulated using a fast Monte Carlo program MCFast.  They
+       are retained for future reference, do not rely on their values. -->
+
+  <parameters name="centralDC_pars" type="mcfast">
+    <int	name="num"	value="2"	/>
+    <string     name="name"	value="CDC"	/>
+    <real       name="rmin"	value="15.0"	comment="inner radius"
+				unit="cm"	/>
+    <real       name="rmax"	value="60.0"	comment="outer radius"
+				unit="cm"	/>
+    <real       name="z0"	value="117.0"	comment="z of midplane"
+				unit="cm"	/>
+    <real       name="zlen"	value="200.0"	comment="length of cntr"
+				unit="cm"	/>
+    <int	name="num_anode"    value="23"	comment="anode layers" />
+    <int	name="num_cathode"  value="0"	/>
+    <reference  name="material"	    value="CDchamberGas" />
+    <real_array name="thick_boun"   comment="inner outer upstream downstream
+		window thicknesses" values="0.20  0.50    0.90     0.60"
+				    unit="cm"	/>
+    <reference_vector name="mat_boun">
+      <reference_data value="CarbonFiber"    comment="inner window material"     />
+      <reference_data value="CarbonFiber"    comment="outer window material"     />
+      <reference_data value="Aluminum" comment="upstream end plate matl"   />
+      <reference_data value="Aluminum" comment="downstream end plate matl" />
+    </reference_vector>
+  </parameters>
+
+  <parameters name="centralDClayer_pars" type="mcfast">
+    <int	name="det"	value="2"	comment="num of mother"   />
+    <real	name="zlen"	value="200.0"	comment="length of layer"
+				unit="cm"	/>
+    <real	name="cell_height" value="1.6"	comment="thickness"
+				unit="cm"	/>
+    <int	name="ID_readout" value="-1"	/>
+    <real	name="phi0"	value="0."	comment="offset to wire 1"
+				unit="cm"	/>
+    <real	name="stereo_offset" value="0."	comment="where is phi0"
+				unit="cm"	/>
+    <real	name="eff_hit"	value="0.96"	comment="hit efficiency"
+				unit="cm"	/>
+    <real	name="eff_dedx"	value="0.96"	comment="dE/dx efficiency"
+				unit="cm"	/>
+    <real	name="siga"	value="0.015"	comment="xy resolution"
+				unit="cm"	/>
+    <real	name="sigb"	value="0.00"	comment="?? resolution"
+				unit="cm"	/>
+    <real	name="sigc"	value="0.00"	comment="?? resolution"
+				unit="cm"	/>
+  </parameters>
+
+  <parameters name="centralDCoffset_pars" type="mcfast">
+    <int	name="det"	value="2"	comment="num of mother"   />
+    <real	name="cell_offset" value="0.0"	comment="offset in phi"
+				unit="cm"	/>
+    <real	name="sag"	value="0.0"	comment="sagitta of wire"
+				unit="cm"	/>
+    <real_array	name="offset"	values="0.0 0.0 0.0" comment="not used"
+				unit="cm"	/>
+    <real_array	name="dircos"	values="0.0 0.0 0.0" comment="not used"
+				unit="cm"	/>
+  </parameters>
+
+  <parameters name="centralDCsupport_pars" type="mcfast">
+    <string	name="shape"	value="TUBE"	/>
+    <int	name="type"	value="41"	/>
+    <real	name="z0"	value="117.0"	comment="z of midplane"
+				unit="cm"	/>
+    <real	name="zlen"	value="200.0"	comment="length of drum"
+				unit="cm"	/>
+    <reference 	name="material" value="Aluminum" comment="straw tube mockup" />
+  </parameters>
+
+  <mcfast model="Drift" template="db/drift.db" parameters="centralDC_pars">
+    <int	name="num"	value="2"	/>
+    <string     name="name"	value="CDC"	/>
+    <int	name="num_anode"    value="23"	comment="anode layers" />
+    <int	name="num_cathode"  value="0"		 />
+    <reference  name="material"	    value="CDchamberGas" />
+    <real_array name="thick_boun"   comment="inner outer upstream downstream
+		window thicknesses" values="0.20  0.50    0.90     0.60"
+				    unit="cm"	/>
+    <reference_vector name="mat_boun">
+      <reference_data value="CarbonFiber" comment="inner window material"  />
+      <reference_data value="CarbonFiber" comment="outer window material"  />
+      <reference_data value="Aluminum" comment="upstream window matl"   />
+      <reference_data value="Aluminum" comment="downstream window matl" />
+    </reference_vector>
+
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="1"	comment="layer number" 	  />
+      <real	name="radius"	value="16.049"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="63"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="2"	comment="layer number" 	  />
+      <real	name="radius"	value="17.831"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="70"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="3"	comment="layer number" 	  />
+      <real	name="radius"	value="19.613"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="77"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="4"	comment="layer number" 	  />
+      <real	name="radius"	value="21.395"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="84"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="5"	comment="layer number" 	  />
+      <real	name="radius"	value="23.178"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="91"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.105"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="6"	comment="layer number" 	  />
+      <real	name="radius"	value="24.960"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="98"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.105"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="7"	comment="layer number" 	  />
+      <real	name="radius"	value="26.742"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="105"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="-0.105" comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="8"	comment="layer number" 	  />
+      <real	name="radius"	value="28.524"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="112"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="-.105"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="9"	comment="layer number" 	  />
+      <real	name="radius"	value="32.089"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="126"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="10"	comment="layer number" 	  />
+      <real	name="radius"	value="33.871"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="133"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="11"	comment="layer number" 	  />
+      <real	name="radius"	value="35.654"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="140"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="12"	comment="layer number" 	  />
+      <real	name="radius"	value="37.436"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="147"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="13"	comment="layer number" 	  />
+      <real	name="radius"	value="39.218"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="154"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="14"	comment="layer number" 	  />
+      <real	name="radius"	value="41.001"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="161"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.105"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="15"	comment="layer number" 	  />
+      <real	name="radius"	value="42.783"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="168"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.105"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="16"	comment="layer number" 	  />
+      <real	name="radius"	value="44.566"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="175"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="-0.105" comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="17"	comment="layer number" 	  />
+      <real	name="radius"	value="46.348"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="182"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="-0.105" comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="18"	comment="layer number" 	  />
+      <real	name="radius"	value="49.149"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="193"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="19"	comment="layer number" 	  />
+      <real	name="radius"	value="50.932"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="200"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="20"	comment="layer number" 	  />
+      <real	name="radius"	value="52.714"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="207"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="21"	comment="layer number" 	  />
+      <real	name="radius"	value="54.497"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="214"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="22"	comment="layer number" 	  />
+      <real	name="radius"	value="56.279"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="221"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+    <mcfast model="LayerDRFAno" template="db/drift_layer.db"
+			        parameters="centralDClayer_pars">
+      <int	name="lyr"	value="23"	comment="layer number" 	  />
+      <real	name="radius"	value="58.062"	comment="central radius"
+				unit="cm"	/>
+      <int	name="nwires"	value="228"	comment="wire count"	  />
+      <int	name="ID_cathode" value="0"	comment="cathode ID"	  />
+      <real	name="stereo_tau" value="0.0"	comment="twist angle tau"
+				unit="rad"	/>
+    </mcfast>
+
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="1"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="2"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="3"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="4"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="5"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="6"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="7"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="8"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="9"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="10"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="11"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="12"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="13"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="14"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="15"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="16"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="17"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="18"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="19"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="20"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="21"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="22"	comment="layer number"	/>
+    </mcfast>
+    <mcfast model="OffsetDRFAno" template="db/drift_offset.db"
+				 parameters="centralDCoffset_pars">
+      <int	name="lyr"	value="23"	comment="layer number"	/>
+    </mcfast>
+
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT01"	/>
+      <real_array name="rmin" 	values="21.00  21.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="21.04  21.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT03"	/>
+      <real_array name="rmin" 	values="25.00  25.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="25.04  25.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT05"	/>
+      <real_array name="rmin" 	values="29.00  29.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="29.04  29.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT07"	/>
+      <real_array name="rmin" 	values="31.00  31.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="31.04  31.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT09"	/>
+      <real_array name="rmin" 	values="35.00  35.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="35.04  35.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT11"	/>
+      <real_array name="rmin" 	values="37.00  37.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="37.04  37.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT13"	/>
+      <real_array name="rmin" 	values="41.00  41.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="41.04  41.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT15"	/>
+      <real_array name="rmin" 	values="45.00  45.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="45.04  45.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT17"	/>
+      <real_array name="rmin" 	values="49.00  49.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="49.04  49.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT19"	/>
+      <real_array name="rmin" 	values="53.00  53.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="53.04  53.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+    <mcfast model="Absorber"	template="db/absorber.db"
+				parameters="centralDCsupport_pars">
+      <string	name="name"	value="SHIT21"	/>
+      <real_array name="rmin" 	values="57.00  57.00" comment="inner cone"
+				unit="cm"	/>
+      <real_array name="rmax" 	values="57.04  57.04" comment="outer cone"
+				unit="cm"	/>
+    </mcfast>
+  </mcfast>
+
+</section>
+
+<!-- </HDDS> -->
+  

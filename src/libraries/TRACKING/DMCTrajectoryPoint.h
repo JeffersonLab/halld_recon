@@ -9,9 +9,8 @@
 #define _DMCTrajectoryPoint_
 
 #include "JANA/JObject.h"
-#include "JANA/JFactory.h"
 
-class DMCTrajectoryPoint:public jana::JObject{
+class DMCTrajectoryPoint: public JObject {
 	public:
 		JOBJECT_PUBLIC(DMCTrajectoryPoint);
 		
@@ -25,22 +24,22 @@ class DMCTrajectoryPoint:public jana::JObject{
 		float step;
 		int mech;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "x", "%1.3f", x);
-			AddString(items, "y", "%1.3f", y);
-			AddString(items, "z", "%1.3f", z);
-			AddString(items, "t", "%1.3f", t/1.0E-9);
-			AddString(items, "px", "%1.3f", px);
-			AddString(items, "py", "%1.3f", py);
-			AddString(items, "pz", "%1.3f", pz);
-			AddString(items, "E", "%1.3f", E);
-			AddString(items, "dE(MeV)", "%1.3f", 1000.0*dE);
-			AddString(items, "primary", "%d", primary_track);
-			AddString(items, "track", "%d", track);
-			AddString(items, "part", "%d", part);
-			AddString(items, "radlen", "%1.3f", radlen);
-			AddString(items, "step", "%1.3f", step);
-			AddString(items, "mech", "%d", mech);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(x, "x", "%1.3f");
+			summary.add(y, "y", "%1.3f");
+			summary.add(z, "z", "%1.3f");
+			summary.add(t/1.0E-9, "t", "%1.3f");
+			summary.add(px, "px", "%1.3f");
+			summary.add(py, "py", "%1.3f");
+			summary.add(pz, "pz", "%1.3f");
+			summary.add(E, "E", "%1.3f");
+			summary.add(1000.0*dE, "dE(MeV)", "%1.3f");
+			summary.add(primary_track, "primary", "%d");
+			summary.add(track, "track", "%d");
+			summary.add(part, "part", "%d");
+			summary.add(radlen, "radlen", "%1.3f");
+			summary.add(step, "step", "%1.3f");
+			summary.add(mech, "mech", "%d");
 		}
 };
 

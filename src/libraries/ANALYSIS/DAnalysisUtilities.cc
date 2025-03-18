@@ -5,32 +5,32 @@
 #include "DAnalysisUtilities.h"
 #include "ANALYSIS/DParticleComboCreator.h"
 
-DAnalysisUtilities::DAnalysisUtilities(JEventLoop* locEventLoop)
+DAnalysisUtilities::DAnalysisUtilities(const std::shared_ptr<const JEvent>& locEvent)
 {
-  DEBUG_LEVEL=0;
-  gPARMS->SetDefaultParameter("DAnalysisUtilities:DEBUG_LEVEL",DEBUG_LEVEL);
+	DEBUG_LEVEL=0;
+	auto app = locEvent->GetJApplication();
+	app->SetDefaultParameter("DAnalysisUtilities:DEBUG_LEVEL",DEBUG_LEVEL);
 
-	locEventLoop->GetSingle(dPIDAlgorithm);
+	locEvent->GetSingle(dPIDAlgorithm);
 
 	dTargetZCenter = 65.0;
 	// Get Target parameters from XML
-	DApplication *locApplication = dynamic_cast<DApplication*> (locEventLoop->GetJApplication());
-	DGeometry *locGeometry = locApplication ? locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber()) : NULL;
+	DGeometry *locGeometry = DEvent::GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetZCenter);
 
 	//Get magnetic field map
-	dMagneticFieldMap = locApplication->GetBfield(locEventLoop->GetJEvent().GetRunNumber());
+	dMagneticFieldMap = DEvent::GetBfield(locEvent);
 	dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dMagneticFieldMap) != NULL);
 
 	//For "Unused" tracks/showers
 	//BEWARE: IF THIS IS CHANGED, CHANGE IN THE BLUEPRINT FACTORY AND THE EVENT WRITER ALSO!!
 	dTrackSelectionTag = "PreSelect";
 	dShowerSelectionTag = "PreSelect";
-	gPARMS->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", dTrackSelectionTag);
-	gPARMS->SetDefaultParameter("COMBO:SHOWER_SELECT_TAG", dShowerSelectionTag);
+	app->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", dTrackSelectionTag);
+	app->SetDefaultParameter("COMBO:SHOWER_SELECT_TAG", dShowerSelectionTag);
 }
 
-bool DAnalysisUtilities::Check_IsBDTSignalEvent(JEventLoop* locEventLoop, const DReaction* locReaction, bool locExclusiveMatchFlag, bool locIncludeDecayingToReactionFlag) const
+bool DAnalysisUtilities::Check_IsBDTSignalEvent(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, bool locExclusiveMatchFlag, bool locIncludeDecayingToReactionFlag) const
 {
 #ifdef VTRACE
 	VT_TRACER("DAnalysisUtilities::Check_IsBDTSignalEvent()");
@@ -47,16 +47,24 @@ bool DAnalysisUtilities::Check_IsBDTSignalEvent(JEventLoop* locEventLoop, const 
 			//e.g. could kinfit to g, p -> pi+, pi0, K0, Lambda and include it as a BDT variable
 
 	if(dParticleComboCreator == nullptr) //Can't create in constructor: infinite recursion
-		dParticleComboCreator = new DParticleComboCreator(locEventLoop, nullptr, nullptr, nullptr);
-	DReaction_factory_Thrown* dThrownReactionFactory = static_cast<DReaction_factory_Thrown*>(locEventLoop->GetFactory("DReaction", "Thrown"));
+		dParticleComboCreator = new DParticleComboCreator(locEvent, nullptr, nullptr, nullptr);
+
+
+	DReaction_factory_Thrown* dThrownReactionFactory = dynamic_cast<DReaction_factory_Thrown*>(locEvent->GetFactory("DReaction", "Thrown"));
+
+	/// NWB: I'm commenting this out because this is not compatible with JANA2. I can't figure out how to do this in JANA2
+	/// until I understand exactly what it is you are trying to do. I suspect this is important, so we can't keep this
+	/// commented out for long.
+	/// TODO: Figure this out
+	/*
         if(!dThrownReactionFactory->brun_was_called())
 	{
-            dThrownReactionFactory->brun(locEventLoop, locEventLoop->GetJEvent().GetRunNumber());
+            dThrownReactionFactory->brun(locEvent, locEvent->GetRunNumber());
             dThrownReactionFactory->Set_brun_called();
 	}
-
+	 */
 	vector<const DReaction*> locThrownReactions;
-	locEventLoop->Get(locThrownReactions, "Thrown");
+	locEvent->Get(locThrownReactions, "Thrown");   // NWB: event::Get() is guaranteed to trigger BeginRun when necessary, so maybe we can just delete the above
 	if(locThrownReactions.empty())
 		return false;
 	auto locActualThrownReaction = locThrownReactions[0];
@@ -131,10 +139,10 @@ bool DAnalysisUtilities::Check_IsBDTSignalEvent(JEventLoop* locEventLoop, const 
 
 	//Get thrown steps
 	deque<pair<const DMCThrown*, deque<const DMCThrown*> > > locThrownSteps;
-	Get_ThrownParticleSteps(locEventLoop, locThrownSteps);
+	Get_ThrownParticleSteps(locEvent, locThrownSteps);
 
 	if(locThrownSteps.size() == 1) //nothing to replace: it either works or it doesn't
-		return Check_ThrownsMatchReaction(locEventLoop, locCurrentReaction, locExclusiveMatchFlag);
+		return Check_ThrownsMatchReaction(locEvent, locCurrentReaction, locExclusiveMatchFlag);
 
 	//build maps of counts of the thrown & DReaction decaying particles
 	map<Particle_t, size_t> locNumDecayingParticles_Thrown;
@@ -200,8 +208,8 @@ bool DAnalysisUtilities::Check_IsBDTSignalEvent(JEventLoop* locEventLoop, const 
 	if(!locIncludeDecayingToReactionFlag)
 	{
 		//don't try decaying thrown particles: compare as-is
-		DReaction* locThrownReaction = dThrownReactionFactory->Build_ThrownReaction(locEventLoop, locThrownSteps);
-		auto locThrownCombo = dParticleComboCreator->Build_ThrownCombo(locEventLoop, locThrownReaction, locThrownSteps);
+		DReaction* locThrownReaction = dThrownReactionFactory->Build_ThrownReaction(locEvent, locThrownSteps);
+		auto locThrownCombo = dParticleComboCreator->Build_ThrownCombo(locEvent, locThrownReaction, locThrownSteps);
 		bool locCheckResult = Check_ThrownsMatchReaction(locActualThrownReaction, locThrownCombo, locCurrentReaction, locExclusiveMatchFlag);
 
 		dParticleComboCreator->Reset();
@@ -241,8 +249,8 @@ bool DAnalysisUtilities::Check_IsBDTSignalEvent(JEventLoop* locEventLoop, const 
 	//if no additional replacements to make: check it
 	if(locPIDVector.empty())
 	{
-		DReaction* locThrownReaction = dThrownReactionFactory->Build_ThrownReaction(locEventLoop, locThrownSteps);
-		auto locThrownCombo = dParticleComboCreator->Build_ThrownCombo(locEventLoop, locThrownReaction, locThrownSteps);
+		DReaction* locThrownReaction = dThrownReactionFactory->Build_ThrownReaction(locEvent, locThrownSteps);
+		auto locThrownCombo = dParticleComboCreator->Build_ThrownCombo(locEvent, locThrownReaction, locThrownSteps);
 		bool locCheckResult = Check_ThrownsMatchReaction(locActualThrownReaction, locThrownCombo, locCurrentReaction, locExclusiveMatchFlag);
 
 		dParticleComboCreator->Reset();
@@ -267,8 +275,8 @@ bool DAnalysisUtilities::Check_IsBDTSignalEvent(JEventLoop* locEventLoop, const 
 		if(locParticleIndex == int(locPIDVector.size()))
 		{
 			//combo defined: try it
-			DReaction* locThrownReaction = dThrownReactionFactory->Build_ThrownReaction(locEventLoop, locCurrentThrownSteps);
-			auto locThrownCombo = dParticleComboCreator->Build_ThrownCombo(locEventLoop, locThrownReaction, locCurrentThrownSteps);
+			DReaction* locThrownReaction = dThrownReactionFactory->Build_ThrownReaction(locEvent, locCurrentThrownSteps);
+			auto locThrownCombo = dParticleComboCreator->Build_ThrownCombo(locEvent, locThrownReaction, locCurrentThrownSteps);
 			bool locCheckResult = Check_ThrownsMatchReaction(locActualThrownReaction, locThrownCombo, locCurrentReaction, locExclusiveMatchFlag);
 
 			dParticleComboCreator->Reset();
@@ -359,18 +367,18 @@ void DAnalysisUtilities::Replace_DecayingParticleWithProducts(deque<pair<const D
 	locThrownSteps.erase(locThrownSteps.begin() + locStepIndex);
 }
 
-bool DAnalysisUtilities::Check_ThrownsMatchReaction(JEventLoop* locEventLoop, const DReaction* locReaction, bool locExclusiveMatchFlag) const
+bool DAnalysisUtilities::Check_ThrownsMatchReaction(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, bool locExclusiveMatchFlag) const
 {
 	//IF DREACTION HAS A MISSING UNKNOWN PARTICLE, MUST USE locExclusiveMatchFlag = false
 
 	//note, if you decay a final state particle (e.g. k+, pi+) in your input DReaction*, a match will NOT be found: the thrown reaction/combo is truncated
 	//if locExclusiveMatchFlag = false, then allow the input DReaction to be a subset of the thrown
 	if(dParticleComboCreator == nullptr) //Can't create in constructor: infinite recursion
-		dParticleComboCreator = new DParticleComboCreator(locEventLoop, nullptr, nullptr, nullptr);
-	auto locThrownCombo = dParticleComboCreator->Build_ThrownCombo(locEventLoop);
+		dParticleComboCreator = new DParticleComboCreator(locEvent, nullptr, nullptr, nullptr);
+	auto locThrownCombo = dParticleComboCreator->Build_ThrownCombo(locEvent);
 
 	vector<const DReaction*> locReactions;
-	locEventLoop->Get(locReactions, "Thrown");
+	locEvent->Get(locReactions, "Thrown");
 	if(locReactions.empty())
 		return false;
 
@@ -504,10 +512,10 @@ bool DAnalysisUtilities::Check_ThrownsMatchReaction(const DReaction* locThrownRe
 	return true;
 }
 
-void DAnalysisUtilities::Get_UnusedChargedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DChargedTrack*>& locUnusedChargedTracks) const
+void DAnalysisUtilities::Get_UnusedChargedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DChargedTrack*>& locUnusedChargedTracks) const
 {
 	locUnusedChargedTracks.clear();
-	locEventLoop->Get(locUnusedChargedTracks, "Combo");
+	locEvent->Get(locUnusedChargedTracks, "Combo");
 	std::sort(locUnusedChargedTracks.begin(), locUnusedChargedTracks.end());
 
 	auto locChargedSourceObjects = locParticleCombo->Get_FinalParticle_SourceObjects(d_Charged);
@@ -523,13 +531,13 @@ void DAnalysisUtilities::Get_UnusedChargedTracks(JEventLoop* locEventLoop, const
 	}
 }
 
-void DAnalysisUtilities::Get_UnusedTimeBasedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTrackTimeBased*>& locUnusedTimeBasedTracks) const
+void DAnalysisUtilities::Get_UnusedTimeBasedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTrackTimeBased*>& locUnusedTimeBasedTracks) const
 {
 	locUnusedTimeBasedTracks.clear();
-	locEventLoop->Get(locUnusedTimeBasedTracks);
+	locEvent->Get(locUnusedTimeBasedTracks);
 
 	vector<const DTrackTimeBased*> locComboTimeBasedTracks;
-	locEventLoop->Get(locComboTimeBasedTracks, "Combo");
+	locEvent->Get(locComboTimeBasedTracks, "Combo");
 	locUnusedTimeBasedTracks.insert(locUnusedTimeBasedTracks.end(), locComboTimeBasedTracks.begin(), locComboTimeBasedTracks.end());
 
 	auto locChargedSourceObjects = locParticleCombo->Get_FinalParticle_SourceObjects(d_Charged);
@@ -547,10 +555,10 @@ void DAnalysisUtilities::Get_UnusedTimeBasedTracks(JEventLoop* locEventLoop, con
 	}
 }
 
-void DAnalysisUtilities::Get_UnusedWireBasedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTrackWireBased*>& locUnusedWireBasedTracks) const
+void DAnalysisUtilities::Get_UnusedWireBasedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTrackWireBased*>& locUnusedWireBasedTracks) const
 {
 	locUnusedWireBasedTracks.clear();
-	locEventLoop->Get(locUnusedWireBasedTracks);
+	locEvent->Get(locUnusedWireBasedTracks);
 
 	auto locChargedSourceObjects = locParticleCombo->Get_FinalParticle_SourceObjects(d_Charged);
 	for(size_t loc_i = 0; loc_i < locChargedSourceObjects.size(); ++loc_i)
@@ -567,10 +575,10 @@ void DAnalysisUtilities::Get_UnusedWireBasedTracks(JEventLoop* locEventLoop, con
 	}
 }
 
-void DAnalysisUtilities::Get_UnusedTrackCandidates(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTrackCandidate*>& locUnusedTrackCandidates) const
+void DAnalysisUtilities::Get_UnusedTrackCandidates(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTrackCandidate*>& locUnusedTrackCandidates) const
 {
 	locUnusedTrackCandidates.clear();
-	locEventLoop->Get(locUnusedTrackCandidates);
+	locEvent->Get(locUnusedTrackCandidates);
 
 	auto locChargedSourceObjects = locParticleCombo->Get_FinalParticle_SourceObjects(d_Charged);
 	set<unsigned int> locUsedCandidateIndices;
@@ -588,10 +596,10 @@ void DAnalysisUtilities::Get_UnusedTrackCandidates(JEventLoop* locEventLoop, con
 	}
 }
 
-void DAnalysisUtilities::Get_UnusedNeutralShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DNeutralShower*>& locUnusedNeutralShowers) const
+void DAnalysisUtilities::Get_UnusedNeutralShowers(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DNeutralShower*>& locUnusedNeutralShowers) const
 {
 	locUnusedNeutralShowers.clear();
-	locEventLoop->Get(locUnusedNeutralShowers, dShowerSelectionTag.c_str());
+	locEvent->Get(locUnusedNeutralShowers, dShowerSelectionTag.c_str());
 
 	auto locNeutralSourceObjects = locParticleCombo->Get_FinalParticle_SourceObjects(d_Neutral);
 	for(size_t loc_i = 0; loc_i < locNeutralSourceObjects.size(); ++loc_i)
@@ -607,10 +615,10 @@ void DAnalysisUtilities::Get_UnusedNeutralShowers(JEventLoop* locEventLoop, cons
 	}
 }
 
-void DAnalysisUtilities::Get_UnusedNeutralParticles(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DNeutralParticle*>& locUnusedNeutralParticles) const
+void DAnalysisUtilities::Get_UnusedNeutralParticles(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DNeutralParticle*>& locUnusedNeutralParticles) const
 {
 	locUnusedNeutralParticles.clear();
-	locEventLoop->Get(locUnusedNeutralParticles, dShowerSelectionTag.c_str());
+	locEvent->Get(locUnusedNeutralParticles, dShowerSelectionTag.c_str());
 
 	auto locNeutralSourceObjects = locParticleCombo->Get_FinalParticle_SourceObjects(d_Neutral);
 	for(size_t loc_i = 0; loc_i < locNeutralSourceObjects.size(); ++loc_i)
@@ -626,10 +634,10 @@ void DAnalysisUtilities::Get_UnusedNeutralParticles(JEventLoop* locEventLoop, co
 	}
 }
 
-void DAnalysisUtilities::Get_UnusedTOFPoints(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTOFPoint*>& locUnusedTOFPoints) const
+void DAnalysisUtilities::Get_UnusedTOFPoints(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTOFPoint*>& locUnusedTOFPoints) const
 {
 	locUnusedTOFPoints.clear();
-	locEventLoop->Get(locUnusedTOFPoints);
+	locEvent->Get(locUnusedTOFPoints);
 
 	vector<const DParticleComboStep*> locParticleComboSteps = locParticleCombo->Get_ParticleComboSteps();
 	for(size_t loc_icombo = 0; loc_icombo < locParticleComboSteps.size(); ++loc_icombo) {
@@ -655,10 +663,10 @@ void DAnalysisUtilities::Get_UnusedTOFPoints(JEventLoop* locEventLoop, const DPa
 	}
 }
 
-void DAnalysisUtilities::Get_ThrownParticleSteps(JEventLoop* locEventLoop, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps) const
+void DAnalysisUtilities::Get_ThrownParticleSteps(const std::shared_ptr<const JEvent>& locEvent, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps) const
 {
  	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	map<size_t, const DMCThrown*> locIDMap; //size_t is the myid
 	for(size_t loc_i = 0; loc_i < locMCThrowns.size(); ++loc_i)
@@ -674,7 +682,7 @@ void DAnalysisUtilities::Get_ThrownParticleSteps(JEventLoop* locEventLoop, deque
 		if(IsResonance(locMCThrowns[loc_i]->PID()))
 			continue; //don't include resonances in DReaction!!
 
-		if(locMCThrowns[loc_i]->PID() == Unknown)
+		if(locMCThrowns[loc_i]->PID() == UnknownParticle)
 			continue; //could be some weird pythia "resonance" like a diquark: just ignore them all
 
 		//initial checks of parent id
@@ -690,7 +698,7 @@ void DAnalysisUtilities::Get_ThrownParticleSteps(JEventLoop* locEventLoop, deque
 		//initial checks of parent pid
 		Particle_t locParentPID = locIDMap[locParentID]->PID();
 		bool locDoneFlag = false;
-		while(((locParentPID == Unknown) || IsResonance(locParentPID)) && (!locDoneFlag))
+		while(((locParentPID == UnknownParticle) || IsResonance(locParentPID)) && (!locDoneFlag))
 		{
 			//intermediate particle, continue towards the source
 			locParentID = locIDMap[locParentID]->parentid; //parent's parent
@@ -756,10 +764,10 @@ for(size_t loc_i = 0; loc_i < locThrownSteps.size(); ++loc_i)
 */
 }
 
-bool DAnalysisUtilities::Are_ThrownPIDsSameAsDesired(JEventLoop* locEventLoop, const deque<Particle_t>& locDesiredPIDs, Particle_t locMissingPID) const
+bool DAnalysisUtilities::Are_ThrownPIDsSameAsDesired(const std::shared_ptr<const JEvent>& locEvent, const deque<Particle_t>& locDesiredPIDs, Particle_t locMissingPID) const
 {
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns, "FinalState");
+	locEvent->Get(locMCThrowns, "FinalState");
 	deque<Particle_t> locDesiredPIDs_Copy = locDesiredPIDs;
 
 	bool locMissingPIDMatchedFlag = false;
@@ -831,7 +839,7 @@ DLorentzVector DAnalysisUtilities::Calc_MissingP4(const DReaction* locReaction, 
 
 	//target particle
 	Particle_t locPID = locReactionStep->Get_TargetPID();
-	if(locPID != Unknown)
+	if(locPID != UnknownParticle)
 	{
 		double locMass = ParticleMass(locPID);
 		locMissingP4 += DLorentzVector(DVector3(0.0, 0.0, 0.0), locMass);
@@ -949,7 +957,7 @@ DLorentzVector DAnalysisUtilities::Calc_FinalStateP4(const DReaction* locReactio
 	if(locStepIndex != 0)
 	{
 		Particle_t locPID = locReactionStep->Get_TargetPID();
-		if(locPID != Unknown)
+		if(locPID != UnknownParticle)
 			locFinalStateP4 -= DLorentzVector(DVector3(0.0, 0.0, 0.0), ParticleMass(locPID));
 	}
 
@@ -984,14 +992,14 @@ DLorentzVector DAnalysisUtilities::Calc_FinalStateP4(const DReaction* locReactio
 	return locFinalStateP4;
 }
 
-int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locEnergy_UnusedShowers, int &locNumber_UnusedShowers_Quality, double &locEnergy_UnusedShowers_Quality) const
+int DAnalysisUtilities::Calc_Energy_UnusedShowers(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, double &locEnergy_UnusedShowers, int &locNumber_UnusedShowers_Quality, double &locEnergy_UnusedShowers_Quality) const
 {
 	DVector3 locVertex(0.0, 0.0, dTargetZCenter);
 	const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
 	double locRFTime = (locEventRFBunch != NULL) ? locEventRFBunch->dTime : numeric_limits<double>::quiet_NaN();
 
 	vector<const DNeutralShower*> locUnusedNeutralShowers;
-	Get_UnusedNeutralShowers(locEventLoop, locParticleCombo, locUnusedNeutralShowers);
+	Get_UnusedNeutralShowers(locEvent, locParticleCombo, locUnusedNeutralShowers);
 	
 	int locNumber_UnusedShowers = 0;
 	locEnergy_UnusedShowers = 0.;
@@ -1020,10 +1028,10 @@ int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, cons
 	return locNumber_UnusedShowers;
 }
 
-int DAnalysisUtilities::Calc_Momentum_UnusedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, TVector3 &locSumP3_UnusedTracks) const
+int DAnalysisUtilities::Calc_Momentum_UnusedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, TVector3 &locSumP3_UnusedTracks) const
 {
 	vector<const DChargedTrack*> locUnusedChargedTracks;
-	Get_UnusedChargedTracks(locEventLoop, locParticleCombo, locUnusedChargedTracks);
+	Get_UnusedChargedTracks(locEvent, locParticleCombo, locUnusedChargedTracks);
 	
 	for(size_t loc_i = 0; loc_i < locUnusedChargedTracks.size(); ++loc_i) {
 		const DChargedTrack* locUnusedChargedTrack = locUnusedChargedTracks[loc_i];

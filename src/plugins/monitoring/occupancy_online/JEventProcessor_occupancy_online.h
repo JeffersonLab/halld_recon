@@ -9,6 +9,7 @@
 #define _JEventProcessor_occupancy_online_
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Services/JLockService.h>
 
 #include <GlueX.h>
 #include <PAIR_SPECTROMETER/DPSGeometry.h>
@@ -18,14 +19,12 @@
 #include <TH2.h>
 #include <TH1.h>
 
-using namespace jana;
 using namespace std;
 
-class JEventProcessor_occupancy_online:public jana::JEventProcessor{
+class JEventProcessor_occupancy_online:public JEventProcessor{
 	public:
 		JEventProcessor_occupancy_online();
 		~JEventProcessor_occupancy_online();
-		const char* className(void){return "JEventProcessor_occupancy_online";}
 
 
 		//------------------------ BCAL -----------------------
@@ -41,6 +40,10 @@ class JEventProcessor_occupancy_online:public jana::JEventProcessor{
 		TH1I *cdc_num_events;
 		TH2F *cdc_occ_ring[28];
 
+  //------------------------ ECAL -----------------------
+  TH1I *ecal_num_events;
+  TH2F* ecal_occ;
+  
 		//------------------------ FCAL -----------------------
 		TH1I *fcal_num_events;
 		TH2F* fcal_occ;
@@ -117,12 +120,13 @@ class JEventProcessor_occupancy_online:public jana::JEventProcessor{
 
 
 	private:
-		jerror_t init(void);
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-		jerror_t erun(void);
-		jerror_t fini(void);
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
+		std::shared_ptr<JLockService> lockService;
 		const DDIRCGeometry* dDIRCGeometry;
 };
 

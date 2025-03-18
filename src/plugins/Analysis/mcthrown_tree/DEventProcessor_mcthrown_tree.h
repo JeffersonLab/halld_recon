@@ -9,22 +9,21 @@
 #define _DEventProcessor_mcthrown_tree_
 
 #include "JANA/JEventProcessor.h"
-#include "DANA/DApplication.h"
 #include <ANALYSIS/DEventWriterROOT.h>
 
-using namespace jana;
 
 class DEventProcessor_mcthrown_tree : public JEventProcessor
 {
 	public:
-		DEventProcessor_mcthrown_tree(){};
+		DEventProcessor_mcthrown_tree(){
+			SetTypeName("DEventProcessor_mcthrown_tree");
+		};
 		~DEventProcessor_mcthrown_tree(){};
-		const char* className(void){return "DEventProcessor_mcthrown_tree";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void Finish() override;
 
 		bool dTagCheck;
 		int numgoodevents;

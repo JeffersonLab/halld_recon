@@ -22,7 +22,7 @@ using namespace std;
 #include "HDEVIO.h"
 
 #if USE_ASYNC_FILEBUF
-#include <async_filebuf.h>
+#include "async_filebuf.h"
 #endif
 
 //---------------------------------

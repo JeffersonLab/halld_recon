@@ -18,11 +18,7 @@
 
 
 #include "TRACKING/DMCThrown.h"
-// Routine used to create our JEventProcessor
 #include "PID/DVertex.h"
-#include "DANA/DApplication.h"
-#include "JANA/JApplication.h"
-#include "JANA/JFactory.h"
 #include "BCAL/DBCALShower.h"
 #include "RF/DRFTime.h"
 #include "PID/DEventRFBunch.h"
@@ -36,7 +32,7 @@
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_pi0bcalskim());
+    app->Add(new JEventProcessor_pi0bcalskim());
   }
 } // "C"
 
@@ -46,20 +42,6 @@ extern "C"{
 //------------------
 JEventProcessor_pi0bcalskim::JEventProcessor_pi0bcalskim()
 {
-
-  MIN_SH1_E = 0.2;
-  MIN_SH2_E = 0.2;
-
-  WRITE_EVIO = 1;
-  WRITE_HDDM = 0;
-
-  gPARMS->SetDefaultParameter( "PI0BCALSKIM:WRITE_EVIO", WRITE_EVIO );
-  gPARMS->SetDefaultParameter( "PI0BCALSKIM:WRITE_HDDM", WRITE_HDDM );
-  gPARMS->SetDefaultParameter( "PI0BCALSKIM:MIN_SH1_E" , MIN_SH1_E );
-  gPARMS->SetDefaultParameter( "PI0BCALSKIM:MIN_SH2_E" , MIN_SH2_E );
-
-  num_epics_events = 0;
-  
 }
 
 //------------------
@@ -71,87 +53,96 @@ JEventProcessor_pi0bcalskim::~JEventProcessor_pi0bcalskim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_pi0bcalskim::init(void)
+void JEventProcessor_pi0bcalskim::Init()
 {
-  //if( ! WRITE_EVIO) cerr << " output isnt working " << endl;
+	auto app = GetApplication();
 
-  return NOERROR;
+	MIN_SH1_E = 0.2;
+	MIN_SH2_E = 0.2;
+
+	WRITE_EVIO = 1;
+	WRITE_HDDM = 0;
+
+	app->SetDefaultParameter( "PI0BCALSKIM:WRITE_EVIO", WRITE_EVIO );
+	app->SetDefaultParameter( "PI0BCALSKIM:WRITE_HDDM", WRITE_HDDM );
+	app->SetDefaultParameter( "PI0BCALSKIM:MIN_SH1_E" , MIN_SH1_E );
+	app->SetDefaultParameter( "PI0BCALSKIM:MIN_SH2_E" , MIN_SH2_E );
+
+	num_epics_events = 0;
+
+	//if( ! WRITE_EVIO) cerr << " output isnt working " << endl;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_pi0bcalskim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_pi0bcalskim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     /* Example
     // only write out BCAL data for these events
 	const DEventWriterEVIO* locEventWriterEVIO = NULL;
-	eventLoop->GetSingle(locEventWriterEVIO);
+	event->GetSingle(locEventWriterEVIO);
     
     if(locEventWriterEVIO) {
         locEventWriterEVIO->SetDetectorsToWriteOut("BCAL","pi0bcalskim");
     }
     */
-  DGeometry* dgeom = NULL;
-  DApplication* dapp = dynamic_cast< DApplication* >(eventLoop->GetJApplication());
-  if (dapp) dgeom = dapp->GetDGeometry(runnumber);
+  DGeometry* dgeom = GetDGeometry(event);
   if (dgeom) {
     dgeom->GetTargetZ(m_targetZ);
   } else {
     cerr << "No geometry accessbile to ccal_timing monitoring plugin." << endl;
-    return RESOURCE_UNAVAILABLE;
+    return;
   }	
-  jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+  JCalibration *jcalib = GetJCalibration(event);
   std::map<string, float> beam_spot;
   jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   m_beamSpotX = beam_spot.at("x");
   m_beamSpotY = beam_spot.at("y");
-
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_pi0bcalskim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_pi0bcalskim::Process(const std::shared_ptr<const JEvent>& event)
 {
   vector< const DBCALShower* > locBCALShowers;
-  loop->Get(locBCALShowers);
+  event->Get(locBCALShowers);
   vector< const DTrackTimeBased*> locTrackTimeBased;
-  loop->Get(locTrackTimeBased);
+  event->Get(locTrackTimeBased);
   vector<const DVertex*> kinfitVertex;
-  loop->Get(kinfitVertex);
+  event->Get(kinfitVertex);
 
   const DEventWriterEVIO* locEventWriterEVIO = NULL;
-  loop->GetSingle(locEventWriterEVIO);
+  event->GetSingle(locEventWriterEVIO);
 
   vector< const JObject* > locObjectsToSave;
 
   // always write out BOR events
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
+  if(GetStatusBit(event, kSTATUS_BOR_EVENT)) {
       //jout << "Found BOR!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "pi0bcalskim" );
-      return NOERROR;
+      locEventWriterEVIO->Write_EVIOEvent( event, "pi0bcalskim" );
+      return;
   }
 
   // write out the first few EPICS events to save run number & other meta info
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
+  if(GetStatusBit(event, kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
       //jout << "Found EPICS!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "pi0bcalskim" );
+      locEventWriterEVIO->Write_EVIOEvent( event, "pi0bcalskim" );
       num_epics_events++;
-      return NOERROR;
+      return;
   }
 
-  if(locBCALShowers.size() < 2 ) return NOERROR;
+  if(locBCALShowers.size() < 2 ) return;
 
   vector<const DTrackFitter*>fitters;
-  loop->Get(fitters);
+  event->Get(fitters);
   
   if(fitters.size()<1){
     _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-    return RESOURCE_UNAVAILABLE;
+    return;
   }
   
   const DTrackFitter *fitter = fitters[0];
@@ -195,10 +186,10 @@ jerror_t JEventProcessor_pi0bcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
 
 
-	//japp->RootWriteLock();
+	//lockService->RootWriteLock();
 	
     vector<const DEventRFBunch*> locEventRFBunches;
-    loop->Get(locEventRFBunches);
+    event->Get(locEventRFBunches);
     if(locEventRFBunches.size() > 0) {
         locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches[0]));
     }
@@ -251,42 +242,37 @@ jerror_t JEventProcessor_pi0bcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
     if( WRITE_EVIO ) {
       //	cout << " inv mass = " << inv_mass << " sh1 E = " << sh1_E << " sh2 E = " << sh2_E << " event num = " << eventnumber << endl;
       //cout << "writing out " << eventnumber << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "pi0bcalskim", locObjectsToSave );
+      locEventWriterEVIO->Write_EVIOEvent( event, "pi0bcalskim", locObjectsToSave );
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
-      loop->Get(locEventWriterHDDMVector);
-      locEventWriterHDDMVector[0]->Write_HDDMEvent(loop, ""); 
+      event->Get(locEventWriterHDDMVector);
+      locEventWriterHDDMVector[0]->Write_HDDMEvent(event, "");
     }
   }
   
 
-  //japp->RootUnLock();
+  //lockService->RootUnLock();
   
    
 
-
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_pi0bcalskim::erun(void)
+void JEventProcessor_pi0bcalskim::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
 // Fin
 //------------------
-jerror_t JEventProcessor_pi0bcalskim::fini(void)
+void JEventProcessor_pi0bcalskim::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 

@@ -7,9 +7,8 @@
 #define _DDIRCLEDRef_
 
 #include "JANA/JObject.h"
-#include "JANA/JFactory.h"
 
-class DDIRCLEDRef:public jana::JObject{
+class DDIRCLEDRef: public JObject{
   
  public:
   JOBJECT_PUBLIC(DDIRCLEDRef);
@@ -22,12 +21,12 @@ class DDIRCLEDRef:public jana::JObject{
   bool has_fADC;
   bool has_TDC;
   
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "integral", "%12.4f", integral);
-    AddString(items, "amp", "%12.4f", amp);
-    AddString(items, "t", "%12.4f", t);
-    AddString(items, "t_TDC","%12.4f",t_TDC);
-    AddString(items, "t_fADC","%12.4f",t_fADC);
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(integral, "integral", "%12.4f");
+    summary.add(amp, "amp", "%12.4f");
+    summary.add(t, "t", "%12.4f");
+    summary.add(t_TDC, "t_TDC", "%12.4f");
+    summary.add(t_fADC, "t_fADC", "%12.4f");
   }
 };
 

@@ -12,20 +12,20 @@
 #include "DDetectorMatches_factory_Combo.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DDetectorMatches_factory_Combo::init(void)
+void DDetectorMatches_factory_Combo::Init()
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DDetectorMatches_factory_Combo::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DDetectorMatches_factory_Combo::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 {
-	dDetectorMatchesFactory = static_cast<DDetectorMatches_factory*>(locEventLoop->GetFactory("DDetectorMatches"));
-	return NOERROR;
+	dDetectorMatchesFactory = dynamic_cast<DDetectorMatches_factory*>(locEvent->GetFactory<DDetectorMatches>());
+	// TODO: NWB: Don't do this!
 }
 
 double DDetectorMatches_factory_Combo::Calc_PVariance(const DTrackTimeBased* locTrack) const
@@ -60,9 +60,9 @@ pair<double, double> DDetectorMatches_factory_Combo::Calc_EnergyRatio(const DTra
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DDetectorMatches_factory_Combo::evnt(jana::JEventLoop* locEventLoop, uint64_t eventnumber)
+void DDetectorMatches_factory_Combo::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 #ifdef VTRACE
 	VT_TRACER("DDetectorMatches_factory_Combo::evnt()");
@@ -70,11 +70,11 @@ jerror_t DDetectorMatches_factory_Combo::evnt(jana::JEventLoop* locEventLoop, ui
 
 	//get new DTrackTimeBased objects
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	locEventLoop->Get(locTrackTimeBasedVector, "Combo");
+	locEvent->Get(locTrackTimeBasedVector, "Combo");
 
 	//get and import original results (will also update bcal/fcal shower distance-to-track results)
 	const DDetectorMatches* locOriginalDetectorMatches = NULL;
-	locEventLoop->GetSingle(locOriginalDetectorMatches);
+	locEvent->GetSingle(locOriginalDetectorMatches);
 
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches(*locOriginalDetectorMatches);
 
@@ -83,7 +83,7 @@ jerror_t DDetectorMatches_factory_Combo::evnt(jana::JEventLoop* locEventLoop, ui
 	{
 		const DTrackTimeBased* locTrackTimeBased = locTrackTimeBasedVector[loc_i];
 		const DTrackTimeBased* locOriginalTrackTimeBased = NULL;
-		locTrackTimeBased->GetSingleT(locOriginalTrackTimeBased);
+		locTrackTimeBased->GetSingle(locOriginalTrackTimeBased);
 
 		pair<double, double> locEnergyRatio = Calc_EnergyRatio(locTrackTimeBased, locOriginalTrackTimeBased); //2nd is variance, not error!
 
@@ -168,25 +168,25 @@ jerror_t DDetectorMatches_factory_Combo::evnt(jana::JEventLoop* locEventLoop, ui
 			locDetectorMatches->Set_FlightTimePCorrelation(locTrackTimeBased, SYS_START, locFlightTimePCorrelation);
 	}
 
-	_data.push_back(locDetectorMatches);
+	Insert(locDetectorMatches);
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DDetectorMatches_factory_Combo::erun(void)
+void DDetectorMatches_factory_Combo::EndRun()
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DDetectorMatches_factory_Combo::fini(void)
+void DDetectorMatches_factory_Combo::Finish()
 {
-	return NOERROR;
+	return;
 }
 
 

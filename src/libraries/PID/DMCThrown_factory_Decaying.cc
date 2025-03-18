@@ -7,59 +7,53 @@
 
 #include "DMCThrown_factory_Decaying.h"
 
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DMCThrown_factory_Decaying::init(void)
+void DMCThrown_factory_Decaying::Init()
 {
 	SetFactoryFlag(NOT_OBJECT_OWNER);
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DMCThrown_factory_Decaying::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DMCThrown_factory_Decaying::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
-	return NOERROR;
+	event->GetSingle(dAnalysisUtilities);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DMCThrown_factory_Decaying::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DMCThrown_factory_Decaying::Process(const std::shared_ptr<const JEvent>& event)
 {
-	_data.clear();
+	mData.clear();
 
 	deque<pair<const DMCThrown*, deque<const DMCThrown*> > > locThrownSteps;
-	dAnalysisUtilities->Get_ThrownParticleSteps(locEventLoop, locThrownSteps);
+	dAnalysisUtilities->Get_ThrownParticleSteps(event, locThrownSteps);
 
 	if(locThrownSteps.empty())
-		return NOERROR;
+		return;
 
 	for(size_t loc_i = 1; loc_i < locThrownSteps.size(); ++loc_i)
-		_data.push_back(const_cast<DMCThrown*>(locThrownSteps[loc_i].first));
-
-	return NOERROR;
+		mData.push_back(const_cast<DMCThrown*>(locThrownSteps[loc_i].first));
 }
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DMCThrown_factory_Decaying::erun(void)
+void DMCThrown_factory_Decaying::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DMCThrown_factory_Decaying::fini(void)
+void DMCThrown_factory_Decaying::Finish()
 {
-	return NOERROR;
 }
 

@@ -9,10 +9,9 @@
 #define _DCPPEpEm_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 #include <FCAL/DFCALShower.h>
 
-class DCPPEpEm:public jana::JObject{
+class DCPPEpEm:public JObject{
  public:
   JOBJECT_PUBLIC(DCPPEpEm);
   
@@ -28,25 +27,24 @@ class DCPPEpEm:public jana::JObject{
 
   // This method is used primarily for pretty printing
   // the second argument to AddString is printf style format
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "Ebeam", "%f", Ebeam);
-    AddString(items, "weight", "%f", weight);
-    AddString(items, "Electron E", "%f", 
-	      (ElectronShower!=NULL)?ElectronShower->getEnergy():0.);
-    AddString(items, "Positron E", "%f", 
-	      (PositronShower!=NULL)?PositronShower->getEnergy():0.);
-    AddString(items, "kpkm_chisq", "%f", kpkm_chisq);
-    AddString(items, "pimu_ML_classifier", "%f", pimu_ML_classifier); 
-    AddString(items, "pimem_ML_classifier", "%f", pimem_ML_classifier);
-    AddString(items, "pipep_ML_classifier", "%f", pipep_ML_classifier);
-    AddString(items, "K+ momentum", "%f", kp_v4.P());
-    AddString(items, "K- momentum", "%f", km_v4.P());
-    AddString(items, "pippim_chisq", "%f", pippim_chisq);
-    AddString(items, "pi+ momentum", "%f", pip_v4.P());
-    AddString(items, "pi- momentum", "%f", pim_v4.P());
-    AddString(items, "epem_chisq", "%f", epem_chisq);
-    AddString(items, "e+ momentum", "%f", ep_v4.P());
-    AddString(items, "e- momentum", "%f", em_v4.P());
+  void Summarize(JObjectSummary& summary) const override {
+
+    summary.add(Ebeam, "Ebeam", "%f");
+    summary.add(weight, "weight", "%f");
+    summary.add((ElectronShower!=NULL)?ElectronShower->getEnergy():0., "Electron E", "%f");
+    summary.add((PositronShower!=NULL)?PositronShower->getEnergy():0., "Positron E", "%f");
+    summary.add(kpkm_chisq, "kpkm_chisq", "%f");
+    summary.add(pimu_ML_classifier, "pimu_ML_classifier", "%f"); 
+    summary.add(pimem_ML_classifier, "pimem_ML_classifier", "%f");
+    summary.add(pipep_ML_classifier, "pipep_ML_classifier", "%f");
+    summary.add(kp_v4.P(), "K+ momentum", "%f");
+    summary.add(km_v4.P(), "K- momentum", "%f");
+    summary.add(pippim_chisq, "pippim_chisq", "%f");
+    summary.add(pip_v4.P(), "pi+ momentum", "%f");
+    summary.add(pim_v4.P(), "pi- momentum", "%f");
+    summary.add(epem_chisq, "epem_chisq", "%f");
+    summary.add(ep_v4.P(), "e+ momentum", "%f");
+    summary.add(em_v4.P(), "e- momentum", "%f");
   }
   
 };

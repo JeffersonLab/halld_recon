@@ -7,6 +7,7 @@
 
 #include "DNeutralShower_factory.h"
 #include "DEventRFBunch.h"
+#include "DANA/DEvent.h"
 
 inline bool DNeutralShower_SortByEnergy(const DNeutralShower* locNeutralShower1, const DNeutralShower* locNeutralShower2)
 {
@@ -37,38 +38,35 @@ DNeutralShower_factory::DNeutralShower_factory()
   dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>(); 
 
   TOF_RF_CUT = 6.5;
-  gPARMS->SetDefaultParameter("NeutralShower:TOF_RF_CUT", TOF_RF_CUT);
+  japp->SetDefaultParameter("NeutralShower:TOF_RF_CUT", TOF_RF_CUT);
   
   SC_RF_CUT_MIN = 1.0;
   SC_RF_CUT_MAX = 7.0;
-  gPARMS->SetDefaultParameter("NeutralShower:SC_RF_CUT_MIN", SC_RF_CUT_MIN);
-  gPARMS->SetDefaultParameter("NeutralShower:SC_RF_CUT_MAX", SC_RF_CUT_MAX);
+  japp->SetDefaultParameter("NeutralShower:SC_RF_CUT_MIN", SC_RF_CUT_MIN);
+  japp->SetDefaultParameter("NeutralShower:SC_RF_CUT_MAX", SC_RF_CUT_MAX);
 
   SC_Energy_CUT = 0.2;
-  gPARMS->SetDefaultParameter("NeutralShower:SC_Energy_CUT", SC_Energy_CUT);
+  japp->SetDefaultParameter("NeutralShower:SC_Energy_CUT", SC_Energy_CUT);
   
 }
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DNeutralShower_factory::init(void)
+void DNeutralShower_factory::Init()
 {
   dResourcePool_TMatrixFSym->Set_ControlParams(20, 20, 20);
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DNeutralShower_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DNeutralShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+  DGeometry* locGeometry = DEvent::GetDGeometry(event);
 
-  DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-  DGeometry* locGeometry = locApplication->GetDGeometry(runnumber);
-
-  jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+  JCalibration *jcalib = DEvent::GetJCalibration(event);
   double locTargetCenterZ;
   locGeometry->GetTargetZ(locTargetCenterZ);
   dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
@@ -81,30 +79,28 @@ jerror_t DNeutralShower_factory::brun(jana::JEventLoop *locEventLoop, int32_t ru
   m_beamSpotX = beam_spot.at("x");
   m_beamSpotY = beam_spot.at("y");
   
-  RunNumber = runnumber;
-
-  return NOERROR;
+  RunNumber = event->GetRunNumber();
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DNeutralShower_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   const DDetectorMatches* locDetectorMatches = NULL;
-  locEventLoop->GetSingle(locDetectorMatches);
+  event->GetSingle(locDetectorMatches);
     
   vector<const DBCALShower*> locBCALShowers;
-  locEventLoop->Get(locBCALShowers);
+  event->Get(locBCALShowers);
 
   vector<const DFCALShower*> locFCALShowers;
-  locEventLoop->Get(locFCALShowers);
+  event->Get(locFCALShowers);
 
   vector<const DCCALShower*> locCCALShowers;
-  locEventLoop->Get(locCCALShowers);
+  event->Get(locCCALShowers);
 
   vector< const DEventRFBunch* > eventRFBunches;
-  locEventLoop->Get(eventRFBunches);
+  event->Get(eventRFBunches);
   // there should always be one and only one object or else it is a coding error
   assert( eventRFBunches.size() == 1 );
   double rfTime = eventRFBunches[0]->dTime; // this is the RF time at the center of the target
@@ -112,14 +108,14 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
   //-----   TOF veto    -----//
   DVector3 vertex(m_beamSpotX, m_beamSpotY, dTargetCenter.Z());
   vector <const DTOFPoint*> locTOFPoints;
-  locEventLoop->Get(locTOFPoints);
+  event->Get(locTOFPoints);
   //-----   SC veto -----//
   vector<const DSCHit*> locSCHits;
-  locEventLoop->Get(locSCHits);
+  event->Get(locSCHits);
   
   // Loop over all DBCALShowers, create DNeutralShower if didn't match to any tracks
   // The chance of an actual neutral shower matching to a bogus track is very small
-  JObject::oid_t locShowerID = 0;
+  oid_t locShowerID = 0;
   for(size_t loc_i = 0; loc_i < locBCALShowers.size(); ++loc_i)
     {
       if(locDetectorMatches->Get_IsMatchedToTrack(locBCALShowers[loc_i]))
@@ -156,7 +152,7 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       
       locNeutralShower->AddAssociatedObject(locBCALShowers[loc_i]);
 
-      _data.push_back(locNeutralShower);
+      Insert(locNeutralShower);
     }
 
   // Loop over all DFCALShowers, create DNeutralShower if didn't match to any tracks
@@ -200,7 +196,7 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
 
       locNeutralShower->AddAssociatedObject(locFCALShowers[loc_i]);
 
-      _data.push_back(locNeutralShower);
+      Insert(locNeutralShower);
     }
   
   // Loop over all DCCALShowers, create DNeutralShower if didn't match to any tracks
@@ -229,28 +225,24 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
 
       locNeutralShower->AddAssociatedObject(locCCALShowers[loc_i]);
       
-      _data.push_back(locNeutralShower);
+      Insert(locNeutralShower);
     }
   
-  sort(_data.begin(), _data.end(), DNeutralShower_SortByEnergy);
-  
-  return NOERROR;
+  sort(mData.begin(), mData.end(), DNeutralShower_SortByEnergy);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DNeutralShower_factory::erun(void)
+void DNeutralShower_factory::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DNeutralShower_factory::fini(void)
+void DNeutralShower_factory::Finish()
 {
-  return NOERROR;
 }
 
 double DNeutralShower_factory::getFCALQuality( const DFCALShower* fcalShower, double rfTime ) const {

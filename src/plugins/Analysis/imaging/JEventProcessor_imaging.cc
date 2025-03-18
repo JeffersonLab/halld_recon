@@ -6,7 +6,6 @@
 //
 
 #include "JEventProcessor_imaging.h"
-using namespace jana;
 #include <TDirectory.h>
 #include <TMatrix.h>
 
@@ -14,12 +13,11 @@ using namespace jana;
 #include <TRACKING/DMCThrown.h>
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_imaging());
+	app->Add(new JEventProcessor_imaging());
 }
 } // "C"
 
@@ -29,7 +27,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_imaging::JEventProcessor_imaging()
 {
-
+	SetTypeName("JEventProcessor_imaging");
 }
 
 //------------------
@@ -41,20 +39,21 @@ JEventProcessor_imaging::~JEventProcessor_imaging()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_imaging::init(void)
+void JEventProcessor_imaging::Init()
 {
+  auto app = GetApplication();
   MC_RECON_CHECK=false;
-  gPARMS->SetDefaultParameter("IMAGING:MC_RECON_CHECK",MC_RECON_CHECK, "Turn on/off comparison to MC"); 
+  app->SetDefaultParameter("IMAGING:MC_RECON_CHECK",MC_RECON_CHECK, "Turn on/off comparison to MC"); 
   DEBUG_LEVEL=0;
-  gPARMS->SetDefaultParameter("IMAGING:DEBUG_LEVEL",DEBUG_LEVEL);
+  app->SetDefaultParameter("IMAGING:DEBUG_LEVEL",DEBUG_LEVEL);
   FIT_CL_CUT=0.05;
-  gPARMS->SetDefaultParameter("IMAGING:FIT_CL_CUT",FIT_CL_CUT, "CL cut for vertex fit"); 
+  app->SetDefaultParameter("IMAGING:FIT_CL_CUT",FIT_CL_CUT, "CL cut for vertex fit"); 
   TRACK_CL_CUT=1e-3;
-  gPARMS->SetDefaultParameter("IMAGING:TRACK_CL_CUT",TRACK_CL_CUT, "CL cut for tracks");
+  app->SetDefaultParameter("IMAGING:TRACK_CL_CUT",TRACK_CL_CUT, "CL cut for tracks");
   DOCA_CUT=1.0; 
-  gPARMS->SetDefaultParameter("IMAGING:DOCA_CUT",DOCA_CUT, "Maximum doca between tracks");
+  app->SetDefaultParameter("IMAGING:DOCA_CUT",DOCA_CUT, "Maximum doca between tracks");
 
 
   gDirectory->mkdir("Vertexes")->cd();
@@ -94,55 +93,50 @@ jerror_t JEventProcessor_imaging::init(void)
   }
     
   gDirectory->cd("../");
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_imaging::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_imaging::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  bfield=dapp->GetBfield(runnumber);
+  bfield=DEvent::GetBfield(event);
 
   dIsNoFieldFlag = ((dynamic_cast<const DMagneticFieldMapNoField*>(bfield)) != NULL);
 
-  eventLoop->GetSingle(dAnalysisUtilities);
-  
-  return NOERROR;
+  event->GetSingle(dAnalysisUtilities);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_imaging::Process(const std::shared_ptr<const JEvent>& event)
 {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
-  // loop->Get(...) to get reconstructed objects (and thereby activating the
+  // event->Get(...) to get reconstructed objects (and thereby activating the
   // reconstruction algorithm) should be done outside of any mutex lock
   // since multiple threads may call this method at the same time.
   // Here's an example:
   //
   // vector<const MyDataClass*> mydataclasses;
-  // loop->Get(mydataclasses);
+  // event->Get(mydataclasses);
   //
   // japp->RootFillLock(this);
   //  ... fill historgrams or trees ...
   // japp->RootFillUnLock(this);
   
   vector<const DChargedTrack*>tracks; 
-  loop->Get(tracks); 
-  if (tracks.size()<2) return NOERROR;
+  event->Get(tracks); 
+  if (tracks.size()<2) return;
 
   vector<const DMCThrown*>mcthrowns;
   if (MC_RECON_CHECK){
-    loop->Get(mcthrowns);
+    event->Get(mcthrowns);
   }
 
-  japp->RootWriteLock();
+  GetLockService(event)->RootFillLock(this);
 
   if (MC_RECON_CHECK && tracks.size()==2){
     // Check estimate of vertex position relative to thrown vertex for simple
@@ -232,31 +226,25 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
     } // first track 
   } // first loop over tracks
   
-  japp->RootUnLock();
-
-
-  
-  return NOERROR;
+  GetLockService(event)->RootFillUnLock(this);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_imaging::erun(void)
+void JEventProcessor_imaging::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_imaging::fini(void)
+void JEventProcessor_imaging::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 
 

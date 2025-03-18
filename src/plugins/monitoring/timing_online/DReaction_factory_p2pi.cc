@@ -9,9 +9,9 @@
 #include "DReaction_factory_p2pi.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DReaction_factory_p2pi::init(void)
+void DReaction_factory_p2pi::Init()
 {
 	// Make as many DReaction objects as desired
 	DReactionStep* locReactionStep = NULL;
@@ -104,18 +104,15 @@ jerror_t DReaction_factory_p2pi::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_TrackVertexComparison(locReaction));
 	
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
-
-	return NOERROR;
+	Insert(locReaction); //Register the DReaction with the factory
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_p2pi::fini(void)
+void DReaction_factory_p2pi::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
 }
 

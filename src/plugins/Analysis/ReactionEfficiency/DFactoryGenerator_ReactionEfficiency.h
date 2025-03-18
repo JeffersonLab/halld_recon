@@ -8,23 +8,22 @@
 #ifndef _DFactoryGenerator_ReactionEfficiency_
 #define _DFactoryGenerator_ReactionEfficiency_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_ReactionEfficiency.h"
 #include "DEventWriterROOT_factory_ReactionEfficiency.h"
 
-class DFactoryGenerator_ReactionEfficiency : public jana::JFactoryGenerator
+class DFactoryGenerator_ReactionEfficiency : public JFactoryGenerator
 {
 	public:
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DFactoryGenerator_ReactionEfficiency";}
 		
-		jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
+		void GenerateFactories(JFactorySet* fs)
 		{
-			locEventLoop->AddFactory(new DReaction_factory_ReactionEfficiency());
-			locEventLoop->AddFactory(new DEventWriterROOT_factory_ReactionEfficiency()); 
-			return NOERROR;
+			fs->Add(new DReaction_factory_ReactionEfficiency());
+			fs->Add(new DEventWriterROOT_factory_ReactionEfficiency()); 
+			return;
 		}
 };
 

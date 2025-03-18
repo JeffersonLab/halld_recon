@@ -10,14 +10,12 @@
 #include "TROOT.h"
 #include "TClass.h"
 
-#include "JANA/JEventLoop.h"
-#include "DANA/DApplication.h"
+#include <JANA/JEvent.h>
 #include "ANALYSIS/DParticleCombo.h"
 #include "ANALYSIS/DReaction.h"
 #include "ANALYSIS/DAnalysisUtilities.h"
 
 using namespace std;
-using namespace jana;
 using namespace DAnalysis;
 
 namespace DAnalysis
@@ -39,23 +37,23 @@ class DAnalysisAction
 			//any ROOT objects to be created by this object (e.g. histograms, trees) should be created in a version of THIS function in the derived class (make it public!)
 				//when creating ROOT objects, call CreateAndChangeTo_ActionDirectory() to navigate to the proper directory
 			//if not creating any objects, just define the function but leave it empty
-		virtual void Initialize(JEventLoop* locEventLoop) = 0;
-		virtual void Run_Update(JEventLoop* locEventLoop) = 0;
+		virtual void Initialize(const std::shared_ptr<const JEvent>& locEvent) = 0;
+		virtual void Run_Update(const std::shared_ptr<const JEvent>& locEvent) = 0;
 
 		//INHERITING CLASSES THAT OVERRIDE THIS METHOD MUST CALL THE BASE METHOD!!!
 		//Reset event (for clearing previously-histogrammed info (duplicate checking)
 		virtual void Reset_NewEvent(void){dCalledPriorWithComboFlag = false;}
 
 		//Function-call operators: Execute the action.
-		bool operator()(JEventLoop* locEventLoop); //DON'T CALL THIS FOR COMBO-DEPENDENT ACTIONS
-		bool operator()(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo); //THIS METHOD ASSUMES THAT ONLY ONE THREAD HAS ACCESS TO THIS OBJECT
+		bool operator()(const std::shared_ptr<const JEvent>& locEvent); //DON'T CALL THIS FOR COMBO-DEPENDENT ACTIONS
+		bool operator()(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo); //THIS METHOD ASSUMES THAT ONLY ONE THREAD HAS ACCESS TO THIS OBJECT
 
 	protected:
 
 		//INHERITING CLASSES MUST(!) DEFINE THIS METHOD
 			//FOR REACTION-INDEPENDENT ACTIONS: EXPECT THE INPUT DParticleCombo TO BE NULL.
 			//Make Perform_Action protected or private in derived classes (not public! should call operator() to execute instead)
-		virtual bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL) = 0;
+		virtual bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL) = 0;
 
 		//FOR ALL OF THE VIRTUAL METHODS:
 			//NEVER: Grab DParticleCombo objects (of any tag!) from the JEventLoop within these methods unless you know EXACTLY what you're doing (and if you're doing this, you probably don't)
@@ -119,17 +117,17 @@ class DAnalysisAction
 		DAnalysisAction(void); //to force inheriting classes to call the public constructor
 };
 
-inline bool DAnalysisAction::operator()(JEventLoop* locEventLoop)
+inline bool DAnalysisAction::operator()(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//ASSUMES ONLY CALLED ONCE PER EVENT
-	bool locResult = Perform_Action(locEventLoop, nullptr);
+	bool locResult = Perform_Action(locEvent, nullptr);
 	return (dPerformAntiCut ? !locResult : locResult);
 }
 
-inline bool DAnalysisAction::operator()(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+inline bool DAnalysisAction::operator()(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//THIS METHOD ASSUMES THAT ONLY ONE THREAD HAS ACCESS TO THIS OBJECT
-	bool locResult = Perform_Action(locEventLoop, locParticleCombo);
+	bool locResult = Perform_Action(locEvent, locParticleCombo);
 	dCalledPriorWithComboFlag = true;
 	return (dPerformAntiCut ? !locResult : locResult);
 }

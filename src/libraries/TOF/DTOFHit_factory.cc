@@ -59,14 +59,17 @@
 
 using namespace std;
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include <TOF/DTOFDigiHit.h>
 #include <TOF/DTOFTDCDigiHit.h>
 #include "DTOFHit_factory.h"
 #include <DAQ/Df250PulseIntegral.h>
 #include <DAQ/Df250Config.h>
 #include <DAQ/DCODAROCInfo.h>
+#include <DANA/DEvent.h>
 
-using namespace jana;
 
 static bool COSMIC_DATA = false;
 static bool OVERRIDE_HIGH_TIME_CUT = false;
@@ -75,12 +78,12 @@ static bool OVERRIDE_LOW_TIME_CUT = false;
 int TOF_DEBUG = 0;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTOFHit_factory::init(void)
+void DTOFHit_factory::Init()
 {
-
-  gPARMS->SetDefaultParameter("TOF:DEBUG_TOF_HITS", TOF_DEBUG,
+  auto app = GetApplication();
+  app->SetDefaultParameter("TOF:DEBUG_TOF_HITS", TOF_DEBUG,
 			      "Generate DEBUG output");
 
   USE_NEWAMP_4WALKCORR = 0; // flag to use this walk correction
@@ -90,22 +93,22 @@ jerror_t DTOFHit_factory::init(void)
 
   DELTA_T_ADC_TDC_MAX = 20.0; // ns
   //	DELTA_T_ADC_TDC_MAX = 30.0; // ns, value based on the studies from cosmic events
-  gPARMS->SetDefaultParameter("TOF:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX, 
+  app->SetDefaultParameter("TOF:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX, 
 			      "Maximum difference in ns between a (calibrated) fADC time and F1TDC time for them to be matched in a single hit");
   
   int analyze_cosmic_data = 0;
-  gPARMS->SetDefaultParameter("TOF:COSMIC_DATA", analyze_cosmic_data,
+  app->SetDefaultParameter("TOF:COSMIC_DATA", analyze_cosmic_data,
 			      "Special settings for analysing cosmic data");
   if(analyze_cosmic_data > 0)
     COSMIC_DATA = true;
   
   CHECK_FADC_ERRORS = true;
-  gPARMS->SetDefaultParameter("TOF:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, set to 0 to keep these hits");
+  app->SetDefaultParameter("TOF:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, set to 0 to keep these hits");
 
-  gPARMS->SetDefaultParameter("TOF:OVERRIDE_HIGH_TIME_CUT", OVERRIDE_HIGH_TIME_CUT, "Set to 1 to override the high side time cut, set to 0 to use the values from CCDB");
-  gPARMS->SetDefaultParameter("TOF:HIGH_TIME_CUT", hi_time_cut, "Set the value of the high side time cut");
-  gPARMS->SetDefaultParameter("TOF:OVERRIDE_LOW_TIME_CUT", OVERRIDE_LOW_TIME_CUT, "Set to 1 to override the low side time cut, set to 0 to use the values from CCDB");
-  gPARMS->SetDefaultParameter("TOF:LOW_TIME_CUT", lo_time_cut, "Set the value of the low side time cut");
+  app->SetDefaultParameter("TOF:OVERRIDE_HIGH_TIME_CUT", OVERRIDE_HIGH_TIME_CUT, "Set to 1 to override the high side time cut, set to 0 to use the values from CCDB");
+  app->SetDefaultParameter("TOF:HIGH_TIME_CUT", hi_time_cut, "Set the value of the high side time cut");
+  app->SetDefaultParameter("TOF:OVERRIDE_LOW_TIME_CUT", OVERRIDE_LOW_TIME_CUT, "Set to 1 to override the low side time cut, set to 0 to use the values from CCDB");
+  app->SetDefaultParameter("TOF:LOW_TIME_CUT", lo_time_cut, "Set the value of the low side time cut");
   
   
   /// Set basic conversion constants
@@ -124,14 +127,12 @@ jerror_t DTOFHit_factory::init(void)
   TOF_NUM_PLANES = 2;
   TOF_NUM_BARS = 44;
   TOF_MAX_CHANNELS = 176;
-  
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTOFHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   /// This method is called every time the run number changes and calibration
   /// parameters can be loaded from CCDB. These parameters include timing offsets
@@ -139,6 +140,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   /// At this point the selection of which walk correction is to be applied is done.
 
 
+    auto runnumber = event->GetRunNumber();
+    auto calibration = DEvent::GetJCalibration(event);
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
     static set<int> runs_announced;
@@ -152,8 +155,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     
     // read in geometry information
     vector<const DTOFGeometry*> tofGeomVect;
-    eventLoop->Get( tofGeomVect );
-    if(tofGeomVect.size()<1)  return OBJECT_NOT_AVAILABLE;
+    event->Get( tofGeomVect );
+    if(tofGeomVect.size()<1)  return; // OBJECT_NOT_AVAILABLE;
     const DTOFGeometry& tofGeom = *(tofGeomVect[0]);
     
     TOF_NUM_PLANES = tofGeom.Get_NPlanes();
@@ -183,8 +186,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
       vector<double> time_cut_values;
       string locTOFHitTimeCutTable = tofGeom.Get_CCDB_DirectoryName() + "/HitTimeCut";
-      if(eventLoop->GetCalib(locTOFHitTimeCutTable.c_str(), time_cut_values)){
-	jout << "Error loading " << locTOFHitTimeCutTable << " SET DEFUALT to 0 and 100!" << endl;
+      if(calibration->Get(locTOFHitTimeCutTable.c_str(), time_cut_values)){
+	jout << "Error loading " << locTOFHitTimeCutTable << " SET DEFUALT to 0 and 100!" << jendl;
 	TimeCenterCut = 0.;
 	TimeWidthCut = 100.;
       } else {
@@ -208,8 +211,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     // load scale factors
     map<string,double> scale_factors;
 	string locTOFDigiScalesTable = tofGeom.Get_CCDB_DirectoryName() + "/digi_scales";
-    if(eventLoop->GetCalib(locTOFDigiScalesTable.c_str(), scale_factors))
-      jout << "Error loading " << locTOFDigiScalesTable << " !" << endl;
+    if(calibration->Get(locTOFDigiScalesTable.c_str(), scale_factors))
+      jout << "Error loading " << locTOFDigiScalesTable << " !" << jendl;
     if( scale_factors.find("TOF_ADC_ASCALE") != scale_factors.end() ) {
       ;	//a_scale = scale_factors["TOF_ADC_ASCALE"];
     } else {
@@ -224,12 +227,12 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     // load base time offset
     map<string,double> base_time_offset;
 	string locTOFBaseTimeOffsetTable = tofGeom.Get_CCDB_DirectoryName() + "/base_time_offset";
-    if (eventLoop->GetCalib(locTOFBaseTimeOffsetTable.c_str(),base_time_offset))
-      jout << "Error loading " << locTOFBaseTimeOffsetTable << " !" << endl;
+    if (calibration->Get(locTOFBaseTimeOffsetTable.c_str(),base_time_offset))
+      jout << "Error loading " << locTOFBaseTimeOffsetTable << " !" << jendl;
     if (base_time_offset.find("TOF_BASE_TIME_OFFSET") != base_time_offset.end())
       t_base = base_time_offset["TOF_BASE_TIME_OFFSET"];
     else
-      jerr << "Unable to get TOF_BASE_TIME_OFFSET from "<<locTOFBaseTimeOffsetTable<<" !" << endl;	
+      jerr << "Unable to get TOF_BASE_TIME_OFFSET from "<<locTOFBaseTimeOffsetTable<<" !" << endl;
     
     if (base_time_offset.find("TOF_TDC_BASE_TIME_OFFSET") != base_time_offset.end())
       t_base_tdc = base_time_offset["TOF_TDC_BASE_TIME_OFFSET"];
@@ -238,29 +241,29 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     
     // load constant tables
     string locTOFPedestalsTable = tofGeom.Get_CCDB_DirectoryName() + "/pedestals";
-    if(eventLoop->GetCalib(locTOFPedestalsTable.c_str(), raw_adc_pedestals))
-      jout << "Error loading " << locTOFPedestalsTable << " !" << endl;
+    if(calibration->Get(locTOFPedestalsTable.c_str(), raw_adc_pedestals))
+      jout << "Error loading " << locTOFPedestalsTable << " !" << jendl;
     string locTOFGainsTable = tofGeom.Get_CCDB_DirectoryName() + "/gains";
-    if(eventLoop->GetCalib(locTOFGainsTable.c_str(), raw_adc_gains))
-      jout << "Error loading " << locTOFGainsTable << " !" << endl;
+    if(calibration->Get(locTOFGainsTable.c_str(), raw_adc_gains))
+      jout << "Error loading " << locTOFGainsTable << " !" << jendl;
     string locTOFADCTimeOffetsTable = tofGeom.Get_CCDB_DirectoryName() + "/adc_timing_offsets";
-    if(eventLoop->GetCalib(locTOFADCTimeOffetsTable.c_str(), raw_adc_offsets))
-      jout << "Error loading " << locTOFADCTimeOffetsTable << " !" << endl;
+    if(calibration->Get(locTOFADCTimeOffetsTable.c_str(), raw_adc_offsets))
+      jout << "Error loading " << locTOFADCTimeOffetsTable << " !" << jendl;
 
     string locADCBadChannelsTable = tofGeom.Get_CCDB_DirectoryName() + "/adc_bad_channels";
-    if(eventLoop->GetCalib(locADCBadChannelsTable.c_str(), raw_adc_bad_channels))
+    if(DEvent::GetCalib(event, locADCBadChannelsTable.c_str(), raw_adc_bad_channels))
       jout << "Error loading " << locADCBadChannelsTable << " !" << endl;
     string locTDCBadChannelsTable = tofGeom.Get_CCDB_DirectoryName() + "/tdc_bad_channels";
-    if(eventLoop->GetCalib(locTDCBadChannelsTable.c_str(), raw_tdc_bad_channels))
+    if(DEvent::GetCalib(event, locTDCBadChannelsTable.c_str(), raw_tdc_bad_channels))
       jout << "Error loading " << locTDCBadChannelsTable << " !" << endl;
     
     // check which walk correction to use:
     string locTOFWalkCorrectionType = tofGeom.Get_CCDB_DirectoryName() + "/walkcorr_type";
     vector<int> walkcorrtype;
-    if(eventLoop->GetCalib(locTOFWalkCorrectionType.c_str(), walkcorrtype)) {
+    if(calibration->Get(locTOFWalkCorrectionType.c_str(), walkcorrtype)) {
       jout<<"\033[1;31m";  // red text";
       jout<< "Error loading "<<locTOFWalkCorrectionType<<" !\033[0m" << endl;
-      return (jerror_t)101;
+      return; // (jerror_t)101;
     }
     
     switch ((int)walkcorrtype[0]) {
@@ -269,12 +272,12 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
       {
 	if(print_messages) jout<<"TOF: USE WALK CORRECTION TYPE 1"<<endl;
 	string locTOFTimewalkTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms";
-	if(eventLoop->GetCalib(locTOFTimewalkTable.c_str(), timewalk_parameters)){
-	  jout << "Error loading "<<locTOFTimewalkTable<<" !" << endl;
+	if(calibration->Get(locTOFTimewalkTable.c_str(), timewalk_parameters)){
+	  jout << "Error loading "<<locTOFTimewalkTable<<" !" << jendl;
 	}
 	string locTOFChanOffsetTable1 = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets";
-	if(eventLoop->GetCalib(locTOFChanOffsetTable1.c_str(), raw_tdc_offsets)){
-	  jout << "Error loading "<<locTOFChanOffsetTable1<<" !" << endl;
+	if(calibration->Get(locTOFChanOffsetTable1.c_str(), raw_tdc_offsets)){
+	  jout << "Error loading "<<locTOFChanOffsetTable1<<" !" << jendl;
 	}
       }
       break;
@@ -284,12 +287,12 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	if(print_messages) jout<<"TOF: USE WALK CORRECTION TYPE 2"<<endl;
 	USE_AMP_4WALKCORR = 1;
 	string locTOFTimewalkAMPTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms_AMP";
-	if(eventLoop->GetCalib(locTOFTimewalkAMPTable.c_str(), timewalk_parameters_AMP)){
-	  jout << "Error loading "<<locTOFTimewalkAMPTable<<" !" << endl;
+	if(calibration->Get(locTOFTimewalkAMPTable.c_str(), timewalk_parameters_AMP)){
+	  jout << "Error loading "<<locTOFTimewalkAMPTable<<" !" << jendl;
 	}
 	string locTOFChanOffsetTable2 = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets";
-	if(eventLoop->GetCalib(locTOFChanOffsetTable2.c_str(), raw_tdc_offsets)){
-	  jout << "Error loading "<<locTOFChanOffsetTable2<<" !" << endl;
+	if(calibration->Get(locTOFChanOffsetTable2.c_str(), raw_tdc_offsets)){
+	  jout << "Error loading "<<locTOFChanOffsetTable2<<" !" << jendl;
 	}
       }
       break;
@@ -299,12 +302,12 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	if(print_messages) jout<<"TOF: USE WALK CORRECTION TYPE 3"<<endl;
 	USE_NEWAMP_4WALKCORR = 1;
 	string locTOFChanOffsetNEWAMPTable = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets_NEWAMP";
-	if(eventLoop->GetCalib(locTOFChanOffsetNEWAMPTable.c_str(), raw_tdc_offsets)) {
-	  jout<< "Error loading "<<locTOFChanOffsetNEWAMPTable<<" !" << endl;
+	if(calibration->Get(locTOFChanOffsetNEWAMPTable.c_str(), raw_tdc_offsets)) {
+	  jout<< "Error loading "<<locTOFChanOffsetNEWAMPTable<<" !" << jendl;
 	}
 	string locTOFTimewalkNEWAMPTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms_NEWAMP";
-	if(eventLoop->GetCalib(locTOFTimewalkNEWAMPTable.c_str(), timewalk_parameters_NEWAMP)){
-	  jout << "Error loading "<<locTOFTimewalkNEWAMPTable<<" !" << endl;
+	if(calibration->Get(locTOFTimewalkNEWAMPTable.c_str(), timewalk_parameters_NEWAMP)){
+	  jout << "Error loading "<<locTOFTimewalkNEWAMPTable<<" !" << jendl;
 	}
       }
       break;
@@ -314,12 +317,12 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	if(print_messages) jout<<"TOF: USE WALK CORRECTION TYPE 4"<<endl;
 	USE_NEW_WALK_NEW = 1;
 	string locTOFTimewalkNEWTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms_5PAR";
-	if(eventLoop->GetCalib(locTOFTimewalkNEWTable.c_str(), timewalk_parameters_5PAR)){
-	  jout << "Error loading "<<locTOFTimewalkNEWTable<<" !" << endl;
+	if(calibration->Get(locTOFTimewalkNEWTable.c_str(), timewalk_parameters_5PAR)){
+	  jout << "Error loading "<<locTOFTimewalkNEWTable<<" !" << jendl;
 	}
 	string locTOFChanOffsetTable = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets_5PAR";
-	if(eventLoop->GetCalib(locTOFChanOffsetTable.c_str(), raw_tdc_offsets)){
-	  jout << "Error loading "<<locTOFChanOffsetTable<<" !" << endl;
+	if(calibration->Get(locTOFChanOffsetTable.c_str(), raw_tdc_offsets)){
+	  jout << "Error loading "<<locTOFChanOffsetTable<<" !" << jendl;
 	}
       }
       break;
@@ -336,8 +339,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     
     
     string locTOFADC2ETable = tofGeom.Get_CCDB_DirectoryName() + "/adc2E";
-    if(eventLoop->GetCalib(locTOFADC2ETable.c_str(), raw_adc2E))
-      jout << "Error loading " << locTOFADC2ETable << " !" << endl;
+    if(calibration->Get(locTOFADC2ETable.c_str(), raw_adc2E))
+      jout << "Error loading " << locTOFADC2ETable << " !" << jendl;
     
     // make sure we have one entry per channel
     adc2E.resize(TOF_NUM_PLANES*TOF_NUM_BARS*2);
@@ -352,13 +355,12 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
       CheckCalibTable(tdc_time_offsets,"/TOF/timing_offsets");
     */
 
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTOFHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   /// Generate DTOFHit object for each DTOFDigiHit object.
   /// This is where the first set of calibration constants
@@ -375,16 +377,17 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   ///
   /// Note that this code does NOT get called for simulated
   /// data in HDDM format. The HDDM event source will copy
-  /// the precalibrated values directly into the _data vector.
-  
-  const DTTabUtilities* locTTabUtilities = NULL;
-  loop->GetSingle(locTTabUtilities);
+  /// the precalibrated values directly into the mData vector.
 
-  //
+  auto eventnumber = event->GetEventNumber();
+
+  const DTTabUtilities* locTTabUtilities = NULL;
+  event->GetSingle(locTTabUtilities);
+  
   // First, make hits out of all fADC250 hits
   //
   vector<const DTOFDigiHit*> digihits;
-  loop->Get(digihits);
+  event->Get(digihits);
   for(unsigned int i=0; i<digihits.size(); i++){
     const DTOFDigiHit *digihit = digihits[i];
 
@@ -526,12 +529,12 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     hit->AddAssociatedObject(digihit);
     
-    _data.push_back(hit);
-  } // looping over all fADC hits done
+    Insert(hit);
+  }
   
   //Get the TDC hits
   vector<const DTOFTDCDigiHit*> tdcdigihits;
-  loop->Get(tdcdigihits);
+  event->Get(tdcdigihits);
   
   // Next, loop over TDC hits, matching them to the
   // existing fADC hits where possible and updating
@@ -574,7 +577,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	hit->t_fADC=numeric_limits<double>::quiet_NaN();
 	hit->has_fADC=false;
 	
-	_data.push_back(hit);
+	Insert(hit);
 	*/
       } else if (hit->has_TDC) {
 	// found matching ADC hit but this ADC hit has already a matching TDC, make new tof ADC hit
@@ -590,7 +593,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	newhit->t = hit->t_fADC;  // set initial time to the ADC time, in case there's no matching TDC hit	
 	newhit->has_TDC=false;
 	newhit->AddAssociatedObject(digihit);
-	_data.push_back(newhit);
+	Insert(newhit);
 	hit = newhit;
       }
 
@@ -634,13 +637,11 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
   
   // Apply calibration constants to convert pulse integrals to energy units
-  for (unsigned int i=0;i<_data.size();i++){
-    int id=2*TOF_NUM_BARS*_data[i]->plane + TOF_NUM_BARS*_data[i]->end + _data[i]->bar-1;
-    _data[i]->dE *= adc2E[id];
-    //cout<<id<<"   "<< adc2E[id]<<"      "<<_data[i]->dE<<endl;
+  for (unsigned int i=0;i<mData.size();i++){
+    int id=2*TOF_NUM_BARS*mData[i]->plane + TOF_NUM_BARS*mData[i]->end + mData[i]->bar-1;
+    mData[i]->dE *= adc2E[id];
+    //cout<<id<<"   "<< adc2E[id]<<"      "<<mData[i]->dE<<endl;
   }
-  
-  return NOERROR;
 }
 
 //------------------
@@ -661,8 +662,8 @@ DTOFHit* DTOFHit_factory::FindMatch(int plane, int bar, int end, double T)
     // Loop over existing hits (from fADC) and look for a match
     // in both the sector and the time.
 
-    for(unsigned int i=0; i<_data.size(); i++){
-        DTOFHit *hit = _data[i];
+    for(unsigned int i=0; i<mData.size(); i++){
+        DTOFHit *hit = mData[i];
 
         if(!isfinite(hit->t_fADC)) continue; // only match to fADC hits, not bachelor TDC hits
         if(hit->plane != plane) continue;
@@ -687,19 +688,17 @@ DTOFHit* DTOFHit_factory::FindMatch(int plane, int bar, int end, double T)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTOFHit_factory::erun(void)
+void DTOFHit_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTOFHit_factory::fini(void)
+void DTOFHit_factory::Finish()
 {
-    return NOERROR;
 }
 
 

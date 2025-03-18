@@ -6,11 +6,10 @@
 #ifndef _DDIRCLut_
 #define _DDIRCLut_
 
-#include <JANA/JFactory.h>
 #include <JANA/JObject.h>
-using namespace jana;
+#include <JANA/Services/JLockService.h>
 
-#include <DANA/DApplication.h>
+#include <DANA/DGeometryManager.h>
 #include <PID/DDetectorMatches.h>
 #include <DIRC/DDIRCGeometry.h>
 #include <DIRC/DDIRCLutReader.h>
@@ -25,16 +24,18 @@ using namespace jana;
 #include "TH2.h"
 #include "TF1.h"
 
+#include <queue>
+
 class DDIRCLut: public JObject {
 
 public:
 	
 	JOBJECT_PUBLIC(DDIRCLut);
 
-	DDIRCLut();
+	DDIRCLut(){};
 	~DDIRCLut(){};
 
-	bool brun(JEventLoop *loop);
+	bool Init(const std::shared_ptr<const JEvent>& event);
 	bool CreateDebugHistograms();
 	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const;
 	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const;
@@ -44,7 +45,9 @@ public:
 	map<Particle_t, double> CalcExpectedAngles(double locP) const;
 	
 private:
-	DApplication *dapp;
+	std::shared_ptr<DGeometryManager> dGeometryManager;
+	std::shared_ptr<JLockService> lockService;
+
 	DDIRCLutReader *dDIRCLutReader;
 	const DDIRCGeometry *dDIRCGeometry;
 	
@@ -71,7 +74,7 @@ private:
 
 	TH1I *hDiff, *hDiffT, *hDiffD, *hDiffR, *hTime, *hCalc, *hNph, *hNphC;
 	TH2I *hDiff_Pixel[2];
-	deque<Particle_t> dFinalStatePIDs;
+	std::deque<Particle_t> dFinalStatePIDs;
 	map<Particle_t, TH1I*> hDeltaThetaC;
 	map<Particle_t, TH2I*> hDeltaThetaC_Pixel;
 

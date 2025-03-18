@@ -27,7 +27,7 @@
 	X(DTSGBORConfig)
 
 
-#include <JANA/jerror.h>
+#include <DANA/jerror.h>
 
 #include <DAQ/LinkAssociations.h>
 

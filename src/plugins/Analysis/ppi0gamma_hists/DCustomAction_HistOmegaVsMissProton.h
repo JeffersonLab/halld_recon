@@ -11,7 +11,7 @@
 #include <string>
 #include <iostream>
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "JANA/JApplication.h"
 
 #include "ANALYSIS/DAnalysisAction.h"
@@ -22,7 +22,6 @@
 #include "TH2I.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_HistOmegaVsMissProton : public DAnalysisAction
 {
@@ -31,12 +30,12 @@ class DCustomAction_HistOmegaVsMissProton : public DAnalysisAction
 		DCustomAction_HistOmegaVsMissProton(const DReaction* locReaction, string locActionUniqueString = "") : 
 		DAnalysisAction(locReaction, "Custom_HistOmegaVsMissProton", false, locActionUniqueString) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop) { locEventLoop->GetSingle(dAnalysisUtilities); }
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) { locEvent->GetSingle(dAnalysisUtilities); }
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		// Optional: Useful utility functions.
 		const DAnalysisUtilities* dAnalysisUtilities;

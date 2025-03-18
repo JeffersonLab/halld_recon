@@ -11,35 +11,41 @@ using namespace std;
 #include "DIRC/DDIRCPmtHit_factory.h"
 #include "TTAB/DTTabUtilities.h"
 #include "DAQ/DDIRCTriggerTime.h"
-using namespace jana;
+
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DDIRCPmtHit_factory::init(void)
+void DDIRCPmtHit_factory::Init()
 {
-        DIRC_SKIP = false;
-	gPARMS->SetDefaultParameter("DIRC:SKIP",DIRC_SKIP);
+	auto app = GetApplication();
+	DIRC_SKIP = false;
+	app->SetDefaultParameter("DIRC:SKIP",DIRC_SKIP);
 	DIRC_TIME_OFFSET = true;
-	gPARMS->SetDefaultParameter("DIRC:TIME_OFFSET",DIRC_TIME_OFFSET);
+	app->SetDefaultParameter("DIRC:TIME_OFFSET",DIRC_TIME_OFFSET);
 	DIRC_TIMEWALK = true;
-        gPARMS->SetDefaultParameter("DIRC:TIMEWALK",DIRC_TIMEWALK);
+	app->SetDefaultParameter("DIRC:TIMEWALK",DIRC_TIMEWALK);
 
-	// initialize calibration tables
+	// Initialize calibration tables
 	vector<double> new_t0s(DIRC_MAX_CHANNELS);
 	vector<int> new_status(DIRC_MAX_CHANNELS);
 	
 	time_offsets.push_back(new_t0s); time_offsets.push_back(new_t0s); 
 	channel_status.push_back(new_status); channel_status.push_back(new_status);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DDIRCPmtHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DDIRCPmtHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	auto runnumber = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
 	// Only print messages for one thread whenever run number change
 	static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 	static set<int> runs_announced;
@@ -51,36 +57,35 @@ jerror_t DDIRCPmtHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumbe
 	}
 	pthread_mutex_unlock(&print_mutex);
 	
-	if(print_messages) jout << "In DDIRCPmtHit_factory, loading constants..." << endl;
+	if(print_messages) jout << "In DDIRCPmtHit_factory, loading constants..." << jendl;
 	
 	// load base time offset
 	map<string,double> base_time_offset;
-	if (eventLoop->GetCalib("/DIRC/base_time_offset",base_time_offset))
-		jout << "Error loading /DIRC/base_time_offset !" << endl;
+	if (calibration->Get("/DIRC/base_time_offset",base_time_offset))
+		jout << "Error loading /DIRC/base_time_offset !" << jendl;
 	else if (base_time_offset.find("t0_North") != base_time_offset.end() && base_time_offset.find("t0_South") != base_time_offset.end()) {
 		t_base[0] = base_time_offset["t0_North"];
 		t_base[1] = base_time_offset["t0_South"];
 	}
 	else
-		jerr << "Unable to get t0s from /DIRC/base_time_offset !" << endl;
+		jerr << "Unable to get t0s from /DIRC/base_time_offset !" << jendl;
 	
 	// load constant tables
-	if (eventLoop->GetCalib("/DIRC/North/timing_offsets", time_offsets[0]))
-		jout << "Error loading /DIRC/North/timing_offsets !" << endl;
-	if (eventLoop->GetCalib("/DIRC/North/channel_status", channel_status[0]))
-		jout << "Error loading /DIRC/North/channel_status !" << endl;
-	if (eventLoop->GetCalib("/DIRC/South/timing_offsets", time_offsets[1]))
-		jout << "Error loading /DIRC/South/timing_offsets !" << endl;
-	if (eventLoop->GetCalib("/DIRC/South/channel_status", channel_status[1]))
-		jout << "Error loading /DIRC/South/channel_status !" << endl;
+	if (calibration->Get("/DIRC/North/timing_offsets", time_offsets[0]))
+		jout << "Error loading /DIRC/North/timing_offsets !" << jendl;
+	if (calibration->Get("/DIRC/North/channel_status", channel_status[0]))
+		jout << "Error loading /DIRC/North/channel_status !" << jendl;
+	if (calibration->Get("/DIRC/South/timing_offsets", time_offsets[1]))
+		jout << "Error loading /DIRC/South/timing_offsets !" << jendl;
+	if (calibration->Get("/DIRC/South/channel_status", channel_status[1]))
+		jout << "Error loading /DIRC/South/channel_status !" << jendl;
 
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DDIRCPmtHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
     /// Generate DDIRCPmtHit object for each DDIRCDigiHit object.
     /// This is where the first set of calibration constants
@@ -92,20 +97,20 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// the precalibrated values directly into the _data vector.
 
     if(DIRC_SKIP) 
-      return NOERROR;
+      return;
 
     // check that SSP board timestamps match for all modules 
     vector<const DDIRCTriggerTime*> timestamps;
-    loop->Get(timestamps);
+    event->Get(timestamps);
     if(timestamps.size() > 0) {
 	    for (unsigned int i=0; i < timestamps.size()-1; i++) {
 		    if(timestamps[i]->time != timestamps[i+1]->time) 
-			    return NOERROR;
+			    return;
 	    }
     }
 
     vector<const DCODAROCInfo*> locCODAROCInfos;
-    eventLoop->Get(locCODAROCInfos);
+    event->Get(locCODAROCInfos);
     uint64_t locReferenceClockTime = 0;
     for (const auto& locCODAROCInfo : locCODAROCInfos) {
         if(locCODAROCInfo->rocid == 92) {
@@ -114,7 +119,7 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
 
     vector<const DDIRCTDCDigiHit*> digihits;
-    loop->Get(digihits);
+    event->Get(digihits);
     
     // loop over leading edges
     for (unsigned int i=0; i < digihits.size(); i++) {
@@ -170,25 +175,21 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
  
 		    hit->AddAssociatedObject(digihit_lead);
 		    hit->AddAssociatedObject(digihit_trail);
-		    _data.push_back(hit);
+		    Insert(hit);
 	    }
     }
-		    
-    return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DDIRCPmtHit_factory::erun(void)
+void DDIRCPmtHit_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DDIRCPmtHit_factory::fini(void)
+void DDIRCPmtHit_factory::Finish()
 {
-    return NOERROR;
 }

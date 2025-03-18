@@ -6,7 +6,6 @@
 // A.S. 1/13/2022 add reference time determined by the PSC
 
 #include "JEventProcessor_TAGH_timewalk.h"
-using namespace jana;
 using namespace std;
 
 #include <TAGGER/DTAGHHit.h>
@@ -18,8 +17,7 @@ using namespace std;
 #include <PAIR_SPECTROMETER/DPSCPair.h>
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <TDirectory.h>
 #include <TH1.h>
 #include <TH2.h>
@@ -38,7 +36,7 @@ static TH2I *htagh_rf_psc;
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_TAGH_timewalk());
+        app->Add(new JEventProcessor_TAGH_timewalk());
     }
 } // "C"
 
@@ -48,7 +46,7 @@ extern "C"{
 //------------------
 JEventProcessor_TAGH_timewalk::JEventProcessor_TAGH_timewalk()
 {
-
+	SetTypeName("JEventProcessor_TAGH_timewalk");
 }
 
 //------------------
@@ -60,10 +58,13 @@ JEventProcessor_TAGH_timewalk::~JEventProcessor_TAGH_timewalk()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_TAGH_timewalk::init(void)
+void JEventProcessor_TAGH_timewalk::Init()
 {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
+
     // This is called once at program startup. If you are creating
     // and filling historgrams in this plugin, you should lock the
     // ROOT mutex like this:
@@ -98,52 +99,49 @@ jerror_t JEventProcessor_TAGH_timewalk::init(void)
         hTAGHRF_correctedTdcTimeDiffVsPulseHeight[i] = new TH2I(name,title+";pulse height [fADC counts];time(TDC) - time(RF) [ns]",41,0,4100,50,-2.5,2.5);
     }
     mainDir->cd();
-
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_TAGH_timewalk::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_TAGH_timewalk::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // This is called whenever the run number changes
-    dRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
+    dRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime", ""));
     vector<const DRFTime*> locRFTimes;
-    eventLoop->Get(locRFTimes);
-    return NOERROR;
+    event->Get(locRFTimes);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_TAGH_timewalk::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_TAGH_timewalk::Process(const std::shared_ptr<const JEvent>& event)
 {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
-    // loop->Get(...) to get reconstructed objects (and thereby activating the
+    // event->Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
 
   vector<const DTAGHGeometry*> taghGeomVect;
 
-  loop->Get( taghGeomVect );  
+  event->Get( taghGeomVect );
   if (taghGeomVect.size() < 1){
     cout << "  taghGeomVect not found " << endl;
-    return OBJECT_NOT_AVAILABLE;  
+    return; // OBJECT_NOT_AVAILABLE;
   }
     
   const DTAGHGeometry&  taghGeom =  *(taghGeomVect[0]);
     
 
     vector<const DTAGHHit*> taghhits;
-    loop->Get(taghhits, "Calib");
+    event->Get(taghhits, "Calib");
     
     vector<const DPSCPair*>   psc_pairs;
-    loop->Get(psc_pairs); 
+    event->Get(psc_pairs);
     
     vector<const DPSPair*>   ps_pairs;
-    loop->Get(ps_pairs); 
+    event->Get(ps_pairs);
 
 //    RFs for PS and PSC
 //  Use two separate RFs
@@ -155,20 +153,20 @@ jerror_t JEventProcessor_TAGH_timewalk::evnt(JEventLoop *loop, uint64_t eventnum
     vector <const DRFTime*> rfTimesPSC;
 
 
-    loop->Get(rfTimesPSC,"PSC");
+    event->Get(rfTimesPSC,"PSC");
 
     if (rfTimesPSC.size() > 0)
       rfTimePSC = rfTimesPSC[0];
     else
-      return NOERROR;
+      return; // NOERROR;
 
 
-    loop->Get(rfTimes,"TAGH");
+    event->Get(rfTimes,"TAGH");
 
     if (rfTimes.size() > 0)
         rfTime = rfTimes[0];
     else
-        return NOERROR;
+        return;
 
     
 
@@ -190,7 +188,7 @@ jerror_t JEventProcessor_TAGH_timewalk::evnt(JEventLoop *loop, uint64_t eventnum
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     double t_RF = rfTime->dTime;
 
@@ -232,27 +230,23 @@ jerror_t JEventProcessor_TAGH_timewalk::evnt(JEventLoop *loop, uint64_t eventnum
 
     }
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-    return NOERROR;
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_TAGH_timewalk::erun(void)
+void JEventProcessor_TAGH_timewalk::EndRun()
 {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_TAGH_timewalk::fini(void)
+void JEventProcessor_TAGH_timewalk::Finish()
 {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }

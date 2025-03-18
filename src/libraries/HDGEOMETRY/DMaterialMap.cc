@@ -5,7 +5,6 @@
 #include <cmath>
 using namespace std;
 
-#include <DANA/DApplication.h>
 #include <DVector2.h>
 
 #include "DMaterialMap.h"
@@ -15,7 +14,7 @@ using namespace std;
 //-----------------
 // DMaterialMap  (Constructor)
 //-----------------
-DMaterialMap::DMaterialMap(string namepath, JCalibration *jcalib)
+DMaterialMap::DMaterialMap(string namepath, JCalibration *jcalib, JParameterManager *params)
 {
 	/// Read the specified material map in from the calibration database.
 	/// This will read in the map and figure out the number of grid
@@ -25,8 +24,8 @@ DMaterialMap::DMaterialMap(string namepath, JCalibration *jcalib)
 	MAX_BOUNDARY_SEARCH_STEPS = 30;
 	ENABLE_BOUNDARY_CHECK = true;
 	
-	gPARMS->SetDefaultParameter("GEOM:MAX_BOUNDARY_SEARCH_STEPS", MAX_BOUNDARY_SEARCH_STEPS, "Maximum number of steps (cells) to iterate when searching for a material boundary in DMaterialMap::EstimatedDistanceToBoundary(...)");
-	gPARMS->SetDefaultParameter("GEOM:ENABLE_BOUNDARY_CHECK", ENABLE_BOUNDARY_CHECK, "Enable boundary checking (superceeds any setting in DReferenceTrajectory). This is for debugging only.");
+	params->SetDefaultParameter("GEOM:MAX_BOUNDARY_SEARCH_STEPS", MAX_BOUNDARY_SEARCH_STEPS, "Maximum number of steps (cells) to iterate when searching for a material boundary in DMaterialMap::EstimatedDistanceToBoundary(...)");
+	params->SetDefaultParameter("GEOM:ENABLE_BOUNDARY_CHECK", ENABLE_BOUNDARY_CHECK, "Enable boundary checking (superceeds any setting in DReferenceTrajectory). This is for debugging only.");
 
 	this->namepath = namepath;
 

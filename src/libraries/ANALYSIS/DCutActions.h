@@ -8,7 +8,7 @@
 #include "TRandom3.h"
 #include "TMath.h"
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 
 #include "particleType.h"
 #include "TRACKING/DMCThrown.h"
@@ -23,7 +23,6 @@
 #include "ANALYSIS/DAnalysisUtilities.h"
 #include "ANALYSIS/DMCThrownMatching.h"
 
-using namespace jana;
 using namespace std;
 
 /*
@@ -75,11 +74,11 @@ class DCutAction_MinTrackHits : public DAnalysisAction
 		dMinTrackHits(locMinTrackHits), dParticleID(nullptr){}
 
 		string Get_ActionName(void) const;
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		unsigned int dMinTrackHits;
 		const DParticleID* dParticleID = nullptr;
@@ -95,11 +94,11 @@ class DCutAction_ThrownTopology : public DAnalysisAction
 		dExclusiveMatchFlag(locExclusiveMatchFlag){}
 
 		string Get_ActionName(void) const;
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		bool dExclusiveMatchFlag; //if false: inclusive match
 		const DAnalysisUtilities* dAnalysisUtilities = nullptr;
@@ -111,11 +110,11 @@ class DCutAction_AllTracksHaveDetectorMatch : public DAnalysisAction
 		DCutAction_AllTracksHaveDetectorMatch(const DReaction* locReaction, string locActionUniqueString = "") : 
 		DAnalysisAction(locReaction, "Cut_AllTracksHaveDetectorMatch", false, locActionUniqueString) {}
 
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 };
 
 class DCutAction_PIDFOM : public DAnalysisAction
@@ -126,11 +125,11 @@ class DCutAction_PIDFOM : public DAnalysisAction
 		dStepPID(locStepPID), dParticleID(locParticleID), dMinimumConfidenceLevel(locMinimumConfidenceLevel), dCutNDFZeroFlag(locCutNDFZeroFlag){}
 
 		string Get_ActionName(void) const;
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		Particle_t dStepPID;
 		Particle_t dParticleID;
@@ -146,11 +145,11 @@ class DCutAction_EachPIDFOM : public DAnalysisAction
 		dMinimumConfidenceLevel(locMinimumConfidenceLevel), dCutNDFZeroFlag(locCutNDFZeroFlag){}
 
 		string Get_ActionName(void) const;
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinimumConfidenceLevel;
 		bool dCutNDFZeroFlag;
@@ -163,11 +162,11 @@ class DCutAction_CombinedPIDFOM : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_CombinedPIDFOM", false, locActionUniqueString), dMinimumConfidenceLevel(locMinimumConfidenceLevel), dCutNDFZeroFlag(locCutNDFZeroFlag){}
 
 		string Get_ActionName(void) const;
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinimumConfidenceLevel;
 		bool dCutNDFZeroFlag;
@@ -180,11 +179,11 @@ class DCutAction_CombinedTrackingFOM : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_CombinedTrackingFOM", false, locActionUniqueString), dMinimumConfidenceLevel(locMinimumConfidenceLevel){}
 
 		string Get_ActionName(void) const;
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinimumConfidenceLevel;
 };
@@ -195,11 +194,11 @@ class DCutAction_TrueBeamParticle : public DAnalysisAction
 		DCutAction_TrueBeamParticle(const DReaction* locReaction, string locActionUniqueString = "") : 
 		DAnalysisAction(locReaction, "Cut_TrueBeamParticle", false, locActionUniqueString){}
 
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 };
 
 class DCutAction_TrueCombo : public DAnalysisAction
@@ -211,13 +210,13 @@ class DCutAction_TrueCombo : public DAnalysisAction
 		dMinThrownMatchFOM(locMinThrownMatchFOM), dExclusiveMatchFlag(locExclusiveMatchFlag), 
 		dCutAction_ThrownTopology(NULL), dCutAction_TrueBeamParticle(NULL){}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 		~DCutAction_TrueCombo(void);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinThrownMatchFOM;
 		bool dExclusiveMatchFlag;
@@ -244,13 +243,13 @@ class DCutAction_BDTSignalCombo : public DAnalysisAction
 		dMinThrownMatchFOM(locMinThrownMatchFOM), dExclusiveMatchFlag(locExclusiveMatchFlag), 
 		dIncludeDecayingToReactionFlag(locIncludeDecayingToReactionFlag), dCutAction_TrueBeamParticle(NULL){}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 		~DCutAction_BDTSignalCombo(void);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinThrownMatchFOM;
 		bool dExclusiveMatchFlag;
@@ -267,11 +266,11 @@ class DCutAction_TruePID : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_TruePID", false, locActionUniqueString), 
 		dTruePID(locTruePID), dInitialPID(locInitialPID), dMinThrownMatchFOM(locMinThrownMatchFOM){}
 
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		Particle_t dTruePID;
 		Particle_t dInitialPID;
@@ -285,11 +284,11 @@ class DCutAction_AllTruePID : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_AllTruePID", false, locActionUniqueString), 
 		dMinThrownMatchFOM(locMinThrownMatchFOM){}
 
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinThrownMatchFOM;
 };
@@ -301,11 +300,11 @@ class DCutAction_ProductionVertexZ : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_ProductionVertexZ", false, locActionUniqueString), dMinVertexZ(locMinVertexZ), dMaxVertexZ(locMaxVertexZ){}
 
 		string Get_ActionName(void) const;
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinVertexZ;
 		double dMaxVertexZ;
@@ -318,11 +317,11 @@ class DCutAction_AllVertexZ : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_AllVertexZ", false, locActionUniqueString), dMinVertexZ(locMinVertexZ), dMaxVertexZ(locMaxVertexZ){}
 
 		string Get_ActionName(void) const;
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinVertexZ;
 		double dMaxVertexZ;
@@ -335,11 +334,11 @@ class DCutAction_MaxTrackDOCA : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_MaxTrackDOCA", false, locActionUniqueString), dInitialPID(locInitialPID), dMaxTrackDOCA(locMaxTrackDOCA){}
 
 		string Get_ActionName(void) const;
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		Particle_t dInitialPID;
 		double dMaxTrackDOCA;
@@ -353,11 +352,11 @@ class DCutAction_KinFitFOM : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_KinFitFOM", true, locActionUniqueString), dMinimumConfidenceLevel(locMinimumConfidenceLevel){}
 
 		string Get_ActionName(void) const;
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		const string dKinFitName;
 		double dMinimumConfidenceLevel;
@@ -370,11 +369,11 @@ class DCutAction_KinFitChiSq : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_KinFitFOM", true, locActionUniqueString), dMaximumChiSq(locMaximumChiSq){}
 
 		string Get_ActionName(void) const;
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		const string dKinFitName;
 		double dMaximumChiSq;
@@ -411,11 +410,11 @@ class DCutAction_MissingMass : public DAnalysisAction
 		dMissingMassOffOfPIDs(deque<Particle_t>(1, locMissingMassOffOfPID)) {}
 
 		string Get_ActionName(void) const;
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinimumMissingMass;
 		double dMaximumMissingMass;
@@ -456,11 +455,11 @@ class DCutAction_MissingMassSquared : public DAnalysisAction
 		dMissingMassOffOfPIDs(deque<Particle_t>(1, locMissingMassOffOfPID)) {}
 
 		string Get_ActionName(void) const;
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinimumMissingMassSq;
 		double dMaximumMissingMassSq;
@@ -481,14 +480,14 @@ class DCutAction_InvariantMass : public DAnalysisAction
 			//call with step = 0, PIDs = pi+, pi-, and will histogram rho mass
 		DCutAction_InvariantMass(const DReaction* locReaction, size_t locStepIndex, deque<Particle_t> locToIncludePIDs, bool locUseKinFitResultsFlag, double locMinMass, double locMaxMass, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_InvariantMass", locUseKinFitResultsFlag, locActionUniqueString),
-		dInitialPID(Unknown), dStepIndex(locStepIndex), dToIncludePIDs(locToIncludePIDs), dMinMass(locMinMass), dMaxMass(locMaxMass){}
+		dInitialPID(UnknownParticle), dStepIndex(locStepIndex), dToIncludePIDs(locToIncludePIDs), dMinMass(locMinMass), dMaxMass(locMaxMass){}
 
 		string Get_ActionName(void) const;
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		Particle_t dInitialPID;
 		int dStepIndex;
@@ -507,11 +506,11 @@ class DCutAction_GoodEventRFBunch : public DAnalysisAction
 		dCutIfBadRFBunchFlag(locCutIfBadRFBunchFlag){}
 
 		string Get_ActionName(void) const;
-		inline void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		inline void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		bool dCutIfBadRFBunchFlag; //if false, will cut if good rf bunch
 };
@@ -525,11 +524,11 @@ class DCutAction_TransverseMomentum : public DAnalysisAction
 		dMaxTransverseMomentum(locMaxTransverseMomentum){}
 
 		string Get_ActionName(void) const;
-		void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMaxTransverseMomentum;
 };
@@ -551,13 +550,13 @@ class DCutAction_TrackHitPattern : public DAnalysisAction
 		dMinHitRingsPerCDCSuperlayer(locMinHitRingsPerCDCSuperlayer), dMinHitPlanesPerFDCPackage(locMinHitPlanesPerFDCPackage){}
 
 		string Get_ActionName(void) const;
-		void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 		bool Cut_TrackHitPattern(const DParticleID* locParticleID, const DKinematicData* locTrack) const;
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		unsigned int dMinHitRingsPerCDCSuperlayer;
 		unsigned int dMinHitPlanesPerFDCPackage;
@@ -570,14 +569,14 @@ class DCutAction_dEdx : public DAnalysisAction
 		DCutAction_dEdx(const DReaction* locReaction, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_dEdx", false, locActionUniqueString){}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 		bool Cut_dEdx(const DChargedTrackHypothesis* locChargedTrackHypothesis);
 
 		map<Particle_t, pair<TF1*, TF1*>> dCutMap; //pair: first is lower bound, second is upper bound
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 };
 
 class DCutAction_BeamEnergy : public DAnalysisAction
@@ -588,13 +587,13 @@ class DCutAction_BeamEnergy : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_BeamEnergy", locUseKinFitResultsFlag, locActionUniqueString),
 		dMinBeamEnergy(locMinBeamEnergy), dMaxBeamEnergy(locMaxBeamEnergy){}
 
-		void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 		string Get_ActionName(void) const;
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinBeamEnergy;
 		double dMaxBeamEnergy;
@@ -612,13 +611,13 @@ class DCutAction_TrackFCALShowerEOverP : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_TrackFCALShowerEOverP", locUseKinFitResultsFlag, locActionUniqueString),
 		dShowerEOverPCut(locShowerEOverPCut){}
 
-		void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 		string Get_ActionName(void) const;
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dShowerEOverPCut;
 };
@@ -635,13 +634,13 @@ class DCutAction_TrackShowerEOverP : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_TrackShowerEOverP", locUseKinFitResultsFlag, locActionUniqueString),
 		dDetector(locDetector), dPID(locPID), dShowerEOverPCut(locShowerEOverPCut) {}
 
-		void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 		string Get_ActionName(void) const;
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		DetectorSystem_t dDetector;
 		Particle_t dPID;
@@ -650,22 +649,22 @@ class DCutAction_TrackShowerEOverP : public DAnalysisAction
 
 class DCutAction_PIDDeltaT : public DAnalysisAction
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 	//if dSystem = SYS_NULL, apply cut to all systems
 
 	public:
 
-		DCutAction_PIDDeltaT(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locDeltaTCut, Particle_t locPID = Unknown, DetectorSystem_t locSystem = SYS_NULL, string locActionUniqueString = "") :
+		DCutAction_PIDDeltaT(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locDeltaTCut, Particle_t locPID = UnknownParticle, DetectorSystem_t locSystem = SYS_NULL, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_PIDDeltaT", locUseKinFitResultsFlag, locActionUniqueString),
 		dDeltaTCut(locDeltaTCut), dPID(locPID), dSystem(locSystem){}
 
-		void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 		string Get_ActionName(void) const;
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dDeltaTCut;
 		Particle_t dPID;
@@ -674,23 +673,23 @@ class DCutAction_PIDDeltaT : public DAnalysisAction
 
 class DCutAction_PIDTimingBeta : public DAnalysisAction
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 	//if dSystem = SYS_NULL, apply cut to all systems
 	//RECOMMENDED ONLY FOR CUTTING ON NEUTRALS (e.g. separating photons and neutrons)
 
 	public:
 
-		DCutAction_PIDTimingBeta(const DReaction* locReaction, double locMinBeta, double locMaxBeta, Particle_t locPID = Unknown, DetectorSystem_t locSystem = SYS_NULL, string locActionUniqueString = "") :
+		DCutAction_PIDTimingBeta(const DReaction* locReaction, double locMinBeta, double locMaxBeta, Particle_t locPID = UnknownParticle, DetectorSystem_t locSystem = SYS_NULL, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_PIDTimingBeta", false, locActionUniqueString),
 		dMinBeta(locMinBeta), dMaxBeta(locMaxBeta), dPID(locPID), dSystem(locSystem){}
 
-		void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 		string Get_ActionName(void) const;
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinBeta;
 		double dMaxBeta;
@@ -700,21 +699,21 @@ class DCutAction_PIDTimingBeta : public DAnalysisAction
 
 class DCutAction_NoPIDHit : public DAnalysisAction
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 
 	public:
 
-		DCutAction_NoPIDHit(const DReaction* locReaction, Particle_t locPID = Unknown, string locActionUniqueString = "") :
+		DCutAction_NoPIDHit(const DReaction* locReaction, Particle_t locPID = UnknownParticle, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_NoPIDHit", false, locActionUniqueString),
 		dPID(locPID){}
 
-		void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 		string Get_ActionName(void) const;
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		Particle_t dPID;
 };
@@ -728,14 +727,14 @@ class DCutAction_OneVertexKinFit : public DAnalysisAction
 		DAnalysisAction(locReaction, "Cut_OneVertexKinFit", false, locActionUniqueString),
 		dMinKinFitCL(locMinKinFitCL), dMinVertexZ(locMinVertexZ), dMaxVertexZ(locMaxVertexZ), dKinFitter(NULL), dKinFitUtils(NULL) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 		~DCutAction_OneVertexKinFit(void);
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinKinFitCL;
 		double dMinVertexZ;
@@ -752,21 +751,21 @@ class DCutAction_OneVertexKinFit : public DAnalysisAction
 
 class DCutAction_FlightDistance : public DAnalysisAction
 {
-	//if dPID = Unknown, apply cut to all relevant PIDs
+	//if dPID = UnknownParticle, apply cut to all relevant PIDs
 
 	public:
 
-		DCutAction_FlightDistance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightDistance, Particle_t locPID = Unknown, string locActionUniqueString = "") :
+		DCutAction_FlightDistance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightDistance, Particle_t locPID = UnknownParticle, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_FlightDistance", locUseKinFitResultsFlag, locActionUniqueString),
 		dMinFlightDistance(locMinFlightDistance), dPID(locPID) {}
 
-		void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 		string Get_ActionName(void) const;
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinFlightDistance;
 		Particle_t dPID;
@@ -775,21 +774,21 @@ class DCutAction_FlightDistance : public DAnalysisAction
 
 class DCutAction_FlightSignificance : public DAnalysisAction
 {
-	//if dPID = Unknown, apply cut to all relevant PIDs
+	//if dPID = UnknownParticle, apply cut to all relevant PIDs
 
 	public:
 
-		DCutAction_FlightSignificance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightSignificance, Particle_t locPID = Unknown, string locActionUniqueString = "") :
+		DCutAction_FlightSignificance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightSignificance, Particle_t locPID = UnknownParticle, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_FlightSignificance", locUseKinFitResultsFlag, locActionUniqueString),
 		dMinFlightSignificance(locMinFlightSignificance), dPID(locPID) {}
 
-		void Initialize(JEventLoop* locEventLoop){}
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent){}
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 		string Get_ActionName(void) const;
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dMinFlightSignificance;
 		Particle_t dPID;

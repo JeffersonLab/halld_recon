@@ -20,9 +20,7 @@
 #include "TRACKING/DMCThrown.h"
 // Routine used to create our JEventProcessor
 #include "PID/DVertex.h"
-#include "DANA/DApplication.h"
-#include "JANA/JApplication.h"
-#include "JANA/JFactory.h"
+#include "DANA/DEvent.h"
 #include "BCAL/DBCALShower.h"
 #include "RF/DRFTime.h"
 #include "PID/DEventRFBunch.h"
@@ -36,7 +34,7 @@
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_cdcbcal_skim());
+    app->Add(new JEventProcessor_cdcbcal_skim());
   }
 } // "C"
 
@@ -46,7 +44,7 @@ extern "C"{
 //------------------
 JEventProcessor_cdcbcal_skim::JEventProcessor_cdcbcal_skim()
 {
-  
+  SetTypeName("JEventProcessor_cdcbcal_skim");
 }
 
 //------------------
@@ -58,53 +56,51 @@ JEventProcessor_cdcbcal_skim::~JEventProcessor_cdcbcal_skim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_cdcbcal_skim::init(void)
+void JEventProcessor_cdcbcal_skim::Init()
 {  
   num_epics_events = 0;
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_cdcbcal_skim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_cdcbcal_skim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_cdcbcal_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_cdcbcal_skim::Process(const std::shared_ptr<const JEvent>& event)
 {
     const DEventWriterEVIO* locEventWriterEVIO = NULL;
-    loop->GetSingle(locEventWriterEVIO);
+    event->GetSingle(locEventWriterEVIO);
 
 	// always write out BOR events
-	if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
+	if(GetStatusBit(event, kSTATUS_BOR_EVENT)) {
 	  //jout << "Found BOR!" << endl;
-	  locEventWriterEVIO->Write_EVIOEvent( loop, "cdcbcal_skim" );
-	  return NOERROR;
+	  locEventWriterEVIO->Write_EVIOEvent( event, "cdcbcal_skim" );
+	  return;
 	}
 
 	// write out the first few EPICS events to save run number & other meta info
-	if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
+	if(GetStatusBit(event, kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
 	  //jout << "Found EPICS!" << endl;
-	  locEventWriterEVIO->Write_EVIOEvent( loop, "cdcbcal_skim" );
+	  locEventWriterEVIO->Write_EVIOEvent( event, "cdcbcal_skim" );
 	  num_epics_events++;
-	  return NOERROR;
+	  return;
 	}
 
 	vector<const DTrackTimeBased *> tracks;
-	loop->Get(tracks);
+	event->Get(tracks);
 
 	if(tracks.size() == 0)
-		return NOERROR;
+		return;
 
 	vector<const DDetectorMatches *> detectorMatchVec;
-	loop->Get(detectorMatchVec);
+	event->Get(detectorMatchVec);
 	const DDetectorMatches *locDetectorMatching = detectorMatchVec[0];
 
 	vector<shared_ptr<const DBCALShowerMatchParams> > locBCALMatchParams;
@@ -120,28 +116,24 @@ jerror_t JEventProcessor_cdcbcal_skim::evnt(JEventLoop *loop, uint64_t eventnumb
 	}
 
 	if(save_event)
-		locEventWriterEVIO->Write_EVIOEvent( loop, "cdcbcal_skim" );
-
-    return NOERROR;
+		locEventWriterEVIO->Write_EVIOEvent( event, "cdcbcal_skim" );
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_cdcbcal_skim::erun(void)
+void JEventProcessor_cdcbcal_skim::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
 // Fin
 //------------------
-jerror_t JEventProcessor_cdcbcal_skim::fini(void)
+void JEventProcessor_cdcbcal_skim::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 

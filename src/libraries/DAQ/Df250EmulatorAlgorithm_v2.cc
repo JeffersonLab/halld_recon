@@ -2,7 +2,7 @@
 
 // corresponds to version 0x0C0C or 0x0C0D of the fADC250 firmwarer
 
-Df250EmulatorAlgorithm_v2::Df250EmulatorAlgorithm_v2(JEventLoop *loop){
+Df250EmulatorAlgorithm_v2::Df250EmulatorAlgorithm_v2(const std::shared_ptr<const JEvent>& event){
     // Enables forced use of default values 
     FORCE_DEFAULT = 0;
     // Default values for the essential parameters
@@ -25,15 +25,16 @@ Df250EmulatorAlgorithm_v2::Df250EmulatorAlgorithm_v2(JEventLoop *loop){
     // Set verbosity
     VERBOSE = 0;
 
-    if(gPARMS){
-        gPARMS->SetDefaultParameter("EMULATION250:FORCE_DEFAULT", FORCE_DEFAULT,"Set to >0 to force use of default values");
-        gPARMS->SetDefaultParameter("EMULATION250:NSA", NSA_DEF,"Set NSA for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION250:NSB", NSB_DEF,"Set NSB for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION250:THR", THR_DEF,"Set threshold for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION250:NPED", NPED_DEF,"Set NPED for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION250:MAXPED", MAXPED_DEF,"Set MAXPED for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION250:NSAT", NSAT_DEF,"Set NSAT for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION250:VERBOSE", VERBOSE,"Set verbosity for f250 emulation");
+    auto app = event->GetJApplication();
+    if(app){
+        app->SetDefaultParameter("EMULATION250:FORCE_DEFAULT", FORCE_DEFAULT,"Set to >0 to force use of default values");
+        app->SetDefaultParameter("EMULATION250:NSA", NSA_DEF,"Set NSA for firmware emulation, will be overwritten by BORConfig if present");
+        app->SetDefaultParameter("EMULATION250:NSB", NSB_DEF,"Set NSB for firmware emulation, will be overwritten by BORConfig if present");
+        app->SetDefaultParameter("EMULATION250:THR", THR_DEF,"Set threshold for firmware emulation, will be overwritten by BORConfig if present");
+        app->SetDefaultParameter("EMULATION250:NPED", NPED_DEF,"Set NPED for firmware emulation, will be overwritten by BORConfig if present");
+        app->SetDefaultParameter("EMULATION250:MAXPED", MAXPED_DEF,"Set MAXPED for firmware emulation, will be overwritten by BORConfig if present");
+        app->SetDefaultParameter("EMULATION250:NSAT", NSAT_DEF,"Set NSAT for firmware emulation, will be overwritten by BORConfig if present");
+        app->SetDefaultParameter("EMULATION250:VERBOSE", VERBOSE,"Set verbosity for f250 emulation");
     }
 }
 
@@ -491,5 +492,4 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
     }
 
     if (VERBOSE > 0) jout << " Df250EmulatorAlgorithm_v2::EmulateFirmware ==> Emulation complete <==" << endl;    
-    return;
 }

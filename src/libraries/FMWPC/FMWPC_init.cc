@@ -5,10 +5,6 @@
 // Creator: davidl (on Darwin harriet.jlab.org 13.4.0 i386)
 //
 
-#include <JANA/JEventLoop.h>
-#include <JANA/JFactory.h>
-using namespace jana;
-
 #include "DFMWPCHit.h"
 #include "DFMWPCHit_factory.h"
 #include "DFMWPCCluster_factory.h"
@@ -22,27 +18,27 @@ using namespace jana;
 #include "DFMWPCMatchedTrack_factory.h"
 #include "DCPPEpEm_factory.h"
 
-jerror_t FMWPC_init(JEventLoop *loop) {
+#include <JANA/JFactorySet.h>
+#include <JANA/JFactoryT.h>
 
+void FMWPC_init(JFactorySet *factorySet) {
   /// Create and register FMWPC data factories
-  //loop->AddFactory(new JFactory<DFMWPCHit>());
-  loop->AddFactory(new JFactory<DFMWPCDigiHit>());
-  loop->AddFactory(new JFactory<DFMWPCTruthHit>());
-  loop->AddFactory(new JFactory<DFMWPCTruth>());
-  loop->AddFactory(new DFMWPCHit_factory());
-  loop->AddFactory(new DFMWPCCluster_factory());
-  loop->AddFactory(new DFMWPCMatchedTrack_factory());
+  //factorySet->Add(new JFactoryT<DFMWPCHit>());
+  factorySet->Add(new JFactoryT<DFMWPCDigiHit>());
+  factorySet->Add(new JFactoryT<DFMWPCTruthHit>());
+  factorySet->Add(new JFactoryT<DFMWPCTruth>());
+  factorySet->Add(new DFMWPCHit_factory());
+  factorySet->Add(new DFMWPCCluster_factory());
+  factorySet->Add(new DFMWPCMatchedTrack_factory());
 
   /// Factories for downstream scintillators
-  loop->AddFactory(new JFactory<DCTOFDigiHit>());
-  loop->AddFactory(new JFactory<DCTOFTDCDigiHit>());
-  loop->AddFactory(new JFactory<DCTOFTruth>());
-  loop->AddFactory(new DCTOFHit_factory());
-  loop->AddFactory(new DCTOFPoint_factory());
+  factorySet->Add(new JFactoryT<DCTOFDigiHit>());
+  factorySet->Add(new JFactoryT<DCTOFTDCDigiHit>());
+  factorySet->Add(new JFactoryT<DCTOFTruth>());
+  factorySet->Add(new DCTOFHit_factory());
+  factorySet->Add(new DCTOFPoint_factory());
 
   // Factory for e+e-/ pi+pi- fitting
-  loop->AddFactory(new DCPPEpEm_factory());
-
-  return NOERROR;
+  factorySet->Add(new DCPPEpEm_factory());
 }
 

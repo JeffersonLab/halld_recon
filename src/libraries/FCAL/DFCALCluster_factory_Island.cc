@@ -11,7 +11,8 @@
 using namespace std;
 
 #include "DFCALCluster_factory_Island.h"
-using namespace jana;
+#include <JANA/JEvent.h>
+#include <DANA/DEvent.h>
 
 inline bool FCALHit_E_cmp(const DFCALCluster_factory_Island::HitInfo a,
 			  const DFCALCluster_factory_Island::HitInfo b){
@@ -26,84 +27,84 @@ inline bool peak_E_cmp(DFCALCluster_factory_Island::PeakInfo a,
 //------------------
 // init
 //------------------
-jerror_t DFCALCluster_factory_Island::init(void)
+void DFCALCluster_factory_Island::Init() 
 {
+  auto app = GetApplication();
+  
   TIME_CUT=15.;
-  gPARMS->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
+  app->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
   
   MAX_HITS_FOR_CLUSTERING = 250;  
-  gPARMS->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
+  app->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
+  app->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
   MIN_EXCESS_SEED_ENERGY=35.*k_MeV;
-  gPARMS->SetDefaultParameter("FCAL:MIN_EXCESS_SEED_ENERGY",
+  app->SetDefaultParameter("FCAL:MIN_EXCESS_SEED_ENERGY",
 			      MIN_EXCESS_SEED_ENERGY);
   MIN_CLUSTER_SEED_ENERGY=35.*k_MeV;
-  gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY",
+  app->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY",
 			      MIN_CLUSTER_SEED_ENERGY);
   MIN_E_FRACTION=0.0;
-  gPARMS->SetDefaultParameter("FCAL:MIN_E_FRACTION",MIN_E_FRACTION);
+  app->SetDefaultParameter("FCAL:MIN_E_FRACTION",MIN_E_FRACTION);
 
   SHOWER_WIDTH_PAR0=0.58;
-  gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR0",SHOWER_WIDTH_PAR0);  
+  app->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR0",SHOWER_WIDTH_PAR0);  
   SHOWER_WIDTH_PAR1=0.0049;
-  gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR1",SHOWER_WIDTH_PAR1);
+  app->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR1",SHOWER_WIDTH_PAR1);
  
   INSERT_SHOWER_WIDTH_PAR0=0.347;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PAR0",
+  app->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PAR0",
 			      INSERT_SHOWER_WIDTH_PAR0);
   INSERT_SHOWER_WIDTH_PAR1=0.00058;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PAR1",
+  app->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PAR1",
 			      INSERT_SHOWER_WIDTH_PAR1);
   MIN_CUTDOWN_FRACTION=0.1;
-  gPARMS->SetDefaultParameter("FCAL:MIN_CUTDOWN_FRACTION",
+  app->SetDefaultParameter("FCAL:MIN_CUTDOWN_FRACTION",
 			      MIN_CUTDOWN_FRACTION);
 
   DEBUG_HISTS=false;
-  gPARMS->SetDefaultParameter("FCAL:DEBUG_HISTS",DEBUG_HISTS);
+  app->SetDefaultParameter("FCAL:DEBUG_HISTS",DEBUG_HISTS);
 
   CHISQ_MARGIN=12.5;
-  gPARMS->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
+  app->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
 
   SPLIT_PEAKS=true;
-  gPARMS->SetDefaultParameter("FCAL:SPLIT_PEAKS",SPLIT_PEAKS);
+  app->SetDefaultParameter("FCAL:SPLIT_PEAKS",SPLIT_PEAKS);
 
   MERGE_HITS_AT_BOUNDARY=true;
-  gPARMS->SetDefaultParameter("FCAL:MERGE_HITS_AT_BOUNDARY",MERGE_HITS_AT_BOUNDARY);
+  app->SetDefaultParameter("FCAL:MERGE_HITS_AT_BOUNDARY",MERGE_HITS_AT_BOUNDARY);
 
   APPLY_S_CURVE_CORRECTION=false;
-  gPARMS->SetDefaultParameter("FCAL:APPLY_S_CURVE_CORRECTION",
+  app->SetDefaultParameter("FCAL:APPLY_S_CURVE_CORRECTION",
 			      APPLY_S_CURVE_CORRECTION);
 
-  S_CURVE_PAR1=-0.374;
-  gPARMS->SetDefaultParameter("FCAL:S_CURVE_PAR1",S_CURVE_PAR1);
-  S_CURVE_PAR2=1.59;
-  gPARMS->SetDefaultParameter("FCAL:S_CURVE_PAR2",S_CURVE_PAR2);
-  S_CURVE_PAR3=1.55;
-  gPARMS->SetDefaultParameter("FCAL:S_CURVE_PAR2",S_CURVE_PAR2); 
-  INSERT_S_CURVE_PAR1=-0.203;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR1",INSERT_S_CURVE_PAR1);
-  INSERT_S_CURVE_PAR2=2.982;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR2",INSERT_S_CURVE_PAR2);
+  S_CURVE_PAR1=-0.0517;
+  app->SetDefaultParameter("FCAL:S_CURVE_PAR1",S_CURVE_PAR1);
+  S_CURVE_PAR2=0.02565;
+  app->SetDefaultParameter("FCAL:S_CURVE_PAR2",S_CURVE_PAR2); 
+  INSERT_S_CURVE_PAR1=-0.1593;
+  app->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR1",INSERT_S_CURVE_PAR1);
+  INSERT_S_CURVE_PAR2=0.02337;
+  app->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR2",INSERT_S_CURVE_PAR2);
   INSERT_S_CURVE_PAR3=0.0;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR3",INSERT_S_CURVE_PAR3);
+  app->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR3",INSERT_S_CURVE_PAR3);
 
   if (DEBUG_HISTS){
     if (HistdE==NULL) HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
     if (HistProb==NULL) HistProb=new TH1D("HistProb",";CL",100,0,1);
   }
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
 // brun
 //------------------
-jerror_t DFCALCluster_factory_Island::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DFCALCluster_factory_Island::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
-  DApplication *dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  const DGeometry *geom = DEvent::GetDGeometry(event);
 
   double targetZ=0.;
   geom->GetTargetZ(targetZ);
-  eventLoop->GetSingle(dFCALGeom);
+  event->GetSingle(dFCALGeom);
   m_zdiff=dFCALGeom->fcalFrontZ()-targetZ;
 
   m_insert_Eres[0]=0.00025;
@@ -113,26 +114,24 @@ jerror_t DFCALCluster_factory_Island::brun(jana::JEventLoop *eventLoop, int32_t 
   m_Eres[0]=0.0005;
   m_Eres[1]=0.0025;
   m_Eres[2]=0.0009;
-
-  return NOERROR;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DFCALCluster_factory_Island::Process(const std::shared_ptr<const JEvent> &event)
 {
   vector<const DFCALHit*>fcal_hits;
-  loop->Get(fcal_hits);
+  event->Get(fcal_hits);
   vector<const DECALHit*>ecal_hits;
-  loop->Get(ecal_hits);
+  event->Get(ecal_hits);
  
   unsigned int total_hits=fcal_hits.size()+ecal_hits.size();
-  if (total_hits==0) return OBJECT_NOT_AVAILABLE;
+  if (total_hits==0) return; // OBJECT_NOT_AVAILABLE;
 
   // LED events will have hits in nearly every channel. Do NOT
   // try clusterizing if more than 250 hits in FCAL
-  if (total_hits > MAX_HITS_FOR_CLUSTERING) return VALUE_OUT_OF_RANGE;
+  if (total_hits > MAX_HITS_FOR_CLUSTERING) return; // VALUE_OUT_OF_RANGE;
 
   // Put hit information into local array
   vector<HitInfo>hits;
@@ -211,7 +210,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 
       myCluster->setCentroid(x,y);
       
-      _data.push_back(myCluster);
+      Insert(myCluster);
 
       continue;
     }
@@ -636,27 +635,25 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  }
 	}
       }
-      _data.push_back(myCluster);
+      Insert(myCluster);
     } // loop over peaks
   } // looper over cluster candidates
 
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
 // erun
 //------------------
-jerror_t DFCALCluster_factory_Island::erun(void)
+void DFCALCluster_factory_Island::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t DFCALCluster_factory_Island::fini(void)
+void DFCALCluster_factory_Island::Finish()
 {
-  return NOERROR;
 }
 
 // Make a list of potential clusters, each consisting of a "central" block 

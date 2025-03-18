@@ -8,7 +8,6 @@
 #ifndef _DMagneticFieldMapCalibDB_
 #define _DMagneticFieldMapCalibDB_
 
-#include <JANA/jerror.h>
 
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 
@@ -18,8 +17,7 @@ using std::vector;
 using std::string;
 
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-using namespace jana;
+#include <JANA/Calibrations/JCalibration.h>
 
 class DMagneticFieldMapCalibDB:public DMagneticFieldMap{
 	public:
@@ -49,6 +47,15 @@ class DMagneticFieldMapCalibDB:public DMagneticFieldMap{
 					 double &dBydz,
 					 double &dBzdx, double &dBzdy,
 					 double &dBzdz) const;
+		void GetFieldAndGradient(double x,double y,double z,
+					 DBfieldCartesian_t &Bdata) const{
+		   GetFieldAndGradient(x,y,z, Bdata.Bx,Bdata.By,Bdata.Bz,
+				       Bdata.dBxdx, Bdata.dBxdy,Bdata.dBxdz,
+				       Bdata.dBydx, Bdata.dBydy,Bdata.dBydz,
+				       Bdata.dBzdx, Bdata.dBzdy,Bdata.dBzdz);
+		   Bdata.Bmag=sqrt(Bdata.Bx*Bdata.Bx+Bdata.By*Bdata.By
+				   +Bdata.Bz*Bdata.Bz);
+		};
 
 		typedef struct{
 			float x,y,z,Bx,By,Bz;

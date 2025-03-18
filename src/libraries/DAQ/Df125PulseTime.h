@@ -29,16 +29,14 @@ class Df125PulseTime:public DDAQAddress{
 		uint32_t peak_time;            ///< from 2nd word for FDC data only (type 6 or 9)
 		bool     emulated;             ///< true if made from Window Raw Data
 		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "pulse_number", "%d", pulse_number);
-			AddString(items, "quality_factor", "%d", quality_factor);
-			AddString(items, "time", "%d", time);
-			AddString(items, "overflows", "%d", overflows);
-			AddString(items, "peak_time", "%d", peak_time);
-			AddString(items, "emulated", "%d", emulated);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(pulse_number, NAME_OF(pulse_number), "%d");
+			summary.add(quality_factor, NAME_OF(quality_factor), "%d");
+			summary.add(time, NAME_OF(time), "%d");
+			summary.add(overflows, NAME_OF(overflows), "%d");
+			summary.add(peak_time, NAME_OF(peak_time), "%d");
+			summary.add(emulated, NAME_OF(emulated), "%d");
 		}
 };
 

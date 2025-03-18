@@ -8,69 +8,63 @@
 #include "DDetectorMatches_factory.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DDetectorMatches_factory::init(void)
+void DDetectorMatches_factory::Init()
 {
   ENABLE_FCAL_SINGLE_HITS = false;
-  gPARMS->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);	
-
-
-	return NOERROR;
+  GetApplication()->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DDetectorMatches_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DDetectorMatches_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	//LEAVE THIS EMPTY!!! OR ELSE WON'T BE INITIALIZED PROPERLY WHEN "COMBO" FACTORY CALLS Create_DDetectorMatches ON REST DATA!!
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DDetectorMatches_factory::evnt(jana::JEventLoop* locEventLoop, uint64_t eventnumber)
+void DDetectorMatches_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	locEventLoop->Get(locTrackTimeBasedVector);
+	event->Get(locTrackTimeBasedVector);
 
-	DDetectorMatches* locDetectorMatches = Create_DDetectorMatches(locEventLoop, locTrackTimeBasedVector);
-	_data.push_back(locDetectorMatches);
-
-	return NOERROR;
+	DDetectorMatches* locDetectorMatches = Create_DDetectorMatches(event, locTrackTimeBasedVector);
+	Insert(locDetectorMatches);
 }
 
-DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locTrackTimeBasedVector)
+DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::shared_ptr<const JEvent>& event, vector<const DTrackTimeBased*>& locTrackTimeBasedVector)
 {
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	event->GetSingle(locParticleID);
 
 	vector<const DSCHit*> locSCHits;
-	locEventLoop->Get(locSCHits);
+	event->Get(locSCHits);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	event->Get(locTOFPoints);
 
 	vector<const DFCALShower*> locFCALShowers;
-	locEventLoop->Get(locFCALShowers);
+	event->Get(locFCALShowers);
 
 	vector<const DBCALShower*> locBCALShowers;
-	locEventLoop->Get(locBCALShowers);
+	event->Get(locBCALShowers);
 
 	vector<const DDIRCPmtHit*> locDIRCHits;
-	locEventLoop->Get(locDIRCHits);
+	event->Get(locDIRCHits);
 
 	// cheat and get truth info of track at bar
 	vector<const DDIRCTruthBarHit*> locDIRCBarHits;
-	locEventLoop->Get(locDIRCBarHits);
+	event->Get(locDIRCBarHits);
 
 	vector<const DCTOFPoint*> locCTOFPoints;
-	locEventLoop->Get(locCTOFPoints);
+	event->Get(locCTOFPoints);
 
 	vector<const DFMWPCCluster *> locFMWPCClusters;
-	locEventLoop->Get(locFMWPCClusters);
+	event->Get(locFMWPCClusters);
 
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches();
 
@@ -97,7 +91,7 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 	// Try to find matches between tracks and single hits in FCAL
 	if (ENABLE_FCAL_SINGLE_HITS){
 	  vector<const DFCALHit*> locFCALHits;
-	  locEventLoop->Get(locFCALHits);
+	  event->Get(locFCALHits);
 	  if (locFCALHits.size()>0){
 	    vector<const DFCALHit*>locSingleHits;
 	    locParticleID->GetSingleFCALHits(locFCALShowers,locFCALHits,

@@ -1,16 +1,13 @@
 // $Id: TTAB_init.cc $
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JFactorySet.h>
 
 #include "DTranslationTable_factory.h"
 #include "DTTabUtilities_factory.h"
 
-jerror_t TTAB_init(JEventLoop *loop)
+void TTAB_init(JFactorySet *factorySet)
 {
   /// Create and register DTranslationTable factory
-  loop->AddFactory(new DTranslationTable_factory());
-  loop->AddFactory(new DTTabUtilities_factory());
-
-  return NOERROR;
+  factorySet->Add(new DTranslationTable_factory());
+  factorySet->Add(new DTTabUtilities_factory());
 }

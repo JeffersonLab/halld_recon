@@ -6,6 +6,8 @@
 //
 
 #include <cmath>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 using namespace std;
 
 #include "DMagneticFieldMapCalibDB.h"
@@ -15,7 +17,7 @@ using namespace std;
 //---------------------------------
 DMagneticFieldMapCalibDB::DMagneticFieldMapCalibDB(JApplication *japp, int32_t runnumber, string namepath)
 {
-	jcalib = japp->GetJCalibration(runnumber);
+	jcalib = japp->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
 
 	JParameterManager *jparms = japp->GetJParameterManager();
 	jparms->SetDefaultParameter("BFIELD_MAP", namepath);
@@ -63,7 +65,7 @@ int DMagneticFieldMapCalibDB::ReadMap(string namepath, int32_t runnumber, string
   // we do it this way. 
   if(!jcalib)return 0;
   
-  jout<<"Reading Magnetic field map from "<<namepath<<" ..."<<endl;
+  jout<<"Reading Magnetic field map from "<<namepath<<" ..."<<jendl;
   vector< vector<float> > Bmap;
   jcalib->Get(namepath, Bmap);
   jout<<Bmap.size()<<" entries found (";
@@ -109,7 +111,7 @@ int DMagneticFieldMapCalibDB::ReadMap(string namepath, int32_t runnumber, string
   jout<<" Nx="<<Nx;
   jout<<" Ny="<<Ny;
   jout<<" Nz="<<Nz;
-  jout<<" )  at 0x"<<hex<<(unsigned long)this<<dec<<endl;
+  jout<<" )  at 0x"<<hex<<(unsigned long)this<<dec<<jendl;
   
   // Create 3D vector so we can index the values by [x][y][z]
   vector<DBfieldPoint_t> zvec(Nz);

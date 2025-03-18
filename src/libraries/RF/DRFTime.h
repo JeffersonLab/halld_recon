@@ -16,7 +16,7 @@
 
 using namespace std;
 
-class DRFTime : public jana::JObject
+class DRFTime : public JObject
 {
 	public:
 		JOBJECT_PUBLIC(DRFTime);
@@ -24,10 +24,9 @@ class DRFTime : public jana::JObject
 		double dTime; //This time is defined at the center of the target. 
 		double dTimeVariance;
 
-		void toStrings(vector<pair<string,string> > &items) const
-		{
-			AddString(items, "t", "%3.5f", dTime);
-			AddString(items, "var_t", "%3.2f", dTimeVariance);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(dTime, "t", "%3.5f");
+			summary.add(dTimeVariance, "var_t", "%3.2f");
 		}
 };
 

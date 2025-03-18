@@ -11,6 +11,8 @@
 #include <ratio>
 using namespace std::chrono;
 
+#include <JANA/JEvent.h>
+
 bool DFDCHit_cmp(const DFDCHit* a, const DFDCHit* b) {
   if (a->gLayer==b->gLayer){
     return a->t < b->t;
@@ -65,31 +67,29 @@ bool DFDCCathodeCluster_gPlane_cmp(	const DFDCCathodeCluster* a,
 
 ///
 /// DFDCCathodeCluster_factory::DFDCCathodeCluster_factory():
-///	default constructor--initializes log file
+///	default constructor
 ///
 DFDCCathodeCluster_factory::DFDCCathodeCluster_factory() {
-	_log = new JStreamLog(std::cout, "DFDCCathodeCluster >>");
 }
 
 ///
 /// DFDCCathodeCluster_factory::~DFDCCathodeCluster_factory():
-/// default destructor--closes log file.
+/// default destructor
 ///
 DFDCCathodeCluster_factory::~DFDCCathodeCluster_factory() {
-	delete _log;
 }
 
 ///
 /// Initialization
 ///
-jerror_t DFDCCathodeCluster_factory::init(void){
+void DFDCCathodeCluster_factory::Init(){
+  auto app = GetApplication();
+
   TIME_SLICE=100.0; //ns,  Changed from 10->100 4/7/16 SJT
-  gPARMS->SetDefaultParameter("FDC:CLUSTER_TIME_SLICE",TIME_SLICE);
+  app->SetDefaultParameter("FDC:CLUSTER_TIME_SLICE",TIME_SLICE);
 
   PROFILE_TIME=false;
-  gPARMS->SetDefaultParameter("TRK:PROFILE_TIME", PROFILE_TIME);
-  
-  return NOERROR;	
+  app->SetDefaultParameter("TRK:PROFILE_TIME", PROFILE_TIME);
 }
 
 ///
@@ -97,14 +97,14 @@ jerror_t DFDCCathodeCluster_factory::init(void){
 /// This (along with DFDCCathodeCluster_factory::pique()) 
 /// is the place cathode hits are associated into cathode clusters.  
 ///
-jerror_t DFDCCathodeCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo) {
+void DFDCCathodeCluster_factory::Process(const std::shared_ptr<const JEvent>& event) {
   vector<const DFDCHit*> allHits;
   vector<const DFDCHit*> uHits;
   vector<const DFDCHit*> vHits;
   vector<vector<const DFDCHit*> >thisLayer;
  
   try {
-    eventLoop->Get(allHits);
+    event->Get(allHits);
 
     if (allHits.size()>0) {
       high_resolution_clock::time_point t0,t1;
@@ -201,7 +201,7 @@ jerror_t DFDCCathodeCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventN
       }
       
       // Ensure that the data are still in order of Z position.
-      std::sort(_data.begin(), _data.end(), DFDCCathodeCluster_gPlane_cmp);
+      std::sort(mData.begin(), mData.end(), DFDCCathodeCluster_gPlane_cmp);
 
       if (PROFILE_TIME){
 	t1 = high_resolution_clock::now();
@@ -211,28 +211,25 @@ jerror_t DFDCCathodeCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventN
       } 
     }
   }
-  catch (JException d) {
+  catch (const JException& d) {
     cout << d << endl;
   }	
   catch (...) {
 		cerr << "exception caught in DFDCCathodeCluster_factory" << endl;
   }
-  
-  return NOERROR;	
 }
 
 //------------------
-// fini
-//------------------
-jerror_t DFDCCathodeCluster_factory::fini(void)
+// Finish
+//-----------------
+void DFDCCathodeCluster_factory::Finish(void)
 {
   if (PROFILE_TIME){
     cout << "Average cathode cluster creation time = "
 	 << 1000.*cumulative_time/cumulative_events << " ms" << endl;
   }
-
-  return NOERROR;
 }
+
 //-----------------------------
 // pique
 //-----------------------------
@@ -268,7 +265,7 @@ void DFDCCathodeCluster_factory::pique(vector<const DFDCHit*>& H)
 			newCluster->q_tot += H[i]->q;
 			newCluster->members.push_back(H[i]);
 		}
-		_data.push_back(newCluster);
+		Insert(newCluster);
 		
 		istart = iend-1;
 	}

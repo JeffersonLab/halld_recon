@@ -11,28 +11,26 @@
 using namespace std;
 
 #include "DCCALTruthShower_factory.h"
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DCCALTruthShower_factory::init(void)
+void DCCALTruthShower_factory::Init()
 {
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DCCALTruthShower_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DCCALTruthShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DCCALTruthShower_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DCCALTruthShower_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	
 	// Code to generate factory data goes here. Add it like:
@@ -41,27 +39,24 @@ jerror_t DCCALTruthShower_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	// myDCCALTruthShower->x = x;
 	// myDCCALTruthShower->y = y;
 	// ...
-	// _data.push_back(myDCCALTruthShower);
+	// Insert(myDCCALTruthShower);
 	//
 	// Note that the objects you create here will be deleted later
 	// by the system and the _data vector will be cleared automatically.
-	
-	return NOERROR;
+
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DCCALTruthShower_factory::erun(void)
+void DCCALTruthShower_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DCCALTruthShower_factory::fini(void)
+void DCCALTruthShower_factory::Finish()
 {
-	return NOERROR;
 }
 

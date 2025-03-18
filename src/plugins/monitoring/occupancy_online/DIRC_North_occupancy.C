@@ -25,7 +25,6 @@
 // hnamepath: /occupancy/dirc_tdc_pixel_N_occ_led
 //
 // e-mail: davidl@jlab.org
-// e-mail: marki@jlab.org
 // e-mail: tbritton@jlab.org
 //
 

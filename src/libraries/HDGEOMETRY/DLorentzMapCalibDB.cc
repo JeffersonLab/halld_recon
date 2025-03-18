@@ -1,5 +1,6 @@
 #include "DLorentzMapCalibDB.h"
 #include "DLorentzDeflections.h"
+#include <JANA/Calibrations/JCalibrationManager.h>
 #include <map>
 #include <vector>
 using namespace std;
@@ -10,7 +11,7 @@ using namespace std;
 //---------------------------------
 DLorentzMapCalibDB::DLorentzMapCalibDB(JApplication *japp, unsigned int run_number)
 {
-  jcalib = japp->GetJCalibration(run_number);
+  jcalib = japp->GetService<JCalibrationManager>()->GetJCalibration(run_number);
 
   int Npoints = GetLorentzDeflections(); 
   if(Npoints==0){

@@ -13,7 +13,7 @@
 
 #include <TRACKING/DTrackTimeBased.h>
 
-class DFMWPCMatchedTrack:public jana::JObject{
+class DFMWPCMatchedTrack:public JObject{
 	public:
 		JOBJECT_PUBLIC(DFMWPCMatchedTrack);
         
@@ -48,22 +48,22 @@ class DFMWPCMatchedTrack:public jana::JObject{
         Particle_t PID(void) const { return tbt->PID(); }
         DVector3 GetPosFCAL(void) const;       // Projected track position at FCAL front face
         DVector3 GetPosFMWPC(int layer)const ; // Projected track position at specified FMWPC wire layer (1-6)
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-            AddString(items, "PID", "%s", ParticleType(PID()));
-			AddString(items, "FCAL_E_center", "%3.1f", FCAL_E_center);
-			AddString(items, "FCAL_E_3x3", "%3.1f", FCAL_E_3x3);
-			AddString(items, "FCAL_E_5x5", "%3.1f", FCAL_E_5x5);
-			AddString(items, "FMWPC_Nhits_cluster1", "%d", FMWPC_Nhits_cluster[0]);
-			AddString(items, "FMWPC_Nhits_cluster2", "%d", FMWPC_Nhits_cluster[1]);
-			AddString(items, "FMWPC_Nhits_cluster3", "%d", FMWPC_Nhits_cluster[2]);
-			AddString(items, "FMWPC_Nhits_cluster4", "%d", FMWPC_Nhits_cluster[3]);
-			AddString(items, "FMWPC_Nhits_cluster5", "%d", FMWPC_Nhits_cluster[4]);
-			AddString(items, "FMWPC_Nhits_cluster6", "%d", FMWPC_Nhits_cluster[5]);
-		}
-		
+
+        // This method is used primarily for pretty printing
+        // the third argument to summary.add is printf style format
+        void Summarize(JObjectSummary& summary) const {
+            summary.add(ParticleType(PID()), "PID", "%s");
+            summary.add(FCAL_E_center, "FCAL_E_center", "%3.1f");
+            summary.add(FCAL_E_3x3, "FCAL_E_3x3", "%3.1f");
+            summary.add(FCAL_E_5x5, "FCAL_E_5x5", "%3.1f");
+            summary.add(FMWPC_Nhits_cluster[0], "FMWPC_Nhits_cluster1", "%d");
+            summary.add(FMWPC_Nhits_cluster[1], "FMWPC_Nhits_cluster2", "%d");
+            summary.add(FMWPC_Nhits_cluster[2], "FMWPC_Nhits_cluster3", "%d");
+            summary.add(FMWPC_Nhits_cluster[3], "FMWPC_Nhits_cluster4", "%d");
+            summary.add(FMWPC_Nhits_cluster[4], "FMWPC_Nhits_cluster5", "%d");
+            summary.add(FMWPC_Nhits_cluster[5], "FMWPC_Nhits_cluster6", "%d");
+        }
+
 };
 
 #endif // _DFMWPCMatchedTrack_

@@ -5,9 +5,9 @@
 #ifndef DFACTORY_DFDCSEGMENT_H
 #define DFACTORY_DFDCSEGMENT_H
 
-#include "JANA/JFactory.h"
-#include "JANA/JException.h"
-#include "JANA/JStreamLog.h"
+#include <JANA/JFactoryT.h>
+#include <JANA/JException.h>
+#include <JANA/JLogger.h>
 
 #include "DFDCSegment.h"
 #include "DFDCPseudo.h"
@@ -32,7 +32,7 @@
 /// class DFDCSegment_factory: definition for a JFactory that
 /// produces space points from pseudopoints.
 /// 
-class DFDCSegment_factory : public JFactory<DFDCSegment> {
+class DFDCSegment_factory : public JFactoryT<DFDCSegment> {
  public:
 		
   ///
@@ -52,7 +52,6 @@ class DFDCSegment_factory : public JFactory<DFDCSegment> {
     double z,covr,covrphi;
   }xyz_t;
 	
-  
   jerror_t FindSegments(vector<const DFDCPseudo*>&points);
   //		jerror_t CorrectPoints(vector<DFDCPseudo*>point,DMatrix XYZ);
   jerror_t GetHelicalTrackPosition(double z,const DFDCSegment *segment,
@@ -73,46 +72,43 @@ class DFDCSegment_factory : public JFactory<DFDCSegment> {
 
   void FillSegmentData(DFDCSegment *segment);
 
-	protected:
-		///
-		/// DFDCSegment_factory::brun():
-		///
-		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);
+protected:
+  ///
+  /// DFDCSegment_factory::BeginRun
+  ///
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  
+  ///
+  /// DFDCSegment_factory::Process
+  /// this is the place that finds track segments
+  ///
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void Finish(void) override;
 
-		///
-		/// DFDCSegment_factory::evnt():
-		/// this is the place that finds track segments and  
-		/// converts pseudopoints into space points.
-		///
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
-
-	private:
-		JStreamLog* _log;
-
-		double N[3];
-	        double varN[3][3];
-	 	double dist_to_origin,xc,yc,rc;
-		double xavg[3],var_avg;
-		
-		// Track parameters
-		double tanl,z0,zvertex,D,phi0;
-		double var_tanl,Phi1;
-		double rotation_sense;
-		unsigned int ref_plane;
-		double RotationSenseToCharge;
-	
-		double chisq;
-		int Ndof;
-
-                const DMagneticFieldMap *bfield;
-		const DLorentzDeflections *lorentz_def;
-//		double ref_time;
-//		bool use_tof,use_sc;
-		double TARGET_Z,BEAM_VARIANCE;
-		int DEBUG_LEVEL;
-
-		int myeventno;
+private:
+  double N[3];
+  double varN[3][3];
+  double dist_to_origin,xc,yc,rc;
+  double xavg[3],var_avg;
+  
+  // Track parameters
+  double tanl,z0,zvertex,D,phi0;
+  double var_tanl,Phi1;
+  double rotation_sense;
+  unsigned int ref_plane;
+  double RotationSenseToCharge;
+  
+  double chisq;
+  int Ndof;
+  
+  const DMagneticFieldMap *bfield;
+  const DLorentzDeflections *lorentz_def;
+  //		double ref_time;
+  //		bool use_tof,use_sc;
+  double TARGET_Z,BEAM_VARIANCE;
+  int DEBUG_LEVEL;
+  
+  int myeventno;
   bool PROFILE_TIME;
   double cumulative_time=0.,cumulative_events=0.;
 };

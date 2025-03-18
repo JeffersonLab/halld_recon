@@ -14,57 +14,55 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_ppi0gamma_hists()); //register this plugin
-		locApplication->AddFactoryGenerator(new DFactoryGenerator_ppi0gamma_hists()); //register the factory generator
+		locApplication->Add(new DEventProcessor_ppi0gamma_hists()); //register this plugin
+		locApplication->Add(new DFactoryGenerator_ppi0gamma_hists()); //register the factory generator
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_ppi0gamma_hists::init(void)
+void DEventProcessor_ppi0gamma_hists::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... create historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	//
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_ppi0gamma_hists::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void DEventProcessor_ppi0gamma_hists::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_ppi0gamma_hists::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_ppi0gamma_hists::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
@@ -73,36 +71,32 @@ jerror_t DEventProcessor_ppi0gamma_hists::evnt(jana::JEventLoop* locEventLoop, u
 		//Getting these objects triggers the analysis, if it wasn't performed already. 
 		//These objects contain the DParticleCombo objects that survived the DAnalysisAction cuts that were added to the DReactions
 	vector<const DAnalysisResults*> locAnalysisResultsVector;
-	locEventLoop->Get(locAnalysisResultsVector);
+	locEvent->Get(locAnalysisResultsVector);
 
 	//Recommended: Write surviving particle combinations (if any) to output ROOT TTree
 		//If no cuts are performed by the analysis actions added to a DReaction, then this saves all of its particle combinations. 
 		//The event writer gets the DAnalysisResults objects from JANA, performing the analysis. 
 	// string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
 	const DEventWriterROOT* locEventWriterROOT = NULL;
-	locEventLoop->GetSingle(locEventWriterROOT);
-	//locEventWriterROOT->Fill_DataTrees(locEventLoop, "ppi0gamma_hists");
-
-	return NOERROR;
+	locEvent->GetSingle(locEventWriterROOT);
+	//locEventWriterROOT->Fill_DataTrees(locEvent, "ppi0gamma_hists");
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_ppi0gamma_hists::erun(void)
+void DEventProcessor_ppi0gamma_hists::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_ppi0gamma_hists::fini(void)
+void DEventProcessor_ppi0gamma_hists::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

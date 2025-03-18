@@ -34,7 +34,7 @@
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_cdc_goodtrack_skim());
+    app->Add(new JEventProcessor_cdc_goodtrack_skim());
   }
 } // "C"
 
@@ -44,7 +44,7 @@ extern "C"{
 //------------------
 JEventProcessor_cdc_goodtrack_skim::JEventProcessor_cdc_goodtrack_skim()
 {
-  
+    SetTypeName("JEventProcessor_cdc_goodtrack_skim");
 }
 
 //------------------
@@ -56,52 +56,50 @@ JEventProcessor_cdc_goodtrack_skim::~JEventProcessor_cdc_goodtrack_skim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_cdc_goodtrack_skim::init(void)
+void JEventProcessor_cdc_goodtrack_skim::Init()
 {  
   num_epics_events = 0;
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_cdc_goodtrack_skim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_cdc_goodtrack_skim::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_cdc_goodtrack_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_cdc_goodtrack_skim::Process(const std::shared_ptr<const JEvent> &event)
 {
     const double MIN_FOM = 0.01;
 
     const DEventWriterEVIO* locEventWriterEVIO = NULL;
-    loop->GetSingle(locEventWriterEVIO);
+    event->GetSingle(locEventWriterEVIO);
 
 	// always write out BOR events
-	if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
+	if(DEvent::GetStatusBit(event, kSTATUS_BOR_EVENT)) {
 	  //jout << "Found BOR!" << endl;
-	  locEventWriterEVIO->Write_EVIOEvent( loop, "cdc_goodtrack_skim" );
-	  return NOERROR;
+	  locEventWriterEVIO->Write_EVIOEvent( event, "cdc_goodtrack_skim" );
+	  return; // NOERROR;
 	}
 	
 	// write out the first few EPICS events to save run number & other meta info
-	if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
+	if(DEvent::GetStatusBit(event, kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
 	  //jout << "Found EPICS!" << endl;
-	  locEventWriterEVIO->Write_EVIOEvent( loop, "cdc_goodtrack_skim" );
+	  locEventWriterEVIO->Write_EVIOEvent( event, "cdc_goodtrack_skim" );
 	  num_epics_events++;
-	  return NOERROR;
+	  return; // NOERROR;
 	}
 
 	vector<const DTrackTimeBased *> tracks;
-	loop->Get(tracks);
+	event->Get(tracks);
 
 	if(tracks.size() == 0)
-		return NOERROR;
+		return; // NOERROR;
 
 
 	// only save events with a "good" track
@@ -131,28 +129,25 @@ jerror_t JEventProcessor_cdc_goodtrack_skim::evnt(JEventLoop *loop, uint64_t eve
 	}
 
 	if(save_event)
-		locEventWriterEVIO->Write_EVIOEvent( loop, "cdc_goodtrack_skim" );
+		locEventWriterEVIO->Write_EVIOEvent( event, "cdc_goodtrack_skim" );
 
-    return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_cdc_goodtrack_skim::erun(void)
+void JEventProcessor_cdc_goodtrack_skim::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// Fin
+// Finish
 //------------------
-jerror_t JEventProcessor_cdc_goodtrack_skim::fini(void)
+void JEventProcessor_cdc_goodtrack_skim::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 

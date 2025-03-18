@@ -9,10 +9,9 @@
 #define _DCTOFPoint_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 #include <DVector3.h>
 
-class DCTOFPoint:public jana::JObject{
+class DCTOFPoint:public JObject{
  public:
   JOBJECT_PUBLIC(DCTOFPoint);
 
@@ -22,14 +21,13 @@ class DCTOFPoint:public jana::JObject{
   DVector3 pos; ///< point position vector, in cm
 		
   // This method is used primarily for pretty printing
-  // the second argument to AddString is printf style format
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "bar", "%4d", bar);
-    AddString(items, "dE", "%f", dE);
-    AddString(items, "t", "%f", t);
-    AddString(items, "x", "%f", pos.x());
-    AddString(items, "y", "%f", pos.y());
-    AddString(items, "z", "%f", pos.z());
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(bar, "bar", "%4d");
+    summary.add(dE, "dE", "%f");
+    summary.add(t, "t", "%f");
+    summary.add(pos.x(), "x", "%f");
+    summary.add(pos.y(), "y", "%f");
+    summary.add(pos.z(), "z", "%f");
   }
 		
 };

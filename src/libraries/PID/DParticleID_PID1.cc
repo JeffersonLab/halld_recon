@@ -6,14 +6,14 @@
 //
 
 #include "DParticleID_PID1.h"
+#include "DANA/DEvent.h"
 
 //---------------------------------
 // DParticleID_PID1    (Constructor)
 //---------------------------------
-DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
+DParticleID_PID1::DParticleID_PID1(const std::shared_ptr<const JEvent>& jevent):DParticleID(jevent)
 {
-  DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
-  JCalibration * jcalib = dapp->GetJCalibration(loop->GetJEvent().GetRunNumber());
+  JCalibration * jcalib = DEvent::GetJCalibration(jevent);
   vector<map<string,double> >vals;
   if (jcalib->Get("CDC/ElectrondEdxMean",vals)==false){
     map<string,double> &row = vals[0];
@@ -208,7 +208,7 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
   }
 
 
-  loop->GetSingle(dTOFGeometry);
+  jevent->GetSingle(dTOFGeometry);
   string locTOFTimeSigmasTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/TimeSigmas";
   if (jcalib->Get(locTOFTimeSigmasTable.c_str(),vals)==false){ 
     for(unsigned int i=0; i<vals.size(); i++){

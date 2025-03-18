@@ -8,10 +8,10 @@
 #ifndef _DTAGHHit_factory_
 #define _DTAGHHit_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DTAGHHit.h"
 
-class DTAGHHit_factory: public jana::JFactory<DTAGHHit> {
+class DTAGHHit_factory: public JFactoryT<DTAGHHit> {
     public:
         DTAGHHit_factory() {};
         ~DTAGHHit_factory() {};
@@ -27,11 +27,11 @@ class DTAGHHit_factory: public jana::JFactory<DTAGHHit> {
         double dBeamBunchPeriod;
         bool IsDoubleHit(double tdiff);
 
-        jerror_t init(void);                                          ///< Called once at program start
-        jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);    ///< Called everytime a new run number is detected
-        jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);  ///< Called every event
-        jerror_t erun(void);                                          ///< Called everytime run number changes, if brun has been called
-        jerror_t fini(void);                                          ///< Called after last event of last event source has been processed
+        void Init() override;
+        void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+        void Process(const std::shared_ptr<const JEvent>& event) override;
+        void EndRun() override;
+        void Finish() override;
 };
 
 #endif // _DTAGHHit_factory_

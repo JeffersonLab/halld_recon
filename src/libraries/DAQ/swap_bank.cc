@@ -1,5 +1,5 @@
 
-#include <swap_bank.h>
+#include "swap_bank.h"
 
 #include <string.h>
 
@@ -7,7 +7,6 @@
 using namespace std;
 
 #include <JANA/JException.h>
-using namespace jana;
 
 //---------------------------------
 // swap_bank

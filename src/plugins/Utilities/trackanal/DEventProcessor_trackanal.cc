@@ -22,8 +22,7 @@ using namespace std;
 #include <TFile.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 // the DANA stuff
 #include <TRACKING/DTrackCandidate.h>
@@ -43,7 +42,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_trackanal());
+	app->Add(new DEventProcessor_trackanal());
 }
 } // "C"
 
@@ -54,7 +53,7 @@ void InitPlugin(JApplication *app){
 //------------------
 DEventProcessor_trackanal::DEventProcessor_trackanal()
 {
-
+	SetTypeName("DEventProcessor_trackanal");
 }
 
 //------------------
@@ -66,9 +65,9 @@ DEventProcessor_trackanal::~DEventProcessor_trackanal()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_trackanal::init(void)
+void DEventProcessor_trackanal::Init()
 {
   // Create histograms here
   // create Tree to hold TOF data
@@ -118,7 +117,7 @@ jerror_t DEventProcessor_trackanal::init(void)
 
   Int_t MaxArray = MaxF*MaxF;
 
-  // initialize varialbes just for the fun of it
+  // Initialize varialbes just for the fun of it
   for (Int_t i=0;i<MaxTrThrown;i++){
     ThrownPType[i] = 0;
     ThrownPp[i]    = 0.0;
@@ -140,33 +139,33 @@ jerror_t DEventProcessor_trackanal::init(void)
 
   pthread_mutex_init(&mutex, NULL);
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_trackanal::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_trackanal::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_trackanal::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_trackanal::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 
   // Fill histograms here
   vector<const DMCThrown*> trThrown;
-  loop->Get(trThrown);
+  event->Get(trThrown);
 
   vector<const DTrackCandidate*> trCand;
-  loop->Get(trCand);
+  event->Get(trCand);
 
   vector<const DTrackTimeBased*> trFit;
-  loop->Get(trFit);
+  event->Get(trFit);
   
   int ntr = trFit.size();
 
@@ -198,7 +197,7 @@ jerror_t DEventProcessor_trackanal::evnt(JEventLoop *loop, uint64_t eventnumber)
     
   }
     
-  EventNum = eventnumber;
+  EventNum = event->GetEventNumber();
   NTrThrown = trThrown.size();
 
   for (int i=0;i<NTrThrown;i++){
@@ -314,24 +313,21 @@ jerror_t DEventProcessor_trackanal::evnt(JEventLoop *loop, uint64_t eventnumber)
   TrackTree->Fill();
   
   pthread_mutex_unlock(&mutex);
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_trackanal::erun(void)
+void DEventProcessor_trackanal::EndRun()
 {
   // Any final calculations on histograms (like dividing them)
   // should be done here. This may get called more than once.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_trackanal::fini(void)
+void DEventProcessor_trackanal::Finish()
 {
 	// Called at very end. This will be called only once
   pthread_mutex_lock(&mutex);
@@ -344,6 +340,5 @@ jerror_t DEventProcessor_trackanal::fini(void)
 
   pthread_mutex_unlock(&mutex);
 
-  return NOERROR;
 }
 

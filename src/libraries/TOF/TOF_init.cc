@@ -1,7 +1,7 @@
 // $Id$
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JFactorySet.h>
+#include <JANA/JFactoryT.h>
 
 #include "DTOFGeometry_factory.h"
 #include "DTOFHit_factory.h"
@@ -13,20 +13,18 @@ using namespace jana;
 #include "DTOFHitMC.h"
 #include "DTOFTruth.h"
 
-jerror_t TOF_init(JEventLoop *loop)
+void TOF_init(JFactorySet *factorySet)
 {
   /// Create and register TOF data factories
-  loop->AddFactory(new DTOFGeometry_factory());
-  loop->AddFactory(new JFactory<DTOFDigiHit>());
-  loop->AddFactory(new JFactory<DTOFTDCDigiHit>());
-  loop->AddFactory(new DTOFHit_factory());            // smeared MC data
-  loop->AddFactory(new JFactory<DTOFHit>("TRUTH"));   // unsmeared MC data
-  loop->AddFactory(new DTOFPaddleHit_factory());
-  loop->AddFactory(new DTOFPoint_factory());
+  factorySet->Add(new DTOFGeometry_factory());
+  factorySet->Add(new JFactoryT<DTOFDigiHit>());
+  factorySet->Add(new JFactoryT<DTOFTDCDigiHit>());
+  factorySet->Add(new DTOFHit_factory());            // smeared MC data
+  factorySet->Add(new JFactoryT<DTOFHit>("TRUTH"));   // unsmeared MC data
+  factorySet->Add(new DTOFPaddleHit_factory());
+  factorySet->Add(new DTOFPoint_factory());
 
-  loop->AddFactory(new JFactory<DTOFTruth>());
-  loop->AddFactory(new JFactory<DTOFHitMC>());        // associated MC data objects
-  loop->AddFactory(new JFactory<DTOFHitMC>("TRUTH")); // associated MC data objects
-  
-  return NOERROR;
+  factorySet->Add(new JFactoryT<DTOFTruth>());
+  factorySet->Add(new JFactoryT<DTOFHitMC>());        // associated MC data objects
+  factorySet->Add(new JFactoryT<DTOFHitMC>("TRUTH")); // associated MC data objects
 }

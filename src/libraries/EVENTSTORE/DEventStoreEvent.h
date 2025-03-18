@@ -13,7 +13,6 @@
 #include <JANA/JEventSource.h>
 
 using namespace std;
-using namespace jana;
 
 class DEventStoreEvent
 {

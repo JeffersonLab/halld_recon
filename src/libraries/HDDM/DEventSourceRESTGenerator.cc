@@ -12,9 +12,9 @@ using std::string;
 #include "DEventSourceREST.h"
 
 //---------------------------------
-// Description
+// GetDescription
 //---------------------------------
-const char* DEventSourceRESTGenerator::Description(void)
+std::string DEventSourceRESTGenerator::GetDescription() const
 {
    return "REST";
 }
@@ -70,5 +70,5 @@ double DEventSourceRESTGenerator::CheckOpenable(std::string source)
 //---------------------------------
 JEventSource* DEventSourceRESTGenerator::MakeJEventSource(std::string source)
 {
-   return new DEventSourceREST(source.c_str());
+   return new DEventSourceREST(source.c_str(), mApplication);
 }

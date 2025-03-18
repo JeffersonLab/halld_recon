@@ -11,11 +11,12 @@
 
 #include "DMCThrownMatching_factory.h"
 #include "TMath.h"
+#include <DANA/DEvent.h>
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DMCThrownMatching_factory::init(void)
+void DMCThrownMatching_factory::Init()
 {
 	dDebugLevel = 0;
 	dMaximumTOFMatchDistance = 10.0; //cm
@@ -25,45 +26,43 @@ jerror_t DMCThrownMatching_factory::init(void)
 	dMaxTotalParticleErrorForMatch = 2.0;
 	dMinTrackMatchHitFraction = 0.5;
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DMCThrownMatching_factory::brun(jana::JEventLoop* locEventLoop, int32_t runnumber)
+void DMCThrownMatching_factory::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 {
-	gPARMS->SetDefaultParameter("MCMATCH:DEBUG_LEVEL", dDebugLevel);
-	gPARMS->SetDefaultParameter("MCMATCH:MAX_TOF_DISTANCE", dMaximumTOFMatchDistance);
-	gPARMS->SetDefaultParameter("MCMATCH:MAX_FCAL_DISTANCE", dMaximumFCALMatchDistance);
-	gPARMS->SetDefaultParameter("MCMATCH:MAX_BCAL_ANGLE", dMaximumBCALMatchAngleDegrees);
-	gPARMS->SetDefaultParameter("MCMATCH:MAX_TOTAL_ERROR", dMaxTotalParticleErrorForMatch);
-	gPARMS->SetDefaultParameter("MCMATCH:MIN_TRACK_MATCH", dMinTrackMatchHitFraction);
+	auto app = GetApplication();
+	app->SetDefaultParameter("MCMATCH:DEBUG_LEVEL", dDebugLevel);
+	app->SetDefaultParameter("MCMATCH:MAX_TOF_DISTANCE", dMaximumTOFMatchDistance);
+	app->SetDefaultParameter("MCMATCH:MAX_FCAL_DISTANCE", dMaximumFCALMatchDistance);
+	app->SetDefaultParameter("MCMATCH:MAX_BCAL_ANGLE", dMaximumBCALMatchAngleDegrees);
+	app->SetDefaultParameter("MCMATCH:MAX_TOTAL_ERROR", dMaxTotalParticleErrorForMatch);
+	app->SetDefaultParameter("MCMATCH:MIN_TRACK_MATCH", dMinTrackMatchHitFraction);
 
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = DEvent::GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetCenter);
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DMCThrownMatching_factory::evnt(jana::JEventLoop* locEventLoop, uint64_t eventnumber)
+void DMCThrownMatching_factory::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 #ifdef VTRACE
 	VT_TRACER("DMCThrownMatching_factory::evnt()");
 #endif
 
  	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	if(locMCThrowns.empty())
-		return NOERROR;
+		return;
 
 	locMCThrowns.clear();
-	locEventLoop->Get(locMCThrowns, "FinalState");
+	locEvent->Get(locMCThrowns, "FinalState");
 
  	vector<const DMCThrown*> locMCThrowns_Charged;
  	vector<const DMCThrown*> locMCThrowns_Neutral;
@@ -79,20 +78,20 @@ jerror_t DMCThrownMatching_factory::evnt(jana::JEventLoop* locEventLoop, uint64_
 		cout << "input #thrown, ok charged # thrown, ok neutral # thrown = " << locMCThrowns.size() << ", " << locMCThrowns_Charged.size() << ", " << locMCThrowns_Neutral.size() << endl;
 
  	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks);
+	locEvent->Get(locChargedTracks);
 
  	vector<const DNeutralParticle*> locNeutralParticles;
-	locEventLoop->Get(locNeutralParticles);
+	locEvent->Get(locNeutralParticles);
 
  	vector<const DChargedTrackHypothesis*> locChargedTrackHypotheses;
-	locEventLoop->Get(locChargedTrackHypotheses);
+	locEvent->Get(locChargedTrackHypotheses);
 
  	vector<const DNeutralParticleHypothesis*> locNeutralParticleHypotheses;
-	locEventLoop->Get(locNeutralParticleHypotheses);
+	locEvent->Get(locNeutralParticleHypotheses);
 
 	DMCThrownMatching* locMCThrownMatching = new DMCThrownMatching();
 
-	Find_GenReconMatches_BeamPhotons(locEventLoop, locMCThrownMatching);
+	Find_GenReconMatches_BeamPhotons(locEvent, locMCThrownMatching);
 
 	Find_GenReconMatches_ChargedHypo(locMCThrowns_Charged, locChargedTrackHypotheses, locMCThrownMatching);
 	Find_GenReconMatches_ChargedTrack(locChargedTracks, locMCThrownMatching);
@@ -100,9 +99,9 @@ jerror_t DMCThrownMatching_factory::evnt(jana::JEventLoop* locEventLoop, uint64_
 	Find_GenReconMatches_NeutralHypo(locMCThrowns_Neutral, locNeutralParticleHypotheses, locMCThrownMatching);
 	Find_GenReconMatches_NeutralParticle(locNeutralParticles, locMCThrownMatching);
 
-	Find_GenReconMatches_TOFPoints(locEventLoop, locMCThrownMatching);
-	Find_GenReconMatches_BCALShowers(locEventLoop, locMCThrownMatching);
-	Find_GenReconMatches_FCALShowers(locEventLoop, locMCThrownMatching);
+	Find_GenReconMatches_TOFPoints(locEvent, locMCThrownMatching);
+	Find_GenReconMatches_BCALShowers(locEvent, locMCThrownMatching);
+	Find_GenReconMatches_FCALShowers(locEvent, locMCThrownMatching);
 
 	if(dDebugLevel > 0)
 	{
@@ -164,24 +163,24 @@ jerror_t DMCThrownMatching_factory::evnt(jana::JEventLoop* locEventLoop, uint64_
 		}
 	}
 
-	_data.push_back(locMCThrownMatching);
+	Insert(locMCThrownMatching);
 
-	return NOERROR;
+	return;
 }
 
-void DMCThrownMatching_factory::Find_GenReconMatches_BeamPhotons(JEventLoop* locEventLoop, DMCThrownMatching* locMCThrownMatching) const
+void DMCThrownMatching_factory::Find_GenReconMatches_BeamPhotons(const std::shared_ptr<const JEvent>& locEvent, DMCThrownMatching* locMCThrownMatching) const
 {
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons);
+	locEvent->Get(locBeamPhotons);
 
 	vector<const DBeamPhoton*> locBeamPhotons_MCGEN;
-	locEventLoop->Get(locBeamPhotons_MCGEN, "MCGEN");
+	locEvent->Get(locBeamPhotons_MCGEN, "MCGEN");
 
 	vector<const DBeamPhoton*> locBeamPhotons_TAGGEDMCGEN;
-	locEventLoop->Get(locBeamPhotons_TAGGEDMCGEN, "TAGGEDMCGEN");
+	locEvent->Get(locBeamPhotons_TAGGEDMCGEN, "TAGGEDMCGEN");
 
 	vector<const DBeamPhoton*> locBeamPhotons_TRUTH;
-	locEventLoop->Get(locBeamPhotons_TRUTH, "TRUTH");
+	locEvent->Get(locBeamPhotons_TRUTH, "TRUTH");
 
 	//first set MCGEN & tagged MCGEN info
 	locMCThrownMatching->Set_MCGENBeamPhoton(locBeamPhotons_MCGEN.empty() ? nullptr : locBeamPhotons_MCGEN[0]);
@@ -252,15 +251,15 @@ void DMCThrownMatching_factory::Find_GenReconMatches_BeamPhotons(JEventLoop* loc
 	locMCThrownMatching->Set_BeamTruthToPhotonMap(locBeamTruthToPhotonMap);
 }
 
-void DMCThrownMatching_factory::Find_GenReconMatches_FCALShowers(JEventLoop* locEventLoop, DMCThrownMatching* locMCThrownMatching) const
+void DMCThrownMatching_factory::Find_GenReconMatches_FCALShowers(const std::shared_ptr<const JEvent>& locEvent, DMCThrownMatching* locMCThrownMatching) const
 {
 	vector<const DFCALTruthShower*> locFCALTruthShowers;
 	const DFCALTruthShower* locFCALTruthShower;
-	locEventLoop->Get(locFCALTruthShowers);
+	locEvent->Get(locFCALTruthShowers);
 
 	vector<const DFCALShower*> locFCALShowers;
 	const DFCALShower* locFCALShower;
-	locEventLoop->Get(locFCALShowers);
+	locEvent->Get(locFCALShowers);
 
 	map<const DFCALShower*, pair<const DFCALTruthShower*, double> > locFCALShowerToTruthMap;
 	map<const DFCALTruthShower*, pair<const DFCALShower*, double> > locFCALTruthToShowerMap;
@@ -321,21 +320,21 @@ void DMCThrownMatching_factory::Find_GenReconMatches_FCALShowers(JEventLoop* loc
 	locMCThrownMatching->Set_FCALTruthToShowerMap(locFCALTruthToShowerMap);
 }
 
-void DMCThrownMatching_factory::Find_GenReconMatches_BCALShowers(JEventLoop* locEventLoop, DMCThrownMatching* locMCThrownMatching) const
+void DMCThrownMatching_factory::Find_GenReconMatches_BCALShowers(const std::shared_ptr<const JEvent>& locEvent, DMCThrownMatching* locMCThrownMatching) const
 {
 	vector<const DBCALTruthShower*> locBCALTruthShowers;
 	const DBCALTruthShower* locBCALTruthShower;
-	locEventLoop->Get(locBCALTruthShowers);
+	locEvent->Get(locBCALTruthShowers);
 
 	vector<const DBCALShower*> locBCALShowers;
 	const DBCALShower* locBCALShower;
-	locEventLoop->Get(locBCALShowers);
+	locEvent->Get(locBCALShowers);
 
 	map<const DBCALShower*, pair<const DBCALTruthShower*, double> > locBCALShowerToTruthMap;
 	map<const DBCALTruthShower*, pair<const DBCALShower*, double> > locBCALTruthToShowerMap;
 
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	//map of truth shower to dmcthrown
 	map<const DBCALTruthShower*, const DMCThrown*> locBCALTruthToMCThrownMap;
@@ -423,15 +422,15 @@ void DMCThrownMatching_factory::Find_GenReconMatches_BCALShowers(JEventLoop* loc
 	locMCThrownMatching->Set_BCALTruthToShowerMap(locBCALTruthToShowerMap);
 }
 
-void DMCThrownMatching_factory::Find_GenReconMatches_TOFPoints(JEventLoop* locEventLoop, DMCThrownMatching* locMCThrownMatching) const
+void DMCThrownMatching_factory::Find_GenReconMatches_TOFPoints(const std::shared_ptr<const JEvent>& locEvent, DMCThrownMatching* locMCThrownMatching) const
 {
 	vector<const DTOFTruth*> locTOFTruths;
 	const DTOFTruth* locTOFTruth;
-	locEventLoop->Get(locTOFTruths);
+	locEvent->Get(locTOFTruths);
 
 	vector<const DTOFPoint*> locTOFPoints;
 	const DTOFPoint* locTOFPoint;
-	locEventLoop->Get(locTOFPoints);
+	locEvent->Get(locTOFPoints);
 
 	map<const DTOFPoint*, pair<const DTOFTruth*, double> > locTOFPointToTruthMap;
 	map<const DTOFTruth*, pair<const DTOFPoint*, double> > locTOFTruthToPointMap;
@@ -762,19 +761,19 @@ double DMCThrownMatching_factory::Calc_MatchFOM(const DVector3& locMomentum_Thro
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DMCThrownMatching_factory::erun(void)
+void DMCThrownMatching_factory::EndRun()
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DMCThrownMatching_factory::fini(void)
+void DMCThrownMatching_factory::Finish()
 {
-	return NOERROR;
+	return;
 }
 
 

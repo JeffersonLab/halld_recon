@@ -12,11 +12,9 @@
 #include "BCAL/DBCALPoint.h"
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
 #include <vector>
 
-using namespace jana;
 using namespace std;
 
 class DBCALCluster : public JObject {
@@ -74,7 +72,7 @@ public:
   void removePoint( const DBCALPoint* point ); 
  
   // this prints out info
-  void toStrings( vector< pair < string, string > > &items ) const;
+  void Summarize(JObjectSummary& summary) const override;
 
 private:
   

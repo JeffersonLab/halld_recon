@@ -22,18 +22,20 @@
 #include "PID/DEventRFBunch.h"
 #include "GlueX.h"
 
-using namespace jana;
 using namespace std;
 
-class DEventProcessor_coherent_peak_skim : public jana::JEventProcessor
+class DEventProcessor_coherent_peak_skim : public JEventProcessor
 {
 	public:
-		const char* className(void){return "DEventProcessor_coherent_peak_skim";}
+		DEventProcessor_coherent_peak_skim() {
+			SetTypeName("DEventProcessor_coherent_peak_skim");
+		}
+		~DEventProcessor_coherent_peak_skim() override = default;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber);	///< Called every time a new run number is detected.
-		jerror_t evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber);	///< Called every event.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
 
 		bool Cut_ShowerEOverP(const DChargedTrackHypothesis* locChargedHypo) const;
 		double Step_TimeToNearInputTime(double locTimeToStep, double locTimeToStepTo) const;

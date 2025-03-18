@@ -14,11 +14,10 @@
 #include "TF1.h"
 
 #include "JANA/JObject.h"
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 
 #include "particleType.h"
 #include "SplitString.h"
-#include "DANA/DApplication.h"
 #include "HDGEOMETRY/DGeometry.h"
 #include "EVENTSTORE/DESSkimData.h"
 
@@ -42,7 +41,6 @@
 
 
 using namespace std;
-using namespace jana;
 
 namespace DAnalysis
 {
@@ -99,13 +97,13 @@ class DSourceComboer : public JObject
 	public:
 
 		DSourceComboer(void) = delete;
-		DSourceComboer(JEventLoop* locEventLoop);
+		DSourceComboer(const std::shared_ptr<const JEvent>& locEvent);
 		~DSourceComboer(void);
 
 		//RESET
-		void Reset_NewEvent(JEventLoop* locEventLoop);
+		void Reset_NewEvent(const std::shared_ptr<const JEvent>& locEvent);
 		
-		void Set_RunDependent_Data(JEventLoop *locEventLoop);
+		void Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent);
 
 		//BUILD COMBOS (what should be called from the outside to do all of the work)
 		DCombosByReaction Build_ParticleCombos(const DReactionVertexInfo* locReactionVertexInfo);
@@ -139,7 +137,7 @@ class DSourceComboer : public JObject
 		void Get_CommandLineCuts_EOverP(void);
 		void Get_CommandLineCuts_Beta(void);
 		void Create_CutFunctions(void);
-		void Setup_NeutralShowers(JEventLoop* locEventLoop);
+		void Setup_NeutralShowers(const std::shared_ptr<const JEvent>& locEvent);
 		void Recycle_Vectors(void);
 
 		//INITIAL CHECKS

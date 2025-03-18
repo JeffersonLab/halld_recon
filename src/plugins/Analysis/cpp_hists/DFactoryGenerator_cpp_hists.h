@@ -8,21 +8,20 @@
 #ifndef _DFactoryGenerator_cpp_hists_
 #define _DFactoryGenerator_cpp_hists_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_cpp_hists.h"
 
-class DFactoryGenerator_cpp_hists : public jana::JFactoryGenerator
+class DFactoryGenerator_cpp_hists : public JFactoryGenerator
 {
 	public:
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DFactoryGenerator_cpp_hists";}
 		
-		jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
+		void GenerateFactories(JFactorySet *factory_set) override
 		{
-			locEventLoop->AddFactory(new DReaction_factory_cpp_hists());
-			return NOERROR;
+			factory_set->Add(new DReaction_factory_cpp_hists());
+			return;
 		}
 };
 

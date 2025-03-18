@@ -6,17 +6,14 @@
 //
 
 #include <string>
-using std::string;
-
 
 #include "JEventSourceGenerator_EVIOpp.h"
-using namespace jana;
 
 
 //---------------------------------
-// Description
+// GetDescription
 //---------------------------------
-const char* JEventSourceGenerator_EVIOpp::Description(void)
+std::string JEventSourceGenerator_EVIOpp::GetDescription() const
 {
 	return "EVIOpp  - Reads EVIO formatted data from file or ET system";
 }
@@ -24,7 +21,7 @@ const char* JEventSourceGenerator_EVIOpp::Description(void)
 //---------------------------------
 // CheckOpenable
 //---------------------------------
-double JEventSourceGenerator_EVIOpp::CheckOpenable(string source)
+double JEventSourceGenerator_EVIOpp::CheckOpenable(std::string source)
 {
 	// First, check if the source starts with "ET:". If so,
 	// return 0.0 immediately. If it does not start with this,
@@ -57,6 +54,6 @@ double JEventSourceGenerator_EVIOpp::CheckOpenable(string source)
 //---------------------------------
 JEventSource* JEventSourceGenerator_EVIOpp::MakeJEventSource(string source)
 {
-	return new JEventSource_EVIOpp(source.c_str());
+	return new JEventSource_EVIOpp(source);
 }
 

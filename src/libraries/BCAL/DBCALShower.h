@@ -2,18 +2,19 @@
 #define _DBCALShower_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 #include <math.h>
 #include <DMatrix.h>
 #include <TMatrixFSym.h>
-using namespace jana;
 
-class DBCALShower:public JObject{
+#include "DANA/DObjectID.h"
+
+class DBCALShower: public JObject{
 	public:
 		JOBJECT_PUBLIC(DBCALShower);
 
  DBCALShower():ExyztCovariance(5) {} ///< Constructor initializes matrix to 5x5
 
+    oid_t id = reinterpret_cast<oid_t>(this);
     float E;
     float E_raw;
     float E_preshower;
@@ -79,40 +80,40 @@ class DBCALShower:public JObject{
 		else return 0;
 	}
 
-	void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "E", "%5.3f", E);
-			AddString(items, "x", "%5.2f", x);
-			AddString(items, "y", "%5.2f", y);
-			AddString(items, "z", "%5.1f", z);
-			AddString(items, "t", "%5.1f", t);
-			AddString(items, "r", "%5.1f", sqrt(x*x+y*y));
-			AddString(items, "phi", "%5.3f",atan2(y,x));
-			AddString(items, "E_preshower", "%5.3f", E_preshower);
-                        AddString(items, "E_L2", "%5.3f", E_L2);
-                        AddString(items, "E_L3", "%5.3f", E_L3);
-                        AddString(items, "E_L4", "%5.3f", E_L4);
-			AddString(items, "N_cell", "%d", N_cell);
-			AddString(items, "Q", "%d", Q);
-			AddString(items, "dE", "%5.3f", EErr());
-			AddString(items, "dx", "%5.3f", xErr());
-			AddString(items, "dy", "%5.3f", yErr());
-			AddString(items, "dz", "%5.2f", zErr());
-			AddString(items, "dt", "%5.3f", tErr());
-			AddString(items, "EXcorr", "%5.3f", EXcorr());
-			AddString(items, "EYcorr", "%5.3f", EYcorr());
-			AddString(items, "EZcorr", "%5.3f", EZcorr());
-			AddString(items, "ETcorr", "%5.3f", ETcorr());
-			AddString(items, "XYcorr", "%5.3f", XYcorr());
-			AddString(items, "XZcorr", "%5.3f", XZcorr());
-			AddString(items, "XTcorr", "%5.3f", XTcorr());
-			AddString(items, "YZcorr", "%5.3f", YZcorr());
-			AddString(items, "YTcorr", "%5.3f", YTcorr());
-			AddString(items, "ZTcorr", "%5.3f", ZTcorr());
-			AddString(items, "sigLong", "%5.3f", sigLong);
-			AddString(items, "sigTrans", "%5.3f", sigTrans);
-			AddString(items, "sigTheta", "%5.3f", sigTheta);
-//                        AddString(items, "sigTime", "%5.3f", sigTime);
-                        AddString(items, "rmsTime", "%5.3f", rmsTime);
+	void Summarize(JObjectSummary& summary) const override {
+			summary.add(E, "E", "%5.3f");
+			summary.add(x, "x", "%5.2f");
+			summary.add(y, "y", "%5.2f");
+			summary.add(z, "z", "%5.1f");
+			summary.add(t, "t", "%5.1f");
+			summary.add(sqrt(x*x+y*y), "r", "%5.1f");
+			summary.add(atan2(y,x), "phi", "%5.3f");
+			summary.add(E_preshower, "E_preshower", "%5.3f");
+			summary.add(E_L2, "E_L2", "%5.3f");
+			summary.add(E_L3, "E_L3", "%5.3f");
+			summary.add(E_L4, "E_L4", "%5.3f");
+			summary.add(N_cell, "N_cell", "%d");
+			summary.add(Q, "Q", "%d");
+			summary.add(EErr(), "dE", "%5.3f");
+			summary.add(xErr(), "dx", "%5.3f");
+			summary.add(yErr(), "dy", "%5.3f");
+			summary.add(zErr(), "dz", "%5.2f");
+			summary.add(tErr(), "dt", "%5.3f");
+			summary.add(EXcorr(), "EXcorr", "%5.3f");
+			summary.add(EYcorr(), "EYcorr", "%5.3f");
+			summary.add(EZcorr(), "EZcorr", "%5.3f");
+			summary.add(ETcorr(), "ETcorr", "%5.3f");
+			summary.add(XYcorr(), "XYcorr", "%5.3f");
+			summary.add(XZcorr(), "XZcorr", "%5.3f");
+			summary.add(XTcorr(), "XTcorr", "%5.3f");
+			summary.add(YZcorr(), "YZcorr", "%5.3f");
+			summary.add(YTcorr(), "YTcorr", "%5.3f");
+			summary.add(ZTcorr(), "ZTcorr", "%5.3f");
+			summary.add(sigLong, "sigLong", "%5.3f");
+			summary.add(sigTrans, "sigTrans", "%5.3f");
+			summary.add(sigTheta, "sigTheta", "%5.3f");
+//            summary.add(sigTime, "sigTime", "%5.3f");
+			summary.add(rmsTime, "rmsTime", "%5.3f");
 	}
 };
 

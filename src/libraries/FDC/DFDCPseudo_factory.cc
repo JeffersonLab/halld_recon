@@ -7,7 +7,13 @@
 //********************************************************
 
 #include "DFDCPseudo_factory.h"
+
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/Services/JLockService.h>
+#include "DANA/DGeometryManager.h"
 #include "HDGEOMETRY/DGeometry.h"
+
 #include "DFDCGeometry.h"
 #include <TRACKING/DTrackHitSelectorTHROWN.h>
 #include <TROOT.h>
@@ -62,16 +68,14 @@ bool DFDCPseudo_cmp(const DFDCPseudo* a, const DFDCPseudo *b){
 
 ///
 /// DFDCPseudo_factory::DFDCPseudo_factory():
-/// default constructor -- initializes log file
+/// default constructor
 ///
 DFDCPseudo_factory::DFDCPseudo_factory() {
-  //_log = new JStreamLog(std::cout, "FDC PSEUDO >>");
-  //*_log << "File initialized." << endMsg;
 }
 
 ///
 /// DFDCPseudo_factory::~DFDCPseudo_factory():
-/// default destructor -- closes log file
+/// default destructor
 ///
 DFDCPseudo_factory::~DFDCPseudo_factory() {
   if (fdcwires.size()){
@@ -88,13 +92,12 @@ DFDCPseudo_factory::~DFDCPseudo_factory() {
       }
     }    
   }
-  //delete _log;
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DFDCPseudo_factory::init(void)
+void DFDCPseudo_factory::Init()
 {
   RIN_FIDUCIAL = 1.5;
   ROUT_FIDUCIAL=48.0;
@@ -106,47 +109,49 @@ jerror_t DFDCPseudo_factory::init(void)
 
   r2_out=ROUT_FIDUCIAL*ROUT_FIDUCIAL;
   r2_in=RIN_FIDUCIAL*RIN_FIDUCIAL;
+
+  auto app = GetApplication();
   
-  gPARMS->SetDefaultParameter("FDC:ROUT_FIDUCIAL",ROUT_FIDUCIAL, "Outer fiducial radius of FDC in cm"); 
-  gPARMS->SetDefaultParameter("FDC:RIN_FIDUCIAL",RIN_FIDUCIAL, "Inner fiducial radius of FDC in cm");
-  gPARMS->SetDefaultParameter("FDC:MAX_ALLOWED_FDC_HITS",MAX_ALLOWED_FDC_HITS, "Max. number of FDC hits (includes both cathode strips and wires hits) to allow before considering event too busy to attempt FDC tracking");
-  gPARMS->SetDefaultParameter("FDC:STRIP_ANODE_TIME_CUT",STRIP_ANODE_TIME_CUT, "maximum time difference between strips and wires (in ns)"); 
-  gPARMS->SetDefaultParameter("FDC:CHARGE_THRESHOLD",CHARGE_THRESHOLD,"Minimum average charge on both cathode planes (in pC)");
-  gPARMS->SetDefaultParameter("FDC:DELTA_X_CUT",DELTA_X_CUT,"Maximum distance between reconstructed wire position and wire position");
+  app->SetDefaultParameter("FDC:ROUT_FIDUCIAL",ROUT_FIDUCIAL, "Outer fiducial radius of FDC in cm"); 
+  app->SetDefaultParameter("FDC:RIN_FIDUCIAL",RIN_FIDUCIAL, "Inner fiducial radius of FDC in cm");
+  app->SetDefaultParameter("FDC:MAX_ALLOWED_FDC_HITS",MAX_ALLOWED_FDC_HITS, "Max. number of FDC hits (includes both cathode strips and wires hits) to allow before considering event too busy to attempt FDC tracking");
+  app->SetDefaultParameter("FDC:STRIP_ANODE_TIME_CUT",STRIP_ANODE_TIME_CUT, "maximum time difference between strips and wires (in ns)"); 
+  app->SetDefaultParameter("FDC:CHARGE_THRESHOLD",CHARGE_THRESHOLD,"Minimum average charge on both cathode planes (in pC)");
+  app->SetDefaultParameter("FDC:DELTA_X_CUT",DELTA_X_CUT,"Maximum distance between reconstructed wire position and wire position");
 
   DEBUG_HISTS = false;
-  gPARMS->SetDefaultParameter("FDC:DEBUG_HISTS",DEBUG_HISTS);
+  app->SetDefaultParameter("FDC:DEBUG_HISTS",DEBUG_HISTS);
+
   MATCH_TRUTH_HITS = false;
-  gPARMS->SetDefaultParameter("FDC:MATCH_TRUTH_HITS",MATCH_TRUTH_HITS);
+  app->SetDefaultParameter("FDC:MATCH_TRUTH_HITS",MATCH_TRUTH_HITS);
 
   PROFILE_TIME=false;
-  gPARMS->SetDefaultParameter("TRK:PROFILE_TIME", PROFILE_TIME);
-  
-  return NOERROR;
+  app->SetDefaultParameter("TRK:PROFILE_TIME", PROFILE_TIME);
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DFDCPseudo_factory::fini(void)
+void DFDCPseudo_factory::Finish(void)
 {
   if (PROFILE_TIME){
     cout << "Average pseudo-point creation time = "
 	 << 1000.*cumulative_time/cumulative_events << " ms" << endl;
   }
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DFDCPseudo_factory::brun(JEventLoop *loop, int32_t runnumber)
+void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  // Get pointer to DGeometry object
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
-    
+  auto run_number = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+  auto root_lock = app->GetService<JLockService>();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto dgeom = geo_manager->GetDGeometry(run_number);
+
   USE_FDC=true;
   if (!dgeom->GetFDCWires(fdcwires)){
     _DBG_<< "FDC geometry not available!" <<endl;
@@ -174,7 +179,6 @@ jerror_t DFDCPseudo_factory::brun(JEventLoop *loop, int32_t runnumber)
   }
  
   // Get offsets tweaking nominal geometry from calibration database
-  JCalibration * jcalib = dapp->GetJCalibration(runnumber);
   vector<map<string,double> >vals;
   if (jcalib->Get("FDC/cell_offsets",vals)==false){
     for(unsigned int i=0; i<vals.size(); i++){
@@ -194,7 +198,7 @@ jerror_t DFDCPseudo_factory::brun(JEventLoop *loop, int32_t runnumber)
   FDC_RES_PAR2=fdcparms["res_par2"];
   
   if(DEBUG_HISTS){
-    dapp->Lock();
+    root_lock->RootWriteLock();
 
     // Histograms may already exist. (Another thread may have created them)
     // Try and get pointers to the existing ones.
@@ -268,14 +272,11 @@ jerror_t DFDCPseudo_factory::brun(JEventLoop *loop, int32_t runnumber)
 	Hxy[i]=new TH2F(hname,hname,4000,-50,50,200,-50,50);
       }
     }
-
-    dapp->Unlock();
+    root_lock->RootUnLock();
   }
-
-  return NOERROR;
 }
 
-jerror_t DFDCPseudo_factory::erun(void){
+void DFDCPseudo_factory::EndRun(){
   if (fdcwires.size()){
     for (unsigned int i=0;i<fdcwires.size();i++){
       for (unsigned int j=0;j<fdcwires[i].size();j++){
@@ -292,45 +293,34 @@ jerror_t DFDCPseudo_factory::erun(void){
     }    
   }
   fdccathodes.clear();
-
-
-  return NOERROR;
 }
+
+
 ///
-/// DFDCPseudo_factory::evnt():
+/// DFDCPseudo_factory::Process
 /// this is the place that anode hits and DFDCCathodeClusters are organized into pseudopoints.
 ///
-jerror_t DFDCPseudo_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
-  if (!USE_FDC) return NOERROR;
-
+void DFDCPseudo_factory::Process(const std::shared_ptr<const JEvent>& event) {
+  if (!USE_FDC) return;
+  
   // Get all FDC hits (anode and cathode)	
   vector<const DFDCHit*> fdcHits;
-  eventLoop->Get(fdcHits);
-  if (fdcHits.size()==0) return NOERROR;
-
+  event->Get(fdcHits);
+  if (fdcHits.size()==0) return;
+  
   // For events with a very large number of hits, assume
   // we can't reconstruct them so bail early
   // Feb. 8, 2008  D.L. (updated to config param. Nov. 18, 2010 D.L.)
   if(fdcHits.size()>MAX_ALLOWED_FDC_HITS){
-    _DBG_<<"Too many hits in FDC ("<<fdcHits.size()<<", max="<<MAX_ALLOWED_FDC_HITS<<")! Pseudopoint reconstruction in FDC bypassed for event "<<eventLoop->GetJEvent().GetEventNumber()<<endl;
-    return NOERROR;
+    _DBG_<<"Too many hits in FDC ("<<fdcHits.size()<<", max="<<MAX_ALLOWED_FDC_HITS<<")! Pseudopoint reconstruction in FDC bypassed for event "<<event->GetEventNumber()<<endl;
+    return;
   }
   
   // Get cathode clusters
   vector<const DFDCCathodeCluster*> cathClus;
-  eventLoop->Get(cathClus);
-  if (cathClus.size()==0) return NOERROR;
-
-  // If this is simulated data then we want to match up the truth hit
-  // with this "real" hit. Ideally, this would be done at the
-  // DFDCHit object level, but the organization of the data in HDDM
-  // makes that difficult. Here we have the full wire definition so
-  // we make the connection here.
-  vector<const DMCTrackHit*> mctrackhits;
-  if (MATCH_TRUTH_HITS){
-    eventLoop->Get(mctrackhits);
-  }
-
+  event->Get(cathClus);
+  if (cathClus.size()==0) return;
+  
   high_resolution_clock::time_point t0,t1;
   if (PROFILE_TIME){
     t0 = high_resolution_clock::now();
@@ -343,23 +333,39 @@ jerror_t DFDCPseudo_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
       xHits.push_back(fdcHits[i]);
   // Make sure the wires are also in order of ascending z position
   std::sort(xHits.begin(), xHits.end(), DFDCAnode_gLayer_cmp);
+		
+  // Sift through clusters and put U and V clusters into respective vectors.
+  vector<const DFDCCathodeCluster*> uClus;	
+  vector<const DFDCCathodeCluster*> vClus;
+  for (unsigned int i=0; i < cathClus.size(); i++) {
+    if (cathClus[i]->plane == 1)
+      vClus.push_back(cathClus[i]);
+    else
+      uClus.push_back(cathClus[i]);
+  }
+  
+  // If this is simulated data then we want to match up the truth hit
+  // with this "real" hit. Ideally, this would be done at the
+  // DFDCHit object level, but the organization of the data in HDDM
+  // makes that difficult. Here we have the full wire definition so
+  // we make the connection here.
+  vector<const DMCTrackHit*> mctrackhits;
+  event->Get(mctrackhits);
 	
-  // For each layer, get its sets of V, X, and U hits, and then pass them
-  // to the geometrical organization routine, DFDCPseudo_factory::makePseudo()
+  vector<const DFDCCathodeCluster*>::iterator uIt = uClus.begin();
+  vector<const DFDCCathodeCluster*>::iterator vIt = vClus.begin();
+  vector<const DFDCHit*>::iterator xIt = xHits.begin();
+  
+  // For each layer, get its sets of V, X, and U hits, and then pass them to the geometrical
+  // organization routine, DFDCPseudo_factory::makePseudo()
   vector<const DFDCCathodeCluster*> oneLayerU;
   vector<const DFDCCathodeCluster*> oneLayerV;
   vector<const DFDCHit*> oneLayerX;
-  vector<const DFDCHit*>::iterator xIt = xHits.begin();
-  vector<const DFDCCathodeCluster*>::iterator cIt = cathClus.begin();
   for (int iLayer=1; iLayer <= 24; iLayer++) {
-    for (; ((cIt != cathClus.end() && (*cIt)->gLayer == iLayer)); cIt++){
-      if ((*cIt)->plane==1){
-	oneLayerV.push_back(*cIt);
-      }
-      else {
-	oneLayerU.push_back(*cIt);
-      }
-    }
+    for (; ((uIt != uClus.end() && (*uIt)->gLayer == iLayer)); uIt++)
+      oneLayerU.push_back(*uIt);
+    for (; ((vIt != vClus.end() && (*vIt)->gLayer == iLayer)); vIt++)
+      oneLayerV.push_back(*vIt);
     for (; ((xIt != xHits.end() && (*xIt)->gLayer == iLayer)); xIt++)
       oneLayerX.push_back(*xIt);
     if (oneLayerU.size()>0 && oneLayerV.size()>0 && oneLayerX.size()>0)
@@ -368,18 +374,15 @@ jerror_t DFDCPseudo_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
     oneLayerV.clear();
     oneLayerX.clear();
   }
-	
   // Make sure the data are both time- and z-ordered
-  std::sort(_data.begin(),_data.end(),DFDCPseudo_cmp);
-
+  std::sort(mData.begin(),mData.end(),DFDCPseudo_cmp);
+  
   if (PROFILE_TIME){
     t1 = high_resolution_clock::now();
     duration<double> time_span = duration_cast<duration<double>>(t1 - t0);
     cumulative_time+=double(time_span.count());
     cumulative_events+=1.0;
   }
-  
-  return NOERROR;
 }
 
 /// 
@@ -550,7 +553,6 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                        v_wire_dt_vs_wire->Fill((*xIt)->element,(*xIt)->t-vpeaks[j].t);
 
 
-
                        int uid=u[upeaks[i].cluster]->members[1]->element;
                        int vid=v[vpeaks[j].cluster]->members[1]->element;
 
@@ -661,8 +663,7 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
 		      const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
 		      if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
 		    }
-		      
-                    _data.push_back(newPseu);
+                    Insert(newPseu);
 
                     if (DEBUG_HISTS){
                        Hxy[ilay]->Fill(newPseu->w_c,newPseu->s);

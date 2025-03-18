@@ -4,13 +4,14 @@
 // initial athor: r.dzhygadlo at gsi.de
 // -----------------------------------------
 
+#include <DANA/DEvent.h>
 #include "DEventProcessor_lut_dirc.h"
 
 // Routine used to create our DEventProcessor
 extern "C" {
   void InitPlugin(JApplication *app) {
     InitJANAPlugin(app);
-    app->AddProcessor(new DEventProcessor_lut_dirc());
+    app->Add(new DEventProcessor_lut_dirc());
   }
 }
 
@@ -21,10 +22,11 @@ DEventProcessor_lut_dirc::DEventProcessor_lut_dirc() {
 DEventProcessor_lut_dirc::~DEventProcessor_lut_dirc() {
 }
 
-jerror_t DEventProcessor_lut_dirc::init(void) {
+void DEventProcessor_lut_dirc::Init() {
   string locOutputFileName = "hd_root.root";
-  if(gPARMS->Exists("OUTPUT_FILENAME"))
-    gPARMS->GetParameter("OUTPUT_FILENAME", locOutputFileName);
+  auto params = GetApplication()->GetJParameterManager();
+  if(params->Exists("OUTPUT_FILENAME"))
+    params->GetParameter("OUTPUT_FILENAME", locOutputFileName);
 
   //go to file
   TFile* locFile = (TFile*)gROOT->FindObject(locOutputFileName.c_str());
@@ -43,21 +45,19 @@ jerror_t DEventProcessor_lut_dirc::init(void) {
       new((fLuta)[n]) DrcLutNode(-1);
     }
   }
-  
-  return NOERROR;
 }
 
-jerror_t DEventProcessor_lut_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void DEventProcessor_lut_dirc::Process(const std::shared_ptr<const JEvent>& event) {
   vector<const DMCThrown*> mcthrowns;
   vector<const DDIRCTruthPmtHit*> dircPmtHits;
   
-  loop->Get(mcthrowns);
-  loop->Get(dircPmtHits);
+  event->Get(mcthrowns);
+  event->Get(dircPmtHits);
 
-  if(mcthrowns.size()<1) return NOERROR;
-  if(dircPmtHits.size()!=1) return NOERROR;
+  if(mcthrowns.size()<1) return;
+  if(dircPmtHits.size()!=1) return;
   
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+  GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
   
   // loop over PMT's hits
   for (unsigned int h = 0; h < dircPmtHits.size(); h++){
@@ -82,18 +82,15 @@ jerror_t DEventProcessor_lut_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
 		 TVector3(dircPmtHits[h]->x,dircPmtHits[h]->y,dircPmtHits[h]->z),
 		 TVector3(dircPmtHits[h]->x,dircPmtHits[h]->y,dircPmtHits[h]->z));
   }
-  japp->RootUnLock(); //RELEASE ROOT LOCK
-
-  return NOERROR;
+  GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
-jerror_t DEventProcessor_lut_dirc::erun(void) {
-  return NOERROR;
+void DEventProcessor_lut_dirc::EndRun() {
 }
 
-jerror_t DEventProcessor_lut_dirc::fini(void) {
-  japp->RootWriteLock();
+void DEventProcessor_lut_dirc::Finish() {
+  auto lockSvc = GetApplication()->GetService<JLockService>();
+  lockSvc->RootWriteLock();
   fTree->Fill();
-  japp->RootUnLock();
-  return NOERROR;
+  lockSvc->RootUnLock();
 }

@@ -11,7 +11,6 @@
 
 #include <JANA/JObject.h>
 
-using namespace jana;
 using namespace std;
 
 class DCODAROCInfo:public JObject{
@@ -24,10 +23,10 @@ class DCODAROCInfo:public JObject{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "rocid"      , "%d" , rocid);
-			AddString(items, "timestamp"  , "%ld", timestamp);
-			AddString(items, "Nmisc"      , "%d" , misc.size());
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(rocid, NAME_OF(rocid), "%d");
+			summary.add(timestamp, NAME_OF(timestamp), "%ld");
+			summary.add(misc.size(), "Nmisc", "%d");
 		}
 		
 };
