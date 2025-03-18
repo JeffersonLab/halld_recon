@@ -59,6 +59,8 @@ public:
 
   unsigned int DB_PEDESTAL;
   unsigned int HIT_DEBUG;
+  
+  bool INSTALLED;
 
   bool   m_activeBlock[kECALBlocksTall][kECALBlocksWide];
   int    m_channelNumber[kECALBlocksTall][kECALBlocksWide];

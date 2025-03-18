@@ -50,6 +50,9 @@ void DFMWPCCluster_factory::Init()
 //------------------
 void DFMWPCCluster_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/FMWPC/install_status", installed);
+	if(atoi(installed["status"].data()) == 0) return;
 
   // Get pointer to DGeometry object
   dgeom  = DEvent::GetDGeometry(event);

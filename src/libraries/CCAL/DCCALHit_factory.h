@@ -45,6 +45,8 @@ class DCCALHit_factory:public JFactoryT<DCCALHit>{
 			const vector<double> &ccal_const_ch, 
 			const DCCALGeometry  &ccalGeom);    
 		
+  		bool INSTALLED;
+
 		unsigned int DB_PEDESTAL;
 		unsigned int HIT_DEBUG;
 		

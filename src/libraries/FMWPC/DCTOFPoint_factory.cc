@@ -18,6 +18,7 @@ using namespace std;
 #include "DCTOFPoint_factory.h"
 #include "DCTOFHit.h"
 #include "HDGEOMETRY/DGeometry.h"
+#include "DANA/DEvent.h"
 
 //------------------
 // Init
@@ -31,6 +32,9 @@ void DCTOFPoint_factory::Init()
 //------------------
 void DCTOFPoint_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/CTOF/install_status", installed);
+
   ATTENUATION_LENGTH=400.;
   LIGHT_PROPAGATION_SPEED=15.; // cm/ns
   THRESHOLD=0.0005; // GeV
@@ -41,6 +45,7 @@ void DCTOFPoint_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
   auto geoman = app->GetService<DGeometryManager>();
   const DGeometry *geom = geoman->GetDGeometry(runnumber);
   geom->GetCTOFPositions(ctof_positions);
+
 }
 
 //------------------
