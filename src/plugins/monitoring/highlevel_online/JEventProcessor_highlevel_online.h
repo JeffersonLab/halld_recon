@@ -68,6 +68,8 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 		TH1I *dKp_Km;
 		TH1I *dpip_pim_pi0;
 		TH2I *dbeta_vs_p;
+		TH2I *dbeta_vs_p_BCAL;
+		TH2I *dbeta_vs_p_TOF;
 		TH1I *dptrans;
 		TH1I *dme_rho;
 		TH1I *dme_omega;
