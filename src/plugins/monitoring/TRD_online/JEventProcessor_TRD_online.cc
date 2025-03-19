@@ -41,6 +41,8 @@ static TH1I *hHit_Occupancy[NTRDplanes];
 static TH1I *hHit_Time[NTRDplanes];
 static TH1I *hHit_PulseHeight[NTRDplanes];
 static TH2I *hHit_TimeVsStrip[NTRDplanes];
+static TH2I *hHit_TimeVsdE[NTRDplanes];
+static TH2I *hHit_StripVsdE[NTRDplanes];
 
 const int NEventsClusterMonitor = 10;
 static TH2I *hClusterHits_TimeVsStrip[NTRDplanes];
@@ -144,7 +146,9 @@ void JEventProcessor_TRD_online::Init() {
 		hHit_Time[i] = new TH1I(Form("Hit_Time_Plane%d", i),Form("Plane %d TRD pulse time;pulse time [ns];calibrated hits / 2 ns",i),250,0.0,2000.0);
 		hHit_PulseHeight[i] = new TH1I(Form("Hit_PulseHeight_Plane%d", i),Form("Plane %d TRD pulse height;pulse height [fADC units];calibrated hits / 1 unit",i),260,400.0,3000.0);
         hHit_TimeVsStrip[i] = new TH2I(Form("Hit_TimeVsStrip_Plane%d", i),Form("Plane %d TRD pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,250,0.0,2000.0);
-
+		hHit_StripVsdE[i] = new TH2I(Form("Hit_StripVsdE_Plane%d", i),Form("Plane %d TRD hit dE vs. strip;strip;dE [q]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,390,400.,3000.0);
+		hHit_TimeVsdE[i] = new TH2I(Form("Hit_TimeVsdE_Plane%d", i),Form("Plane %d TRD pulse dE vs. time;dE [q];pulse time [ns]",i),390,400.,3000.,250,0.0,2000.0);
+		
 	}
     
 	// point-level hists
@@ -284,6 +288,8 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 	    hHit_Time[plane]->Fill(hit->t);
 	    hHit_PulseHeight[plane]->Fill(hit->pulse_height);
         hHit_TimeVsStrip[plane]->Fill(hit->strip, hit->t);
+		hHit_TimeVsdE[plane]->Fill(hit->q, hit->t);
+		hHit_StripVsdE[plane]->Fill(hit->strip, hit->q);
     }
 	
        if (clusters.size() > 10 && eventClusterCount < NEventsClusterMonitor) {
