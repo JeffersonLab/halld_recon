@@ -78,6 +78,8 @@ void DECALHit_factory::Init(void)
     
     base_time  = 0;
     
+    INSTALLED = false;
+    
 
     return; //NOERROR;
 }
@@ -87,6 +89,15 @@ void DECALHit_factory::Init(void)
 //------------------
 void DECALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/ECAL/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		INSTALLED = false;
+	else
+		INSTALLED = true;
+		
+	if(!INSTALLED) return;
+
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
     int runnumber = event->GetRunNumber();
@@ -215,6 +226,8 @@ void DECALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
     /// Note that this code does NOT get called for simulated
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
+
+	if(!INSTALLED) return;
 
     vector<const DECALDigiHit*> digihits;
 

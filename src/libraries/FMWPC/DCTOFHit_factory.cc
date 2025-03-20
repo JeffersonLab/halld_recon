@@ -33,6 +33,9 @@ void DCTOFHit_factory::Init()
   t_scale    = 0.0625;   // 62.5 ps/count
   t_base_adc = 0.;       // ns
   t_base_tdc = 0.; // ns
+
+  INSTALLED = false;
+    
 }
 
 //------------------
@@ -40,6 +43,15 @@ void DCTOFHit_factory::Init()
 //------------------
 void DCTOFHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/CTOF/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		INSTALLED = false;
+	else
+		INSTALLED = true;
+		
+	if(!INSTALLED) return;
+
   // load base time offset
   map<string,double> base_time_offset;
   if ((GetCalib(event,"/CTOF/adc_base_time_offset",base_time_offset))==false){
@@ -60,6 +72,8 @@ void DCTOFHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 //------------------
 void DCTOFHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {   
+  if(!INSTALLED) return;
+
   const DTTabUtilities* locTTabUtilities = NULL;
   event->GetSingle(locTTabUtilities);
   
