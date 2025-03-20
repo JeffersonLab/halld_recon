@@ -14,6 +14,7 @@ using namespace std;
 
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
+#include <DANA/DEvent.h>
 
 
 //------------------
@@ -45,6 +46,14 @@ void DDIRCPmtHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 	auto runnumber = event->GetRunNumber();
 	auto app = event->GetJApplication();
 	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
+	// check to see if the detector is install - don't load anything if it's not
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/DIRC/install_status", installed);
+	if(atoi(installed["status"].data()) == 0) {
+		DIRC_SKIP = true;
+		return;
+	}
 
 	// Only print messages for one thread whenever run number change
 	static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;

@@ -9,7 +9,10 @@
 #define _DCCALGeometry_factory_
 
 #include <JANA/JFactoryT.h>
+#include <DANA/DEvent.h>
 #include "DCCALGeometry.h"
+#include <map>
+
 
 class DCCALGeometry_factory:public JFactoryT<DCCALGeometry>{
 	public:
@@ -17,6 +20,7 @@ class DCCALGeometry_factory:public JFactoryT<DCCALGeometry>{
 		~DCCALGeometry_factory(){};
 
 		DCCALGeometry *ccalgeometry = nullptr;
+		bool INSTALLED = true;
 
 		//------------------
 		// BeginRun
@@ -26,7 +30,16 @@ class DCCALGeometry_factory:public JFactoryT<DCCALGeometry>{
 			// (See DTAGHGeometry_factory.h)
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			
+
+			map<string,string> installed;
+			DEvent::GetCalib(event, "/CCAL/install_status", installed);
+			if(atoi(installed["status"].data()) == 0)
+				INSTALLED = false;
+			else
+				INSTALLED = true;
+				
+			if(!INSTALLED) return;
+
 			delete ccalgeometry;
 			ccalgeometry = new DCCALGeometry();
 		}
@@ -36,6 +49,8 @@ class DCCALGeometry_factory:public JFactoryT<DCCALGeometry>{
 		//------------------
 		 void Process(const std::shared_ptr<const JEvent>& event) override
 		 {
+			if(!INSTALLED) return;
+
 			// Reuse existing DBCALGeometry object.
 			if( ccalgeometry ) Insert( ccalgeometry );
 		 }
