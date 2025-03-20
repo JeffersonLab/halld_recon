@@ -54,6 +54,7 @@ typedef enum {
   Helium         = 47,
   Geantino       = 48,
   He3            = 49,
+  GammaOptical   = 50,
 
   Li6            = 61,
   Li7            = 62,
@@ -267,6 +268,8 @@ inline static char* ParticleType(Particle_t p)
     return (char*)"AntiOmega+";
   case Geantino:
     return (char*)"Geantino";
+  case GammaOptical:
+    return (char*)"GammaOptical";
   case Rho0:
     return (char*)"Rho0";
   case RhoPlus:
@@ -528,6 +531,8 @@ inline static char* EnumString(Particle_t p)
     return (char*)"AntiOmegaPlus";
   case Geantino:
     return (char*)"Geantino";
+  case GammaOptical:
+    return (char*)"GammaOptical";
   case Rho0:
     return (char*)"Rho0";
   case RhoPlus:
@@ -789,6 +794,8 @@ inline static char* EvtGenString(Particle_t p)
     return (char*)"anti-Omega+";
   case Geantino:
     return (char*)"geantino";
+  case GammaOptical:
+    return (char*)"gammaOptical";
   case Rho0:
     return (char*)"rho0";
   case RhoPlus:
@@ -1050,6 +1057,8 @@ inline static char* ShortName(Particle_t locPID)
 	return (char*)"antiomegap";
   case Geantino:
 	return (char*)"geant";
+  case GammaOptical:
+	return (char*)"gammaoptical";
   case omega:
 	return (char*)"omega";
   case EtaPrime:
@@ -1310,6 +1319,8 @@ inline static Particle_t ParticleEnum(const char* locParticleName)
     return AntiOmegaPlus;
   else if(strcmp(locParticleName, "Geantino") == 0)
     return Geantino;
+  else if(strcmp(locParticleName, "GammaOptical") == 0)
+    return GammaOptical;
   else if(strcmp(locParticleName, "Rho0") == 0)
     return Rho0;
   else if(strcmp(locParticleName, "Rho+") == 0)
@@ -1533,6 +1544,7 @@ inline static unsigned short int IsFixedMass(Particle_t p)
   case AntiXiPlus:	return 1;
   case AntiOmegaPlus:	return 1;
   case Geantino:	return 1;
+  case GammaOptical:    return 1;
   case EtaPrime:	return 1;
   case Deuteron:	return 1;
   case Triton:   	return 1;
@@ -1732,6 +1744,8 @@ inline static char* ParticleName_ROOT(Particle_t p)
     return (char*)"#bar{#Omega}^{#plus}";
   case Geantino:
     return (char*)"geantino";
+  case GammaOptical:
+    return (char*)"#gamma_{optical}";
   case Rho0:
     return (char*)"#rho^{0}";
   case RhoPlus:
@@ -1959,6 +1973,7 @@ inline static double ParticleMass(Particle_t p)
   case AntiXiPlus:	return 1.32171;
   case AntiOmegaPlus:	return 1.67245;
   case Geantino:	return 0.0;
+  case GammaOptical:    return 0.0;
   case Rho0:		return 0.7690;  // neutral only, photoproduced and other reactions. e+ e- gives 775.26
   case RhoPlus:		return 0.7665;  // charged only, hadroproduced. tau decays and e+ e- gives 775.11
   case RhoMinus:	return 0.7665;
@@ -2096,6 +2111,7 @@ inline static int ParticleCharge(Particle_t p)
   case AntiXiPlus:	return +1;
   case AntiOmegaPlus:	return +1;
   case Geantino:	return  0;
+  case GammaOptical:    return  0;
   case Rho0:		return  0;
   case RhoPlus:		return +1;
   case RhoMinus:	return -1;
@@ -2234,6 +2250,7 @@ inline static int PDGtype(Particle_t p)
   case AntiXiPlus:	return -3312;
   case AntiOmegaPlus:	return -3334;
   case Geantino:	return  0;
+  case GammaOptical:    return -22;
   case Rho0:		return  113;
   case RhoPlus:		return  213;
   case RhoMinus:	return -213;
