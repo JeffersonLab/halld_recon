@@ -121,7 +121,7 @@ void JEventProcessor_HELI_online::Init(void){
 //------------------
 void JEventProcessor_HELI_online::BeginRun(const std::shared_ptr<const JEvent>& event){
   // This is called whenever the run number changes
-  auto runnumber = event->GetEventNumber();
+  auto runnumber = event->GetRunNumber();
   // Init all the counters
   fEventInRun     = 0;  
   fPlusInRun      = 0;	  
