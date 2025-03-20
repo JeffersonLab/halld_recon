@@ -44,7 +44,7 @@ class DTRDPoint_Hit_factory : public JFactoryT<DTRDPoint_Hit> {
  		
 	private:		
   		double TIME_DIFF_MAX;
-//   		double DIST_DIFF_MAX;
+   		double dE_DIFF_MAX;
 
 		vector<double>dTRDz;
 

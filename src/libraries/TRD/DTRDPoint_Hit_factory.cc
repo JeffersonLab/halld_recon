@@ -28,8 +28,11 @@ void DTRDPoint_Hit_factory::Init()
 		auto app = GetApplication();
 		
 		TIME_DIFF_MAX = 50.;
-		
 		app->SetDefaultParameter("TRDPoint:XY_TIME_DIFF",TIME_DIFF_MAX);
+		
+		dE_DIFF_MAX = 3000.;
+		app->SetDefaultParameter("TRD:dE_DIFF_MAX",dE_DIFF_MAX,
+			"Time difference between charge in X and Y planes to be considered a coincidence (default: 1000.)");
 
 }
 
@@ -79,12 +82,12 @@ void DTRDPoint_Hit_factory::Process(const std::shared_ptr<const JEvent>& event)
 			// calculate hit time and energy
 			double t_diff = hitX[i]->t - hitY[j]->t;
 			double dE = ( hitX[i]->q + hitY[j]->q ) / 2.;
-			double dE_diff = ( hitX[i]->q - hitY[j]->q ) / ( hitX[i]->q + hitY[j]->q );
-			double dE_diff_max = 0.3;
+			double dE_high = (hitX[i]->q + dE_DIFF_MAX);
+			double dE_low = (hitX[i]->q - dE_DIFF_MAX);
 			
 			// some requirements for a good point
-			if(fabs(t_diff) < TIME_DIFF_MAX) {//&& fabs(dE_diff) < dE_diff_max) {
-			//if(fabs(t_diff) < TIME_DIFF_MAX && (hitX[i]->q < (4000.*dE_diff_max)+hitY[j]->q*(4000.-dE_diff_max)) && (hitY[j]->q < (dE_diff_max*4000.)+hitX[i]->q*(4000.-dE_diff_max))) {
+			//if(fabs(t_diff) < TIME_DIFF_MAX) {//&& fabs(dE_diff) < dE_diff_max) {
+			if(fabs(t_diff) < TIME_DIFF_MAX && (hitY[j]->q < dE_high) && (hitY[j]->q > dE_low )) {
 				
 				// save new point
 				DTRDPoint_Hit* point = new DTRDPoint_Hit;
