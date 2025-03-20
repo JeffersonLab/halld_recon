@@ -180,8 +180,6 @@ void JEventProcessor_highlevel_online::Init()
 	dTimingCutMap[Positron][SYS_BCAL] = 2.5;
 	dTimingCutMap[Positron][SYS_FCAL] = 3.0;
 
-	lockService->RootWriteLock();
-
 	// All histograms go in the "highlevel" directory
 	TDirectory *main = gDirectory;
 
@@ -308,6 +306,8 @@ void JEventProcessor_highlevel_online::Init()
 	dme_omega = new TH1I("PiPlusPiMinusPiZero_me", ";#pi^{+}#pi^{-}#pi^{0} missing energy (GeV)", 500, -1.0, 1.0);
 	
 	dbeta_vs_p = new TH2I("BetaVsP", "#beta vs. p (best FOM all charged tracks);p (GeV);#beta", 200, 0.0, 2.0, 100, 0.0, 1.2);
+	dbeta_vs_p_TOF = new TH2I("BetaVsP_TOF", "#beta vs. p (best FOM all charged tracks in TOF);p (GeV);#beta", 200, 0.0, 2.0, 100, 0.0, 1.2);
+	dbeta_vs_p_BCAL = new TH2I("BetaVsP_BCAL", "#beta vs. p (best FOM all charged tracks in BCAL);p (GeV);#beta", 200, 0.0, 2.0, 100, 0.0, 1.2);
 
 	/*************************************************************** F1 TDC - fADC time ***************************************************************/
 
@@ -351,8 +351,6 @@ void JEventProcessor_highlevel_online::Init()
 
 	// back to main dir
 	main->cd();
-  
-	lockService->RootUnLock();
 }
 
 //------------------
@@ -726,7 +724,7 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 
 
 	/*************************************************************** F1 TDC - fADC time ***************************************************************/
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	// The following fills the dF1TDC_fADC_tdiff histo for
 	// all detectors that use F1TDC modules. See the templates
@@ -874,7 +872,7 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
        dHist_L1bits_fp_twelvehundhits->Fill(pseudo_triggerbit);
 	// DON'T DO HIGHER LEVEL PROCESSING FOR FRONT PANEL TRIGGER EVENTS, OR NON-TRIGGER EVENTS
     if(!locL1Trigger || (locL1Trigger && (locL1Trigger->fp_trig_mask>0))) {
-        lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+        lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
         return;
     }
 
@@ -909,9 +907,22 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 		double locTheta = locChargedHypo->momentum().Theta()*180.0/TMath::Pi();
 		double locPhi = locChargedHypo->momentum().Phi()*180.0/TMath::Pi();
 		double locBeta = locChargedHypo->measuredBeta();
+
+		auto locBCALShowerMatchParams = locChargedHypo->Get_BCALShowerMatchParams();
+		//auto locFCALShowerMatchParams = locChargedHypo->Get_FCALShowerMatchParams();
+		auto locTOFHitMatchParams = locChargedHypo->Get_TOFHitMatchParams();
+		//auto locSCHitMatchParams = locChargedHypo->Get_SCHitMatchParams();
+
 		dHist_PVsTheta_Tracks->Fill(locTheta, locP);
 		dHist_PhiVsTheta_Tracks->Fill(locTheta, locPhi);
+		
 		dbeta_vs_p->Fill(locP, locBeta);
+		if(locTOFHitMatchParams != NULL) {
+			dbeta_vs_p_TOF->Fill(locP, locBeta);
+		}
+		if(locBCALShowerMatchParams != NULL) {
+			dbeta_vs_p_BCAL->Fill(locP, locBeta);
+		}
 	}
 	
 	/*************************************************************** VERTEX ***************************************************************/
@@ -1141,7 +1152,7 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 	}
 
 
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------

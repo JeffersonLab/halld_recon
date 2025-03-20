@@ -37,6 +37,7 @@ static TH2I *hDigiHit_TimeVsStrip[NTRDplanes];
 static TH2I *hDigiHit_TimeVsPeak[NTRDplanes];
 
 static TH1I *hHit_NHits;
+static TH1I *hHit_NHits_[NTRDplanes];
 static TH1I *hHit_Occupancy[NTRDplanes];
 static TH1I *hHit_Time[NTRDplanes];
 static TH1I *hHit_PulseHeight[NTRDplanes];
@@ -110,7 +111,7 @@ void JEventProcessor_TRD_online::Init() {
     // digihit-level hists
     trdDir->cd();
     gDirectory->mkdir("DigiHit")->cd();
-    hDigiHit_NHits = new TH1I("DigiHit_NfadcHits","TRD fADC hit multiplicity;raw hits;events",100,0.5,0.5+200);
+    hDigiHit_NHits = new TH1I("DigiHit_NfadcHits","TRD fADC hit multiplicity;raw hits;events",200,0.5,0.5+200);
     
     // histograms for each plane
     for(int i=0; i<NTRDplanes; i++) {
@@ -133,7 +134,7 @@ void JEventProcessor_TRD_online::Init() {
     // hit-level hists
     trdDir->cd();
     gDirectory->mkdir("Hit")->cd();
-    hHit_NHits = new TH1I("Hit_NHits","TRD calibrated hit multiplicity;calibrated hits;events",100,0.5,0.5+200);
+    hHit_NHits = new TH1I("Hit_NHits","TRD calibrated hit multiplicity;calibrated hits;events",200,0.5,0.5+200);
     // histograms for each plane
     for(int i=0; i<NTRDplanes; i++) {
 		int NTRDstrips = 0.;
@@ -141,7 +142,8 @@ void JEventProcessor_TRD_online::Init() {
 			NTRDstrips = NTRD_xstrips;
 		else
 			NTRDstrips = NTRD_ystrips;
-
+		
+		hHit_NHits_[i] = new TH1I(Form("Hit_NHits_Plane%d", i),Form("TRD Plane %d calibrated hit multiplicity;calibrated hits;events",i),200,0.5,0.5+200);
 		hHit_Occupancy[i] = new TH1I(Form("Hit_Occupancy_Plane%d", i),Form("Plane %d TRD hit occupancy;strip;calibrated hits / counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
 		hHit_Time[i] = new TH1I(Form("Hit_Time_Plane%d", i),Form("Plane %d TRD time;8*(peak time) [ns];calibrated hits / 2 ns",i),250,0.0,2000.0);
 		hHit_PulseHeight[i] = new TH1I(Form("Hit_PulseHeight_Plane%d", i),Form("Plane %d TRD pulse height;pulse height [fADC units];calibrated hits / 1 unit",i),450,0.0,3000.0);
@@ -154,7 +156,7 @@ void JEventProcessor_TRD_online::Init() {
 	// point-level hists
     trdDir->cd();
     gDirectory->mkdir("Point")->cd();
-	hPoint_NHits = new TH1I("Point_NHits","TRD calibrated point multiplicity;calibrated points;events",100,0.5,0.5+200);
+	hPoint_NHits = new TH1I("Point_NHits","TRD calibrated point multiplicity;calibrated points;events",200,0.5,0.5+200);
     hPoint_XYT = new TH3I("Point_XYT","TRD 3D Points;X Strip;Y Strip;8*(Peak Time) [ns]",720,-0.5,719.5,360,-0.5,359.5,200,0.,200.*8.);
 	hPoint_Time = new TH1I("Point_Time","TRD Point Time;8*(Peak Time) [ns]; ",200,0.,200.*8.);
 	hPoint_dE = new TH1I("Point_dE","TRD Point dE;Average dE [q]; ",450,0.,3000.);
@@ -284,6 +286,8 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     hHit_NHits->Fill(hits.size());
     for (const auto& hit : hits) {
 	    int plane = hit->plane-1;
+		if (plane == 0) hHit_NHits_[plane]->Fill(hits.size());
+		else if (plane == 1) hHit_NHits_[plane]->Fill(hits.size());
 	    hHit_Occupancy[plane]->Fill(hit->strip);
 	    hHit_Time[plane]->Fill(hit->t);
 	    hHit_PulseHeight[plane]->Fill(hit->pulse_height);

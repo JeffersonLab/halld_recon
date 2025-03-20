@@ -126,7 +126,7 @@ void JEventProcessor_TAGM_clusters::Process(const std::shared_ptr<const JEvent>&
    vector<const DTAGMHit*>	tagm_merged_hits;
    event->Get(tagm_merged_hits);
 
-   lockService->RootWriteLock();
+   lockService->RootFillLock(this);
 
    // Get occupancies and multiplicities before merging
    int mult_b = 0;
@@ -215,7 +215,7 @@ void JEventProcessor_TAGM_clusters::Process(const std::shared_ptr<const JEvent>&
       }
    }
 
-   lockService->RootUnLock();
+   lockService->RootFillUnLock(this);
 }
 
 //------------------

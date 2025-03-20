@@ -32,7 +32,7 @@ void DTRDPoint_Hit_factory::Init()
 		
 		dE_DIFF_MAX = 3000.;
 		app->SetDefaultParameter("TRD:dE_DIFF_MAX",dE_DIFF_MAX,
-			"Time difference between charge in X and Y planes to be considered a coincidence (default: 1000.)");
+			"Difference between Point_Hit charge in X and Y planes to be considered a coincidence (default: 3000.)");
 
 }
 

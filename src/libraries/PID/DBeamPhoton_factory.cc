@@ -47,8 +47,6 @@ void DBeamPhoton_factory::Init()
     "Maximum energy difference in GeV between a TAGM-TAGH pair of beam photons"
     " for them to be merged into a single photon");
 
-	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory.
-	SetFactoryFlag(NOT_OBJECT_OWNER);
 }
 
 //------------------
@@ -71,9 +69,6 @@ void DBeamPhoton_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 void DBeamPhoton_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	auto locEventNumber = event->GetEventNumber();
-	dResourcePool_BeamPhotons->Recycle(dCreated);
-	dCreated.clear();
-	mData.clear();
 
     vector<const DTAGMHit*> tagm_hits;
     event->Get(tagm_hits);
@@ -82,7 +77,7 @@ void DBeamPhoton_factory::Process(const std::shared_ptr<const JEvent>& event)
     {
         if (!tagm_hits[ih]->has_fADC) continue; // Skip TDC-only hits (i.e. hits with no ADC info.)
         if (tagm_hits[ih]->row > 0) continue; // Skip individual fiber readouts
-        DBeamPhoton* gamma = Get_Resource();
+		DBeamPhoton* gamma = new DBeamPhoton();
 
         Set_BeamPhoton(gamma, tagm_hits[ih], locEventNumber);
         Insert(gamma);
@@ -95,7 +90,7 @@ void DBeamPhoton_factory::Process(const std::shared_ptr<const JEvent>& event)
     {
         if (!tagh_hits[ih]->has_fADC) continue; // Skip TDC-only hits (i.e. hits with no ADC info.)
         if (!tagh_hits[ih]->has_TDC) continue;  // Skip fADC-only hits (i.e. hits with no TDC info.)
-        DBeamPhoton* gamma = Get_Resource();
+		DBeamPhoton* gamma = new DBeamPhoton();
 
 	Set_BeamPhoton(gamma, tagh_hits[ih], locEventNumber);
         Insert(gamma);
@@ -103,7 +98,6 @@ void DBeamPhoton_factory::Process(const std::shared_ptr<const JEvent>& event)
     }
 
 	sort(mData.begin(), mData.end(), DBeamPhoton_SortByTime);
-	dCreated = mData;
 }
 
 void DBeamPhoton_factory::Set_BeamPhoton(DBeamPhoton* gamma, const DTAGMHit* hit, uint64_t locEventNumber)

@@ -155,7 +155,7 @@ void JEventProcessor_ST_online_multi::Process(const std::shared_ptr<const JEvent
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
  //reset the counters to zero
   memset(counter_adc, 0, sizeof(counter_adc));
@@ -263,7 +263,7 @@ void JEventProcessor_ST_online_multi::Process(const std::shared_ptr<const JEvent
 	}
     }
   
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 }
 

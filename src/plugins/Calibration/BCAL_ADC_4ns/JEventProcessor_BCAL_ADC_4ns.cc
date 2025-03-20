@@ -182,7 +182,9 @@ void JEventProcessor_BCAL_ADC_4ns::Process(const std::shared_ptr<const JEvent>& 
             double Deltat = hitVector[0]->t_raw - hitVector[1]->t_raw;
             if (hitVector[0]->end==1) Deltat = -Deltat;
 
+ 			lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 			hZvsDeltat[thisPoint->module()][thisPoint->layer()][thisPoint->sector()]->Fill(Deltat, trackHitZ);
+ 			lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
          }
       }
    }

@@ -208,7 +208,7 @@ void JEventProcessor_ST_online_lowlevel::Process(const std::shared_ptr<const JEv
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   if( (dscdigihits.size()>0) || (dsctdcdigihits.size()>0) || (dschits.size()>0) )
     st_num_events->Fill(1);
@@ -396,7 +396,7 @@ void JEventProcessor_ST_online_lowlevel::Process(const std::shared_ptr<const JEv
       
     }// End Hit loop
   // Lock ROOT mutex so other threads won't interfere 
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
   return;
 }

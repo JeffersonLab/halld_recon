@@ -7,10 +7,13 @@
 
 #include "JEventProcessor_BEAM_online.h"
 
+#include "DANA/DEvent.h"
+
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
 #include <JANA/JFactoryT.h>
+
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
@@ -169,6 +172,8 @@ void JEventProcessor_BEAM_online::Process(const std::shared_ptr<const JEvent>& e
     double tpair = (PSPairs[0]->ee.first->t + PSPairs[0]->ee.second->t) / 2.;
     double epair = (PSPairs[0]->ee.first->E + PSPairs[0]->ee.second->E);
 
+    DEvent::GetLockService(event)->RootFillLock(this); 
+
     // loop over beam photons
     for (int k=0; k<NBeamPhotons; k++){
       float dt = Beam[k]->time() - tpair;
@@ -182,6 +187,7 @@ void JEventProcessor_BEAM_online::Process(const std::shared_ptr<const JEvent>& e
 	  OutOfTimeBeamH.push_back(Beam[k]);
 	}
       }
+      
       
       if (Beam[k]->dSystem == SYS_TAGM){
 	
@@ -380,6 +386,8 @@ void JEventProcessor_BEAM_online::Process(const std::shared_ptr<const JEvent>& e
 	
       }
     }
+    
+    DEvent::GetLockService(event)->RootFillUnLock(this); 
   }
 
 
@@ -389,6 +397,8 @@ void JEventProcessor_BEAM_online::Process(const std::shared_ptr<const JEvent>& e
     event->Get(Beam);
     int NBeamPhotons = Beam.size();
 
+	DEvent::GetLockService(event)->RootFillLock(this); 
+        
     for (int j=0; j<50; j++) {
       
       double TIME = -16.*RFWidth + j*RFWidth;
@@ -435,6 +445,8 @@ void JEventProcessor_BEAM_online::Process(const std::shared_ptr<const JEvent>& e
 	}
       }	
     }
+    
+    DEvent::GetLockService(event)->RootFillUnLock(this); 
   }
 }
 

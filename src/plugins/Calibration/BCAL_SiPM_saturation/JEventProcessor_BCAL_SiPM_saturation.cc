@@ -213,7 +213,7 @@ auto lockService = DEvent::GetLockService(event);
 		locNeutralShower->Get(Points);
         uint Ncell = Points.size();
         
-    	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    	lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
 		// Fill histogram for showers
 		dHistEthrown->Fill(Ethrown);
@@ -227,7 +227,7 @@ auto lockService = DEvent::GetLockService(event);
 	
         dHistNCell->Fill(Ncell);
 
-    	lockService->RootUnLock(); //RELEASE ROOT LOCK
+    	lockService->RootFillUnLock(this); //RELEASE ROOT LOCK
 
 
         for (unsigned int j = 0; j < Ncell; j++){
@@ -263,13 +263,13 @@ auto lockService = DEvent::GetLockService(event);
 			if (VERBOSE>=3) cout << " VERBOSE >=3" << " t=" << t << " z=" << z << endl;
 
 
-    		lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    		lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 	
 			// Fill 1D histograms
 			dHistLayer->Fill(layer);
 			dHistEpoint->Fill(Ept);
 
-	    	lockService->RootUnLock(); //RELEASE ROOT LOCK
+	    	lockService->RootFillUnLock(this); //RELEASE ROOT LOCK
 
 			// cout << " Point: Ept=" << Ept << endl;
 			float upHit=0;
@@ -305,7 +305,7 @@ auto lockService = DEvent::GetLockService(event);
 			}
 
 
-    		lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    		lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
             // Fill 1D histograms
 			if (layer == 1) {
@@ -328,7 +328,7 @@ auto lockService = DEvent::GetLockService(event);
 			  cout << " ***Illegal layer=" << layer << endl;
 			}
 
-	    	lockService->RootUnLock(); //RELEASE ROOT LOCK
+	    	lockService->RootFillUnLock(this); //RELEASE ROOT LOCK
 
 	     }
 
@@ -343,8 +343,10 @@ auto lockService = DEvent::GetLockService(event);
                      << " lambda=" << attenuation_length << " Eup=" << upHit << " Edown=" << downHit << " Point: Ept=" 
                      << Ept << " Ecalc=" << Ecalc << " Diff=" << Ept-Ecalc <<  endl;*/
 
+    	lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 		dHistEcalc->Fill(Ecalc);
 		dHistEcalcEpt->Fill(Ecalc-Ept);
+		lockService->RootFillUnLock(this); //RELEASE ROOT LOCK
 
 	}
 

@@ -418,7 +418,7 @@ void JEventProcessor_BCAL_Eff::Process(const std::shared_ptr<const JEvent> &locE
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	event_count++;
 //	if (event_count%100 == 0) printf ("Event count=%d, EventNumber=%d\n",event_count,locEventNumber);
@@ -654,7 +654,7 @@ void JEventProcessor_BCAL_Eff::Process(const std::shared_ptr<const JEvent> &locE
 
 	}   // end loop over matched showers
 
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 	/*
 	//Optional: Save event to output REST file. Use this to create skims.
@@ -674,7 +674,7 @@ void JEventProcessor_BCAL_Eff::EndRun()
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 	//lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
-  // h1eff_eff->Divide(h1eff_layer,h1eff_layertot);
+    // h1eff_eff->Divide(h1eff_layer,h1eff_layertot);
 	//lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
@@ -685,14 +685,10 @@ void JEventProcessor_BCAL_Eff::Finish()
 {
   // Called before program exit after event processing is finished.  
 
-  lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
-
   h1eff_eff->Divide(h1eff_layer,h1eff_layertot,1,1,"B");
   h1eff2_eff2->Divide(h1eff2_layer,h1eff2_layertot,1,1,"B");
 
   h1eff_cellideff->Divide(h1eff_cellid,h1eff_cellidtot,1,1,"B");
   h1eff2_cellideff2->Divide(h1eff2_cellid,h1eff2_cellidtot,1,1,"B");
-
-  lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
