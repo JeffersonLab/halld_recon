@@ -47,6 +47,9 @@ void DFMWPCHit_factory::Init()
   amp_a_scale = a_scale*28.8;
   t_scale = 8.0/10.0;    // 8 ns/count and integer time is in 1/10th of sample
   t_base  = 0.;       // ns
+
+  INSTALLED = false;
+    
 }
 
 //------------------
@@ -54,6 +57,16 @@ void DFMWPCHit_factory::Init()
 //------------------
 void DFMWPCHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
+  map<string,string> installed;
+  DEvent::GetCalib(event, "/FMWPC/install_status", installed);
+  if(atoi(installed["status"].data()) == 0)
+	INSTALLED = false;
+  else
+	INSTALLED = true;
+	
+  if(!INSTALLED) return;
+
+
   auto runnumber = event->GetRunNumber();
   auto app = GetApplication();
   // Only print messages for one thread whenever run number change
@@ -199,6 +212,8 @@ void DFMWPCHit_factory::Process(const std::shared_ptr<const JEvent> &event)
   /// data in HDDM format. The HDDM event source will copy
   /// the precalibrated values directly into the _data vector.
   
+  if(!INSTALLED) return;
+
   /// In order to use the new Flash125 data types and maintain compatibility with the old code, what is below is a bit of a mess
 
   vector<const DFMWPCDigiHit*> digihits;

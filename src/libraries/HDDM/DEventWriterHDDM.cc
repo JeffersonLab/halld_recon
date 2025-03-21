@@ -86,7 +86,6 @@ bool DEventWriterHDDM::Write_HDDMEvent(const std::shared_ptr<const JEvent>& locE
 	locEventLoop->Get(TOFHits);
 	locEventLoop->Get(FCALHits);
 	locEventLoop->Get(ECALHits);
-	locEventLoop->Get(ECALHits);
 	locEventLoop->Get(CCALHits);
 	locEventLoop->Get(BCALDigiHits);
 	locEventLoop->Get(BCALTDCDigiHits);
@@ -100,10 +99,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(const std::shared_ptr<const JEvent>& locE
 	locEventLoop->Get(DIRCPmtHits);
 	locEventLoop->Get(CTOFHits);
 	locEventLoop->Get(FMWPCHits);
-	locEventLoop->Get(CTOFHits);
-	locEventLoop->Get(FMWPCHits);
 
-	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0) && ECALHits.size()==uint(0) && CTOFHits.size()==uint(0) && FMWPCHits.size()==uint(0) )
 	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0) && ECALHits.size()==uint(0) && CTOFHits.size()==uint(0) && FMWPCHits.size()==uint(0) )
 	{
 		return false;

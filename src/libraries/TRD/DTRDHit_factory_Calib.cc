@@ -53,6 +53,15 @@ void DTRDHit_factory_Calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	auto runnumber = event->GetRunNumber();
 
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/TRD/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		INSTALLED = false;
+	else
+		INSTALLED = true;
+		
+	if(!INSTALLED) return;
+
 	// Only print messages for one thread whenever run number change
 	static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 	static set<int> runs_announced;
@@ -124,6 +133,8 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
     /// Note that this code does NOT get called for simulated
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
+
+	if(!INSTALLED) return;
 
     vector<const DTRDDigiHit*> digihits;
     event->Get(digihits);
