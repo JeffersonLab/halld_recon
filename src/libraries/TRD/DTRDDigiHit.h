@@ -22,6 +22,7 @@ class DTRDDigiHit : public JObject {
 		uint32_t nsamples_integral;    ///< number of samples used in integral 
 		uint32_t nsamples_pedestal;    ///< number of samples used in pedestal
 
+
 		void Summarize(JObjectSummary& summary) const override {
 			summary.add(plane, NAME_OF(plane), "%4d");
 			summary.add(strip, NAME_OF(strip), "%4d");
