@@ -1424,7 +1424,7 @@ DFDCCathodeDigiHit* DTranslationTable::MakeFDCCathodeDigiHit(
    
 	return h;
 }
-
+/*
 //---------------------------------
 // MakeTRDDigiHit
 //---------------------------------
@@ -1439,6 +1439,7 @@ DTRDDigiHit* DTranslationTable::MakeTRDDigiHit(
 	h->pulse_time        = p->le_time;
 	h->pedestal          = p->pedestal;
 	h->QF                = p->time_quality_bit + (p->overflow_count<<1);
+	h->NPK				 = p->NPK;
 	h->nsamples_integral = p->nsamples_integral;
 	h->nsamples_pedestal = p->nsamples_pedestal;
 
@@ -1448,7 +1449,7 @@ DTRDDigiHit* DTranslationTable::MakeTRDDigiHit(
    
 	return h;
 }
-
+*/
 //---------------------------------
 // MakeTRDDigiHit
 //---------------------------------
@@ -1464,6 +1465,7 @@ DTRDDigiHit* DTranslationTable::MakeTRDDigiHit(
 	h->peak_time         = p->peak_time;
 	h->pedestal          = p->pedestal;
 	h->QF                = p->time_quality_bit + (p->overflow_count<<1);
+	h->NPK               = p->NPK;
 	h->nsamples_integral = p->nsamples_integral;
 	h->nsamples_pedestal = p->nsamples_pedestal;
 

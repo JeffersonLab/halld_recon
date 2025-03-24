@@ -13,6 +13,7 @@ using namespace std;
 #include <TRD/DTRDStripCluster.h>
 #include <TRD/DTRDPoint.h>
 #include <TRD/DTRDPoint_Hit.h>
+#include <DAQ/Df125FDCPulse.h>
 
 #include <TDirectory.h>
 #include <TH1.h>
@@ -25,9 +26,10 @@ using namespace std;
 static const int NTRDplanes = 2;
 static const int NTRD_xstrips = 720;
 static const int NTRD_ystrips = 432;
-
 static TH1I *trd_num_events;
+
 static TH1I *hDigiHit_NHits;
+static TH1I *hDigiHit_NPKs;
 static TH1I *hDigiHit_QualityFactor[NTRDplanes];
 static TH1I *hDigiHit_Occupancy[NTRDplanes];
 static TH2I *hDigiHit_PeakVsStrip[NTRDplanes];
@@ -37,6 +39,7 @@ static TH2I *hDigiHit_TimeVsStrip[NTRDplanes];
 static TH2I *hDigiHit_TimeVsPeak[NTRDplanes];
 
 static TH1I *hHit_NHits;
+static TH1I *hHit_NPKs;
 static TH1I *hHit_NHits_[NTRDplanes];
 static TH1I *hHit_Occupancy[NTRDplanes];
 static TH1I *hHit_Time[NTRDplanes];
@@ -106,13 +109,14 @@ void JEventProcessor_TRD_online::Init() {
     TDirectory *trdDir = gDirectory->mkdir("TRD");
     trdDir->cd();
     // book hists
-    trd_num_events = new TH1I("trd_num_events","TRD number of events",1,0.5,1.5);
+    trd_num_events = new TH1I("trd_num_events","TRD Number of Events",1,0.5,1.5);
 
     // digihit-level hists
     trdDir->cd();
     gDirectory->mkdir("DigiHit")->cd();
-    hDigiHit_NHits = new TH1I("DigiHit_NfadcHits","TRD fADC hit multiplicity;raw hits;events",200,0.5,0.5+200);
-    
+    hDigiHit_NHits = new TH1I("DigiHit_NHits","TRD fADC Hit Multiplicity;Raw Hits;Events",150,0.5,0.5+150);
+	hDigiHit_NPKs = new TH1I("DigiHit_NPKs","TRD fADC Peak Multiplicity;Raw Peaks;Events",15,0.5,0.5+15);
+	
     // histograms for each plane
     for(int i=0; i<NTRDplanes; i++) {
 		int NTRDstrips = 0.;
@@ -121,21 +125,22 @@ void JEventProcessor_TRD_online::Init() {
 		else
 			NTRDstrips = NTRD_ystrips;
 
-		hDigiHit_Occupancy[i] = new TH1I(Form("DigiHit_Occupancy_Plane%d", i),Form("Plane %d TRD hit occupancy;strip;raw hits / counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
-		hDigiHit_QualityFactor[i] = new TH1I(Form("DigiHit_QualityFactor_Plane%d", i),Form("Plane %d TRD quality factor;quality factor;raw hits",i),4,-0.5,3.5);
-		hDigiHit_PeakVsStrip[i] = new TH2I(Form("DigiHit_PeakVsStrip_Plane%d", i),Form("Plane %d TRD pulse peak vs. strip;strip;pulse peak",i),NTRDstrips,-0.5,-0.5+NTRDstrips,410,0.0,4100.0);
-		hDigiHit_PulseTime[i] = new TH1I(Form("DigiHit_PulseTime_Plane%d", i),Form("Plane %d TRD pulse time;pulse time [62.5 ps];raw hits",i),200,0.0,2000.0);
-		hDigiHit_Time[i] = new TH1I(Form("DigiHit_Time_Plane%d", i),Form("Plane %d TRD peak time;8*(peak time) [ns];raw hits / 2 ns",i),250,0.0,2000.0);
-		hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_Plane%d", i),Form("Plane %d TRD time vs. strip;strip;8*(peak time) [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,250,0.0,2000.0);
-		hDigiHit_TimeVsPeak[i] = new TH2I(Form("DigiHit_TimeVsPeak_Plane%d", i),Form("Plane %d TRD time vs. peak;pulse peak;8*(peak time) [ns]",i),410,0.0,4100.0,250,0.0,2000.0);
+		hDigiHit_Occupancy[i] = new TH1I(Form("DigiHit_Occupancy_Plane%d",i),Form("TRD Plane %d Hit Occupancy;Strip;Raw Hits / Counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
+		hDigiHit_QualityFactor[i] = new TH1I(Form("DigiHit_QualityFactor_Plane%d",i),Form("TRD Plane %d Quality Factor;Quality Factor;Raw Hits",i),4,-0.5,3.5);
+		hDigiHit_PeakVsStrip[i] = new TH2I(Form("DigiHit_PeakVsStrip_Plane%d",i),Form("TRD Plane %d Pulse Height vs. Strip;Strip;Pulse Height [fADC units]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,410,0.0,4100.0);
+		hDigiHit_PulseTime[i] = new TH1I(Form("DigiHit_PulseTime_Plane%d",i),Form("TRD Plane %d Pulse Time;Pulse Time [62.5 ps];Raw Hits",i),200,0.0,2000.0);
+		hDigiHit_Time[i] = new TH1I(Form("DigiHit_Time_Plane%d",i),Form("TRD Plane %d Peak Time;8*(Peak Time) [ns];Raw Hits / 2 ns",i),250,0.0,2000.0);
+		hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_Plane%d",i),Form("TRD Plane %d Time vs. Strip;Strip;8*(Peak Time) [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,250,0.0,2000.0);
+		hDigiHit_TimeVsPeak[i] = new TH2I(Form("DigiHit_TimeVsPeak_Plane%d",i),Form("TRD Plane %d Time vs. Pulse Height;Pulse Height [fADC units];8*(Peak Time) [ns]",i),410,0.0,4100.0,250,0.0,2000.0);
 		
 	}
 		
     // hit-level hists
     trdDir->cd();
     gDirectory->mkdir("Hit")->cd();
-    hHit_NHits = new TH1I("Hit_NHits","TRD calibrated hit multiplicity;calibrated hits;events",200,0.5,0.5+200);
-    // histograms for each plane
+    hHit_NHits = new TH1I("Hit_NHits","TRD Calibrated Hit Multiplicity;Calibrated Hits;Events",150,0.5,0.5+150);
+    hHit_NPKs = new TH1I("Hit_NPKs","TRD fADC Peak Multiplicity for Stored Hits;Raw Peaks;Events",15,0.5,0.5+15);
+	// histograms for each plane
     for(int i=0; i<NTRDplanes; i++) {
 		int NTRDstrips = 0.;
 		if(i==0)
@@ -143,28 +148,28 @@ void JEventProcessor_TRD_online::Init() {
 		else
 			NTRDstrips = NTRD_ystrips;
 		
-		hHit_NHits_[i] = new TH1I(Form("Hit_NHits_Plane%d", i),Form("TRD Plane %d calibrated hit multiplicity;calibrated hits;events",i),200,0.5,0.5+200);
-		hHit_Occupancy[i] = new TH1I(Form("Hit_Occupancy_Plane%d", i),Form("Plane %d TRD hit occupancy;strip;calibrated hits / counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
-		hHit_Time[i] = new TH1I(Form("Hit_Time_Plane%d", i),Form("Plane %d TRD time;8*(peak time) [ns];calibrated hits / 2 ns",i),250,0.0,2000.0);
-		hHit_PulseHeight[i] = new TH1I(Form("Hit_PulseHeight_Plane%d", i),Form("Plane %d TRD pulse height;pulse height [fADC units];calibrated hits / 1 unit",i),450,0.0,3000.0);
-        hHit_TimeVsStrip[i] = new TH2I(Form("Hit_TimeVsStrip_Plane%d", i),Form("Plane %d TRD time vs. strip;strip;8*(peak time) [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,250,0.0,2000.0);
-		hHit_StripVsdE[i] = new TH2I(Form("Hit_StripVsdE_Plane%d", i),Form("Plane %d TRD hit dE vs. strip;strip;dE [q]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,450,0.,3000.0);
-		hHit_TimeVsdE[i] = new TH2I(Form("Hit_TimeVsdE_Plane%d", i),Form("Plane %d TRD pulse dE vs. time;dE [q];8*(peak time) [ns]",i),450,0.,3000.,250,0.0,2000.0);
+		hHit_NHits_[i] = new TH1I(Form("Hit_NHits_Plane%d",i),Form("TRD Plane %d Calibrated Hit Multiplicity;Calibrated Hits;Events",i),150,0.5,0.5+150);
+		hHit_Occupancy[i] = new TH1I(Form("Hit_Occupancy_Plane%d",i),Form("TRD Plane %d Hit Occupancy;Strip;Calibrated Hits / Counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
+		hHit_Time[i] = new TH1I(Form("Hit_Time_Plane%d",i),Form("TRD Plane %d Time;8*(Peak Time) [ns];Calibrated Hits / 2 ns",i),250,0.0,2000.0);
+		hHit_PulseHeight[i] = new TH1I(Form("Hit_PulseHeight_Plane%d",i),Form("TRD Plane %d Pulse Height;Pulse Height [fADC units];Calibrated Hits / 1 unit",i),450,0.0,3000.0);
+        hHit_TimeVsStrip[i] = new TH2I(Form("Hit_TimeVsStrip_Plane%d",i),Form("TRD Plane %d Time vs. Strip;Strip;8*(Peak Time) [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,250,0.0,2000.0);
+		hHit_StripVsdE[i] = new TH2I(Form("Hit_StripVsdE_Plane%d",i),Form("TRD Plane %d Hit Charge vs. Strip;Strip;dE [q]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,450,0.,3000.0);
+		hHit_TimeVsdE[i] = new TH2I(Form("Hit_TimeVsdE_Plane%d",i),Form("TRD Plane %d Hit Charge vs. Time;dE [q];8*(Peak Time) [ns]",i),450,0.,3000.,250,0.0,2000.0);
 		
 	}
     
 	// point-level hists
     trdDir->cd();
     gDirectory->mkdir("Point")->cd();
-	hPoint_NHits = new TH1I("Point_NHits","TRD calibrated point multiplicity;calibrated points;events",200,0.5,0.5+200);
+	hPoint_NHits = new TH1I("Point_NHits","TRD Calibrated Point Multiplicity;Calibrated Points;Events",150,0.5,0.5+150);
     hPoint_XYT = new TH3I("Point_XYT","TRD 3D Points;X Strip;Y Strip;8*(Peak Time) [ns]",720,-0.5,719.5,360,-0.5,359.5,200,0.,200.*8.);
 	hPoint_Time = new TH1I("Point_Time","TRD Point Time;8*(Peak Time) [ns]; ",200,0.,200.*8.);
-	hPoint_dE = new TH1I("Point_dE","TRD Point dE;Average dE [q]; ",450,0.,3000.);
-	hPoint_dEDiff = new TH1I("Point_dEDiff","TRD Point dE X,Y Weighted Diff.;(dE_x - dE_y)/(dE_x + dE_y); ",100,-1.,1.);
+	hPoint_dE = new TH1I("Point_dE","TRD Point Charge;Average dE [q]; ",450,0.,3000.);
+	hPoint_dEDiff = new TH1I("Point_dEDiff","TRD Point Charge X,Y Weighted Diff.;(dE_x - dE_y)/(dE_x + dE_y); ",100,-1.,1.);
 	hPoint_dERatio = new TH1I("Point_dERatio","TRD Point dE_x / dE_y;(dE_x / dE_y); ",100,-0.,6.);
-	hPoint_dE_XY = new TH2I("Point_dE_XY","TRD Point dE Corr. in X,Y;X Strip dE [q]; Y Strip dE [q]",450,0.,3000.,450,0.,3000.);
-	hPoint_TimeVsdEX= new TH2I("Point_TimeVsdEX","TRD Point dE of X in Time;X Strip dE [q];8*(Peak Time) [ns]",450,0.,3000.,200,0.,200.*8.);
-	hPoint_TimeVsdEY= new TH2I("Point_TimeVsdEY","TRD Point dE of Y in Time;Y Strip dE [q];8*(Peak Time) [ns]",450,0.,3000.,200,0.,200.*8.);
+	hPoint_dE_XY = new TH2I("Point_dE_XY","TRD Point Charge Corr. in X,Y;X Strip dE [q]; Y Strip dE [q]",450,0.,3000.,450,0.,3000.);
+	hPoint_TimeVsdEX= new TH2I("Point_TimeVsdEX","TRD Point Charge of X in Time;X Strip dE [q];8*(Peak Time) [ns]",450,0.,3000.,200,0.,200.*8.);
+	hPoint_TimeVsdEY= new TH2I("Point_TimeVsdEY","TRD Point Charge of Y in Time;Y Strip dE [q];8*(Peak Time) [ns]",450,0.,3000.,200,0.,200.*8.);
 	hPoint_OccupancyX = new TH1I("Point_OccupancyX","TRD Point X;X Strip; ",720,-0.5,719.5);
 	hPoint_OccupancyY = new TH1I("Point_OccupancyY","TRD Point Y;Y Strip; ",360,-0.5,359.5);
 	hPoint_XYDisplay = new TH2I("Point_XYDisplay","TRD Point Display;X Strip;Y Strip",720,-0.5,719.5,360,-0.5,359.5);
@@ -173,7 +178,8 @@ void JEventProcessor_TRD_online::Init() {
 	hPoint_TimeDiff = new TH1I("Point_TimeDiff","TRD Point Time Difference;abs(X Time - Y Time) [ns]; ",80,-40.,40.);
 	
     trdDir->cd();
-
+	
+	// cluster-level hists
     eventClusterCount = 0;
 
     gDirectory->mkdir("Cluster")->cd();
@@ -187,13 +193,13 @@ void JEventProcessor_TRD_online::Init() {
         else
 	{    NTRDstrips = NTRD_ystrips;}
 
-            hClusterHits_TimeVsStrip[i] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d", i),Form("Plane %d TRD cluster hits time vs. strip;8*(peak time) [ns];strip",i),250,0,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
-            hCluster_TimeVsStrip[i] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d", i),Form("Plane %d TRD cluster time vs. strip;8*(peak time) [ns];strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+            hClusterHits_TimeVsStrip[i] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d",i),Form("TRD Plane %d Cluster Hits Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+            hCluster_TimeVsStrip[i] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d",i),Form("TRD Plane %d Cluster Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
         for(int j=0; j<NEventsClusterMonitor; j++) {
-            hClusterHits_TimeVsStripEvent[i][j] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d_Event%d", i, j),Form("Plane %d TRD cluster hits time vs. strip;8*(peak) time [ns];strip",i),250,0,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
-            hCluster_TimeVsStripEvent[i][j] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d_Event%d", i, j),Form("Plane %d TRD cluster time vs. strip;8*(peak time) [ns];strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+            hClusterHits_TimeVsStripEvent[i][j] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Hits Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+            hCluster_TimeVsStripEvent[i][j] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
         }
-    }   
+    }
     
     // back to main dir
     mainDir->cd();
@@ -263,15 +269,15 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     ///////////////////////////
-    // TRD DigiHits and Hits //
+    //    TRD DigiHits       //
     ///////////////////////////
 
     if (digihits.size() > 0) trd_num_events->Fill(1);
     hDigiHit_NHits->Fill(digihits.size());
-    for (const auto& hit : digihits) {
+	for (const auto& hit : digihits) {
 	    int plane = hit->plane-1;  // plane and strip counting starts from 1
 	    int strip = hit->strip;
-	    
+	    hDigiHit_NPKs->Fill(hit->NPK);
 	    hDigiHit_Occupancy[plane]->Fill(strip);
 	    hDigiHit_QualityFactor[plane]->Fill(hit->QF);
 	    hDigiHit_PeakVsStrip[plane]->Fill(strip,hit->pulse_peak);
@@ -282,7 +288,10 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 	    hDigiHit_TimeVsPeak[plane]->Fill(hit->pulse_peak,t_ns);
     }
 
-
+	///////////////////////////
+    //        TRD Hits       //
+    ///////////////////////////
+	
     hHit_NHits->Fill(hits.size());
     for (const auto& hit : hits) {
 	    int plane = hit->plane-1;
@@ -294,18 +303,28 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
         hHit_TimeVsStrip[plane]->Fill(hit->strip, hit->t);
 		hHit_TimeVsdE[plane]->Fill(hit->q, hit->t);
 		hHit_StripVsdE[plane]->Fill(hit->strip, hit->q);
+		
+		const DTRDDigiHit* locAssociatedDigiHit = NULL;
+        hit->GetSingle(locAssociatedDigiHit);
+        if(!locAssociatedDigiHit) continue;
+        int NPK = locAssociatedDigiHit->NPK;
+		hHit_NPKs->Fill(NPK);
     }
 	
-       if (clusters.size() > 10 && eventClusterCount < NEventsClusterMonitor) {
-        cout << "Event " << eventnumber << " has " << clusters.size() << " clusters, eventClusterCount = " << eventClusterCount << endl;
-        for (const auto& cluster : clusters) {
-            int plane = cluster->plane-1;
-            double pos = 0.;
-            if (plane == 0) pos = cluster->pos.x();
-            else pos = cluster->pos.y();
+	///////////////////////////
+    //    TRD Clusters       //
+    ///////////////////////////
+	
+    if (clusters.size() > 2 && eventClusterCount < NEventsClusterMonitor) {
+    	cout << "Event " << eventnumber << " has " << clusters.size() << " clusters, eventClusterCount = " << eventClusterCount << endl;
+    	for (const auto& cluster : clusters) {
+    		int plane = cluster->plane-1;
+        	double pos = 0.;
+        	if (plane == 0) pos = cluster->pos.x();
+        	else pos = cluster->pos.y();
 
-            hCluster_TimeVsStripEvent[plane][eventClusterCount]->Fill(cluster->t_avg, pos);
-        }
+        	hCluster_TimeVsStripEvent[plane][eventClusterCount]->Fill(cluster->t_avg, pos);
+    	}
 
         for (const auto& hit : hits) {
             int plane = hit->plane-1;
@@ -314,38 +333,42 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 
         eventClusterCount++;
     }
-	
+
+    for (const auto& cluster : clusters) {
+        int plane = cluster->plane-1;
+        double pos = 0.;
+        if (plane == 0) pos = cluster->pos.x();
+        else pos = cluster->pos.y();
+
+        hCluster_TimeVsStrip[plane]->Fill(cluster->t_avg, pos);
+    }
+
+    for (const auto& hit : hits) {
+        int plane = hit->plane-1;
+        hClusterHits_TimeVsStrip[plane]->Fill(hit->t, hit->strip);
+    }
+		
+	///////////////////////////
+    //      TRD Points       //
+    ///////////////////////////
+		
 	hPoint_NHits->Fill(pointhits.size());
     for (const auto& point : pointhits) {
         hPoint_XYT->Fill(point->x,point->y,point->time);
-		hPoint_Time->Fill(point->time);
-		hPoint_TimeDiff->Fill(abs(point->t_x - point->t_y));
-		hPoint_OccupancyX->Fill(point->x);
-		hPoint_OccupancyY->Fill(point->y);
-		hPoint_dE->Fill(point->dE);
-		hPoint_dE_XY->Fill(point->dE_x,point->dE_y);
-		hPoint_TimeVsdEX->Fill(point->dE_x,point->t_x);
-		hPoint_TimeVsdEY->Fill(point->dE_y,point->t_y);
-		hPoint_dEDiff->Fill((point->dE_x - point->dE_y)/(point->dE_x + point->dE_y));
-		hPoint_dERatio->Fill((point->dE_x / point->dE_y));
-		hPoint_TimeVsX->Fill(point->x,point->time);
-		hPoint_TimeVsY->Fill(point->y,point->time);
-		hPoint_XYDisplay->Fill(point->x,point->y);
-	}
-	
-        for (const auto& cluster : clusters) {
-            int plane = cluster->plane-1;
-            double pos = 0.;
-            if (plane == 0) pos = cluster->pos.x();
-            else pos = cluster->pos.y();
-            
-            hCluster_TimeVsStrip[plane]->Fill(cluster->t_avg, pos);
+	    hPoint_Time->Fill(point->time);
+  	    hPoint_TimeDiff->Fill(abs(point->t_x - point->t_y));
+        hPoint_OccupancyX->Fill(point->x);
+	    hPoint_OccupancyY->Fill(point->y);
+    	hPoint_dE->Fill(point->dE);
+        hPoint_dE_XY->Fill(point->dE_x,point->dE_y);
+	    hPoint_TimeVsdEX->Fill(point->dE_x,point->t_x);
+    	hPoint_TimeVsdEY->Fill(point->dE_y,point->t_y);
+        hPoint_dEDiff->Fill((point->dE_x - point->dE_y)/(point->dE_x + point->dE_y));
+	    hPoint_dERatio->Fill((point->dE_x / point->dE_y));
+    	hPoint_TimeVsX->Fill(point->x,point->time);
+        hPoint_TimeVsY->Fill(point->y,point->time);
+        hPoint_XYDisplay->Fill(point->x,point->y);
     }
-	
-        for (const auto& hit : hits) {
-            int plane = hit->plane-1;
-            hClusterHits_TimeVsStrip[plane]->Fill(hit->t, hit->strip);
-        }
 	
     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	

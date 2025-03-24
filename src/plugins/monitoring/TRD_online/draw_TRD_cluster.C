@@ -28,7 +28,7 @@ void draw_TRD_cluster(TString root_file = "/work/halld2/home/nseptian/TRD-DEV/hd
     c->Print(pdfFileName + "[");
 
     gStyle->SetOptStat(0);
-
+	gStyle->SetPalette(kRainBow);
     for (int i = 0; i < NEventsClusterMonitor; i++) {
         for (int j = 0; j < NTRDplanes; j++) {
             c->cd(j+1);
