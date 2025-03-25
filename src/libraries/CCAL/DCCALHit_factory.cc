@@ -21,6 +21,7 @@ using namespace std;
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
 
+#include "DANA/DEvent.h"
 
 //----------------
 // Constructor
@@ -64,6 +65,8 @@ void DCCALHit_factory::Init()
     
     base_time  = 0;
     
+    INSTALLED = false;
+    
 }
 
 //------------------
@@ -71,6 +74,15 @@ void DCCALHit_factory::Init()
 //------------------
 void DCCALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/CCAL/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		INSTALLED = false;
+	else
+		INSTALLED = true;
+		
+	if(!INSTALLED) return;
+
 	auto runnumber = event->GetRunNumber();
 	auto app = event->GetJApplication();
 	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
@@ -209,6 +221,7 @@ void DCCALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
 
+	if(!INSTALLED) return;
 
     // extract the CCAL Geometry
     vector<const DCCALGeometry*> ccalGeomVect;

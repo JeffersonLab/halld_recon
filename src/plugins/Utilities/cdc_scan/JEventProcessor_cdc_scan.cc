@@ -274,15 +274,9 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
   if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
     return;
   }
-<<<<<<< HEAD
-  */   
-  vector <const Df125CDCPulse*> cdcpulses;
-  loop->Get(cdcpulses);
-=======
   */
   
   auto cdcpulses = event->Get<Df125CDCPulse>();  
->>>>>>> 2cd7c9f89ed8f70ac624f5fd1c88173fd872127b
   uint32_t nc = (uint32_t)cdcpulses.size();
 
   auto fdcpulses = event->Get<Df125FDCPulse>();

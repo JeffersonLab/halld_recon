@@ -23,6 +23,8 @@ class DCTOFHit_factory:public JFactoryT<DCTOFHit>{
   void EndRun() override;
   void Finish() override;
 
+  bool INSTALLED;
+
   double DELTA_T_ADC_TDC_MAX;
   double t_base_adc,t_base_tdc,t_scale;
   vector<double>adc_time_offsets,tdc_time_offsets,adc2E;

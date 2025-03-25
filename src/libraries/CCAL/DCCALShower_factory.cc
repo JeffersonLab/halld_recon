@@ -11,6 +11,7 @@
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
 #include "DANA/DGeometryManager.h"
+#include <DANA/DEvent.h>
 #include "HDGEOMETRY/DGeometry.h"
 
 static mutex CCAL_MUTEX;
@@ -86,6 +87,12 @@ void DCCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     auto jcalib = calib_man->GetJCalibration(runnumber);
     auto geo_manager = app->GetService<DGeometryManager>();
     auto geom = geo_manager->GetDGeometry(runnumber);
+
+	// check to see if the detector is install - don't load anything if it's not
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/CCAL/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		return;
 
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
