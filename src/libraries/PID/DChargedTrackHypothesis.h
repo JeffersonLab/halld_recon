@@ -70,6 +70,7 @@ class DChargedTrackHypothesis : public DKinematicData
 		shared_ptr<const DDIRCMatchParams> Get_DIRCMatchParams(void) const{return dTrackingInfo->dDIRCMatchParams;}
 		shared_ptr<const DCTOFHitMatchParams> Get_CTOFHitMatchParams(void) const{return dTrackingInfo->dCTOFHitMatchParams;}
 		shared_ptr<const DFMWPCMatchParams> Get_FMWPCMatchParams(void) const{return dTrackingInfo->dFMWPCMatchParams;}
+  shared_ptr<const DTRDMatchParams> Get_TRDMatchParams(void) const{return dTrackingInfo->dTRDMatchParams;}
 
 		//SETTERS
 
@@ -95,6 +96,7 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_DIRCMatchParams(shared_ptr<const DDIRCMatchParams> locMatchParams){dTrackingInfo->dDIRCMatchParams = locMatchParams;}	
 		void Set_CTOFHitMatchParams(shared_ptr<const DCTOFHitMatchParams> locMatchParams){dTrackingInfo->dCTOFHitMatchParams = locMatchParams;}
 		void Set_FMWPCMatchParams(shared_ptr<const DFMWPCMatchParams> locMatchParams){dTrackingInfo->dFMWPCMatchParams = locMatchParams;}
+  void Set_TRDMatchParams(shared_ptr<const DTRDMatchParams> locMatchParams){dTrackingInfo->dTRDMatchParams = locMatchParams;}
 
 		void Summarize(JObjectSummary& summary) const override
 		{
@@ -174,6 +176,7 @@ class DChargedTrackHypothesis : public DKinematicData
 				shared_ptr<const DDIRCMatchParams> dDIRCMatchParams = nullptr;	
 				shared_ptr<const DCTOFHitMatchParams> dCTOFHitMatchParams = nullptr;
 				shared_ptr<const DFMWPCMatchParams> dFMWPCMatchParams=nullptr;
+		  shared_ptr<const DTRDMatchParams> dTRDMatchParams=nullptr;
 		};
 
 	private:
@@ -414,6 +417,7 @@ inline void DChargedTrackHypothesis::DTrackingInfo::Reset(void)
 	dFCALSingleHitMatchParams = nullptr;
 	dDIRCMatchParams = nullptr;
 	dFMWPCMatchParams = nullptr;
+	dTRDMatchParams = nullptr;
 }
 
 inline void DChargedTrackHypothesis::DEOverPInfo::Reset(void)
