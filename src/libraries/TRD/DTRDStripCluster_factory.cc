@@ -71,7 +71,6 @@ void DTRDStripCluster_factory::Init()
     return;	
 }
 
-
 ///
 /// DTRDStripCluster_factory::StripToPosition():
 /// calculate position along plane
@@ -80,9 +79,9 @@ double DTRDStripCluster_factory::StripToPosition(int iplane, const DTRDHit *hit)
 {
   // better to pull this from CCDB, also probably the pitch as well
   if(iplane == 0) {
-    return STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip);
+    return STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
   }
-  return STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip);
+  return STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
 }
 
 
@@ -104,7 +103,7 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
     return;
   
   // require a minimum number of hits
-  if (allHits.size() < MINIMUM_HITS_FOR_CLUSTERING) {
+  if (static_cast<int>(allHits.size()) < MINIMUM_HITS_FOR_CLUSTERING) {
     return;
   }
   
@@ -116,7 +115,7 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
   for (vector<const DTRDHit*>::iterator i = allHits.begin(); i != allHits.end(); ++i) {
     // sort hits
     int stripPlane = (*i)->plane-1;
-    int strip = (*i)->strip-1;
+    //int strip = (*i)->strip-1;
     if( (stripPlane<0) || (stripPlane>=2) ){ // only two planes
       static int Nwarn = 0;
       if( Nwarn<10 ){
@@ -140,7 +139,7 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
     if(planeHits[iplane].size()>0){			
       map<int,vector<Point>> time_slices;
       
-      for(int ihit=0; ihit < planeHits[iplane].size(); ihit++) {
+      for(size_t ihit=0; ihit < planeHits[iplane].size(); ihit++) {
 	const DTRDHit* hit = planeHits[iplane][ihit];
  	
 	// const float CL_DIST=2.7; // mm
@@ -228,7 +227,7 @@ void DTRDStripCluster_factory::ExpandCluster(vector<Point> &points, Point &point
 		}
 	}
 
-	if (seeds.size() < minPts) {
+	if (seeds.size() < static_cast<size_t>(minPts)) {
 		point.clusterId = 0; // Mark as noise
 		return;
 	}
@@ -253,7 +252,7 @@ void DTRDStripCluster_factory::ExpandCluster(vector<Point> &points, Point &point
 				}
 			}
 
-			if (result.size() >= minPts) {
+			if (result.size() >= static_cast<size_t>(minPts)) {
 				for (auto &res : result) {
 					if (res->clusterId == -1 || res->clusterId == 0) {
 						if (res->clusterId == -1) {
