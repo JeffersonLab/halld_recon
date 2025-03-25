@@ -49,9 +49,10 @@ void DTRDPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   dgeom->GetGEMTRDz(dTRDz);
 
   vector<double>xvec,yvec;
-  dgeom->GetGEMTRDxy_vec(xvec,yvec);
-  dTRDx=xvec[0];
-  dTRDy=yvec[0];
+  if(dgeom->GetGEMTRDxy_vec(xvec,yvec)){
+    dTRDx=xvec[0];
+    dTRDy=yvec[0];
+  }
 
   return;
 }
