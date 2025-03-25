@@ -41,7 +41,8 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 			Point(const DTRDHit *hit, double x, double y, double weight) : hit(hit), x(x), y(y), weight(weight), visited(false), clusterId(-1) {}
 		};
 		double PointsDistance(Point p1, Point p2){
-			return sqrt(pow(p1.x/8.-p2.x/8., 2) + pow(p1.y-p2.y, 2));
+		  //return sqrt(pow(p1.x/8.-p2.x/8., 2) + pow(p1.y-p2.y, 2));
+		  return fabs(p1.y-p2.y);
 		}
 		void ExpandCluster(vector<Point> &points, Point &point, int clusterId, double eps, int minPts);
 		void DBSCAN(vector<Point> &points, double eps, int minPts);
