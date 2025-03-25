@@ -31,7 +31,8 @@ private:
   void FindSegments(const vector<const DTRDPoint *>&points,
 		    vector<vector<const DTRDPoint *>>&segments) const;
   void FitLine(const vector<const DTRDPoint *>&points,
-	       double &x0,double &y0,double &tx,double &ty) const;
+	       double &x0,double &y0,double &tx,double &ty,
+	       double &var_x,double &var_y,double &var_tx,double &var_ty) const;
   
   double dTRDz;
   int DEBUG_LEVEL;

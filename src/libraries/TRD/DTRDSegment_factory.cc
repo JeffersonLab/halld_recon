@@ -1,4 +1,4 @@
-//************************************************************************
+
 // DTRDSegment_factory.cc - factory producing track segments from points
 //************************************************************************
 
@@ -51,13 +51,18 @@ void DTRDSegment_factory::Process(const std::shared_ptr<const JEvent>& event)
     vector<const DTRDPoint *>segment=segments[i];
     if (segment.size()>1){
       DTRDSegment *myTRDSegment = new DTRDSegment;
-      double x0=0,y0=0,tx=0,ty=0;
-      FitLine(segment,x0,y0,tx,ty);
+      double x=0,y=0,tx=0,ty=0;
+      double var_x=0.,var_y=0.,var_tx=0.,var_ty=0.;
+      FitLine(segment,x,y,tx,ty,var_x,var_y,var_tx,var_ty);
       
-      myTRDSegment->x0=x0;
-      myTRDSegment->y0=y0;
+      myTRDSegment->x=x;
+      myTRDSegment->y=y;
       myTRDSegment->tx=tx;
       myTRDSegment->ty=ty;
+      myTRDSegment->var_x=var_x;
+      myTRDSegment->var_y=var_y;
+      myTRDSegment->var_tx=var_tx;
+      myTRDSegment->var_ty=var_ty;
       
       Insert(myTRDSegment);
     }
@@ -79,7 +84,9 @@ void DTRDSegment_factory::FindSegments(const vector<const DTRDPoint *>&points,
 
 
 void DTRDSegment_factory::FitLine(const vector<const DTRDPoint *>&points,
-				  double &x0,double &y0,double &tx,double &ty) const{
+				  double &x0,double &y0,double &tx,double &ty,
+				  double &var_x,double &var_y,double &var_tx,
+				  double &var_ty) const{
   double varx=0.01,vary=0.01; // just a guess for now
   double S1=0,S1z=0.,S1y=0.,S1zz=0.,S1zy=0.;
   double S2=0,S2z=0.,S2x=0.,S2zz=0.,S2zx=0.; 

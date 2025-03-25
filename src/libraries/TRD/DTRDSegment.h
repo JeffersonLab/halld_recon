@@ -23,13 +23,19 @@ public :
   JOBJECT_PUBLIC(DTRDSegment);			/// DANA identifier
   DTRDSegment(){}
 
-  double x0,y0,tx,ty;
+  double x,y,tx,ty;
+  double var_x,var_y,var_tx,var_ty;
   
   void Summarize(JObjectSummary& summary) const override {
-    summary.add(x0, "x0", "%3.2f");
-    summary.add(y0, "y0", "%3.2f");
+    summary.add(x, "x", "%3.2f");
+    summary.add(y, "y", "%3.2f");
     summary.add(tx, "tx", "%3.2f");
     summary.add(ty, "ty", "%3.2f");
+    summary.add(var_x, "var_x", "%3.2f");
+    summary.add(var_y, "var_y", "%3.2f");
+    summary.add(var_tx, "var_tx", "%3.2f");
+    summary.add(var_ty, "var_ty", "%3.2f");
+		
   }
 };
 
