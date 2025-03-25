@@ -107,9 +107,9 @@ void JEventProcessor_HELI_online::Init(void){
   strcpy(fHWPEPICSChanValue,"IGL1I00OD16_16");
 
 
-  if(HELIVERBOSE > 0){                                     //if debugging       
-    //    dFile = fopen("heli.log","w");                         //open a separate file for logging (maybe from infile name later)
-    dFile = fopen(HELILOG.c_str(),"w");                         //open a separate file for logging (maybe from infile name later)
+  if(HELIVERBOSE > 0){                                      //if debugging       
+    //    dFile = fopen("heli.log","w");                    //open a separate file for logging (maybe from infile name later)
+    dFile = fopen(HELILOG.c_str(),"a");                     //open a separate file for logging (maybe from infile name later)
     for(int n=0;n<10;n++){                                  //init the array that holds event bit and helicity data.
       dHelBits[n]=0;
     }
@@ -122,7 +122,7 @@ void JEventProcessor_HELI_online::Init(void){
 //------------------
 void JEventProcessor_HELI_online::BeginRun(const std::shared_ptr<const JEvent>& event){
   // This is called whenever the run number changes
-  auto runnumber = event->GetEventNumber();
+  auto runnumber = event->GetRunNumber();
   // Init all the counters
   fEventInRun     = 0;  
   fPlusInRun      = 0;	  
@@ -182,6 +182,16 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
     return; //NOERROR;
   }
 
+  // Get DCODAROCInfo for this ROC
+  vector<const DCODAROCInfo*> locCODAROCInfos;
+  event->Get(locCODAROCInfos);
+  uint64_t locReferenceClockTime = 0;
+  for (const auto& locCODAROCInfo : locCODAROCInfos) {
+    if(locCODAROCInfo->rocid == 71) {
+      locReferenceClockTime = locCODAROCInfo->timestamp;
+      fReferenceClockTime = locReferenceClockTime;
+    }
+  }    
   m_mtx.lock();                                           //lock this thread
 
   //do some event inits
@@ -205,7 +215,12 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
     return; //NOERROR;
   }
 
-   
+
+
+
+
+
+  
   //------------------------------------------ start latest event handling -------------------------------------------------------------------
   //For multi threaded running need to handle furthers ahead events differently from  standard events                                        |
 
@@ -528,7 +543,8 @@ int JEventProcessor_HELI_online::printEvent(){
   dHelBits[0]  = f_t_settle;
   dHelBits[1]  = f_pattern_sync;
   dHelBits[2]  = f_pair_sync;
-  dHelBits[3]  = Helb2h[f_helicity];
+  dHelBits[3]  = f_helicity;
+  //dHelBits[3]  = Helb2h[f_helicity];
   dHelBits[4]  = f_ihwp;
   dHelBits[5]  = fHelPred;                                 
   dHelBits[6]  = fHelNow;                                  
@@ -537,7 +553,7 @@ int JEventProcessor_HELI_online::printEvent(){
   dHelBits[9]  = f_beam_on;                                 
   dHelBits[10] = fHelicity;                                 
   
-  fprintf(dFile,"%lu ", fEventno);                        //print events to file. No # tag for these, but all other log lines tagged with #label
+  fprintf(dFile,"%lu %lu", fEventno,fReferenceClockTime);  //print events to file. No # tag for these, but all other log lines tagged with #label
   for(int n=0;n<11;n++){                                  //and all the bits
     fprintf(dFile," %d",dHelBits[n]);
   }
