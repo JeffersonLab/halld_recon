@@ -12,7 +12,6 @@ using namespace std;
 #include <TRD/DTRDHit.h>
 #include <TRD/DTRDStripCluster.h>
 #include <TRD/DTRDPoint.h>
-#include <TRD/DTRDPoint_Hit.h>
 #include <DAQ/Df125FDCPulse.h>
 
 #include <TDirectory.h>
@@ -53,6 +52,7 @@ static TH2I *hClusterHits_TimeVsStrip[NTRDplanes];
 static TH2I *hCluster_TimeVsStrip[NTRDplanes];
 static TH2I *hClusterHits_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
 static TH2I *hCluster_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
+static TH2I *hDigiHit_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
 
 static TH3I *hPoint_XYT;
 static TH1I *hPoint_NHits;
@@ -114,7 +114,7 @@ void JEventProcessor_TRD_online::Init() {
     // digihit-level hists
     trdDir->cd();
     gDirectory->mkdir("DigiHit")->cd();
-    hDigiHit_NHits = new TH1I("DigiHit_NHits","TRD fADC Hit Multiplicity;Raw Hits;Events",150,0.5,0.5+150);
+    hDigiHit_NHits = new TH1I("DigiHit_NHits","TRD fADC Hit Multiplicity;Raw Hits;Events",5000,0.5,0.5+5000);
 	hDigiHit_NPKs = new TH1I("DigiHit_NPKs","TRD fADC Peak Multiplicity;Raw Peaks;Events",15,0.5,0.5+15);
 	
     // histograms for each plane
@@ -198,6 +198,7 @@ void JEventProcessor_TRD_online::Init() {
         for(int j=0; j<NEventsClusterMonitor; j++) {
             hClusterHits_TimeVsStripEvent[i][j] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Hits Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
             hCluster_TimeVsStripEvent[i][j] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+			hDigiHit_TimeVsStripEvent[i][j] = new TH2I(Form("DigiHit_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d DigiHit Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
         }
     }
     
@@ -260,9 +261,7 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     vector<const DTRDStripCluster*> clusters;
     event->Get(clusters);
 	vector<const DTRDPoint*> points;
-    event->Get(points);
-	vector<const DTRDPoint_Hit*> pointhits;
-    event->Get(pointhits);
+    event->Get(points,"Hit");
 	
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
@@ -330,6 +329,11 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
             int plane = hit->plane-1;
             hClusterHits_TimeVsStripEvent[plane][eventClusterCount]->Fill(hit->t, hit->strip);
         }
+		
+		for (const auto& hit : digihits) {
+            int plane = hit->plane-1;
+            hDigiHit_TimeVsStripEvent[plane][eventClusterCount]->Fill(8.*hit->peak_time, hit->strip);
+        }
 
         eventClusterCount++;
     }
@@ -352,8 +356,8 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     //      TRD Points       //
     ///////////////////////////
 		
-	hPoint_NHits->Fill(pointhits.size());
-    for (const auto& point : pointhits) {
+	hPoint_NHits->Fill(points.size());
+    for (const auto& point : points) {
         hPoint_XYT->Fill(point->x,point->y,point->time);
 	    hPoint_Time->Fill(point->time);
   	    hPoint_TimeDiff->Fill(abs(point->t_x - point->t_y));

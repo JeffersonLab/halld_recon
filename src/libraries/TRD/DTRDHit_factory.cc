@@ -39,7 +39,7 @@ void DTRDHit_factory::Init()
 	app->SetDefaultParameter("TRD:IS_XY_TIME_DIFF_CUT", IS_XY_TIME_DIFF_CUT, 
 			      "Apply time difference cut between X and Y hits (default: false)");
 
-	XY_TIME_DIFF = 20.;
+	XY_TIME_DIFF = 40.;
 	app->SetDefaultParameter("TRD:XY_TIME_DIFF", XY_TIME_DIFF, 
 			      "Time difference between hits in X and Y planes to be considered a coincidence (default: 20.)");
 	

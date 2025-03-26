@@ -26,6 +26,7 @@ void draw_NPK(TString root_file = "/work/halld2/home/lkasper/dsoft/halldrecon/ha
     
     c1->cd(1);
 	gPad->SetLogy(1);
+	gStyle->SetOptStat(1111111111);
     hDigiHit_NPKs->GetXaxis()->SetTitle("Num Peaks");
 	hDigiHit_NPKs->SetMinimum(1);
     hDigiHit_NPKs->GetYaxis()->SetTitle("Events");

@@ -1,63 +1,39 @@
 //********************************************************
-// DTRDPoint_Hit_factory.cc - modeled after DFDCPseudo_factory 
+// DTRDPoint_factory_Hit.cc - modeled after DFDCPseudo_factory 
 //********************************************************
 
-#include "DTRDPoint_Hit_factory.h"
-
+#include "DTRDPoint_factory_Hit.h"
 #include <JANA/JEvent.h>
 #include "DANA/DGeometryManager.h"
 
 ///
-/// DTRDPoint_Hit_cmp(): 
+/// DTRDPoint_cmp(): 
 /// non-member function passed to std::sort() to sort DTRDHit pointers 
 /// for the wires by their plane attributes.
 ///
-bool DTRDPoint_Hit_cmp(const DTRDPoint_Hit* a, const DTRDPoint_Hit *b){
+bool DTRDPoint_Hit_cmp(const DTRDPoint* a, const DTRDPoint *b){
   return a->time<b->time;
 }
 
 //------------------
 // init
 //------------------
-//jerror_t DTRDPoint_Hit_factory::init(void)
-//{
-//  return NOERROR;
-//}
-void DTRDPoint_Hit_factory::Init()
+void DTRDPoint_factory_Hit::Init()
 {
 		auto app = GetApplication();
 		
-		TIME_DIFF_MAX = 50.;
-		app->SetDefaultParameter("TRDPoint:XY_TIME_DIFF",TIME_DIFF_MAX);
+		TIME_DIFF_MAX = 48.;
+		app->SetDefaultParameter("TRD:XY_TIME_DIFF",TIME_DIFF_MAX);
 		
-		dE_DIFF_MAX = 3000.;
-		app->SetDefaultParameter("TRD:dE_DIFF_MAX",dE_DIFF_MAX,
-			"Difference between Point_Hit charge in X and Y planes to be considered a coincidence (default: 3000.)");
+		dE_DIFF_MAX = 10000.;
+		app->SetDefaultParameter("TRDPOINT:dE_DIFF_MAX",dE_DIFF_MAX,
+			"Difference between Point_Hit charge in X and Y planes to be considered a coincidence (default: 10000.)");
 
-}
-
-//------------------
-// BeginRun
-//------------------
-void DTRDPoint_Hit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
-{
-	auto runnumber = event->GetRunNumber();
-	auto app = event->GetJApplication();
-	auto geo_manager = app->GetService<DGeometryManager>();
-	auto dgeom = geo_manager->GetDGeometry(runnumber);
-	
-  	// Get GEM geometry from xml (CCDB or private HDDS)
-  	dgeom->GetTRDZ(dTRDz);
-  
-  return;
-}
-
-void DTRDPoint_Hit_factory::EndRun(){
 }
 
 /// this is the place that produces points from GEMTRD strip hits
 ///
-void DTRDPoint_Hit_factory::Process(const std::shared_ptr<const JEvent>& event)
+void DTRDPoint_factory_Hit::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Get strip hits
 	vector<const DTRDHit*> hit;
@@ -72,30 +48,26 @@ void DTRDPoint_Hit_factory::Process(const std::shared_ptr<const JEvent>& event)
 			hitY.push_back(hit[i]);
 	}
 	
-	// Primitive noise suppression for cosmic
 	// match hits in X and Y planes
 	for(uint i=0; i<hitX.size(); i++){
-		if (hitX.size()>25) continue;
 		for(uint j=0; j<hitY.size(); j++){
-			if (hitY.size()>25) continue;
 			
 			// calculate hit time and energy
 			double t_diff = hitX[i]->t - hitY[j]->t;
-			double dE = ( hitX[i]->q + hitY[j]->q ) / 2.;
+			double dE = ( hitX[i]->q + hitY[j]->q );
 			double dE_high = (hitX[i]->q + dE_DIFF_MAX);
 			double dE_low = (hitX[i]->q - dE_DIFF_MAX);
 			
 			// some requirements for a good point
-			//if(fabs(t_diff) < TIME_DIFF_MAX) {//&& fabs(dE_diff) < dE_diff_max) {
 			if(fabs(t_diff) < TIME_DIFF_MAX && (hitY[j]->q < dE_high) && (hitY[j]->q > dE_low )) {
 				
 				// save new point
-				DTRDPoint_Hit* point = new DTRDPoint_Hit;
+				DTRDPoint* point = new DTRDPoint;
 				point->x = hitX[i]->strip;
 				point->y = hitY[j]->strip;
 				point->t_x = hitX[i]->t;
 				point->t_y = hitY[j]->t;
-				point->time = (hitX[i]->t*hitX[i]->q + hitY[j]->t*hitY[j]->q) / (dE*2.);
+				point->time = (hitX[i]->t*hitX[i]->q + hitY[j]->t*hitY[j]->q) / (dE);
 				point->dE = dE;
 				point->dE_x = hitX[i]->q;
 				point->dE_y = hitY[j]->q;
