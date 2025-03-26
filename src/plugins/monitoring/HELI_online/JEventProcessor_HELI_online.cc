@@ -197,7 +197,7 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
   //t settle present, so skip the event
   if(fUseTSettle && f_t_settle){ 
     fHelicity = 0;  
-    if(HELIVERBOSE > 1)printEvent();
+    if(HELIVERBOSE > 0)printEvent();
     m_mtx.unlock();                                            // Unlock main mutex
     return; //NOERROR;
   }
@@ -257,14 +257,14 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
 	fBits  += f_helicity;                             //acquire another bit
 	fNBitsRead++;                                     //increment bit counter
 	fPatFlag=0;                                       //reset
-	if(HELIVERBOSE > 0){
+	if(HELIVERBOSE > 1){
 	  fprintf(dFile,"#NewBit %ld, Hel %d, Got %d bits %d\n",fEventno,f_helicity,fNBitsRead,fBits);
 	}
 	if(fNBitsRead == fNBitsReqd){
 	  fBitsNow = fBits;                               //copy the delayed generator word to the current one
 	  for(uint d=0; d<fNPatDel;d++){                  //and move on by the required number of patterns to make it the present generator.
 	    nextRand(&fBitsNow);
-	    if(HELIVERBOSE > 0)fprintf(dFile,"#Got Extra Bit %d for Now Helicity\n",d+1);
+	    if(HELIVERBOSE > 1)fprintf(dFile,"#Got Extra Bit %d for Now Helicity\n",d+1);
 	  }
 	}
       }
@@ -346,7 +346,7 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
   else if  (fHelicity ==  1) fPlusInRun++;
   else                       fNullInRun++;
 
-  if(HELIVERBOSE > 1)printEvent();
+  if(HELIVERBOSE > 0)printEvent();
 
   m_mtx.unlock();                                            // Unlock main mutex
   
