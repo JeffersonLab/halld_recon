@@ -995,16 +995,13 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 				break;
 
 			case 0xDEC:  // Helicity decoder board, SD 2025-01-28
-				jout << "found Helicity decoder board!  (len = " << data_block_bank_len << ")" << endl;
-//             	jout<<"Skip Helicity Decoder Block!" << endl;
-//             	break;
-            	
-				cout << "----- First few words to help with debugging -----" << endl;
-				cout.flush(); cerr.flush();
-				DumpBinary(&iptr[-2], iend, 32, &iptr[-1]);
+				if(VERBOSE>3) jout <<" -- JLab Helicity Decoder  rocid="<< rocid << endl;
+//				jout << "found Helicity decoder board!  (len = " << data_block_bank_len << ")" << endl;            	
+// 				cout << "----- First few words to help with debugging -----" << endl;
+// 				cout.flush(); cerr.flush();
+// 				DumpBinary(&iptr[-2], iend, 32, &iptr[-1]);
 				
                 ParseHelicityDecoderBank(rocid, iptr, iend);
-                //Parsef250Bank(rocid, iptr, iend);
  				break;
 			case 0:
 			case 1:
@@ -1386,10 +1383,6 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
                */
                break;
                
-//             case DModuleType::HELICITY_DECODER:
-//                 ParseHelicityDecoderBank(rocid, iptr, iend);
-//                 break;
-
             case DModuleType::UNKNOWN:
             default:
                 jerr<<"Unknown module type ("<<mod_id<<") iptr=0x" << hex << iptr << dec << endl;
