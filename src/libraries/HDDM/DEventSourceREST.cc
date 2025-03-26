@@ -421,6 +421,10 @@ bool DEventSourceREST::GetObjects(const std::shared_ptr<const JEvent> &event, JF
       return (Extract_DEventHitStatistics(record,
                      dynamic_cast<JFactoryT<DEventHitStatistics>*>(factory)));
    }
+   if (dataClassName =="DBeamHelicity") {
+      return (Extract_DBeamHelicity(record,
+                     dynamic_cast<JFactoryT<DBeamHelicity>*>(factory)));
+   }
 
    return false; //OBJECT_NOT_AVAILABLE
 }
