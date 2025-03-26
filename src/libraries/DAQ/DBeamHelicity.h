@@ -20,7 +20,7 @@ class DBeamHelicity:public JObject{
   bool pair_sync;     //
   bool ihwp;          // from EPICS variable CCDB or other (0=IN and 1=OUT)
   bool beam_on;       // from EPICS variable CCDB of other (0=OFF and 1=ON)
-  bool real_hel;      // actual helicity decoded in the factory (0 = -1,  1 = 1)
+  //bool real_hel;      // actual helicity decoded in the factory (0 = -1,  1 = 1)
   bool valid;         // if the above is well defined (0 = invalid, 1 = valid)
   
    
@@ -33,7 +33,7 @@ class DBeamHelicity:public JObject{
     summary.add(pair_sync,    "pair_sync",    "%d");
     summary.add(ihwp,         "ihwp",         "%d");
     summary.add(beam_on,      "beam_on",      "%d");
-    summary.add(real_hel,     "real_hel",     "%d");
+    //summary.add(real_hel,     "real_hel",     "%d");
     summary.add(valid,        "valid",        "%d");
     
   } 

@@ -635,15 +635,15 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	for (size_t i=0; i < locBeamHelicities.size(); ++i)
 	{
 		hddm_r::ElectronBeamList electronBeam = res().addElectronBeams(1);
-		int flags = 0x01      // first bit indicates that this event has valid helicity data
+		int flags = locBeamHelicities[i]->valid      // first bit indicates if this event has valid helicity data
 					| (locBeamHelicities[i]->helicity     << 1)
 					| (locBeamHelicities[i]->pattern_sync << 2)
 					| (locBeamHelicities[i]->t_settle     << 3)
 					| (locBeamHelicities[i]->pair_sync    << 4)
 					| (locBeamHelicities[i]->ihwp         << 5)
-					| (locBeamHelicities[i]->beam_on      << 6)
-					| (locBeamHelicities[i]->real_hel     << 7)
-					| (locBeamHelicities[i]->valid        << 8);
+					| (locBeamHelicities[i]->beam_on      << 6);
+// 					| (locBeamHelicities[i]->real_hel     << 7)
+// 					| (locBeamHelicities[i]->valid        << 8);
 		electronBeam().setHelicitydata(flags);
 
 	}

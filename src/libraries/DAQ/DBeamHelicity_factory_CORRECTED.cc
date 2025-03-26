@@ -52,6 +52,8 @@ void DBeamHelicity_factory_CORRECTED::Process(const std::shared_ptr<const JEvent
 	for(auto beam_helicity : locBeamHelicities) {
 		DBeamHelicity *new_beam_helicity = new DBeamHelicity(*beam_helicity);
 		new_beam_helicity->helicity *= dCorrectionFactor;
+		
+		new_beam_helicity->AddAssociatedObject(beam_helicity);
 		Insert(new_beam_helicity);
 	}
 		

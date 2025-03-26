@@ -1062,10 +1062,8 @@ bool DEventSourceREST::Extract_DBeamHelicity(hddm_r::HDDM *record, JFactoryT<DBe
  		if (iter->getJtag() != tag)
  			continue;
 
-		// don't make an object if there's no beam helicity
-		if(iter->getHelicitydata()&0x01 == 0)  continue;
-
 		DBeamHelicity *locBeamHelicity = new DBeamHelicity();
+		locBeamHelicity->valid = (iter->getHelicitydata())&0x01;
 		locBeamHelicity->helicity = (iter->getHelicitydata()>>1)&0x01;
 
 		locBeamHelicity->pattern_sync = (iter->getHelicitydata()>>2)&0x01;

@@ -118,6 +118,7 @@ DBeamHelicity *DBeamHelicity_factory::Make_DBeamHelicity(vector<const DHELIDigiH
 	locBeamHelicity->pair_sync     = 0;
 	locBeamHelicity->ihwp          = dIHWP;
 	locBeamHelicity->beam_on       = dBeamOn;
+	locBeamHelicity->valid         = true;  //?
 	
 	for(size_t loc_i=0; loc_i<locHELIDigiHits.size(); loc_i++) {
 		const DHELIDigiHit *locHELIDigiHit = locHELIDigiHits[loc_i];
@@ -145,6 +146,7 @@ DBeamHelicity *DBeamHelicity_factory::Make_DBeamHelicity(const DHelicityData *lo
 	locBeamHelicity->pair_sync     = locHelicityData->trigger_pair_sync;
 	locBeamHelicity->ihwp          = dIHWP;
 	locBeamHelicity->beam_on       = dBeamOn;
+	locBeamHelicity->valid         = true;  //?
 	
 	return locBeamHelicity;
 }
