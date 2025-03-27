@@ -189,10 +189,10 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
   for (const auto& locCODAROCInfo : locCODAROCInfos) {
     if(locCODAROCInfo->rocid == 71) {
       locReferenceClockTime = locCODAROCInfo->timestamp;
-      fReferenceClockTime = locReferenceClockTime;
     }
   }    
   m_mtx.lock();                                           //lock this thread
+  fReferenceClockTime = locReferenceClockTime;
 
   //do some event inits
 
