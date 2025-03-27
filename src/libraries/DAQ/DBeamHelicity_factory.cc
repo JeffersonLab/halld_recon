@@ -86,6 +86,9 @@ void DBeamHelicity_factory::Process(const std::shared_ptr<const JEvent>& event){
   vector<const DHelicityData*> locHelicityDatas;
   event->Get(locHelicityDatas);
 
+  if(locHELIDigiHits.empty() && locHelicityDatas.empty())
+    return;
+
   if(!locHELIDigiHits.empty() && !locHelicityDatas.empty()) {
   	jerr << "both DHELIDigiHit and DHelicityData objects are in the data stream???" << endl;
   	jerr << "  not sure what to do, not creating DBeamHelicity objects ... " << endl;
@@ -95,7 +98,7 @@ void DBeamHelicity_factory::Process(const std::shared_ptr<const JEvent>& event){
   if(!locHELIDigiHits.empty())
   	locBeamHelicity = Make_DBeamHelicity(locHELIDigiHits);
   
-  if(!locHELIDigiHits.empty())
+  if(!locHelicityDatas.empty())
   	locBeamHelicity = Make_DBeamHelicity(locHelicityDatas[0]);
   
 
