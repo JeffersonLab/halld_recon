@@ -444,7 +444,7 @@ void JEventProcessor_FCAL_online::Process(const std::shared_ptr<const JEvent>& e
 
   // for events with a lot of hits -- stop now
   if( hits.size() > 500 ){
-    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    lockService->RootFillUnLock(this);  //RELEASE ROOT FILL LOCK
     return;
   }
 
