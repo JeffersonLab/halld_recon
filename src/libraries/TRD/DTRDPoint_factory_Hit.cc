@@ -73,7 +73,8 @@ void DTRDPoint_factory_Hit::Process(const std::shared_ptr<const JEvent>& event)
 				point->dE_y = hitY[j]->q;
 				point->status = 1;
 				//newPoint->itrack = 0;
-				//newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[i]->pos.z()*stripClusY[j]->q_tot) / dE + dTRDz[0];
+				point->z = (hitX[i]->t*hitX[i]->q + hitY[j]->t*hitY[j]->q) / dE; // + dTRDz[0]; //Not Useful Yet
+				
 
 				point->AddAssociatedObject(hitX[i]);
 				point->AddAssociatedObject(hitY[j]);

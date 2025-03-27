@@ -30,7 +30,7 @@ class DTRDPoint : public JObject {
       double t_x,t_y; ///< time of the two cathode clusters
       double time; ///< time corresponding to this pseudopoint.
       int status; ///< status word for pseudopoint
-      double covxx,covxy,covyy; ///< Covariance terms for (x,y) 
+      //double covxx,covxy,covyy; ///< Covariance terms for (x,y) 
       double dE; /// < energy deposition 
       double dE_x,dE_y; /// < energy deposition for each plane
 	  //int itrack; //?
