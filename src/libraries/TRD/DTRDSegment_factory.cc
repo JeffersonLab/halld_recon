@@ -112,9 +112,13 @@ void DTRDSegment_factory::FitLine(const vector<const DTRDPoint *>&points,
   
    double D1=S1*S1zz-S1z*S1z;
    y0=(S1zz*S1y-S1z*S1zy)/D1;
+   var_y=S1zz/D1;
    ty=(S1*S1zy-S1z*S1y)/D1;
+   var_ty=S1/D1;
 
    double D2=S2*S2zz-S2z*S2z;
    x0=(S2zz*S2x-S2z*S2zx)/D2;
+   var_x=S2zz/D2;
    tx=(S2*S2zx-S2z*S2x)/D2;
+   var_tx=S2/D2;
 }
