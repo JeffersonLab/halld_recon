@@ -165,7 +165,7 @@ void JEventProcessor_TPOL_tree::Process(const std::shared_ptr<const JEvent>& eve
     vector<const DBeamPhoton*> beamPhotons;
     event->Get(beamPhotons);
 
-    GetLockService(event)->RootFillLock(this);
+
     // PSC coincidences
     if (cpairs.size()>=1) {
         // take pair with smallest time difference from sorted vector
@@ -313,7 +313,7 @@ void JEventProcessor_TPOL_tree::Process(const std::shared_ptr<const JEvent>& eve
 
         }
     }
-    GetLockService(event)->RootFillUnLock(this);
+
 }
 
 double JEventProcessor_TPOL_tree::GetPhi(unsigned int sector)

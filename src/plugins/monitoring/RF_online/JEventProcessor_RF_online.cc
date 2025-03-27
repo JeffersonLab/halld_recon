@@ -344,7 +344,7 @@ void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &loc
 */
 
 	//MAKE/FILL ROC HISTOGRAMS
-	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 	{
 		//roc info consistency:
 			//compare roc infos: delta-t of each to avg-t-exlcuding-itself //separate histograms for each delta
@@ -371,7 +371,7 @@ void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &loc
 			dHistMap_ROCInfoDeltaT[locROCID]->Fill(locDeltaT);
 		}
 	}
-	lockService->RootUnLock(); //RELEASE ROOT LOCK!!
+	lockService->RootFillUnLock(this); //RELEASE ROOT LOCK!!
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock

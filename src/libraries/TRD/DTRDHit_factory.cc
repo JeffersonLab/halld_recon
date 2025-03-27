@@ -39,10 +39,14 @@ void DTRDHit_factory::Init()
 	app->SetDefaultParameter("TRD:IS_XY_TIME_DIFF_CUT", IS_XY_TIME_DIFF_CUT, 
 			      "Apply time difference cut between X and Y hits (default: false)");
 
-	XY_TIME_DIFF = 20.;
+	XY_TIME_DIFF = 40.;
 	app->SetDefaultParameter("TRD:XY_TIME_DIFF", XY_TIME_DIFF, 
 			      "Time difference between hits in X and Y planes to be considered a coincidence (default: 20.)");
-
+	
+	HIT_SIZE_MAX = 1000.;
+    app->SetDefaultParameter("TRD:HIT_SIZE_MAX", HIT_SIZE_MAX, 
+                  "Maximum number of hits on a strip in either X or Y in an event, for noise cleaning (default: 1000.)");
+	
 	// Setting this flag makes it so that JANA does not delete the objects in _data.
 	// This factory will manage this memory.
 	SetFactoryFlag(NOT_OBJECT_OWNER);  // TODO: Make sure we don't need PERSISTENT as well
@@ -67,9 +71,6 @@ void DTRDHit_factory::Process(const std::shared_ptr<const JEvent>& event)
     vector<const DTRDHit*> hits;
     event->Get(hits, "Calib");
     
-//     cout << "DTRDHit_factory::Process() ..." << endl;
-//     cout << "  num input hits = " << hits.size() << endl;
-
     if(!IS_XY_TIME_DIFF_CUT) {
     	for(auto &hit : hits)
     		Insert(const_cast<DTRDHit*>(hit));
@@ -97,8 +98,12 @@ void DTRDHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 	}
 
 	// loops to check the time coincidence of hits in the two planes and add them to the _data vector
+	
+	if (IS_XY_TIME_DIFF_CUT) {
 	for (unsigned int i=0; i < hits_plane[0].size(); i++) {
+		if (hits_plane[0].size()>HIT_SIZE_MAX) continue; 
 		for (unsigned int j=0; j < hits_plane[1].size(); j++) {
+			if (hits_plane[1].size()>HIT_SIZE_MAX) continue;
 			if (abs(hits_plane[0][i]->t - hits_plane[1][j]->t) < XY_TIME_DIFF) {
 				Insert(const_cast<DTRDHit*>(hits_plane[0][i]));
 				break;
@@ -107,13 +112,16 @@ void DTRDHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 	}
 
 	for (unsigned int i=0; i < hits_plane[1].size(); i++) {
+		if (hits_plane[1].size()>HIT_SIZE_MAX) continue;
 		for (unsigned int j=0; j < hits_plane[0].size(); j++) {
+			if (hits_plane[0].size()>HIT_SIZE_MAX) continue;
 			if (abs(hits_plane[1][i]->t - hits_plane[0][j]->t) < XY_TIME_DIFF) {
 				Insert(const_cast<DTRDHit*>(hits_plane[1][i]));
 				break;
 			}
 		}
-	}	
+	}
+	}
 		    
     return;
 }

@@ -593,9 +593,9 @@ void JEventProcessor_TAGM_online::Process(const std::shared_ptr<const JEvent>& e
   event->Get(tdcdigihits);
   event->Get(hits, "Calib");
 
-	// FILL HISTOGRAMS
-	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+  // FILL HISTOGRAMS
+  // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
+  lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   // Histogram the total number of events
   if( (digihits.size()>0) || (tdcdigihits.size()>0) )
@@ -884,7 +884,7 @@ void JEventProcessor_TAGM_online::Process(const std::shared_ptr<const JEvent>& e
     }
   }
 
-	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+  lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
   return;
 }
