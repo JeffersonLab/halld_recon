@@ -37,7 +37,7 @@ using namespace std;
 #include <TSpline.h>
 
 // Declared in hdview2.cc
-extern JEventLoop *eventloop;
+extern JEvent *jevent;
 extern MyProcessor *myproc;
 
 // Defined in hdv_mainframe.cc
@@ -246,15 +246,14 @@ void fmwpc_mainframe::DoNewEvent(void)
 	DoMyRedraw();
 
     // Update run, event info
-    if( eventloop ) {
-        auto jevent = eventloop->GetJEvent();
+    if( jevent ) {
         std::stringstream ss;
-        ss << jevent.GetRunNumber();
+        ss << jevent->GetRunNumber();
         run->SetTitle(ss.str().c_str());
         run->Draw();
 
         ss.str("");
-        ss << jevent.GetEventNumber();
+        ss << jevent->GetEventNumber();
         event->SetTitle(ss.str().c_str());
         event->Draw();
 
@@ -515,17 +514,17 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
     vector<const DCTOFTDCDigiHit*> ctoftdcdigihits;
     vector<const DCTOFHit*> ctofhits;
     vector<const DCTOFPoint*> ctofpoints;
-    if( eventloop != NULL ) {
-        eventloop->Get(tbts);
-        eventloop->Get(fcalhits);
-        eventloop->Get(fmwpcdigihits);
-        eventloop->Get(fmwpchits);
-        eventloop->Get(fmwpcclusters);
-        eventloop->Get(fmwpcmatchedtracks);
-        eventloop->Get(ctofdigihits);
-        eventloop->Get(ctoftdcdigihits);
-        eventloop->Get(ctofhits);
-        eventloop->Get(ctofpoints);
+    if( jevent != NULL ) {
+        jevent->Get(tbts);
+        jevent->Get(fcalhits);
+        jevent->Get(fmwpcdigihits);
+        jevent->Get(fmwpchits);
+        jevent->Get(fmwpcclusters);
+        jevent->Get(fmwpcmatchedtracks);
+        jevent->Get(ctofdigihits);
+        jevent->Get(ctoftdcdigihits);
+        jevent->Get(ctofhits);
+        jevent->Get(ctofpoints);
     }
 
     // Draw FCALHits

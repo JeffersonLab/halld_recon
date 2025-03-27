@@ -10,7 +10,7 @@
 #define _MYPROCESSOR_H_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 #include <JANA/JEvent.h>
 
 #include <GlueX.h>
@@ -58,10 +58,10 @@ class MyProcessor:public JEventProcessor
  public:
   MyProcessor();
   ~MyProcessor();
-  
-  jerror_t init(void);	///< Called once at program start.
-  jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);///< Called every event.
+
+  void Init() override; ///< Called once at program start
+	void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;	///< Called everytime a new run number is detected.
+	void Process(const std::shared_ptr<const JEvent>& locEvent) override;///< Called every event.
   
   //void DrawXY(void);
   //void DrawRPhi(void);
@@ -101,7 +101,7 @@ class MyProcessor:public JEventProcessor
   vector<TObject*> graphics_tof_hits;
   
   void GetFactoryNames(vector<string> &facnames);
-  void GetFactories(vector<JFactory_base*> &factories);
+  void GetFactories(vector<JFactory*> &factories);
   unsigned int GetNrows(const string &factory, string tag);
   void GetDReferenceTrajectory(string dataname, string tag, 
 			       unsigned int index, DReferenceTrajectoryHDV* &rt, vector<const DCDCTrackHit*> &cdchits);
@@ -114,8 +114,8 @@ class MyProcessor:public JEventProcessor
   hdv_mainframe *hdvmf;
   hdv_fulllistframe *fulllistmf=NULL;
   hdv_debugerframe *debugermf;
-  JEventLoop *loop;
-  JEvent last_jevent;
+  JEvent* jevent;
+  JEvent* last_jevent;
   DRootGeom *RootGeom;
   DGeometry *geom;
   string MATERIAL_MAP_MODEL;

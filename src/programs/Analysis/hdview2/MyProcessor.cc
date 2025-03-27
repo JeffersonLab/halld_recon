@@ -20,6 +20,8 @@ using namespace std;
 #include <TColor.h>
 #include <TLegend.h>
 
+#include <JANA/JEventSource.h>
+
 #include <particleType.h>
 #include "hdview2.h"
 #include "hdv_mainframe.h"
@@ -35,7 +37,8 @@ using namespace std;
 #include "TRACKING/DTrackTimeBased.h"
 #include "PID/DChargedTrack.h"
 #include "TRACKING/DReferenceTrajectory.h"
-#include "JANA/JGeometry.h"
+#include "DANA/DEvent.h"
+#include <JANA/Geometry/JGeometry.h>
 #include "TRACKING/DMCTrajectoryPoint.h"
 #include "FCAL/DFCALHit.h"
 #include "ECAL/DECALHit.h"
@@ -94,23 +97,6 @@ MyProcessor *gMYPROC=NULL;
 //------------------------------------------------------------------
 MyProcessor::MyProcessor()
 {
-	Bfield = NULL;
-	loop = NULL;
-
-	// Tell factory to keep around a few density histos
-	//gPARMS->SetParameter("TRKFIND:MAX_DEBUG_BUFFERS",	16);
-	
-	RMAX_INTERIOR = 65.0;
-	RMAX_EXTERIOR = 88.0;
-    ZMAX = 890.0;
-	gPARMS->SetDefaultParameter("RT:RMAX_INTERIOR",	RMAX_INTERIOR, "cm track drawing Rmax inside solenoid region");
-	gPARMS->SetDefaultParameter("RT:RMAX_EXTERIOR",	RMAX_EXTERIOR, "cm track drawing Rmax outside solenoid region");
-    gPARMS->SetDefaultParameter("RT:ZMAX",	ZMAX, "cm track drawing ZMax");
-
-	BCALVERBOSE = 0;
-	gPARMS->SetDefaultParameter("BCALVERBOSE", BCALVERBOSE, "Verbosity level for BCAL objects and display");
-
-	gMYPROC = this;
 }
 
 //------------------------------------------------------------------
@@ -122,20 +108,52 @@ MyProcessor::~MyProcessor()
 }
 
 //------------------------------------------------------------------
-// init 
+// Init 
 //------------------------------------------------------------------
-jerror_t MyProcessor::init(void)
+void MyProcessor::Init(void)
+{
+		Bfield = NULL;
+		jevent = NULL;
+
+		// Tell factory to keep around a few density histos
+		//gPARMS->SetParameter("TRKFIND:MAX_DEBUG_BUFFERS",	16);
+		
+		RMAX_INTERIOR = 65.0;
+		RMAX_EXTERIOR = 88.0;
+		ZMAX = 890.0;
+		auto app = GetApplication();
+		app->SetDefaultParameter("RT:RMAX_INTERIOR",	RMAX_INTERIOR, "cm track drawing Rmax inside solenoid region");
+		app->SetDefaultParameter("RT:RMAX_EXTERIOR",	RMAX_EXTERIOR, "cm track drawing Rmax outside solenoid region");
+		app->SetDefaultParameter("RT:ZMAX",	ZMAX, "cm track drawing ZMax");
+
+		BCALVERBOSE = 0;
+		app->SetDefaultParameter("BCALVERBOSE", BCALVERBOSE, "Verbosity level for BCAL objects and display");
+
+		gMYPROC = this;
+
+	
+	
+	return; //NOERROR;
+}
+
+//------------------------------------------------------------------
+// BeginRun
+//------------------------------------------------------------------
+void MyProcessor::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// Make sure detectors have been drawn
 	//if(!drew_detectors)DrawDetectors();
-  
-  
-
-	vector<JEventLoop*> loops = app->GetJEventLoops();
-	if(loops.size()>0){
-
 		vector<string> facnames;
-		loops[0]->GetFactoryNames(facnames);
+		for (auto factory : locEvent->GetFactorySet()->GetAllFactories()) {
+			auto fac_name = factory->GetObjectName();
+			auto fac_tag = factory->GetTag();
+
+			if (!fac_tag.empty()) {
+				facnames.push_back(fac_name + ":" + fac_tag);
+			} else {
+				facnames.push_back(fac_name);
+			}
+		}
 
 		hdvmf = new hdv_mainframe(gClient->GetRoot(), 1400, 700);
 		hdvmf->SetCandidateFactories(facnames);
@@ -158,44 +176,37 @@ jerror_t MyProcessor::init(void)
 		  BCALHitMatrixD->GetXaxis()->SetTitle("Sector number");
 		  BCALParticles->GetXaxis()->SetTitle("Phi angle [deg]");
 		}
-	}
-	
-	return NOERROR;
-}
-
-//------------------------------------------------------------------
-// brun 
-//------------------------------------------------------------------
-jerror_t MyProcessor::brun(JEventLoop *eventloop, int32_t runnumber)
-{
-
 	// Read in Magnetic field map
-	DApplication* dapp = dynamic_cast<DApplication*>(eventloop->GetJApplication());
-	Bfield = dapp->GetBfield(runnumber);
-	const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
-	dgeom->GetFDCWires(fdcwires);
+	auto app = GetApplication();
+	auto runnumber = locEvent->GetRunNumber();
+	auto geo_manager = app->GetService<DGeometryManager>();
+	Bfield = DEvent::GetBfield(locEvent);
 
-	RootGeom = dapp->GetRootGeom(runnumber);
-	geom = dapp->GetDGeometry(runnumber);
+	RootGeom = geo_manager->GetRootGeom(runnumber);
+	geom = geo_manager->GetDGeometry(runnumber);
+	geom->GetFDCWires(fdcwires);
+
 	
 	MATERIAL_MAP_MODEL="DGeometry";
-	gPARMS->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL",			MATERIAL_MAP_MODEL);
+	app->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL",			MATERIAL_MAP_MODEL);
 
-	eventloop->GetCalib("PID/photon_track_matching", photon_track_matching);
+	DEvent::GetCalib(locEvent, "PID/photon_track_matching", photon_track_matching);
 	DELTA_R_FCAL = photon_track_matching["DELTA_R_FCAL"];
 
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------------------------------------------------------
-// evnt 
+// Process 
 //------------------------------------------------------------------
-jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void MyProcessor::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
-	if(!eventLoop)return NOERROR;
-	loop = eventLoop;
-	last_jevent.FreeEvent();
-	last_jevent = loop->GetJEvent();
+	if(!jevent)return; //NOERROR;
+	auto eventnumber = locEvent->GetEventNumber();
+	jevent = const_cast<JEvent*>(locEvent.get());
+	jevent->SetSequential(true);
+	last_jevent->Finish();
+	last_jevent = const_cast<JEvent*>(locEvent.get());
 	static uint64_t Nevents_since_last_draw = 0;
 	static bool save_continuous = (GO == 1);
 	static long save_sleep_time = hdvmf->GetSleepTime();
@@ -214,14 +225,27 @@ jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 
 	uint32_t num_required_classes_present = 0;
 	for( auto c : REQUIRED_CLASSES_FOR_DRAWING ){
-		auto fac = loop->GetFactory( c );
+		string tag = "";
+		unsigned int pos = c.rfind(":",c.size()-1);
+		if(pos != (unsigned int)string::npos){
+			tag = c.substr(pos+1,c.size());
+			c.erase(pos);
+		}
+		auto fac = jevent->GetFactory(c, tag.c_str());
 		if( !fac ){
 			jerr << "No factory found for type: " << c << " !" << endl;
 			jerr << "Double check that there is not a typo in the name and run again." << endl;
 			exit(-1);
 		}
-		if( fac->GetNrows() != 0 ){
-			num_required_classes_present++;
+		if(fac){
+			try{
+				fac->Create(locEvent);
+				if( fac->GetNumObjects() > 0){
+					num_required_classes_present++;
+				}
+			}catch(...){
+				cout<<"hdview2 MyProcessor::Process threw an exception on fac->Create or fac->GetNumObjects"<<endl;
+			}
 		}
 	}
 	bool draw_event = num_required_classes_present > 0; // Default to OR logic
@@ -251,7 +275,7 @@ jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 		char trigstring[10];
 		const DL1Trigger *trig = NULL;
 		try {
-			loop->GetSingle(trig);
+			jevent->GetSingle(trig);
 		} catch (...) {}
 		if (trig) {
 			sprintf(trigstring,"0x%04x",trig->trig_mask); 
@@ -261,17 +285,17 @@ jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 		hdvmf->SetTrig(trigstring);
 
 		string source = "<no source>";
-		if(last_jevent.GetJEventSource())source = last_jevent.GetJEventSource()->GetSourceName();
+		if(last_jevent->GetJEventSource())source = last_jevent->GetJEventSource()->GetResourceName();
 
-		cout<<"----------- New Event "<<eventnumber<<"  (run " << last_jevent.GetRunNumber()<<") -------------"<<endl;
+		cout<<"----------- New Event "<<eventnumber<<"  (run " << last_jevent->GetRunNumber()<<") -------------"<<endl;
 		hdvmf->SetEvent(eventnumber);
-		hdvmf->SetRun(last_jevent.GetRunNumber());
+		hdvmf->SetRun(last_jevent->GetRunNumber());
 		hdvmf->SetSource(source.c_str());
 		hdvmf->DoMyRedraw();	
 	}else{
 	
 		// If this is the first event in a sequence we are skipping the draw
-		// then set the "continuous" checkbox on so the outer loop will continue
+		// then set the "continuous" checkbox on so the outer event will continue
 		// to call us. Save the state of the checkbox so we can restore it once an
 		// event we do draw is encountered.
 		if( Nevents_since_last_draw == 0 ){
@@ -286,9 +310,9 @@ jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 		if( Nevents_since_last_draw%1 == 0 ) cout.flush();
 	}
 
-	japp->SetSequentialEventComplete();
+	// japp->SetSequentialEventComplete(); // will be done automatically in FinishEvent because SetSequential(true) is done for this event
 	
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------------------------------------------------------
@@ -313,16 +337,16 @@ void MyProcessor::FillGraphics(void)
 	graphics_yz.clear();  // The objects placed in these will be deleted by hdv_mainframe
 	graphics_tof_hits.clear();  // The objects placed in these will be deleted by hdv_mainframe
 
-	if(!loop)return;
+	if(!jevent)return;
 
 	vector<const DSCHit *>schits;
-	loop->Get(schits);
+	jevent->Get(schits);
 	vector<const DTrackCandidate*> trCand;
-	loop->Get(trCand);
+	jevent->Get(trCand);
 	vector<const DTrackTimeBased*> trTB;
-	loop->Get(trTB);
+	jevent->Get(trTB);
 	vector<const DTrackWireBased*> trWB;
-	loop->Get(trWB);
+	jevent->Get(trWB);
 	hdv_debugerframe *p = hdvmf->GetDebugerFrame();
 	p->SetNTrCand(trCand.size());
 	p->SetNTrWireBased(trWB.size());
@@ -330,7 +354,7 @@ void MyProcessor::FillGraphics(void)
 
 	if (BCALHitCanvas) {
 	  vector<const DBCALHit*> locBcalHits;
-	  loop->Get(locBcalHits);
+	  jevent->Get(locBcalHits);
 	  BCALHitMatrixU->Reset();
 	  BCALHitMatrixD->Reset();
 	  for (unsigned int k=0;k<locBcalHits.size();k++){
@@ -375,7 +399,7 @@ void MyProcessor::FillGraphics(void)
 
 	  // Fill BCAL points into layer histograms
 	  vector<const DBCALPoint*> locBcalPoint;
-	  loop->Get(locBcalPoint);
+	  jevent->Get(locBcalPoint);
 	  for (int layer=0; layer<4; layer++) {
 		  BCALPointZphiLayer[layer]->Reset();
 		  BCALPointPhiTLayer[layer]->Reset();
@@ -426,7 +450,7 @@ void MyProcessor::FillGraphics(void)
 
 	  // Fill BCAL Clusters into histograms
 	  vector<const DBCALCluster*> locBcalCluster;
-	  loop->Get(locBcalCluster);
+	  jevent->Get(locBcalCluster);
 
 	  unsigned int oldsize = BCALClusterZphiHistos.size();
 	  for (unsigned int k=0;k<oldsize;k++){
@@ -496,7 +520,7 @@ void MyProcessor::FillGraphics(void)
 	  }
 
 	  vector<const DBCALIncidentParticle*> locBcalParticles;
-	  loop->Get(locBcalParticles);
+	  jevent->Get(locBcalParticles);
 	  BCALParticles->Reset();
 	  BCALPLables.clear();
 	  for (unsigned int k=0;k<locBcalParticles.size();k++){	    
@@ -617,7 +641,7 @@ void MyProcessor::FillGraphics(void)
 	// BCAL hits
 	if(hdvmf->GetCheckButton("bcal")){
 	  vector<const DBCALHit*> bcalhits;
-	  loop->Get(bcalhits);
+	  jevent->Get(bcalhits);
 	  
 	  for(unsigned int i=0; i<bcalhits.size(); i++){
 	    const DBCALHit *hit = bcalhits[i];
@@ -682,7 +706,7 @@ void MyProcessor::FillGraphics(void)
 	if(hdvmf->GetCheckButton("fcal")){
 	  // Get FCAL2 insert hits if present
 	  vector<const DECALHit*> ecalhits;
-	  loop->Get(ecalhits);
+	  jevent->Get(ecalhits);
 	  
 	  for(unsigned int i=0; i<ecalhits.size(); i++){
 	    const DECALHit *hit = ecalhits[i]; 
@@ -695,7 +719,7 @@ void MyProcessor::FillGraphics(void)
 	  }
 
 	  vector<const DFCALHit*> fcalhits;
-	  loop->Get(fcalhits);
+	  jevent->Get(fcalhits);
 	  
 	  for(unsigned int i=0; i<fcalhits.size(); i++){
 	    const DFCALHit *hit = fcalhits[i];
@@ -709,7 +733,7 @@ void MyProcessor::FillGraphics(void)
 	// CCAL hits
 	if(hdvmf->GetCheckButton("ccal")){
 	  vector<const DCCALHit*> ccalhits;
-	  loop->Get(ccalhits);
+	  jevent->Get(ccalhits);
 
 	  for(unsigned int i=0; i<ccalhits.size(); i++){
 	    const DCCALHit *hit = ccalhits[i];
@@ -736,7 +760,7 @@ void MyProcessor::FillGraphics(void)
 	  memset(hit_down,0,sizeof(hit_down));
 
           vector<const DTOFHit*> tofhits;
-          loop->Get(tofhits);
+          jevent->Get(tofhits);
 
           for(unsigned int i=0; i<tofhits.size(); i++){
             const DTOFHit *tof_hit = tofhits[i];
@@ -941,7 +965,7 @@ void MyProcessor::FillGraphics(void)
 	// CDC hits
 	if(hdvmf->GetCheckButton("cdc")){
 		vector<const DCDCTrackHit*> cdctrackhits;
-		loop->Get(cdctrackhits);
+		jevent->Get(cdctrackhits);
 		
 		for(unsigned int i=0; i<cdctrackhits.size(); i++){
 			const DCDCWire *wire = cdctrackhits[i]->wire;
@@ -979,7 +1003,7 @@ void MyProcessor::FillGraphics(void)
 	// FDC wire
 	if(hdvmf->GetCheckButton("fdcwire")){
 		vector<const DFDCHit*> fdchits;
-		loop->Get(fdchits);
+		jevent->Get(fdchits);
 
 		for(unsigned int i=0; i<fdchits.size(); i++){
 			const DFDCHit *fdchit = fdchits[i];
@@ -1006,7 +1030,7 @@ void MyProcessor::FillGraphics(void)
 	// FDC intersection hits
 	if(hdvmf->GetCheckButton("fdcintersection")){
 		vector<const DFDCIntersection*> fdcints;
-		loop->Get(fdcints);
+		jevent->Get(fdcints);
 		DGraphicSet gsetp(46, kMarker, 0.5);
 		
 		for(unsigned int i=0; i<fdcints.size(); i++){
@@ -1020,7 +1044,7 @@ void MyProcessor::FillGraphics(void)
 	// FDC psuedo hits
 	if(hdvmf->GetCheckButton("fdcpseudo")){
 		vector<const DFDCPseudo*> fdcpseudos;
-		loop->Get(fdcpseudos);
+		jevent->Get(fdcpseudos);
 		DGraphicSet gsetp(38, kMarker, 0.5);
 		
 		for(unsigned int i=0; i<fdcpseudos.size(); i++){
@@ -1037,7 +1061,7 @@ void MyProcessor::FillGraphics(void)
 	// DMCThrown
 	if(hdvmf->GetCheckButton("thrown")){
 		vector<const DMCThrown*> mcthrown;
-		loop->Get(mcthrown);
+		jevent->Get(mcthrown);
 		for(unsigned int i=0; i<mcthrown.size(); i++){
 			int color=14;
 			double size=1.5;
@@ -1068,7 +1092,7 @@ void MyProcessor::FillGraphics(void)
 	// CDC Truth points
 	if(hdvmf->GetCheckButton("cdctruth")){	
 		vector<const DMCTrackHit*> mctrackhits;
-		loop->Get(mctrackhits);
+		jevent->Get(mctrackhits);
 		DGraphicSet gset(12, kMarker, 0.5);
 		for(unsigned int i=0; i<mctrackhits.size(); i++){
 			const DMCTrackHit *hit = mctrackhits[i];
@@ -1083,7 +1107,7 @@ void MyProcessor::FillGraphics(void)
 	// FDC Truth points
 	if(hdvmf->GetCheckButton("fdctruth")){	
 		vector<const DMCTrackHit*> mctrackhits;
-		loop->Get(mctrackhits);
+		jevent->Get(mctrackhits);
 		DGraphicSet gset(12, kMarker, 0.5);
 		for(unsigned int i=0; i<mctrackhits.size(); i++){
 			const DMCTrackHit *hit = mctrackhits[i];
@@ -1242,7 +1266,7 @@ void MyProcessor::FillGraphics(void)
 	// TOF reconstructed points 
 	if (hdvmf->GetCheckButton("tof")){
 	  vector<const DTOFPoint *>tofpoints;
-	  loop->Get(tofpoints);
+	  jevent->Get(tofpoints);
 	  DGraphicSet gset(kRed, kMarker, 0.5);
 	  for(unsigned int i=0; i<tofpoints.size(); i++){
 	    const DTOFPoint *hit = tofpoints[i];
@@ -1255,7 +1279,7 @@ void MyProcessor::FillGraphics(void)
 	// TOF Truth points
 	if(hdvmf->GetCheckButton("toftruth")){	
 		vector<const DMCTrackHit*> mctrackhits;
-		loop->Get(mctrackhits);
+		jevent->Get(mctrackhits);
 		DGraphicSet gset(kBlack, kMarker, 0.5);
 		for(unsigned int i=0; i<mctrackhits.size(); i++){
 			const DMCTrackHit *hit = mctrackhits[i];
@@ -1270,7 +1294,7 @@ void MyProcessor::FillGraphics(void)
 	// BCAL Truth points
 	if(hdvmf->GetCheckButton("bcaltruth")){	
 		vector<const DMCTrackHit*> mctrackhits;
-		loop->Get(mctrackhits);
+		jevent->Get(mctrackhits);
 		DGraphicSet gset(kBlack, kMarker, 1.0);
 		for(unsigned int i=0; i<mctrackhits.size(); i++){
 			const DMCTrackHit *hit = mctrackhits[i];
@@ -1289,8 +1313,8 @@ void MyProcessor::FillGraphics(void)
 	if(hdvmf->GetCheckButton("fcaltruth")){
 		vector<const DFCALGeometry*> fcalgeometries;
 		vector<const DFCALHit*> mcfcalhits;
-		loop->Get(fcalgeometries);
-		loop->Get(mcfcalhits, "TRUTH");
+		jevent->Get(fcalgeometries);
+		jevent->Get(mcfcalhits, "TRUTH");
 		if(fcalgeometries.size()>0){
 			const DFCALGeometry *fgeom = fcalgeometries[0];
 
@@ -1319,7 +1343,7 @@ void MyProcessor::FillGraphics(void)
 	// BCAL reconstructed photons
 	if(hdvmf->GetCheckButton("recon_photons_bcal")){
 		vector<const DNeutralParticle*> neutrals;
-		loop->Get(neutrals);
+		jevent->Get(neutrals);
 	
 		DGraphicSet gset(kYellow+2, kMarker, 1.25);
 		gset.marker_style=21;
@@ -1346,7 +1370,7 @@ void MyProcessor::FillGraphics(void)
 	// FCAL reconstructed photons
 	if(hdvmf->GetCheckButton("recon_photons_fcal")){
 		vector<const DNeutralParticle*> neutrals;
-		loop->Get(neutrals);
+		jevent->Get(neutrals);
 		DGraphicSet gset(kOrange, kMarker, 1.25);
 		gset.marker_style=2;
 		for(unsigned int i=0; i<neutrals.size(); i++){
@@ -1385,7 +1409,7 @@ void MyProcessor::FillGraphics(void)
 	// Reconstructed photons matched with tracks
 	if(hdvmf->GetCheckButton("recon_photons_track_match")){
 		vector<const DChargedTrack*> ctracks;
-		loop->Get(ctracks);
+		jevent->Get(ctracks);
 		for(unsigned int i=0; i<ctracks.size(); i++){
 		  const DChargedTrack *locCTrack = ctracks[i];
 		  vector<const DNeutralShower*> locNeutralShowers;
@@ -1427,7 +1451,7 @@ void MyProcessor::FillGraphics(void)
 	// FCAL and BCAL thrown photon projections
 	if(hdvmf->GetCheckButton("thrown_photons_fcal") || hdvmf->GetCheckButton("thrown_photons_bcal")){
 		vector<const DMCThrown*> throwns;
-		loop->Get(throwns);
+		jevent->Get(throwns);
 		DGraphicSet gset(kSpring, kMarker, 1.25);
 		for(unsigned int i=0; i<throwns.size(); i++){
 			const DMCThrown *thrown = throwns[i];
@@ -1464,7 +1488,7 @@ void MyProcessor::FillGraphics(void)
 	// FCAL and BCAL thrown charged particle projections
 	if(hdvmf->GetCheckButton("thrown_charged_fcal") || hdvmf->GetCheckButton("thrown_charged_bcal")){
 		vector<const DMCThrown*> throwns;
-		loop->Get(throwns);
+		jevent->Get(throwns);
 		
 		for(unsigned int i=0; i<throwns.size(); i++){
 			const DMCThrown *thrown = throwns[i];
@@ -1507,7 +1531,7 @@ void MyProcessor::FillGraphics(void)
 		// the current purpose of drawing these is to see matching of reconstructed
 		// charged tracks with calorimeter clusters.
 		vector<const DTrackTimeBased*> tracks;
-		loop->Get(tracks, hdvmf->GetFactoryTag("DTrackTimeBased"));
+		jevent->Get(tracks, hdvmf->GetFactoryTag("DTrackTimeBased"));
 		
 		for(unsigned int i=0; i<tracks.size(); i++){
 			const DTrackTimeBased *track = tracks[i];
@@ -1541,7 +1565,7 @@ void MyProcessor::FillGraphics(void)
 	// CCAL reconstructed clusters
 	if(hdvmf->GetCheckButton("recon_photons_ccal")){
 		vector<const DCCALShower*> clusters;
-		loop->Get(clusters);
+		jevent->Get(clusters);
 		for(auto cluster : clusters){
 
 			double E = cluster->E/1000.0; // divide by 1000 since energy does not seem to be calibrated to GeV at the moment.  2018-12-10 DL
@@ -1573,7 +1597,7 @@ void MyProcessor::FillGraphics(void)
 	// DMCTrajectoryPoints
 	if(hdvmf->GetCheckButton("trajectories")){
 		vector<const DMCTrajectoryPoint*> mctrajectorypoints;
-		loop->Get(mctrajectorypoints);
+		jevent->Get(mctrajectorypoints);
 		//sort(mctrajectorypoints.begin(), mctrajectorypoints.end(), DMCTrajectoryPoint_track_cmp);
 		
 		poly_type drawtype = hdvmf->GetCheckButton("trajectories_lines") ? kLine:kMarker;
@@ -1683,7 +1707,7 @@ void MyProcessor::FillGraphics(void)
 	// DTrackCandidate
 	if(hdvmf->GetCheckButton("candidates")){
 		vector<const DTrackCandidate*> trackcandidates;
-		loop->Get(trackcandidates, hdvmf->GetFactoryTag("DTrackCandidate"));
+		jevent->Get(trackcandidates, hdvmf->GetFactoryTag("DTrackCandidate"));
 		for(unsigned int i=0; i<trackcandidates.size(); i++){
 			int color=i+1;
 			double size=2.0;
@@ -1696,7 +1720,7 @@ void MyProcessor::FillGraphics(void)
 	// DTrackWireBased
 	if(hdvmf->GetCheckButton("wiretracks")){
 		vector<const DTrackWireBased*> wiretracks;
-		loop->Get(wiretracks, hdvmf->GetFactoryTag("DTrackWireBased"));
+		jevent->Get(wiretracks, hdvmf->GetFactoryTag("DTrackWireBased"));
 		for(unsigned int i=0; i<wiretracks.size(); i++){
 			AddKinematicDataTrack(wiretracks[i], (wiretracks[i]->charge()>0.0 ? kBlue:kRed)+2, 1.25);
 		}
@@ -1705,7 +1729,7 @@ void MyProcessor::FillGraphics(void)
 	// DTrackTimeBased
 	if(hdvmf->GetCheckButton("timetracks")){
 		vector<const DTrackTimeBased*> timetracks;
-		loop->Get(timetracks, hdvmf->GetFactoryTag("DTrackTimeBased"));
+		jevent->Get(timetracks, hdvmf->GetFactoryTag("DTrackTimeBased"));
 		for(unsigned int i=0; i<timetracks.size(); i++){
 			AddKinematicDataTrack(timetracks[i], (timetracks[i]->charge()>0.0 ? kBlue:kRed)+0, 1.00);
 		}
@@ -1714,7 +1738,7 @@ void MyProcessor::FillGraphics(void)
 	// DChargedTrack
 	if(hdvmf->GetCheckButton("chargedtracks")){
 	  vector<const DChargedTrack*> chargedtracks;
-		loop->Get(chargedtracks, hdvmf->GetFactoryTag("DChargedTrack"));
+		jevent->Get(chargedtracks, hdvmf->GetFactoryTag("DChargedTrack"));
 		for(unsigned int i=0; i<chargedtracks.size(); i++){
 		  int color=kViolet-3;
 		  double size=1.25;
@@ -1728,7 +1752,7 @@ void MyProcessor::FillGraphics(void)
 	// DNeutralParticles
 	if(hdvmf->GetCheckButton("neutrals")){
 		vector<const DNeutralParticle*> photons;
-		loop->Get(photons, hdvmf->GetFactoryTag("DNeutralParticle"));
+		jevent->Get(photons, hdvmf->GetFactoryTag("DNeutralParticle"));
     
 		for(unsigned int i=0; i<photons.size(); i++){
 		  int color = kBlack;
@@ -1783,7 +1807,7 @@ void MyProcessor::UpdateBcalDisp(void)
 
   if (BCALHitCanvas) {
     vector<const DBCALHit*> locBcalHits;
-    loop->Get(locBcalHits);
+    jevent->Get(locBcalHits);
     BCALHitMatrixU->Reset();
     BCALHitMatrixD->Reset();
     for (unsigned int k=0;k<locBcalHits.size();k++){
@@ -1843,7 +1867,7 @@ void MyProcessor::UpdateBcalDisp(void)
 	}
 
     vector<const DBCALIncidentParticle*> locBcalParticles;
-    loop->Get(locBcalParticles);
+    jevent->Get(locBcalParticles);
     BCALParticles->Reset();
     BCALPLables.clear();
     for (unsigned int k=0;k<locBcalParticles.size();k++){
@@ -1912,7 +1936,7 @@ void MyProcessor::UpdateTrackLabels(void)
 	
 	// Get Thrown particles
 	vector<const DMCThrown*> throwns;
-	if(loop)loop->Get(throwns);
+	if(jevent)jevent->Get(throwns);
 
 	// Get the track info as DKinematicData objects
 	vector<const DKinematicData*> trks;
@@ -1920,37 +1944,37 @@ void MyProcessor::UpdateTrackLabels(void)
 	vector<const DTrackWireBased*> TrksWireBased;
 	vector<const DTrackTimeBased*> TrksTimeBased;
 	vector<const DTrackCandidate*> cand;
-	if(loop)loop->Get(cand);
+	if(jevent)jevent->Get(cand);
 	for(unsigned int i=0; i<cand.size(); i++)TrksCand.push_back(cand[i]);
 
-	if(loop)loop->Get(TrksWireBased);
-	if(loop)loop->Get(TrksTimeBased);
+	if(jevent)jevent->Get(TrksWireBased);
+	if(jevent)jevent->Get(TrksTimeBased);
 	
 	if(name=="DChargedTrack"){
 		vector<const DChargedTrack*> chargedtracks;
-		if(loop)loop->Get(chargedtracks, tag.c_str());
+		if(jevent)jevent->Get(chargedtracks, tag.c_str());
 		for(unsigned int i=0; i<chargedtracks.size(); i++){
 		  trks.push_back(chargedtracks[i]->Get_BestFOM());
 		}
 	}	
 	if(name=="DTrackTimeBased"){
 		vector<const DTrackTimeBased*> timetracks;
-		if(loop)loop->Get(timetracks, tag.c_str());
+		if(jevent)jevent->Get(timetracks, tag.c_str());
 		for(unsigned int i=0; i<timetracks.size(); i++)trks.push_back(timetracks[i]);
 	}
 	if(name=="DTrackWireBased"){
 		vector<const DTrackWireBased*> wiretracks;
-		if(loop)loop->Get(wiretracks, tag.c_str());
+		if(jevent)jevent->Get(wiretracks, tag.c_str());
 		for(unsigned int i=0; i<wiretracks.size(); i++)trks.push_back(wiretracks[i]);
 	}
 	if(name=="DTrackCandidate"){
 		vector<const DTrackCandidate*> candidates;
-		if(loop)loop->Get(candidates, tag.c_str());
+		if(jevent)jevent->Get(candidates, tag.c_str());
 		for(unsigned int i=0; i<candidates.size(); i++)trks.push_back(candidates[i]);
 	}
 	if(name=="DNeutralParticle"){
 		vector<const DNeutralParticle*> photons;
-		if(loop)loop->Get(photons, tag.c_str());
+		if(jevent)jevent->Get(photons, tag.c_str());
 		for(unsigned int i=0; i<photons.size(); i++) {
 		  trks.push_back(photons[i]->Get_BestFOM());
 		}
@@ -2191,22 +2215,34 @@ void MyProcessor::GetIntersectionWithCalorimeter(const DKinematicData* kd, DVect
 //------------------------------------------------------------------
 void MyProcessor::GetFactoryNames(vector<string> &facnames)
 {
-	vector<JEventLoop*> loops = app->GetJEventLoops();
-	if(loops.size()>0){
-		vector<string> facnames;
-		loops[0]->GetFactoryNames(facnames);
+	if(jevent) {
+		auto app = jevent->GetJApplication();
+		auto factory_summaries = app->GetComponentSummary().factories;
+		for (const auto& factory_summary : factory_summaries) {
+			std::string combined_name = factory_summary.object_name;
+			if (!factory_summary.factory_tag.empty()) {
+				combined_name += ":" + factory_summary.factory_tag;
+			}
+			facnames.push_back(combined_name);
+		}
 	}
 }
 
 //------------------------------------------------------------------
 // GetFactories 
 //------------------------------------------------------------------
-void MyProcessor::GetFactories(vector<JFactory_base*> &factories)
+void MyProcessor::GetFactories(vector<JFactory*> &factories)
 {
-	vector<JEventLoop*> loops = app->GetJEventLoops();
-	if(loops.size()>0){
-		factories = loops[0]->GetFactories();
-	}
+    if (jevent) {
+        // factories.clear();  // Ensure the vector is empty before filling it
+        // auto sharedFactories = jevent->GetFactorySet()->GetAllFactories();
+
+        // // Convert shared_ptr<JFactory> to raw JFactory* and store in factories
+        // for (const auto& factory : sharedFactories) {
+        //     factories.push_back(factory.get());
+        // }
+		factories = jevent->GetFactorySet()->GetAllFactories();
+    }
 }
 
 //------------------------------------------------------------------
@@ -2214,27 +2250,27 @@ void MyProcessor::GetFactories(vector<JFactory_base*> &factories)
 //------------------------------------------------------------------
 unsigned int MyProcessor::GetNrows(const string &factory, string tag)
 {
-	vector<JEventLoop*> loops = app->GetJEventLoops();
-	if(loops.size()>0){
-		// Here is something a little tricky. The GetFactory() method of JEventLoop
-		// gets the factory of the specified data name and tag, but without trying
-		// to substitute a user-specified tag (a'la -PDEFTAG:XXX=YYY) as is done
-		// on normal Get() method calls. Therefore, we have to check for the default
-		// tags ourselves and substitute it "by hand".
-		if(tag==""){
-			map<string,string> default_tags = loops[0]->GetDefaultTags();
-			map<string, string>::const_iterator iter = default_tags.find(factory);
-			if(iter!=default_tags.end())tag = iter->second.c_str();
-		}
-		JFactory_base *fac = loops[0]->GetFactory(factory, tag.c_str());
+	if(!jevent)return 0;
+	// Here is something a little tricky. The GetFactory() method of JEventevent
+	// gets the factory of the specified data name and tag, but without trying
+	// to substitute a user-specified tag (a'la -PDEFTAG:XXX=YYY) as is done
+	// on normal Get() method calls. Therefore, we have to check for the default
+	// tags ourselves and substitute it "by hand".
+	JFactory *fac = jevent->GetFactory(factory, tag.c_str());
 
-		// Since calling GetNrows will cause the program to quit if there is
-		// not a valid event, then first check that there is one before calling it
-		if(loops[0]->GetJEvent().GetJEventSource() == NULL)return 0;
-		
-		return fac==NULL ? 0:(unsigned int)fac->GetNrows();
-	}
+	// Since calling GetNrows will cause the program to quit if there is
+	// not a valid event, then first check that there is one before calling it
+	if(jevent->GetJEventSource() == NULL)return 0;
 	
+	if(fac)
+	{
+		try{
+			fac->Create(std::shared_ptr<const JEvent>(jevent));
+			return (unsigned int )fac->GetNumObjects();
+		}catch(...){
+			cout<<"hdview2 MyProcessor::GetNrows threw an exception on fac->Create or fac->GetNumObjects"<<endl;
+		}
+	}
 	return 0;
 }
 
@@ -2248,11 +2284,8 @@ _DBG__;
 	rt = NULL;
 	cdchits.clear();
 
-	// Get pointer to the JEventLoop so we can get at the data
-	vector<JEventLoop*> loops = app->GetJEventLoops();
-	if(loops.size()==0)return;
-	JEventLoop* &loop = loops[0];
-	
+	// Get pointer to the JEventevent so we can get at the data
+	if(!jevent)return;	
 	// Variables to hold track parameters
 	DVector3 pos, mom(0,0,0);
 	double q=0.0;
@@ -2262,7 +2295,7 @@ _DBG__;
 	if(dataname=="DChargedTrack"){
 		vector<const DChargedTrack*> chargedtracks;
 		vector<const DTrackTimeBased*> timebasedtracks;
-		loop->Get(chargedtracks, tag.c_str());
+		jevent->Get(chargedtracks, tag.c_str());
 		if(index>=chargedtracks.size())return;
 		q = chargedtracks[index]->Get_Charge();
 		pos = chargedtracks[index]->Get_BestFOM()->position();
@@ -2276,7 +2309,7 @@ _DBG__;
 
 	if(dataname=="DTrackTimeBased"){
 		vector<const DTrackTimeBased*> timetracks;
-		loop->Get(timetracks, tag.c_str());
+		jevent->Get(timetracks, tag.c_str());
 		if(index>=timetracks.size())return;
 		q = timetracks[index]->charge();
 		pos = timetracks[index]->position();
@@ -2287,7 +2320,7 @@ _DBG__;
 
 	if(dataname=="DTrackWireBased"){
 		vector<const DTrackWireBased*> wiretracks;
-		loop->Get(wiretracks, tag.c_str());
+		jevent->Get(wiretracks, tag.c_str());
 		if(index>=wiretracks.size())return;
 		q = wiretracks[index]->charge();
 		pos = wiretracks[index]->position();
@@ -2298,7 +2331,7 @@ _DBG__;
 
 	if(dataname=="DTrackCandidate"){
 		vector<const DTrackCandidate*> tracks;
-		loop->Get(tracks, tag.c_str());
+		jevent->Get(tracks, tag.c_str());
 		if(index>=tracks.size())return;
 		q = tracks[index]->charge();
 		pos = tracks[index]->position();
@@ -2309,7 +2342,7 @@ _DBG__;
 
 	if(dataname=="DMCThrown"){
 		vector<const DMCThrown*> tracks;
-		loop->Get(tracks, tag.c_str());
+		jevent->Get(tracks, tag.c_str());
 		if(index>=tracks.size())return;
 		const DMCThrown *t = tracks[index];
 		q = t->charge();
@@ -2353,14 +2386,12 @@ void MyProcessor::GetAllWireHits(vector<pair<const DCoordinateSystem*,double> > 
 	/// wire, one needs to attempt a dynamic_cast to both a DCDCWire
 	/// and a DFDCWire and access the parameters of whichever one succeeds.
 	
-	// Get pointer to the JEventLoop so we can get at the data
-	vector<JEventLoop*> loops = app->GetJEventLoops();
-	if(loops.size()==0)return;
-	JEventLoop* &loop = loops[0];
+	// Get pointer to the JEventevent so we can get at the data
+	if(!jevent)return;
 
 	// Get CDC wire hits
 	vector<const DCDCTrackHit*> cdchits;
-	loop->Get(cdchits);
+	jevent->Get(cdchits);
 	for(unsigned int i=0; i<cdchits.size(); i++){
 		pair<const DCoordinateSystem*,double> hit;
 		hit.first = cdchits[i]->wire;
@@ -2370,7 +2401,7 @@ void MyProcessor::GetAllWireHits(vector<pair<const DCoordinateSystem*,double> > 
 	
 	// Get FDC wire hits
 	vector<const DFDCPseudo*> fdchits;
-	loop->Get(fdchits);
+	jevent->Get(fdchits);
 	for(unsigned int i=0; i<fdchits.size(); i++){
 		pair<const DCoordinateSystem*,double> hit;
 		hit.first = fdchits[i]->wire;

@@ -423,7 +423,7 @@ void trk_mainframe::FillFactoryTagComboBox(TGComboBox* cb, TGComboBox* datanamec
 	string dataname = datanamecb->GetTextEntry()->GetText();
 
 	// Get list of all factories
-	vector<JFactory_base*> factories;
+	vector<JFactory*> factories;
 	gMYPROC->GetFactories(factories);
 	
 	// Loop over all factories, looking for ones with the desired
@@ -431,8 +431,8 @@ void trk_mainframe::FillFactoryTagComboBox(TGComboBox* cb, TGComboBox* datanamec
 	vector<string> tags;
 	tags.push_back("<default>");
 	for(unsigned int i=0; i<factories.size(); i++){
-		if(dataname == factories[i]->GetDataClassName()){
-			string tag = factories[i]->Tag();
+		if(dataname == factories[i]->GetObjectName()){
+			string tag = factories[i]->GetTag();
 			if(tag!="")tags.push_back(tag);
 		}
 	}
@@ -652,7 +652,7 @@ void trk_mainframe::DrawHitsForOneTrack(
 
     // Get fdc drift time - distance function
     vector<const DTrackFitter*> fitters;
-    eventloop->Get(fitters, "KalmanSIMD");
+    jevent->Get(fitters, "KalmanSIMD");
     const DTrackFitterKalmanSIMD *fitter=0;
     if (fitters.size() > 0) {
         fitter = dynamic_cast<const DTrackFitterKalmanSIMD *>(fitters[0]);

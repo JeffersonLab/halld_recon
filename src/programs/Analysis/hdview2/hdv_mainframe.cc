@@ -21,6 +21,7 @@ using namespace std;
 #include "HDGEOMETRY/DGeometry.h"
 #include <PID/DNeutralParticle.h>
 #include <DAQ/DEPICSvalue.h>
+#include "DANA/DEvent.h"
 
 #include <TPolyMarker.h>
 #include <TLine.h>
@@ -102,8 +103,7 @@ static vector<vector <DFDCWire *> >fdcwires;
 hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(p,w,h)
 {
   //Get pointer to DGeometry object
-  DApplication* dapp=dynamic_cast<DApplication*>(japp);
-  const DGeometry *dgeom  = dapp->GetDGeometry(RUNNUMBER);
+  const DGeometry *dgeom  = DEvent::GetDGeometry(std::shared_ptr<const JEvent>(jevent));
   
   tofgeom = new DTOFGeometry(dgeom);
   fcalgeom= new DFCALGeometry(dgeom);
@@ -261,13 +261,13 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   TGLabel *eventlab = new TGLabel(eventlabs, "Event:");
   TGLabel *triglab = new TGLabel(eventlabs, "GTP bits:");
   run = new TGLabel(eventvals, "--------------");
-  event = new TGLabel(eventvals, "--------------");
+  tgevent = new TGLabel(eventvals, "--------------");
   trig = new TGLabel(eventvals, "--------------");
   eventlabs->AddFrame(runlab, rhints);
   eventlabs->AddFrame(eventlab,rhints);
   eventlabs->AddFrame(triglab,rhints);
   eventvals->AddFrame(run, lhints);
-  eventvals->AddFrame(event, lhints);
+  eventvals->AddFrame(tgevent, lhints);
   eventvals->AddFrame(trig, lhints);
  
   //----------------- Inspectors
@@ -834,8 +834,7 @@ void hdv_mainframe::DoQuit(void)
 {
 	SavePreferences();
 
-	japp->Quit();
-	japp->Fini();
+	japp->Stop();
 	delete japp;
 	japp = NULL;
 
@@ -849,17 +848,15 @@ void hdv_mainframe::DoQuit(void)
 //-------------------
 void hdv_mainframe::DoNext(void)
 {
-	if(eventloop){
+	if(jevent){
 		if(SKIP_EPICS_EVENTS){
 			while(true){
-				eventloop->OneEvent();
+				// event->OneEvent();
 				vector<const DEPICSvalue*> epicsvalues;
-				eventloop->Get(epicsvalues);
+				jevent->Get(epicsvalues);
 				if(epicsvalues.empty()) break;
-				cout << "Skipping EPICS event " << eventloop->GetJEvent().GetEventNumber() << endl;
+				cout << "Skipping EPICS event " << jevent->GetEventNumber() << endl;
 			}
-		}else{
-			eventloop->OneEvent();
 		}
 	}
 }
@@ -2266,12 +2263,12 @@ void hdv_mainframe::DrawLabel(TCanvas *c, vector<TObject*> &graphics, const char
 //-------------------
 void hdv_mainframe::SetEvent(ULong64_t id)
 {
-	if(!event)return;
+	if(!tgevent)return;
 
 	stringstream ss;
 	ss << id;
-	event->SetTitle(ss.str().c_str());
-	event->Draw();
+	tgevent->SetTitle(ss.str().c_str());
+	tgevent->Draw();
 }
 
 //-------------------
@@ -2279,7 +2276,7 @@ void hdv_mainframe::SetEvent(ULong64_t id)
 //-------------------
 void hdv_mainframe::SetRun(Int_t id)
 {
-	if(!event)return;
+	if(!tgevent)return;
 
 	stringstream ss;
 	ss << id;
@@ -2292,7 +2289,7 @@ void hdv_mainframe::SetRun(Int_t id)
 //-------------------
 void hdv_mainframe::SetTrig(char *trigstring)
 {
-	if(!event)return;
+	if(!tgevent)return;
 
 	trig->SetTitle(trigstring);
 	trig->Draw();

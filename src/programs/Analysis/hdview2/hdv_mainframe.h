@@ -177,7 +177,7 @@ class hdv_mainframe:public TGMainFrame {
 		TRootEmbeddedCanvas *endviewA;
 		TRootEmbeddedCanvas *endviewB;
 		
-		TGLabel *event, *run, *trig, *source;
+		TGLabel *tgevent, *run, *trig, *source;
 		
 		TGComboBox *timetracksfactory;
 		TGComboBox *wiretracksfactory;
