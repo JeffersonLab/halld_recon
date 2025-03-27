@@ -12,14 +12,14 @@ using namespace std;
 #include <TApplication.h>
 #include <TCanvas.h>
 
-#include <JANA/JEventLoop.h>
-#include <JANA/jerror.h>
+#include <JANA/JEvent.h>
+#include <DANA/jerror.h>
 #include "DANA/DApplication.h"
 #include "MyProcessor.h"
 
 extern TCanvas *maincanvas;
 extern DApplication *dapp;
-extern JEventLoop *eventloop;
+extern JEvent *jevent;
 extern MyProcessor *myproc;
 
 extern int32_t RUNNUMBER;
