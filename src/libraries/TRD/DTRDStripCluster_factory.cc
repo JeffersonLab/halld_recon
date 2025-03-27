@@ -18,11 +18,11 @@ static bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
 /// their strip (wire or strip) numbers. Typically only used for a single layer
 /// of hits.
 ///
-static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
-	if(a->strip != b->strip) return a->strip < b->strip;
-	if(a->t       != b->t      ) return a->t < b->t;
-	return a->pulse_height < b->pulse_height;
-}
+// static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
+// 	if(a->strip != b->strip) return a->strip < b->strip;
+// 	if(a->t       != b->t      ) return a->t < b->t;
+// 	return a->pulse_height < b->pulse_height;
+// }
 
 ///
 /// DTRDHit_time_cmp()
@@ -31,11 +31,11 @@ static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
 /// significant.
 ///
 
-static bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) {
-  if (fabs(a->t-b->t)>HIT_TIME_DIFF_MIN && (a->t < b->t))
-    return true;
-  return false;
-}
+// static bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) {
+//   if (fabs(a->t-b->t)>HIT_TIME_DIFF_MIN && (a->t < b->t))
+//     return true;
+//   return false;
+// }
 
 ///
 /// DTRDStripCluster_gPlane_cmp():
@@ -110,7 +110,7 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
 		return;
 
 	// require a minimum number of hits
-    if (allHits.size() < MINIMUM_HITS_FOR_CLUSTERING) {
+    if (static_cast<long int>(allHits.size()) < MINIMUM_HITS_FOR_CLUSTERING) {
     	return;
     }
 
@@ -122,7 +122,7 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
 	for (vector<const DTRDHit*>::iterator i = allHits.begin(); i != allHits.end(); ++i) {
 		// sort hits
 		int stripPlane = (*i)->plane-1;
-		int strip = (*i)->strip-1;
+		//int strip = (*i)->strip-1;
 		if( (stripPlane<0) || (stripPlane>=2) ){ // only two planes
 			static int Nwarn = 0;
 			if( Nwarn<10 ){
@@ -146,7 +146,7 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
  		if(planeHits[iplane].size()>0){			
 			vector<Point> points;
 
- 			for(int ihit=0; ihit < planeHits[iplane].size(); ihit++) {
+ 			for(int ihit=0; ihit < static_cast<long int>(planeHits[iplane].size()); ihit++) {
  				const DTRDHit* hit = planeHits[iplane][ihit];
  				
 				// const float CL_DIST=2.7; // mm
@@ -233,7 +233,7 @@ void DTRDStripCluster_factory::ExpandCluster(vector<Point> &points, Point &point
 		}
 	}
 
-	if (seeds.size() < minPts) {
+	if (static_cast<long int>(seeds.size()) < minPts) {
 		point.clusterId = 0; // Mark as noise
 		return;
 	}
@@ -258,7 +258,7 @@ void DTRDStripCluster_factory::ExpandCluster(vector<Point> &points, Point &point
 				}
 			}
 
-			if (result.size() >= minPts) {
+			if (static_cast<long int>(result.size()) >= minPts) {
 				for (auto &res : result) {
 					if (res->clusterId == -1 || res->clusterId == 0) {
 						if (res->clusterId == -1) {

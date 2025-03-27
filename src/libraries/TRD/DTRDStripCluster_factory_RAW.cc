@@ -25,12 +25,12 @@ static bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b)
 /// their strip (wire or strip) numbers. Typically only used for a single layer
 /// of hits.
 ///
-static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) 
-{
-	if(a->strip != b->strip) return a->strip < b->strip;
-	if(a->t       != b->t      ) return a->t < b->t;
-	return a->pulse_height < b->pulse_height;
-}
+// static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) 
+// {
+// 	if(a->strip != b->strip) return a->strip < b->strip;
+// 	if(a->t       != b->t      ) return a->t < b->t;
+// 	return a->pulse_height < b->pulse_height;
+// }
 
 ///
 /// DTRDHit_time_cmp()
@@ -39,12 +39,12 @@ static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b)
 /// significant.
 ///
 
-static bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) 
-{
-  if (fabs(a->t-b->t)>HIT_TIME_DIFF_MIN && (a->t < b->t))
-    return true;
-  return false;
-}
+// static bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) 
+// {
+//   if (fabs(a->t-b->t)>HIT_TIME_DIFF_MIN && (a->t < b->t))
+//     return true;
+//   return false;
+// }
 
 ///
 /// DTRDStripCluster_gPlane_cmp():
@@ -187,7 +187,7 @@ void DTRDStripCluster_factory_RAW::Process(const std::shared_ptr<const JEvent>& 
 		
         //if (0. > ped || ped > 200 ) ped = 100;  // should we renormalize the pedestals?  I think this is based on beam test data...
         
-	    for (int si=0; si<rawdata->samples.size(); si++) {
+	    for (int si=0; si<static_cast<long int>(rawdata->samples.size()); si++) {
       	 	int time=si;
       	  	int adc = rawdata->samples.at(si);
       	  	adc = adc-ped;
@@ -209,8 +209,9 @@ void DTRDStripCluster_factory_RAW::Process(const std::shared_ptr<const JEvent>& 
 // 	jerr << " hits for planes 1, 2 = " << planeHits[0].size() << ", " << planeHits[1].size() << endl;
 
 	// require a minimum number of hits
-    if (num_good_hits < MINIMUM_HITS_FOR_CLUSTERING)   
+    if (num_good_hits < MINIMUM_HITS_FOR_CLUSTERING) { 
     	return; //-- skip event !!!!!
+    }
 
 	// do the clustering
 	vector<DTRDStripCluster *> clusters; 
@@ -262,7 +263,7 @@ void DTRDStripCluster_factory_RAW::Process(const std::shared_ptr<const JEvent>& 
 				}
 				
 				  int added=0;
-				  for (int k=0; k<clusters.size(); k++) {
+				  for (int k=0; k<static_cast<long int>(clusters.size()); k++) {
 					double dist=sqrt(pow((y1-clusters[k]->pos.x()),2.)+pow((x1-clusters[k]->pos.z()),2.)); //--- dist hit to clusters
 					// check the distance from the x1,y1 to the center of the cluster based on the radius (2.7 mm)
 					if (dist<CL_DIST) {
@@ -311,7 +312,7 @@ void DTRDStripCluster_factory_RAW::Process(const std::shared_ptr<const JEvent>& 
 
 
 	// Apply quality cuts before we save the clusters
-	for (int k=0; k<clusters.size(); k++) {
+	for (int k=0; k<static_cast<long int>(clusters.size()); k++) {
 	  //-------------  Cluster Filter -----------------
 	  if (clusters[k]->num_hits>= MinClustSize && zStart < clusters[k]->pos.z() && clusters[k]->pos.z() < zEnd 
 	  		&& clusters[k]->width.z()>MinClustWidth )
