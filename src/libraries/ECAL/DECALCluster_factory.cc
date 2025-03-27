@@ -14,7 +14,6 @@
 #include <JANA/JApplication.h>
 #include <JANA/JFactoryGenerator.h>
 #include <JANA/JEvent.h>
-#include <DANA/DEvent.h>
 
 //------------------
 // Init
@@ -22,6 +21,7 @@
 void DECALCluster_factory::Init()
 {
   auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 
   TIME_CUT=15.;
   app->SetDefaultParameter("ECAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
@@ -44,6 +44,23 @@ void DECALCluster_factory::Init()
   // Shower shape parameters
   app->SetDefaultParameter("ECAL:SHOWER_WIDTH_PAR0",SHOWER_WIDTH_PAR0);
   app->SetDefaultParameter("ECAL:SHOWER_WIDTH_PAR1",SHOWER_WIDTH_PAR1);
+
+  // Single block energy variance parameters
+  app->SetDefaultParameter("ECAL:VAR_E_PAR0",VAR_E_PAR0);
+  app->SetDefaultParameter("ECAL:VAR_E_PAR1",VAR_E_PAR1);
+  app->SetDefaultParameter("ECAL:VAR_E_PAR2",VAR_E_PAR2);
+
+  DEBUG_HISTS=false;
+  app->SetDefaultParameter("ECAL:DEBUG_HISTS",DEBUG_HISTS);
+
+  if (DEBUG_HISTS){
+    lockService->RootWriteLock();
+
+    if (h_dE==NULL) h_dE=new TH2D("h_dE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
+    if (h_Prob==NULL) h_Prob=new TH1D("h_Prob",";CL",100,0,1);
+
+    lockService->RootUnLock();
+  }
 }
 
 //------------------
@@ -320,6 +337,20 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       } // check for minimum energy
     } // loop over peak candidates
 
+    if (DEBUG_HISTS&&num_hits>3&&peaks.size()==1){
+      lockService->RootWriteLock();
+      
+      h_Prob->Fill(TMath::Prob(chisq,num_hits-3));
+      PeakInfo myPeakInfo=peaks[0];
+      for (unsigned int k=0;k<clusterHits.size();k++){
+	double Ecalc=0.,E=clusterHits[k].E;
+	Ecalc+=myPeakInfo.E*CalcClusterEDeriv(b,clusterHits[k],myPeakInfo);
+	h_dE->Fill(E,E-Ecalc);
+      }
+
+      lockService->RootUnLock();
+    }
+    
     // Attempt to split the peaks to create new shower candidates
     if (SPLIT_PEAKS && num_hits>3*(peaks.size()+1)){
       // Subtract the energy due to the fitted peaks from the energy of each

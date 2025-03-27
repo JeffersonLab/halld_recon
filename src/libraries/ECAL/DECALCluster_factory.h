@@ -9,10 +9,14 @@
 #define _DECALCluster_factory_
 
 #include <JANA/JFactoryT.h>
+#include <JANA/Services/JLockService.h>
+
 #include "DECALCluster.h"
 #include "DECALHit.h"
 #include "DECALGeometry.h"
 #include <TMatrixD.h>
+#include <TH1D.h>
+#include <TH2D.h>
 
 class DECALCluster_factory:public JFactoryT<DECALCluster>{
 public:
@@ -78,9 +82,15 @@ private:
   double SHOWER_WIDTH_PAR0=0.347,SHOWER_WIDTH_PAR1=0.00058;
   double CHISQ_MARGIN,MIN_CUTDOWN_FRACTION;
   double MIN_EXCESS_SEED_ENERGY,MIN_CLUSTER_SEED_ENERGY;
-  bool SPLIT_PEAKS;
+  bool SPLIT_PEAKS,DEBUG_HISTS;
+
+  // Debug histograms
+  TH2D *h_dE=NULL;
+  TH1D *h_Prob=NULL;
 
   const DECALGeometry *dECALGeom=NULL;
+  std::shared_ptr<JLockService> lockService;
+
 };
 
 #endif // _DECALCluster_factory_
