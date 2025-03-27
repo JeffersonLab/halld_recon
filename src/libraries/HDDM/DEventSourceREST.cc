@@ -421,6 +421,10 @@ bool DEventSourceREST::GetObjects(const std::shared_ptr<const JEvent> &event, JF
       return (Extract_DEventHitStatistics(record,
                      dynamic_cast<JFactoryT<DEventHitStatistics>*>(factory)));
    }
+   if (dataClassName =="DBeamHelicity") {
+      return (Extract_DBeamHelicity(record,
+                     dynamic_cast<JFactoryT<DBeamHelicity>*>(factory)));
+   }
 
    return false; //OBJECT_NOT_AVAILABLE
 }
@@ -1034,6 +1038,50 @@ bool DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactoryT<DTrigger
 
 	return true; //NOERROR;
 }
+
+//-----------------------
+// Extract_DBeamHelicity
+//-----------------------
+bool DEventSourceREST::Extract_DBeamHelicity(hddm_r::HDDM *record, JFactoryT<DBeamHelicity>* factory)
+{
+	/// Copies the data from the electron beam hddm record. This is
+	/// call from JEventSourceREST::GetObjects. If factory is NULL, this
+	/// returns OBJECT_NOT_AVAILABLE immediately.
+
+	if (factory==NULL)
+		return false; //OBJECT_NOT_AVAILABLE
+	string tag = factory->GetTag();
+
+	vector<DBeamHelicity*> data;
+
+	// loop over the electron beam info records
+	const hddm_r::ElectronBeamList &ebeams = record->getElectronBeams();
+	hddm_r::ElectronBeamList::iterator iter;
+	for (iter = ebeams.begin(); iter != ebeams.end(); ++iter)
+	{
+ 		if (iter->getJtag() != tag)
+ 			continue;
+
+		DBeamHelicity *locBeamHelicity = new DBeamHelicity();
+		locBeamHelicity->valid = (iter->getHelicitydata())&0x01;
+		locBeamHelicity->helicity = (iter->getHelicitydata()>>1)&0x01;
+
+		locBeamHelicity->pattern_sync = (iter->getHelicitydata()>>2)&0x01;
+		locBeamHelicity->t_settle = (iter->getHelicitydata()>>3)&0x01;
+		locBeamHelicity->pair_sync = (iter->getHelicitydata()>>4)&0x01;
+		locBeamHelicity->ihwp = (iter->getHelicitydata()>>5)&0x01;
+		locBeamHelicity->beam_on = (iter->getHelicitydata()>>6)&0x01;
+				
+		data.push_back(locBeamHelicity);
+	}
+
+	// Copy into factory
+	factory->Set(data);
+
+	return true; //NOERROR;
+}
+
+
 
 //-----------------------
 // Extract_DFCALShower

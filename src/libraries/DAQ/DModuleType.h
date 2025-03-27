@@ -52,6 +52,8 @@ class DModuleType{
 			CAEN1290,          // =19
 
 			CDAQTSG=22,        // = 22
+			
+			HELICITY_DECODER='D',  // = 68
 
 			N_MODULE_TYPES     // Make sure this is the last thing in the enum!
 		};
