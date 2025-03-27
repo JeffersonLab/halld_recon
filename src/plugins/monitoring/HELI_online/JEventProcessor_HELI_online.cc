@@ -400,7 +400,8 @@ void JEventProcessor_HELI_online::EndRun(){
 //------------------
 void JEventProcessor_HELI_online::Finish(void){
   // Called before program exit after event processing is finished.
-  fclose(dFile);
+  if(dFile!=NULL)
+  	fclose(dFile);
   return; //NOERROR;
 }
 
