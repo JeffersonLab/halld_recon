@@ -46,6 +46,8 @@
 #include "DDIRCADCHit.h"
 #include "DGEMSRSWindowRawData.h"
 #include "DHELIDigiHit.h"
+#include "DHelicityData.h"
+#include "DHelicityDataTriggerTime.h"
 #include "Df125EmulatorAlgorithm_factory.h"
 #include "Df125EmulatorAlgorithm_factory_v2.h"
 #include "Df250EmulatorAlgorithm_factory.h"
@@ -111,5 +113,8 @@ void DAQ_init(JFactorySet *factorySet) {
     factorySet->Add(new JFactoryT<DDIRCTDCHit>());
     factorySet->Add(new JFactoryT<DDIRCADCHit>());
     factorySet->Add(new JFactoryT<DGEMSRSWindowRawData>());
+	factorySet->Add(new JFactoryT<DHelicityData>());
+	factorySet->Add(new JFactoryT<DHelicityDataTriggerTime>());
+
 }
 

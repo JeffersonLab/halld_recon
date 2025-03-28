@@ -11,7 +11,7 @@
 
 ///
 /// class DTRDPoint_factory: definition for a JFactory that
-/// produces points from wire hits and GEM strips
+/// produces points from strip hits
 /// 
 class DTRDPoint_factory : public JFactoryT<DTRDPoint> {
 	public:
@@ -35,10 +35,9 @@ class DTRDPoint_factory : public JFactoryT<DTRDPoint> {
  		
 	private:		
   		double TIME_DIFF_MAX;
-//   		double DIST_DIFF_MAX;
   double DRIFT_VELOCITY;
   double dTRDx=0.,dTRDy=0.,dTRDz=0.;
-
+   		double dE_DIFF_MAX;
 };
 
 #endif // DFACTORY_DTRDPOINT_H

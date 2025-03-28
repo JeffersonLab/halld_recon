@@ -10,6 +10,9 @@
 #include <JANA/JEvent.h>
 #include "DBeamHelicity.h"
 
+#include <DAQ/DHELIDigiHit.h>
+#include <DAQ/DHelicityData.h>
+
 class DBeamHelicity_factory:public JFactoryT<DBeamHelicity>{
 	public:
 		DBeamHelicity_factory(){};
@@ -23,6 +26,12 @@ class DBeamHelicity_factory:public JFactoryT<DBeamHelicity>{
 		void Process(const std::shared_ptr<const JEvent>& event) override;
 		void EndRun() override;
 		void Finish() override;							///< Called after last event of last event source has been processed.
+
+
+	private:
+		DBeamHelicity *Make_DBeamHelicity(vector<const DHELIDigiHit*> &locHELIDigiHits);
+		DBeamHelicity *Make_DBeamHelicity(const DHelicityData *locHelicityData);
+
 };
 
 #endif // _DBeamHelicity_factory_

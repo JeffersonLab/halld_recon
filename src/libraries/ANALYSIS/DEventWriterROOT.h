@@ -23,6 +23,7 @@
 #include "TRACKING/DMCThrown.h"
 #include <TRACKING/DMCTrajectoryPoint.h>
 #include "TRACKING/DTrackTimeBased.h"
+#include "DAQ/DBeamHelicity.h"
 
 #include "PID/DVertex.h"
 #include "PID/DChargedTrack.h"
