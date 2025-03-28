@@ -62,6 +62,9 @@ DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
   ADD_FCAL_DATA_FOR_CPP=false;
   app->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
 
+  TRD_MATCH_CUT=4.0; //cm^2
+  app->SetDefaultParameter("PID:TRD_MATCH_CUT",TRD_MATCH_CUT);
+  
   const DRootGeom *RootGeom = geo_manager->GetRootGeom(run_number);
   // Get material properties for chamber gas
   double rho_Z_over_A_LnI=0,radlen=0;
@@ -1986,7 +1989,7 @@ bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> 
   double locDeltaX = locTRDMatchParams->dDeltaXToSegment;
   double locDeltaY = locTRDMatchParams->dDeltaYToSegment;
   double locDeltaRsq=locDeltaX*locDeltaX+locDeltaY*locDeltaY;
-  if (locDeltaRsq>25.0) return false;
+  if (locDeltaRsq>TRD_MATCH_CUT) return false;
 
   return true;
 }

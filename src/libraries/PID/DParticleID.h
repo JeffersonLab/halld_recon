@@ -337,6 +337,8 @@ class DParticleID: public JObject
                 bool CDC_TRUNCATE_DEDX;            // dE/dx truncation: ignore hits with highest dE
 		bool ADD_FCAL_DATA_FOR_CPP;
 
+  double TRD_MATCH_CUT;
+  
 		double dTargetZCenter;
 
 		const DTrackFinder *finder;
