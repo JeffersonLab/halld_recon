@@ -46,6 +46,8 @@ using namespace std;
 #include "ECAL/DECALHit.h"
 #include "CCAL/DCCALTruthShower.h"
 #include "CCAL/DCCALHit.h"
+#include "TRD/DTRDTruthPoint.h"
+#include "TRD/DTRDHit.h"
 #include "TOF/DTOFTruth.h"
 #include "TOF/DTOFHit.h"
 #include "TOF/DTOFHitMC.h"
@@ -153,8 +155,15 @@ class DEventSourceHDDM:public JEventSource
       bool Extract_DCTOFHit(hddm_s::HDDM *record,  JFactoryT<DCTOFHit> *factory, string tag);
       bool Extract_DCTOFTruth(hddm_s::HDDM *record,  JFactoryT<DCTOFTruth> *factory, string tag);
 
-      bool Extract_DTPOLHit(hddm_s::HDDM *record, JFactoryT<DTPOLHit>* factory, string tag);
-      bool Extract_DTPOLTruthHit(hddm_s::HDDM *record, JFactoryT<DTPOLTruthHit>* factory, string tag);
+  bool Extract_DTRDTruthPoint(hddm_s::HDDM *record,
+			      JFactoryT<DTRDTruthPoint> *factory,
+			      string tag);
+  bool Extract_DTRDHit(hddm_s::HDDM *record,
+		       JFactoryT<DTRDHit> *factory, string tag);
+  
+  bool Extract_DTPOLHit(hddm_s::HDDM *record, JFactoryT<DTPOLHit>* factory, string tag);
+  bool Extract_DTPOLTruthHit(hddm_s::HDDM *record, JFactoryT<DTPOLTruthHit>* factory, string tag);
+  
       Particle_t IDTrack(float locCharge, float locMass) const;
 
       // add RICH hit and Truth, yqiang Oct 3, 2012

@@ -505,6 +505,14 @@ bool DEventSourceHDDM::GetObjects(const std::shared_ptr<const JEvent> &event, JF
    if (dataClassName == "DTPOLTruthHit")
       return Extract_DTPOLTruthHit(record,
                      dynamic_cast<JFactoryT<DTPOLTruthHit>*>(factory), tag);
+   
+   if (dataClassName == "DTRDTruthPoint")
+      return Extract_DTRDTruthPoint(record, 
+                     dynamic_cast<JFactoryT<DTRDTruthPoint>*>(factory), tag);
+
+   if (dataClassName == "DTRDHit")
+      return Extract_DTRDHit(record, 
+                     dynamic_cast<JFactoryT<DTRDHit>*>(factory), tag);
 
    return false; // OBJECT_NOT_AVAILABLE;
 }
@@ -3272,4 +3280,79 @@ bool DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
   factory->Set(data);
 
   return true; //NOERROR;
+}
+
+//------------------
+// Extract_DTRDTruthPoint
+//------------------
+bool DEventSourceHDDM::Extract_DTRDTruthPoint(hddm_s::HDDM *record,
+                                   JFactoryT<DTRDTruthPoint> *factory, string tag)
+{
+   /// Copies the data from the given hddm_s structure. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL)
+     return false; //OBJECT_NOT_AVAILABLE;
+   if (tag != "")
+     return false; //OBJECT_NOT_AVAILABLE;
+  
+   vector<DTRDTruthPoint*> data;
+
+   const hddm_s::GemtrdTruthPointList &points = record->getGemtrdTruthPoints();
+   hddm_s::GemtrdTruthPointList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DTRDTruthPoint *trdtruth = new DTRDTruthPoint;
+      trdtruth->primary = iter->getPrimary();
+      trdtruth->track   = iter->getTrack();
+      trdtruth->x       = iter->getX();
+      trdtruth->y       = iter->getY();
+      trdtruth->z       = iter->getZ();
+      trdtruth->t       = iter->getT();
+      trdtruth->px      = iter->getPx();
+      trdtruth->py      = iter->getPy();
+      trdtruth->pz      = iter->getPz();
+      trdtruth->E       = iter->getE();
+      trdtruth->ptype   = iter->getPtype();
+      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
+      trdtruth->itrack = (ids.size())? ids.begin()->getItrack() : 0;
+      data.push_back(trdtruth);
+   }
+
+   // Copy into factory
+   factory->Set(data);
+
+   return true; // NOERROR;
+}
+
+//------------------
+// Extract_DTRDHit
+//------------------
+bool DEventSourceHDDM::Extract_DTRDHit(hddm_s::HDDM *record,  JFactoryT<DTRDHit> *factory, string tag)
+{
+   /// Copies the data from the given hddm_s record. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+  if (factory == NULL) return false; // OBJECT_NOT_AVAILABLE;
+  if (tag != "") return false; // OBJECT_NOT_AVAILABLE;
+
+   vector<DTRDHit*> data;
+
+   const hddm_s::GemtrdHitList &points = record->getGemtrdHits();
+   hddm_s::GemtrdHitList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DTRDHit *hit = new DTRDHit;
+      hit->plane = iter->getPlane();
+      hit->strip = iter->getStrip();
+      hit->q = iter->getQ();
+      hit->pulse_height=hit->q;
+      hit->t     = iter->getT();
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->Set(data);
+
+   return true; // NOERROR;
 }

@@ -7,9 +7,6 @@
 #define MADCGAM 50 // maximum allowed showers
 #define MAX_CC 60
 		
-#define xsize 2.09
-#define ysize 2.09
-
 #define MIN_ENERGY 0.
 
 #define COUNT_ZERO 1

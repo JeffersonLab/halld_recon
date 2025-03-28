@@ -19,15 +19,13 @@ public:
   float pulse_height; // signal amplitude
   float pedestal;  // need pedestal for raw data analysis
   float q;
-  
-
+ 
   void Summarize(JObjectSummary& summary) const override {
     summary.add(t, "t", "%1.3f");
     summary.add(pulse_height, "pulse_height", "%1.3f");
     summary.add(q, "q", "%1.3f");
     summary.add(plane, "plane", "%d");
     summary.add(strip, "strip", "%d");
-
   }
 };
 
