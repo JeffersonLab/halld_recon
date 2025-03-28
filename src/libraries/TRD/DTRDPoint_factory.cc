@@ -3,7 +3,6 @@
 //********************************************************
 
 #include "DTRDPoint_factory.h"
-
 #include <JANA/JEvent.h>
 #include "DANA/DGeometryManager.h"
 
@@ -24,12 +23,13 @@ void DTRDPoint_factory::Init()
 	auto app = GetApplication();
   
   // Some parameters for defining matching
-  TIME_DIFF_MAX = 50.;
-//   DIST_DIFF_MAX = 10.;
-  //DE_DIFF_MAX = 1.0;
+  	TIME_DIFF_MAX = 48.;
+  	app->SetDefaultParameter("TRD:XY_TIME_DIFF",TIME_DIFF_MAX);
+	
+	dE_DIFF_MAX = 10000.;
+    app->SetDefaultParameter("TRDPOINT:dE_DIFF_MAX",dE_DIFF_MAX,
+        "Difference between Point_Hit charge in X and Y planes to be considered a coincidence (default: 10000.)");
 
-  app->SetDefaultParameter("TRDPOINT:TIME_DIFF_MAX",TIME_DIFF_MAX);
-//   app->SetDefaultParameter("TRDPOINT:DIST_DIFF_MAX",DIST_DIFF_MAX);
 }
 
 
@@ -51,9 +51,10 @@ void DTRDPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 
 void DTRDPoint_factory::EndRun(){
 }
+
 ///
-/// DTRDPoint_factory::evnt():
-/// this is the place that produces points from wire hits and GEM strips
+/// DTRDPoint_factory::Process():
+/// this is the place that produces points from strips
 ///
 void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event) 
 {
@@ -83,10 +84,12 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 			// calculate strip cluster time and position
 			double t_diff = stripClusX[i]->t_avg - stripClusY[j]->t_avg;
 			double dE = stripClusX[i]->q_tot + stripClusY[j]->q_tot;
+			double dE_high = (stripClusX[i]->q_tot + dE_DIFF_MAX);
+            double dE_low = (stripClusX[i]->q_tot - dE_DIFF_MAX);
 
-			// some requirements for a good point
-			if(fabs(t_diff) < TIME_DIFF_MAX) {   // && fabs(dE_amp_diff) <gem_dE_max) {
-		
+            // some requirements for a good point
+            if(fabs(t_diff) < TIME_DIFF_MAX && (stripClusY[j]->q_tot < dE_high) && (stripClusY[j]->q_tot > dE_low )) {
+			
 				// save new point
 				DTRDPoint* newPoint = new DTRDPoint;     
 				newPoint->x = stripClusX[i]->pos.x();
@@ -95,6 +98,8 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 				newPoint->t_y = stripClusY[j]->t_avg;
 				newPoint->time = (stripClusX[i]->t_avg*stripClusX[i]->q_tot + stripClusY[j]->t_avg*stripClusY[j]->q_tot) / dE;
 				newPoint->dE = dE;
+				newPoint->dE_x = stripClusX[i]->q_tot;
+				newPoint->dE_y = stripClusY[j]->q_tot;
 				newPoint->status = 1;
 				//newPoint->itrack = 0;
 				//newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE + dTRDz[0];

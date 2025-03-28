@@ -130,6 +130,7 @@ class DEVIOWorkerThread{
 		void               ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 		void           ParseDGEMSRSBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 		void   MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t apv_id, vector<int>rawData16bits);
+        void   ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 
 		void LinkAllAssociations(void);
 

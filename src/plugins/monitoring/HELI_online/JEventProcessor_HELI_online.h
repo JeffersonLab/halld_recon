@@ -11,10 +11,13 @@
 #include "TH1F.h"
 #include "TTree.h"
 
+#include <JANA/JFactoryT.h>
+//#include <JANA/JEvent.h>
 #include <JANA/JEventProcessor.h>
 #include <mutex>
 #include <DAQ/DBeamHelicity.h>
-
+#include <DAQ/DHelicityData.h>
+#include <DAQ/DCODAROCInfo.h>
 // 
 // Here are the helicity signals (eg. quartet pattern (+--+ or -++-))
 // Signals with a (U) get delivered to the Halls to go into the DAQ.
@@ -97,6 +100,7 @@ class JEventProcessor_HELI_online:public JEventProcessor{
   
   uint32_t  fRunNumber;                     //Current run number
   uint64_t  fEventno;                       //Number current event
+  uint64_t  fReferenceClockTime;            //Timestamp from  ROC
   uint64_t  fEventLatest;                   //Number of latest event (another thread may have done a future event).
   uint      fIsLatest;
   uint64_t  fEventRate;                     //To make an approximate count of the event rate.

@@ -44,6 +44,8 @@
 #include <TAGGER/DTAGMGeometry.h>
 #include <TAGGER/DTAGHGeometry.h>
 #include <HDDM/DEventHitStatistics.h>
+#include "DAQ/DBeamHelicity.h"
+
 #include "DResourcePool.h"
 
 #include <TMatrixF.h>
@@ -85,6 +87,8 @@ class DEventSourceREST:public JEventSource
                     JFactoryT<DTrackTimeBased>* factory, const std::shared_ptr<const JEvent>& locEvent);
    bool Extract_DTrigger(hddm_r::HDDM *record,
                     JFactoryT<DTrigger>* factory);
+   bool Extract_DBeamHelicity(hddm_r::HDDM *record,
+                    JFactoryT<DBeamHelicity>* factory);
    bool Extract_DDetectorMatches(const std::shared_ptr<const JEvent>& locEvent, hddm_r::HDDM *record,
                     JFactoryT<DDetectorMatches>* factory);
 #if 0

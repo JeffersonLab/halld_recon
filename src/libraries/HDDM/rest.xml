@@ -116,6 +116,7 @@
 			 l1_trig_bits="int" l1_fp_trig_bits="int">
  	  <triggerEnergySums BCALEnergySum="float" FCALEnergySum="float" minOccurs="0"/>
     </trigger>
+    <electronBeam maxOccurs="1" minOccurs="0" jtag="string" helicitydata="int" />
 
     <detectorMatches minOccurs="1" maxOccurs="1" jtag="string">
       <!-- 
