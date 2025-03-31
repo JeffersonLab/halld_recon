@@ -50,7 +50,12 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
     SetTypeName(NAME_OF_THIS);
 	EnableGetObjects(true);  // Check the source first for existing objects; only invoke the factory to create them if they aren't found in the source.
 	EnableFinishEvent(true); // Ensure ::FinishEvent gets called. By default, it is disabled (false).
+}
 
+//----------------
+// Open
+//----------------
+void JEventSource_EVIOpp::Open() {
 	DONE = false;
 	DISPATCHER_END = false;
 	NEVENTS_PROCESSED = 0;
@@ -58,6 +63,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 	NEVENTBUFF_STALLED   = 0;
 	NPARSER_STALLED      = 0;
 
+	auto source_name = GetResourceName();
 	// Initialize dedicated logger
 	evioout.SetGroup("EVIO");
 	evioout.ShowTimestamp(true);
@@ -258,7 +264,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 
 	// Record start time
 	tstart = high_resolution_clock::now();
-
+	
 }
 
 //----------------
@@ -266,7 +272,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 //----------------
 JEventSource_EVIOpp::~JEventSource_EVIOpp()
 {
-	// Set DONE flag to tell dispatcher thread to quit
+		// Set DONE flag to tell dispatcher thread to quit
 	// as well as anyone in a wait state
 	DONE = true;
 	PARSED_EVENTS_CV.notify_all();
