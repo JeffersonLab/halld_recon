@@ -9,12 +9,7 @@
 #include <iomanip>
 
 #include "DECALCluster_factory.h"
-
-// Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactoryGenerator.h>
 #include <JANA/JEvent.h>
-#include <DANA/DEvent.h>
 
 //------------------
 // Init
