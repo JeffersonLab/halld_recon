@@ -16,6 +16,7 @@
 #include <BCAL/DBCALShower.h>
 #include <CCAL/DCCALShower.h>
 #include <FCAL/DFCALGeometry.h>
+#include <ECAL/DECALGeometry.h>
 
 using namespace std;
 
@@ -48,7 +49,8 @@ class DNeutralShower_factory_PreSelect : public JFactoryT<DNeutralShower>
         double dFCALInnerRingCut; //PRESELECT:FCAL_INNER_CUT
         double dMinBCALShowerQuality; //PRESELECT:MIN_BCAL_SHOWER_QUALITY 
         double dMinFCALShowerQuality; //PRESELECT:MIN_FCAL_SHOWER_QUALITY 
-       
+  bool haveInsert;
+  
         vector< int > dFCALInnerChannels;
 };
 

@@ -7,6 +7,7 @@
 
 #include "DNeutralShower_factory_HadronPreSelect.h"
 #include <JANA/JEvent.h>
+#include <DANA/DGeometryManager.h>
 
 //------------------
 // init
@@ -41,6 +42,10 @@ void DNeutralShower_factory_HadronPreSelect::BeginRun(const std::shared_ptr<cons
 	app->SetDefaultParameter("HADRONPRESELECT:MIN_BCAL_Z", dMaxBCALZ);
 	app->SetDefaultParameter("HADRONPRESELECT:FCAL_INNER_CUT", dFCALInnerRingCut);
 
+	auto geo_manager = app->GetService<DGeometryManager>();
+	auto dgeom = geo_manager->GetDGeometry(event->GetRunNumber());
+	haveInsert=dgeom->HaveInsert();
+
 	// get FCAL Geometry object
 	vector< const DFCALGeometry * > fcalGeomVec;
 	event->Get( fcalGeomVec );
@@ -51,21 +56,25 @@ void DNeutralShower_factory_HadronPreSelect::BeginRun(const std::shared_ptr<cons
 	}
   	dFCALGeometry = fcalGeomVec[0];		
 
-	if (dFCALGeometry->insertSize()>0){
+	if (haveInsert){
+	  const DECALGeometry *ecalGeometry=nullptr;
+	  event->GetSingle(ecalGeometry);
+
+	  cout << "Setting exclusion" << endl;
 	  // build list of channels in the inner ring.  Pick all channels which
 	  // touch the beam hole (including corners!)
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 118, 118 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 118, 119 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 118, 120 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 118, 121 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 119, 118 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 120, 118 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 119, 121 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 120, 121 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 121, 118 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 121, 119 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 121, 120 ) );
-	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 121, 121 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 18, 18 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 18, 19 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 18, 20 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 18, 21 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 19, 18 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 20, 18 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 19, 21 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 20, 21 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 21, 18 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 21, 19 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 21, 20 ) );
+	  dFCALInnerChannels.push_back( ecalGeometry->channel( 21, 21 ) );
 	}
 	else{
 	  // build list of channels in the inner ring.  Pick all channels which
@@ -114,18 +123,22 @@ void DNeutralShower_factory_HadronPreSelect::Process(const std::shared_ptr<const
 			if(locNeutralShowers[loc_i]->dSpacetimeVertex.Vect().Perp() > dMaxFCALR)
 				continue;
 			// Fiducial cut: reject showers in the inner ring(s) which may leak into the beam hole 
-			if(dFCALInnerRingCut) {
-				// sanity check
-				if(dFCALGeometry == nullptr) 
-					jerr << "In DNeutralShower_factory_HadronPreSelect::evnt(), no FCAL Geometry???" << endl;			
-				
-				int channel = dFCALGeometry->channel(locNeutralShowers[loc_i]->dSpacetimeVertex.X(),locNeutralShowers[loc_i]->dSpacetimeVertex.Y());
-				
-				// is the center of shower in one of the channels outside of our fiducial cut?
-				if( find(dFCALInnerChannels.begin(), dFCALInnerChannels.end(), channel) 
-                    != dFCALInnerChannels.end() ) {
-					continue;
-                }
+			if(haveInsert==false && dFCALInnerRingCut) {
+			  double locX=locNeutralShowers[loc_i]->dSpacetimeVertex.X();
+			  double locY=locNeutralShowers[loc_i]->dSpacetimeVertex.Y();
+			  // sanity check
+			  if(dFCALGeometry == nullptr) 
+			    jerr << "In DNeutralShower_factory_HadronPreSelect::evnt(), no FCAL Geometry???" << endl;
+			  
+			  int row=dFCALGeometry->y_to_row(locY);
+			  int col=dFCALGeometry->x_to_column(locX);
+			  int channel = dFCALGeometry->channel(row,col);
+			  
+			  // is the center of shower in one of the channels outside of our fiducial cut?
+			  if( find(dFCALInnerChannels.begin(), dFCALInnerChannels.end(), channel) 
+			      != dFCALInnerChannels.end() ) {
+			    continue;
+			  }
 			}
 		}
 		else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_BCAL)
