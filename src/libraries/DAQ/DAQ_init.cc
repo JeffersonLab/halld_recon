@@ -3,6 +3,7 @@
 
 #include "DBeamCurrent_factory.h"
 #include "DBeamHelicity_factory.h"
+#include "DBeamHelicity_factory_CORRECTED.h"
 #include "Df250Config.h"
 #include "Df250PulseIntegral.h"
 #include "Df250StreamingRawData.h"
@@ -63,6 +64,7 @@ void DAQ_init(JFactorySet *factorySet) {
 
     factorySet->Add(new DBeamCurrent_factory());
 	factorySet->Add(new DBeamHelicity_factory());
+	//factorySet->Add(new DBeamHelicity_factory_CORRECTED());
     factorySet->Add(new Df125EmulatorAlgorithm_factory());
     factorySet->Add(new Df125EmulatorAlgorithm_factory_v2());
     factorySet->Add(new Df250EmulatorAlgorithm_factory());
