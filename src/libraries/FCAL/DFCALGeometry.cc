@@ -156,7 +156,7 @@ DFCALGeometry::channel( int row, int column ) const
 }
 
 int
-DFCALGeometry::row( float y ) const 
+DFCALGeometry::y_to_row( float y ) const 
 {      
   y-=m_FCALdY;
 
@@ -167,7 +167,7 @@ DFCALGeometry::row( float y ) const
 }
 
 int
-DFCALGeometry::column( float x ) const 
+DFCALGeometry::x_to_column( float x ) const 
 {      
   x-=m_FCALdX;
 

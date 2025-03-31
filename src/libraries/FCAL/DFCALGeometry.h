@@ -52,8 +52,8 @@ public:
   int column( int channel ) const { return m_column[channel]; }
 
   // get row and column from x and y positions
-  int row   ( float y ) const;
-  int column( float x ) const;
+  int y_to_row   ( float y ) const;
+  int x_to_column( float x ) const;
 
   void Summarize(JObjectSummary& summary) const override {
     summary.add((int)kBlocksWide, "kBlocksWide", "%d");
