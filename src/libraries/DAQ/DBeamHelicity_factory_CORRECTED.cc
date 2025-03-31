@@ -27,7 +27,6 @@ void DBeamHelicity_factory_CORRECTED::Init()
 //------------------
 void DBeamHelicity_factory_CORRECTED::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-
     // load correction factors
     map<string,double> scale_factors;
 
@@ -49,11 +48,12 @@ void DBeamHelicity_factory_CORRECTED::Process(const std::shared_ptr<const JEvent
 	vector<const DBeamHelicity*> locBeamHelicities;
 	event->Get(locBeamHelicities);
 	
-	for(auto beam_helicity : locBeamHelicities) {
-		DBeamHelicity *new_beam_helicity = new DBeamHelicity(*beam_helicity);
+	//for(auto beam_helicity : locBeamHelicities) {
+	for(size_t loc_i = 0; loc_i < locBeamHelicities.size(); ++loc_i) {
+		DBeamHelicity *new_beam_helicity = new DBeamHelicity(*locBeamHelicities[loc_i]);
 		new_beam_helicity->helicity *= dCorrectionFactor;
 		
-		new_beam_helicity->AddAssociatedObject(beam_helicity);
+		new_beam_helicity->AddAssociatedObject(locBeamHelicities[loc_i]);
 		Insert(new_beam_helicity);
 	}
 		
