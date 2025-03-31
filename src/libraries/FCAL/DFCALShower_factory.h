@@ -19,7 +19,6 @@
 #include <TH2F.h>
 
 class DFCALHit;
-class DECALHit;
 class DTrackWireBased;
 
 class DFCALShower_factory:public JFactoryT<DFCALShower>{
