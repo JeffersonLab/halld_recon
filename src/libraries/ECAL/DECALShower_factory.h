@@ -24,8 +24,14 @@ private:
   void EndRun() override;                     ///< Called everytime run number changes, provided BeginRun has been called.
   void Finish() override;                     ///< Called after last event of last event source has been processed.
 
+  double GetCorrectedEnergy(double E) const;
+  double GetCorrectedZ(double E) const;
+  
   double mECALz;
+  double SHOWER_ENERGY_THRESHOLD;
   double E_VAR1,E_VAR2,E_VAR3,POS_RES1,POS_RES2;
+  double E_CORRECTION_PAR1,E_CORRECTION_PAR2,E_CORRECTION_PAR3;
+  double E_CORRECTION_PAR4;
 };
 
 #endif // _DECALShower_factory_

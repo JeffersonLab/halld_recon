@@ -14,6 +14,7 @@
 #include <JANA/JEvent.h>
 #include <DANA/DGeometryManager.h>
 #include <HDGEOMETRY/DGeometry.h>
+#include <units.h>
 
 //------------------
 // Init
@@ -32,6 +33,18 @@ void DECALShower_factory::Init()
   app->SetDefaultParameter("ECAL:E_VAR2",E_VAR2);
   app->SetDefaultParameter("ECAL:E_VAR3",E_VAR3);
   app->SetDefaultParameter("ECAL:E_VAR1",E_VAR1);
+
+  SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
+  app->SetDefaultParameter("ECAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
+
+  E_CORRECTION_PAR1=0.016;
+  E_CORRECTION_PAR2=0.881;
+  E_CORRECTION_PAR3=1.055;
+  E_CORRECTION_PAR4=2.0;
+  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR1",E_CORRECTION_PAR1);
+  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR2",E_CORRECTION_PAR2);
+  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR3",E_CORRECTION_PAR3);
+  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR4",E_CORRECTION_PAR4);
 }
 
 //------------------
@@ -57,31 +70,31 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
   for (size_t i=0;i<clusters.size();i++){
     const DECALCluster *cluster=clusters[i];
 
-    DECALShower *shower=new DECALShower;
-    shower->E=cluster->E;
-    shower->t=cluster->t;
-    shower->pos=DVector3(cluster->x,cluster->y,mECALz);
+    double E=GetCorrectedEnergy(cluster->E);
+    if (E>SHOWER_ENERGY_THRESHOLD){
+      DECALShower *shower=new DECALShower;
+      shower->E=E;
+      shower->t=cluster->t;
 
-    // Guess for covariance matrix
-    double sigx=POS_RES1/sqrt(shower->E)+POS_RES2;
-    double sigy=sigx;
-    shower->ExyztCovariance(1,1)=sigx*sigx;
-    shower->ExyztCovariance(2,2)=sigy*sigy;
-    shower->ExyztCovariance(3,3)=1.; // fix this!
-    shower->ExyztCovariance(0,0)
-      =shower->E*shower->E*(E_VAR1/shower->E
-			    + E_VAR2/(shower->E*shower->E)
-			    + E_VAR3);
-    // Make sure off-diagonal elements are zero, for now...
-    for (unsigned int i=0;i<5;i++){
-      for(unsigned int j=0;j<5;j++){
-	if (i!=j) shower->ExyztCovariance(i,j)=0.;
-      }
-    }
+      double z=GetCorrectedZ(E);
+      shower->pos=DVector3(cluster->x,cluster->y,z);
 
-    Insert(shower);
-  }
+      // Guess for covariance matrix
+      TMatrixFSym cov(5);
+      double sigx=POS_RES1/sqrt(E)+POS_RES2;
+      double sigy=sigx;
+      const double radiation_length=0.89*k_cm;
+      double X0_over_E=radiation_length/E;
+      cov(1,1)=sigx*sigx;
+      cov(2,2)=sigy*sigy;
+      cov(0,0)=E*E_VAR1+E_VAR2+E_VAR3*E*E;
+      cov(3,3)=X0_over_E*X0_over_E*cov(0,0);
+      cov(3,0)=cov(0,3)=X0_over_E*cov(0,0);
+      shower->ExyztCovariance=cov;
 
+      Insert(shower);
+    } // Check on mininum energy
+  } // loop over clusters
 }
 
 //------------------
@@ -98,3 +111,28 @@ void DECALShower_factory::Finish()
 {
 }
 
+// Correct the measured energy to account for the unmeasured part of of the
+// shower
+double DECALShower_factory::GetCorrectedEnergy(double Ecluster) const {
+  double Ecorr=0.;
+  if (Ecluster<E_CORRECTION_PAR4){
+    Ecorr=Ecluster/(E_CORRECTION_PAR1*Ecluster+E_CORRECTION_PAR2);
+  }
+  else {
+    Ecorr=E_CORRECTION_PAR4
+      /(E_CORRECTION_PAR1*E_CORRECTION_PAR4+E_CORRECTION_PAR2)
+      +E_CORRECTION_PAR3*(Ecluster-E_CORRECTION_PAR4);
+  }
+  return Ecorr;
+}
+
+// Correct the z-positon of the shower to account for the shower depth
+double DECALShower_factory::GetCorrectedZ(double E) const {
+  // Crystal material properties
+  const double radiation_length=0.89*k_cm;
+  const double critical_energy=0.00964*k_GeV;
+  // Assume photon-induced shower
+  double dZmax=radiation_length*(0.5+log(E/critical_energy));
+
+  return mECALz+dZmax;
+}
