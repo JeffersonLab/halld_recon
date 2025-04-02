@@ -1483,7 +1483,7 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
 // Fill fcal calibration tables similar to FCALHit factory
 void DL1MCTrigger_factory::LoadFCALConst(fcal_constants_t &table, const vector<double> &fcal_const_ch, 
 					 const DFCALGeometry  &fcalGeom){
-  for (int ch = 0; ch < fcalGeom.numFcalChannels(); ch++) {
+  for (int ch = 0; ch < fcalGeom.numChannels(); ch++) {
     int row = fcalGeom.row(ch);
     int col = fcalGeom.column(ch);
     table[row][col] = fcal_const_ch[ch];
