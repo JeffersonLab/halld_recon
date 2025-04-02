@@ -270,7 +270,7 @@ void DDetectorMatches_factory::MatchToECAL(const DParticleID* locParticleID, con
   for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i)
     {
       shared_ptr<DECALShowerMatchParams>locShowerMatchParams;
-      //if(locParticleID->Cut_MatchDistance(extrapolations, locFCALShowers[loc_i], locInputStartTime, locShowerMatchParams))
+      if(locParticleID->Cut_MatchDistance(extrapolations, locECALShowers[loc_i], locInputStartTime, locShowerMatchParams))
 	    locDetectorMatches->Add_Match(locTrackTimeBased, locECALShowers[loc_i], locShowerMatchParams);
 	}
 }
@@ -363,10 +363,10 @@ void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, co
       
       shared_ptr<DECALShowerMatchParams> locShowerMatchParams;
       double locInputStartTime = locTrackTimeBasedVector[loc_i]->t0();
-      //if(!locParticleID->Distance_ToTrack(extrapolations.at(SYS_FCAL), locFCALShower, locInputStartTime, locShowerMatchParams))
-      //continue;
-      //if(locShowerMatchParams->dDOCAToShower < locMinDistance)
-      //locMinDistance = locShowerMatchParams->dDOCAToShower;
+      if(!locParticleID->Distance_ToTrack(extrapolations.at(SYS_ECAL), locECALShower, locInputStartTime, locShowerMatchParams))
+	continue;
+      if(locShowerMatchParams->dDOCAToShower < locMinDistance)
+	locMinDistance = locShowerMatchParams->dDOCAToShower;
     }
   locDetectorMatches->Set_DistanceToNearestTrack(locECALShower, locMinDistance);
 }
