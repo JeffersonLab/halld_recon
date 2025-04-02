@@ -20,6 +20,7 @@ struct DECALShower : public JObject {
 
   double E,t;
   DVector3 pos;
+  TMatrixFSym ExyztCovariance;
 
   void Summarize(JObjectSummary& summary) const override {
     summary.add(E, "E(GeV)", "%f");

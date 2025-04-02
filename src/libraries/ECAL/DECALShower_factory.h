@@ -25,6 +25,7 @@ private:
   void Finish() override;                     ///< Called after last event of last event source has been processed.
 
   double mECALz;
+  double E_VAR1,E_VAR2,E_VAR3,POS_RES1,POS_RES2;
 };
 
 #endif // _DECALShower_factory_
