@@ -20,6 +20,7 @@
 #include <FMWPC/DCTOFPoint.h>
 #include <FMWPC/DFMWPCCluster.h>
 #include <BCAL/DBCALShower.h>
+#include <ECAL/DECALShower.h>
 #include <FCAL/DFCALShower.h>
 #include <DIRC/DDIRCPmtHit.h>
 #include <DIRC/DDIRCTruthBarHit.h>
@@ -45,6 +46,7 @@ class DDetectorMatches_factory : public JFactoryT<DDetectorMatches>
 		//matching tracks to hits/showers routines
 		void MatchToTOF(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DTOFPoint*>& locTOFPoints, DDetectorMatches* locDetectorMatches) const;
 		void MatchToBCAL(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DBCALShower*>& locBCALShowers, DDetectorMatches* locDetectorMatches) const;
+  void MatchToECAL(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DECALShower*>& locECALShowers, DDetectorMatches* locDetectorMatches) const;
 		void MatchToFCAL(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DFCALShower*>& locFCALShowers, DDetectorMatches* locDetectorMatches) const;
 		void MatchToSC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DSCHit*>& locSCHits, DDetectorMatches* locDetectorMatches) const;
 		void MatchToDIRC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DDIRCPmtHit*>& locDIRCHits, DDetectorMatches* locDetectorMatches, const vector<const DDIRCTruthBarHit*>& locDIRCBarHits) const;
@@ -59,6 +61,7 @@ class DDetectorMatches_factory : public JFactoryT<DDetectorMatches>
 		//matching showers to tracks routines
 		void MatchToTrack(const DParticleID* locParticleID, const DBCALShower* locBCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const;
 		void MatchToTrack(const DParticleID* locParticleID, const DFCALShower* locFCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const;
+  void MatchToTrack(const DParticleID* locParticleID, const DECALShower* locECALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const;
 
 		bool ENABLE_FCAL_SINGLE_HITS;
 };
