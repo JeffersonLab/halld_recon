@@ -35,6 +35,15 @@ public:
   DVector2 positionOnFace( int channel ) const {return positionOnFace( m_row[channel], m_column[channel]);} 
   double sensitiveBlockSize() const {return m_sensitiveBlockSize;}
   double insertFrontZ() const {return m_insertFrontZ;}
+  bool isFiducial(double x,double y) const {
+    double xmax=m_positionOnFace[39][39].X()+0.5*blockSize();
+    double xmin=m_positionOnFace[0][0].X()-0.5*blockSize();
+    double ymax=m_positionOnFace[39][39].Y()+0.5*blockSize();
+    double ymin=m_positionOnFace[0][0].Y()-0.5*blockSize();
+    if (x<xmax && x>xmin && y<ymax && y>ymin) return true;
+
+    return false;
+  }
   
   int channel( int row, int column ) const {return m_channelNumber[row][column];} 
   int row   ( int channel ) const { return m_row[channel];    }
@@ -55,7 +64,7 @@ public:
   
 private:
   DVector2 m_positionOnFace[kECALBlocksTall][kECALBlocksWide];
-  double m_insertFrontZ;
+  double m_insertFrontZ,m_FCALx,m_FCALy;
   double m_sensitiveBlockSize;
   
   int    m_channelNumber[kECALBlocksTall][kECALBlocksWide];

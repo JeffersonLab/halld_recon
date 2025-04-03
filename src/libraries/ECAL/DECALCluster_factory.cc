@@ -545,12 +545,10 @@ bool DECALCluster_factory::FitPeaks(const TMatrixD &W,double b,
     }
     //Check that the new peak positions are still within the fiducial area of
     // the detector
-    /*
     if (dECALGeom->isFiducial(myNewPeak.x,myNewPeak.y)==false){
       //_DBG_ << myNewPeak.x << " " << myNewPeak.y << endl;
       return false;
     }
-    */
     // Matrix of per-block differences between measured and calculated energies
     TMatrixD dE(nhits,1);
     // Matrix containing partical derivatives of the shower profile function
@@ -569,12 +567,10 @@ bool DECALCluster_factory::FitPeaks(const TMatrixD &W,double b,
 
 	//Check that the new peak positions are still within the fiducial 
 	//area of the detector 
-	/*
-	  if (dECALGeom->isFiducial(myPeakInfo.x,myPeakInfo.y)==false){
+	if (dECALGeom->isFiducial(myPeakInfo.x,myPeakInfo.y)==false){
 	  //_DBG_<< myPeakInfo.x << " " << myPeakInfo.y << endl;
 	  return false;
 	}
-	*/
 	// Compute the Jacobian matrix elements
 	df_dE=CalcClusterEDeriv(b,hitList[i],myPeakInfo);
 	A(i,3*j+0)=df_dE;
