@@ -116,8 +116,10 @@ DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
 	//IF YOU CHANGE THESE, PLEASE (!!) UPDATE THE CUT LINES DRAWN FOR THE MONITORING IN:
 	// src/plugins/Analysis/monitoring_hists/HistMacro_Matching_*.C
 
-	ECAL_CUT_PAR1=5.;
+	ECAL_CUT_PAR1=0.26;
 	app->SetDefaultParameter("ECAL:CUT_PAR1",ECAL_CUT_PAR1);
+	ECAL_CUT_PAR2=1.8;
+	app->SetDefaultParameter("ECAL:CUT_PAR2",ECAL_CUT_PAR2);
 
 	FCAL_CUT_PAR1=2.75;
 	app->SetDefaultParameter("FCAL:CUT_PAR1",FCAL_CUT_PAR1);
@@ -1885,8 +1887,8 @@ bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> 
       *locOutputProjPos = locProjPos;
       *locOutputProjMom = locProjMom;
     }
-
-  return (locShowerMatchParams->dDOCAToShower < ECAL_CUT_PAR1);
+  double locCut=ECAL_CUT_PAR1+ECAL_CUT_PAR2/locProjMom.Mag();
+  return (locShowerMatchParams->dDOCAToShower < locCut);
 }
 
 bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DFCALShower* locFCALShower, double locInputStartTime,shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
