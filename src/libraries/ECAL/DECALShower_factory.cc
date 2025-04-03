@@ -38,7 +38,7 @@ void DECALShower_factory::Init()
   app->SetDefaultParameter("ECAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
   E_CORRECTION_PAR1=0.016;
-  E_CORRECTION_PAR2=0.881;
+  E_CORRECTION_PAR2=0.864;
   E_CORRECTION_PAR3=1.055;
   E_CORRECTION_PAR4=2.0;
   app->SetDefaultParameter("ECAL:E_CORRECTION_PAR1",E_CORRECTION_PAR1);
@@ -126,7 +126,7 @@ double DECALShower_factory::GetCorrectedEnergy(double Ecluster) const {
   return Ecorr;
 }
 
-// Correct the z-positon of the shower to account for the shower depth
+// Correct the z-position of the shower to account for the shower depth
 double DECALShower_factory::GetCorrectedZ(double E) const {
   // Crystal material properties
   const double radiation_length=0.89*k_cm;
