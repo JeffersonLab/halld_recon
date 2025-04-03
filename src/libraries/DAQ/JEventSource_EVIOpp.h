@@ -198,6 +198,7 @@ class JEventSource_EVIOpp: public JEventSource{
 		bool     PARSE_EVENTTAG;
 		bool     PARSE_TRIGGER;
 		bool     PARSE_SSP;
+	        bool     SKIP_SSP_FORMAT_ERROR;
 		bool     PARSE_GEMSRS;
                 int      NSAMPLES_GEMSRS;
 		bool     APPLY_TRANSLATION_TABLE;
