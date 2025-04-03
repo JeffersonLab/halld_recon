@@ -71,6 +71,7 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	PARSE_EVENTTAG      = true;
 	PARSE_TRIGGER       = true;
 	PARSE_SSP           = true;
+	SKIP_SSP_FORMAT_ERROR = false;
 	PARSE_GEMSRS        = true;
         NSAMPLES_GEMSRS     = 9;
 	
@@ -2402,6 +2403,8 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
 	if(!PARSE_SSP){ iptr = &iptr[(*iptr) + 1]; return; }
+
+	int continue_on_format_error = SKIP_SSP_FORMAT_ERROR;
 	
 	auto pe_iter = current_parsed_events.begin();
 	DParsedEvent *pe = NULL;
@@ -2439,6 +2442,13 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
 				if( slot != slot_bh ){
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;
+					
+					if (continue_on_format_error) {
+						iptr = iend;
+						return;
+					}	
+					else
+						throw JException("Bad SSP Data!", __FILE__, __LINE__);
 				}
 				break;
 			case 3:  // Trigger Time
