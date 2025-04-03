@@ -214,8 +214,8 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 		TH2I* dHist_FCALShowerYVsX = nullptr;
 		TH1I* dHist_FCALShowerEnergy = nullptr;
 
-  TH2I* dHist_ECALShowerYVsX = nullptr;
-  TH1I* dHist_ECALShowerEnergy = nullptr;
+                TH2I* dHist_ECALShowerYVsX = nullptr;
+                TH1I* dHist_ECALShowerEnergy = nullptr;
 
 		TH2I* dHist_CCALShowerYVsX = nullptr;
 		TH1I* dHist_CCALShowerEnergy = nullptr;
@@ -359,6 +359,17 @@ class DHistogramAction_DetectorMatching : public DAnalysisAction
 		map<bool, TH1I*> dHistMap_TrackFCALP_NoHit;
 		map<bool, TH2I*> dHistMap_TrackFCALRowVsColumn_HasHit;
 		map<bool, TH2I*> dHistMap_TrackFCALRowVsColumn_NoHit;
+
+                map<bool, TH2I*> dHistMap_TrackECALYVsX_HasHit;
+		map<bool, TH2I*> dHistMap_TrackECALYVsX_NoHit;
+		map<bool, TH1I*> dHistMap_TrackECALR_HasHit;
+		map<bool, TH1I*> dHistMap_TrackECALR_NoHit;
+		map<bool, TH1I*> dHistMap_TrackECALP_HasHit;
+		map<bool, TH1I*> dHistMap_TrackECALP_NoHit;
+		map<bool, TH2I*> dHistMap_TrackECALRowVsColumn_HasHit;
+		map<bool, TH2I*> dHistMap_TrackECALRowVsColumn_NoHit;
+	        map<bool, TH2I*> dHistMap_ECALTrackDistanceVsP;
+		map<bool, TH2I*> dHistMap_ECALTrackDistanceVsTheta;
 
 		map<bool, TH2I*> dHistMap_TrackBCALModuleVsZ_HasHit;
 		map<bool, TH2I*> dHistMap_TrackBCALModuleVsZ_NoHit;

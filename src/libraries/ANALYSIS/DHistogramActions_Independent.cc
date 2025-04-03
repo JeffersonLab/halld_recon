@@ -866,8 +866,11 @@ void DHistogramAction_DetectorMatching::Initialize(const std::shared_ptr<const J
 
 			//Kinematics of has (no) hit
 			vector<DetectorSystem_t> locDetectorSystems;
-			locDetectorSystems.push_back(SYS_START);  locDetectorSystems.push_back(SYS_BCAL);
-			locDetectorSystems.push_back(SYS_TOF);  locDetectorSystems.push_back(SYS_FCAL);
+			locDetectorSystems.push_back(SYS_START);
+			locDetectorSystems.push_back(SYS_BCAL);
+			locDetectorSystems.push_back(SYS_TOF);
+			locDetectorSystems.push_back(SYS_FCAL);
+			locDetectorSystems.push_back(SYS_ECAL);
 			//locDetectorSystems.push_back(SYS_CCAL);
 			for(size_t loc_i = 0; loc_i < locDetectorSystems.size(); ++loc_i)
 			{
@@ -1091,7 +1094,49 @@ void DHistogramAction_DetectorMatching::Initialize(const std::shared_ptr<const J
 			locHistTitle = locTrackString + string(";#theta#circ;FCAL / Track Distance (cm)");
 			dHistMap_FCALTrackDistanceVsTheta[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DThetaBins, dMinTheta, 20.0, dNum2DTrackDOCABins, dMinTrackDOCA, dMaxTrackMatchDOCA);
 			gDirectory->cd("..");
-			
+
+			//ECAL
+			CreateAndChangeTo_Directory("ECAL", "ECAL");
+			locHistName = "TrackECALYVsX_HasHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL Has Hit;Projected ECAL Hit X (cm);Projected ECAL Hit Y (cm)");
+			dHistMap_TrackECALYVsX_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
+
+			locHistName = "TrackECALYVsX_NoHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL No Hit;Projected ECAL Hit X (cm);Projected ECAL Hit Y (cm)");
+			dHistMap_TrackECALYVsX_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
+
+			locHistName = "TrackECALP_HasHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL Has Hit;p (GeV/c)");
+			dHistMap_TrackECALP_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumPBins, dMinP, dMaxP);
+
+			locHistName = "TrackECALP_NoHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL No Hit;p (GeV/c)");
+			dHistMap_TrackECALP_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumPBins, dMinP, dMaxP);
+
+			locHistName = "TrackECALR_HasHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL Has Hit;Projected ECAL Hit R (cm)");
+			dHistMap_TrackECALR_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumFCALTOFXYBins, 0.0, 130);
+
+			locHistName = "TrackECALR_NoHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL No Hit;Projected ECAL Hit R (cm)");
+			dHistMap_TrackECALR_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumFCALTOFXYBins, 0.0, 130);
+
+			locHistName = "TrackECALRowVsColumn_HasHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL Has Hit;Projected ECAL Hit Column;Projected ECAL Hit Row");
+			dHistMap_TrackECALRowVsColumn_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 59, -0.5, 58.5, 59, -0.5, 58.5);
+
+			locHistName = "TrackECALRowVsColumn_NoHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL No Hit;Projected ECAL Hit Column;Projected ECAL Hit Row");
+			dHistMap_TrackECALRowVsColumn_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 59, -0.5, 58.5, 59, -0.5, 58.5);
+
+			locHistName = "ECALTrackDistanceVsP";
+			locHistTitle = locTrackString + string(";p (GeV/c);ECAL / Track Distance (cm)");
+			dHistMap_ECALTrackDistanceVsP[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DTrackDOCABins, dMinTrackDOCA, dMaxTrackMatchDOCA);
+
+			locHistName = "ECALTrackDistanceVsTheta";
+			locHistTitle = locTrackString + string(";#theta#circ;ECAL / Track Distance (cm)");
+			dHistMap_ECALTrackDistanceVsTheta[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DThetaBins, dMinTheta, 20.0, dNum2DTrackDOCABins, dMinTrackDOCA, dMaxTrackMatchDOCA);
+			gDirectory->cd("..");
 			
 			//BCAL
 			CreateAndChangeTo_Directory("BCAL", "BCAL");
@@ -1288,6 +1333,24 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 	      locFCALTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
 	  }
 	}
+
+	//TRACK / ECAL CLOSEST MATCHES
+	map<const DTrackingData*, shared_ptr<const DECALShowerMatchParams>> locECALTrackDistanceMap;
+	for(auto locTrackIterator = locBestTrackMap.begin(); locTrackIterator != locBestTrackMap.end(); ++locTrackIterator)
+	{
+	  map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations;
+	  Get_Extrapolations(locTrackIterator->second,extrapolations);
+
+	  if(extrapolations.size()<2)
+	    break; //e.g. REST data: no trajectory
+	  
+	  if (extrapolations[SYS_ECAL].size()>0){
+	    double locStartTime = locTrackIterator->second->t0();
+	    shared_ptr<const DECALShowerMatchParams> locBestMatchParams;
+	    if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_ECAL), locECALShowers, false, locStartTime, locBestMatchParams))
+	      locECALTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
+	  }
+	}
 	
 	//TRACK / SC CLOSEST MATCHES
 	map<const DTrackingData*, pair<shared_ptr<const DSCHitMatchParams>, double> > locSCTrackDistanceMap; //double = z
@@ -1362,6 +1425,8 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 	map<const DTrackingData*, pair<float, float> > locProjectedTOFXYMap; //pair: x, y
 	map<const DTrackingData*, pair<int, int> > locProjectedFCALRowColumnMap; //pair: column, row
 	map<const DTrackingData*, pair<float, float> > locProjectedFCALXYMap; //pair: x, y
+	map<const DTrackingData*, pair<int, int> > locProjectedECALRowColumnMap; //pair: column, row
+	map<const DTrackingData*, pair<float, float> > locProjectedECALXYMap; //pair: x, y
 	map<const DTrackingData*, pair<float, int> > locProjectedBCALModuleSectorMap; //pair: z, module
 	map<const DTrackingData*, pair<float, float> > locProjectedBCALPhiZMap; //pair: z, phi
 	for(auto locTrackIterator = locBestTrackMap.begin(); locTrackIterator != locBestTrackMap.end(); ++locTrackIterator)
@@ -1403,6 +1468,19 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 		locProjectedFCALXYMap[locTrack] = pair<float, float>(locFCALIntersection.X(), locFCALIntersection.Y());
 	      }
 	  }
+
+	  //ECAL
+	  if (extrapolations[SYS_ECAL].size()>0){
+	    DVector3 locECALIntersection;
+	    unsigned int locRow = 0, locColumn = 0;
+	    /*
+	    if(locParticleID->PredictECALHit(extrapolations.at(SYS_ECAL), locRow, locColumn, &locECALIntersection))
+	      {
+		locProjectedECALRowColumnMap[locTrack] = pair<int, int>(locColumn, locRow);
+		locProjectedECALXYMap[locTrack] = pair<float, float>(locECALIntersection.X(), locECALIntersection.Y());
+	      }
+	    */
+	  }
 	  
 	  //BCAL
 	  if (extrapolations[SYS_BCAL].size()>0){
@@ -1443,6 +1521,14 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 			auto locTrack = locMapPair.first;
 			dHistMap_FCALTrackDistanceVsP[locIsTimeBased]->Fill(locTrack->momentum().Mag(), locMapPair.second->dDOCAToShower);
 			dHistMap_FCALTrackDistanceVsTheta[locIsTimeBased]->Fill(locTrack->momentum().Theta()*180.0/TMath::Pi(), locMapPair.second->dDOCAToShower);
+		}
+
+		//ECAL
+		for(auto locMapPair : locECALTrackDistanceMap)
+		{
+			auto locTrack = locMapPair.first;
+			dHistMap_ECALTrackDistanceVsP[locIsTimeBased]->Fill(locTrack->momentum().Mag(), locMapPair.second->dDOCAToShower);
+			dHistMap_ECALTrackDistanceVsTheta[locIsTimeBased]->Fill(locTrack->momentum().Theta()*180.0/TMath::Pi(), locMapPair.second->dDOCAToShower);
 		}
 
 		//TOF Paddle
@@ -1540,6 +1626,46 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 					}
 				}
 			}
+
+			//ECAL
+			if(locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_ECAL))
+			  {
+			    dHistMap_PVsTheta_HasHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locP);
+			    if(locP > 1.0)
+			      dHistMap_PhiVsTheta_HasHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locPhi);
+			    if(locProjectedECALRowColumnMap.find(locTrack) != locProjectedECALRowColumnMap.end())
+			      {
+				dHistMap_TrackECALP_HasHit[locIsTimeBased]->Fill(locP);
+				if(locP > 1.0)
+				  {
+				    pair<float, float>& locPositionPair = locProjectedECALXYMap[locTrack];
+				    dHistMap_TrackECALYVsX_HasHit[locIsTimeBased]->Fill(locPositionPair.first, locPositionPair.second);
+				    float locECALR = sqrt(locPositionPair.first*locPositionPair.first + locPositionPair.second*locPositionPair.second);
+				    dHistMap_TrackECALR_HasHit[locIsTimeBased]->Fill(locECALR);
+				    pair<int, int>& locElementPair = locProjectedECALRowColumnMap[locTrack];
+				    dHistMap_TrackECALRowVsColumn_HasHit[locIsTimeBased]->Fill(locElementPair.first, locElementPair.second);
+				  }
+			      }
+			  }
+			else
+			  {
+			    dHistMap_PVsTheta_NoHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locP);
+			    if(locP > 1.0)
+			      dHistMap_PhiVsTheta_NoHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locPhi);
+			    if(locProjectedECALRowColumnMap.find(locTrack) != locProjectedECALRowColumnMap.end())
+			      {
+				dHistMap_TrackECALP_NoHit[locIsTimeBased]->Fill(locP);
+				if(locP > 1.0)
+				  {
+				    pair<float, float>& locPositionPair = locProjectedECALXYMap[locTrack];
+				    dHistMap_TrackECALYVsX_NoHit[locIsTimeBased]->Fill(locPositionPair.first, locPositionPair.second);
+				    float locECALR = sqrt(locPositionPair.first*locPositionPair.first + locPositionPair.second*locPositionPair.second);
+				    dHistMap_TrackECALR_NoHit[locIsTimeBased]->Fill(locECALR);
+				    pair<int, int>& locElementPair = locProjectedECALRowColumnMap[locTrack];
+				    dHistMap_TrackECALRowVsColumn_NoHit[locIsTimeBased]->Fill(locElementPair.first, locElementPair.second);
+				  }
+			      }
+			  }
 
 			//FCAL
 			if(locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_FCAL))
