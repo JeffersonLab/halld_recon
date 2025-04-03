@@ -63,7 +63,6 @@ void DNeutralShower_factory_PreSelect::BeginRun(const std::shared_ptr<const JEve
 	  const DECALGeometry *ecalGeometry=nullptr;
 	  event->GetSingle(ecalGeometry);
 
-	  cout << "Setting exclusion" << endl;
 	  // build list of channels in the inner ring.  Pick all channels which
 	  // touch the beam hole (including corners!)
 	  dFCALInnerChannels.push_back( ecalGeometry->channel( 18, 18 ) );
