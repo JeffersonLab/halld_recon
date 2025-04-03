@@ -42,6 +42,8 @@
 #include "FCAL/DFCALHit.h"
 #include "CCAL/DCCALShower.h"
 #include "CCAL/DCCALHit.h"
+#include "ECAL/DECALShower.h"
+#include "ECAL/DECALHit.h"
 
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRACKING/DTrackWireBased.h"
@@ -211,6 +213,9 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 
 		TH2I* dHist_FCALShowerYVsX = nullptr;
 		TH1I* dHist_FCALShowerEnergy = nullptr;
+
+  TH2I* dHist_ECALShowerYVsX = nullptr;
+  TH1I* dHist_ECALShowerEnergy = nullptr;
 
 		TH2I* dHist_CCALShowerYVsX = nullptr;
 		TH1I* dHist_CCALShowerEnergy = nullptr;

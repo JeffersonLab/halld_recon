@@ -329,6 +329,12 @@ void DHistogramAction_Reconstruction::Initialize(const std::shared_ptr<const JEv
 		locHistName = "FCALShowerEnergy";
 		dHist_FCALShowerEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";FCAL Shower Energy (GeV)", dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
 
+		//ECAL
+		locHistName = "ECALShowerYVsX";
+		dHist_ECALShowerYVsX = GetOrCreate_Histogram<TH2I>(locHistName, ";ECAL Shower X (cm);ECAL Shower Y (cm)", dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
+		locHistName = "ECALShowerEnergy";
+		dHist_ECALShowerEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";ECAL Shower Energy (GeV)", dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
+
 		//CCAL
 		locHistName = "CCALShowerYVsX";
 		dHist_CCALShowerYVsX = GetOrCreate_Histogram<TH2I>(locHistName, ";CCAL Shower X (cm);CCAL Shower Y (cm)", dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
@@ -515,6 +521,9 @@ bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const
 	vector<const DFCALShower*> locFCALShowers;
 	locEvent->Get(locFCALShowers);
 
+	vector<const DECALShower*> locECALShowers;
+	locEvent->Get(locECALShowers);
+
 	vector<const DCCALShower*> locCCALShowers;
 	locEvent->Get(locCCALShowers);
 
@@ -606,6 +615,14 @@ bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const
 			dHist_FCALShowerYVsX->Fill(locFCALShowers[loc_i]->getPosition().X(), locFCALShowers[loc_i]->getPosition().Y());
 		}
 
+		//ECAL
+		for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i)
+		{
+		  dHist_ECALShowerEnergy->Fill(locECALShowers[loc_i]->E);
+		  dHist_ECALShowerYVsX->Fill(locECALShowers[loc_i]->pos.X(),
+					     locECALShowers[loc_i]->pos.Y());
+		}
+		
 		//CCAL
 		for(size_t loc_i = 0; loc_i < locCCALShowers.size(); ++loc_i)
 		{
@@ -1210,6 +1227,9 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 
 	vector<const DFCALShower*> locFCALShowers;
 	locEvent->Get(locFCALShowers);
+	
+	vector<const DECALShower*> locECALShowers;
+	locEvent->Get(locECALShowers);
 
 	vector<const DCCALShower*> locCCALShowers;
 	locEvent->Get(locCCALShowers);
