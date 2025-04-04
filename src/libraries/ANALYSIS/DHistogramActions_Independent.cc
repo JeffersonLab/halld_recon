@@ -3684,6 +3684,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(const std::shared_ptr<
 		//Showers / Neutrals / TOF / SC
 		locHistName = "NumFCALShowers";
 		dHist_NumFCALShowers = GetOrCreate_Histogram<TH1D>(locHistName, ";# DFCALShower", dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
+		locHistName = "NumECALShowers";
+		dHist_NumECALShowers = GetOrCreate_Histogram<TH1D>(locHistName, ";# DECALShower", dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
 		locHistName = "NumCCALShowers";
 		dHist_NumCCALShowers = GetOrCreate_Histogram<TH1D>(locHistName, ";# DCCALShower", dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
 		locHistName = "NumBCALShowers";
@@ -3708,6 +3710,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(const std::shared_ptr<
 		dHist_NumTrackBCALMatches = GetOrCreate_Histogram<TH1D>(locHistName, ";# Track-BCAL Matches", dMaxNumMatchObjects + 1, -0.5, (float)dMaxNumMatchObjects + 0.5);
 		locHistName = "NumTrackFCALMatches";
 		dHist_NumTrackFCALMatches = GetOrCreate_Histogram<TH1D>(locHistName, ";# Track-FCAL Matches", dMaxNumMatchObjects + 1, -0.5, (float)dMaxNumMatchObjects + 0.5);
+		locHistName = "NumTrackECALMatches";
+		dHist_NumTrackECALMatches = GetOrCreate_Histogram<TH1D>(locHistName, ";# Track-ECAL Matches", dMaxNumMatchObjects + 1, -0.5, (float)dMaxNumMatchObjects + 0.5);
 		locHistName = "NumTrackTOFMatches";
 		dHist_NumTrackTOFMatches = GetOrCreate_Histogram<TH1D>(locHistName, ";# Track-TOF Matches", dMaxNumMatchObjects + 1, -0.5, (float)dMaxNumMatchObjects + 0.5);
 		locHistName = "NumTrackSCMatches";
@@ -3732,6 +3736,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(const std::shared_ptr<
 			dHist_NumBCALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DBCALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
 			locHistName = "NumFCALHits";
 			dHist_NumFCALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DFCALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
+			locHistName = "NumECALHits";
+			dHist_NumECALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DECALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
 			locHistName = "NumCCALHits";
 			dHist_NumCCALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DFCALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
 
@@ -3761,6 +3767,9 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 	vector<const DFCALShower*> locFCALShowers;
 	locEvent->Get(locFCALShowers);
 
+	vector<const DECALShower*> locECALShowers;
+	locEvent->Get(locECALShowers);
+	
 	vector<const DCCALShower*> locCCALShowers;
 	locEvent->Get(locCCALShowers);
 
@@ -3796,6 +3805,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 	vector<const DTOFHit*> locTOFHits;
 	vector<const DBCALHit*> locBCALHits;
 	vector<const DFCALHit*> locFCALHits;
+	vector<const DECALHit*> locECALHits;
 	vector<const DCCALHit*> locCCALHits;
 	vector<const DTAGMHit*> locTAGMHits;
 	vector<const DTAGHHit*> locTAGHHits;
@@ -3817,6 +3827,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 		locEvent->Get(locTOFHits);
 		locEvent->Get(locBCALHits);
 		locEvent->Get(locFCALHits);
+		locEvent->Get(locECALHits);
 		locEvent->Get(locCCALHits);
 		locEvent->Get(locTAGHHits);
 		locEvent->Get(locTAGMHits);
@@ -3936,6 +3947,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 
 		//Showers
 		dHist_NumFCALShowers->Fill((Double_t)locFCALShowers.size());
+		dHist_NumECALShowers->Fill((Double_t)locECALShowers.size());
 		dHist_NumCCALShowers->Fill((Double_t)locCCALShowers.size());
 		dHist_NumBCALShowers->Fill((Double_t)locBCALShowers.size());
 		dHist_NumNeutralShowers->Fill((Double_t)locNeutralShowers.size());
@@ -3954,6 +3966,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 		//Matches
 		dHist_NumTrackBCALMatches->Fill((Double_t)locDetectorMatches->Get_NumTrackBCALMatches());
 		dHist_NumTrackFCALMatches->Fill((Double_t)locDetectorMatches->Get_NumTrackFCALMatches());
+		dHist_NumTrackECALMatches->Fill((Double_t)locDetectorMatches->Get_NumTrackECALMatches());
 		dHist_NumTrackTOFMatches->Fill((Double_t)locDetectorMatches->Get_NumTrackTOFMatches());
 		dHist_NumTrackSCMatches->Fill((Double_t)locDetectorMatches->Get_NumTrackSCMatches());
 
@@ -3968,6 +3981,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 			dHist_NumTOFHits->Fill((Double_t)locTOFHits.size());
 			dHist_NumBCALHits->Fill((Double_t)locBCALHits.size());
 			dHist_NumFCALHits->Fill((Double_t)locFCALHits.size());
+			dHist_NumECALHits->Fill((Double_t)locECALHits.size());
 			dHist_NumCCALHits->Fill((Double_t)locCCALHits.size());
 			dHist_NumRFSignals->Fill((Double_t)(locRFDigiTimes.size() + locRFTDCDigiTimes.size()));
 		}

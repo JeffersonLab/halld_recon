@@ -928,6 +928,7 @@ class DHistogramAction_NumReconstructedObjects : public DAnalysisAction
 
 		TH1D* dHist_NumBeamPhotons = nullptr;
 		TH1D* dHist_NumFCALShowers = nullptr;
+                TH1D* dHist_NumECALShowers = nullptr;
 		TH1D* dHist_NumCCALShowers = nullptr;
 		TH1D* dHist_NumBCALShowers = nullptr;
 		TH1D* dHist_NumNeutralShowers = nullptr;
@@ -938,6 +939,7 @@ class DHistogramAction_NumReconstructedObjects : public DAnalysisAction
 
 		TH1D* dHist_NumTrackBCALMatches = nullptr;
 		TH1D* dHist_NumTrackFCALMatches = nullptr;
+                TH1D* dHist_NumTrackECALMatches = nullptr;
 		TH1D* dHist_NumTrackTOFMatches = nullptr;
 		TH1D* dHist_NumTrackSCMatches = nullptr;
 
@@ -949,6 +951,7 @@ class DHistogramAction_NumReconstructedObjects : public DAnalysisAction
 		TH1I* dHist_NumTOFHits = nullptr;
 		TH1I* dHist_NumBCALHits = nullptr;
 		TH1I* dHist_NumFCALHits = nullptr;
+                TH1I* dHist_NumECALHits = nullptr;
 		TH1I* dHist_NumCCALHits = nullptr;
 
 		TH1I* dHist_NumRFSignals = nullptr; //all sources
