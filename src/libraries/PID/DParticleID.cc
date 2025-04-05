@@ -219,9 +219,11 @@ DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
   if(jcalib->Get("CDC/gain_doca_correction", CDC_GAIN_DOCA_PARS))
 		jout << "Error loading CDC/gain_doca_correction !" << jendl;
 
-
         // FCAL geometry
         event->GetSingle(dFCALGeometry);
+
+	// ECAL geometry
+        event->GetSingle(dECALGeometry);
 
 	//TOF calibration constants & geometry
 	event->GetSingle(dTOFGeometry);
@@ -1374,8 +1376,8 @@ bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &
   // The following additional information is needed for CPP ML mu/pi separation
   if (ADD_FCAL_DATA_FOR_CPP){
     // Row/column corresponding to projected position
-    auto row = dFCALGeometry->row( (float)locProjPos.y() );
-    auto col = dFCALGeometry->column( (float)locProjPos.x() );
+    auto row = dFCALGeometry->y_to_row( (float)locProjPos.y() );
+    auto col = dFCALGeometry->x_to_column( (float)locProjPos.x() );
     if (row>=0 && col>=0){
       locShowerMatchParams->dE5x5=0.;
       locShowerMatchParams->dE3x3=0.;
@@ -3301,25 +3303,41 @@ unsigned int DParticleID::PredictSCSector(const vector<DTrackFitter::Extrapolati
 
 bool DParticleID::PredictFCALHit(const vector<DTrackFitter::Extrapolation_t>&extrapolations, unsigned int &row, unsigned int &col, DVector3 *intersection) const
 {
-	// Initialize output variables
-	row=0;
-	col=0;
-	if(extrapolations.size()==0)
-		return false;
+  // Initialize output variables
+  row=0;
+  col=0;
+  if(extrapolations.size()==0)
+    return false;
+  
+  // Find intersection with FCAL plane
+  DVector3 proj_pos=extrapolations[0].position;
+  
+  if (intersection) *intersection=proj_pos;
 
-	// Find intersection with FCAL plane given by fcal_pos
-	DVector3 fcal_pos(0,0,dFCALz);
-	DVector3 norm(0.0, 0.0, 1.0); //normal vector to FCAL plane
-	DVector3 proj_mom=extrapolations[0].momentum;
-	DVector3 proj_pos=extrapolations[0].position;
+  double x=proj_pos.x();
+  double y=proj_pos.y();
+  row=dFCALGeometry->y_to_row(float(y));
+  col=dFCALGeometry->x_to_column(float(x));
+  return (dFCALGeometry->isBlockActive(row,col));
+}
 
-	if (intersection) *intersection=proj_pos;
+bool DParticleID::PredictECALHit(const vector<DTrackFitter::Extrapolation_t>&extrapolations, unsigned int &row, unsigned int &col, DVector3 *intersection) const
+{
+  // Initialize output variables
+  row=0;
+  col=0;
+  if(extrapolations.size()==0)
+    return false;
 
-	double x=proj_pos.x();
-	double y=proj_pos.y();
-	row=dFCALGeometry->y_to_row(float(y));
-	col=dFCALGeometry->x_to_column(float(x));
-	return (dFCALGeometry->isBlockActive(row,col));
+  // Find intersection with ECAL plane
+  DVector3 proj_pos=extrapolations[0].position;
+  if (intersection) *intersection=proj_pos;
+  
+  double x=proj_pos.x();
+  double y=proj_pos.y();
+  row=dECALGeometry->y_to_row(y);
+  col=dECALGeometry->x_to_column(x);
+  return (dECALGeometry->isBlockActive(row,col));
 }
 
 // Given a track, predict which BCAL wedge should have a hit

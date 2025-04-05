@@ -28,6 +28,7 @@
 #include <FCAL/DFCALCluster.h>
 #include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALGeometry_factory.h>
+#include <ECAL/DECALGeometry.h>
 #include <FMWPC/DCTOFPoint.h>
 #include <TOF/DTOFPoint.h>
 #include <TOF/DTOFPaddleHit.h>
@@ -203,6 +204,7 @@ class DParticleID: public JObject
 		unsigned int PredictSCSector(const vector<DTrackFitter::Extrapolation_t> &extrapolations, double& locDeltaPhi, DVector3& locProjPos, DVector3& locProjMom, DVector3& locPaddleNorm, double& locPathLength, double& locFlightTime, double& locFlightTimeVariance, int& locSCPlane) const;
 		unsigned int PredictSCSector(const vector<DTrackFitter::Extrapolation_t> &extrapolations, DVector3* locOutputProjPos=nullptr, bool* locProjBarrelRegion=nullptr, double* locMinDPhi=nullptr) const;
 		bool PredictFCALHit(const vector<DTrackFitter::Extrapolation_t>&extrapolations, unsigned int &row, unsigned int &col, DVector3 *intersection=nullptr) const;
+  bool PredictECALHit(const vector<DTrackFitter::Extrapolation_t>&extrapolations, unsigned int &row, unsigned int &col, DVector3 *intersection=nullptr) const;
 		bool PredictBCALWedge(const vector<DTrackFitter::Extrapolation_t>&extrapolations, unsigned int &module,unsigned int &sector, DVector3 *intersection=nullptr) const;
 		bool PredictTOFPaddles(const vector<DTrackFitter::Extrapolation_t>&extrapolations, unsigned int &hbar,unsigned int &vbar, DVector3 *intersection=nullptr) const;
 
@@ -324,6 +326,9 @@ class DParticleID: public JObject
 		// FCAL geometry
 		double dFCALz;
 		const DFCALGeometry *dFCALGeometry;
+
+  // ECAL geometry
+  const DECALGeometry *dECALGeometry=nullptr;
 
 		// FCAL calibration constants
 		double dFCALTimewalkPar1,dFCALTimewalkPar2;
