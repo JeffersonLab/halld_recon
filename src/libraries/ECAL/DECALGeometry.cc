@@ -8,15 +8,14 @@
 using namespace std;
 
 #include "DECALGeometry.h"
-#include "DVector2.h"
 
 //---------------------------------
 // DFCALGeometry    (Constructor)
 //---------------------------------
 DECALGeometry::DECALGeometry(const DGeometry *geom){
   // Find position of upstream face of FCAL
-  double fcal_dx=0.,fcal_dy=0.,fcal_z_front=0.;
-  geom->GetFCALPosition(fcal_dx,fcal_dy,fcal_z_front);
+  double fcal_z_front=0.;
+  geom->GetFCALPosition(m_FCALx,m_FCALy,fcal_z_front);
 
   // Find the size of the sensitive volume of each PWO crystal
   vector<double>block;
@@ -25,6 +24,13 @@ DECALGeometry::DECALGeometry(const DGeometry *geom){
   
   // Get the z-position of the upstream face of the insert
   geom->GetECALZ(m_insertFrontZ);
+  
+  // Initialize active block map
+  for( int row = 0; row < kECALBlocksTall; row++ ){
+    for( int col = 0; col < kECALBlocksWide; col++ ){
+      m_activeBlock[row][col]=false;
+    }
+  }
   
   // extract the positions of the PWO crystals
   m_numActiveBlocks=0;
@@ -49,14 +55,21 @@ DECALGeometry::DECALGeometry(const DGeometry *geom){
       my_row=i-21;
     }
     for (int col=col0;col<col0+ncopy;col++){
-      double x=fcal_dx+x0+double(col-col0)*dx;
-      double y=fcal_dy+pos[1]+phi*x; //use small angle approximation
-
+      double x=m_FCALx+x0+double(col-col0)*dx;
+      double y=m_FCALy+pos[1]+phi*x; //use small angle approximation
+      
       m_positionOnFace[my_row][col].Set(x,y);
       m_row[m_numActiveBlocks]=my_row;
       m_column[m_numActiveBlocks]=col;
+      m_activeBlock[my_row][col] = true;
       
       m_numActiveBlocks++;
     }
   }
+  
+  // outer dimensions
+  m_xmax=m_positionOnFace[39][39].X()+0.5*blockSize();
+  m_xmin=m_positionOnFace[0][0].X()-0.5*blockSize();
+  m_ymax=m_positionOnFace[39][39].Y()+0.5*blockSize();
+  m_ymin=m_positionOnFace[0][0].Y()-0.5*blockSize();
 }
