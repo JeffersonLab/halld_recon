@@ -24,6 +24,7 @@ public:
   
   static const int kECALBlocksWide   = 40;
   static const int kECALBlocksTall   = 40;
+  static const int kECALMidBlock     = 20;
   static const int kECALMaxChannels  = kECALBlocksWide * kECALBlocksTall;
   static const int kECALBeamHoleSize = 2;
 
@@ -31,29 +32,21 @@ public:
   static double blockLength(){ return  20.0 * k_cm; }
   
   int numActiveBlocks() const { return m_numActiveBlocks; }
+  bool isBlockActive( int row, int column ) const;
+  
   DVector2 positionOnFace(int row,int column) const {return m_positionOnFace[row][column];}
   DVector2 positionOnFace( int channel ) const {return positionOnFace( m_row[channel], m_column[channel]);} 
   double sensitiveBlockSize() const {return m_sensitiveBlockSize;}
   double insertFrontZ() const {return m_insertFrontZ;}
-  bool isFiducial(double x,double y) const {
-    double xmax=m_positionOnFace[39][39].X()+0.5*blockSize();
-    double xmin=m_positionOnFace[0][0].X()-0.5*blockSize();
-    double ymax=m_positionOnFace[39][39].Y()+0.5*blockSize();
-    double ymin=m_positionOnFace[0][0].Y()-0.5*blockSize();
-    if (x<xmax && x>xmin && y<ymax && y>ymin) return true;
-
-    return false;
-  }
+  bool isFiducial(double x,double y) const;
   
   int channel( int row, int column ) const {return m_channelNumber[row][column];} 
   int row   ( int channel ) const { return m_row[channel];    }
   int column( int channel ) const { return m_column[channel]; }
 	
   // get row and column from x and y positions
-  int row   ( double y ) const;
-  int column( double x ) const;
-  // get channel number from x and y
-  int channel(double x,double y) const;
+  int y_to_row   ( double y ) const;
+  int x_to_column( double x ) const;
   
   void Summarize(JObjectSummary& summary) const{
     summary.add((int) kECALBlocksWide, "kECALBlocksWide", "%d");
@@ -65,8 +58,10 @@ public:
 private:
   DVector2 m_positionOnFace[kECALBlocksTall][kECALBlocksWide];
   double m_insertFrontZ,m_FCALx,m_FCALy;
+  double m_xmin,m_ymin,m_xmax,m_ymax;
   double m_sensitiveBlockSize;
-  
+
+  bool   m_activeBlock[kECALBlocksTall][kECALBlocksWide];
   int    m_channelNumber[kECALBlocksTall][kECALBlocksWide];
   int    m_row[kECALMaxChannels];
   int    m_column[kECALMaxChannels];
@@ -75,6 +70,41 @@ private:
 
   DECALGeometry(){};// force use of constructor with arguments.
 };
+
+inline int DECALGeometry::y_to_row( double y ) const {
+  y-=m_FCALy;
+  
+  int my_row=static_cast<int>( y / blockSize() + kECALMidBlock + 0.5);
+  if (my_row<0) return -1;
+  if (my_row>=kECALBlocksTall) return -1;
+  
+  return my_row;
+}
+
+inline int DECALGeometry::x_to_column( double x ) const {
+  x-=m_FCALx;
+
+  int my_col=static_cast<int>( x / blockSize() + kECALMidBlock + 0.5);
+  if (my_col<0) return -1;
+  if (my_col>=kECALBlocksWide) return -1;
+  
+  return my_col;
+}
+
+// Check that x and y are in the bounds of the detector
+inline bool DECALGeometry::isFiducial(double x,double y) const {
+  if (x<m_xmax && x>m_xmin && y<m_ymax && y>m_ymin) return true;
+  
+  return false;
+}
+
+inline bool DECALGeometry::isBlockActive( int row, int column ) const {
+  if (row>=0 && row<kECALBlocksTall && column >= 0 && column<kECALBlocksWide){
+    return m_activeBlock[row][column];
+  }
+  return false;
+}
+
 
 #endif // _DECALGeometry_
 
