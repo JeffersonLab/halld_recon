@@ -1123,11 +1123,11 @@ void DHistogramAction_DetectorMatching::Initialize(const std::shared_ptr<const J
 
 			locHistName = "TrackECALRowVsColumn_HasHit";
 			locHistTitle = locTrackString + string(", Has Other Match, ECAL Has Hit;Projected ECAL Hit Column;Projected ECAL Hit Row");
-			dHistMap_TrackECALRowVsColumn_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 59, -0.5, 58.5, 59, -0.5, 58.5);
+			dHistMap_TrackECALRowVsColumn_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 40, -0.5, 39.5, 40, -0.5, 39.5);
 
 			locHistName = "TrackECALRowVsColumn_NoHit";
 			locHistTitle = locTrackString + string(", Has Other Match, ECAL No Hit;Projected ECAL Hit Column;Projected ECAL Hit Row");
-			dHistMap_TrackECALRowVsColumn_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 59, -0.5, 58.5, 59, -0.5, 58.5);
+			dHistMap_TrackECALRowVsColumn_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 40, -0.5, 39.5, 40, -0.5, 39.5);
 
 			locHistName = "ECALTrackDistanceVsP";
 			locHistTitle = locTrackString + string(";p (GeV/c);ECAL / Track Distance (cm)");
@@ -1473,13 +1473,11 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 	  if (extrapolations[SYS_ECAL].size()>0){
 	    DVector3 locECALIntersection;
 	    unsigned int locRow = 0, locColumn = 0;
-	    /*
 	    if(locParticleID->PredictECALHit(extrapolations.at(SYS_ECAL), locRow, locColumn, &locECALIntersection))
 	      {
 		locProjectedECALRowColumnMap[locTrack] = pair<int, int>(locColumn, locRow);
 		locProjectedECALXYMap[locTrack] = pair<float, float>(locECALIntersection.X(), locECALIntersection.Y());
 	      }
-	    */
 	  }
 	  
 	  //BCAL
