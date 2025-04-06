@@ -27,7 +27,9 @@ private:
     auto app = event->GetJApplication();
     auto geo_manager = app->GetService<DGeometryManager>();
     auto dgeom = geo_manager->GetDGeometry(runnumber);
-    Insert(new DECALGeometry(dgeom));
+    if (dgeom->HaveInsert()){
+      Insert(new DECALGeometry(dgeom));
+    }
   } 
   //------------------
   // EndRun
