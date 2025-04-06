@@ -569,6 +569,11 @@ class DHistogramAction_Neutrals : public DAnalysisAction
 		TH1I* dHist_FCALNeutralShowerDeltaT = nullptr;
 		TH2I* dHist_FCALNeutralShowerDeltaTVsE = nullptr;
 
+                TH1I* dHist_ECALTrackDOCA = nullptr;
+		TH1I* dHist_ECALNeutralShowerEnergy = nullptr;
+		TH1I* dHist_ECALNeutralShowerDeltaT = nullptr;
+		TH2I* dHist_ECALNeutralShowerDeltaTVsE = nullptr;
+
 		TH1I* dHist_CCALNeutralShowerEnergy = nullptr;
 		TH1I* dHist_CCALNeutralShowerDeltaT = nullptr;
 		TH2I* dHist_CCALNeutralShowerDeltaTVsE = nullptr;

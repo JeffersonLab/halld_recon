@@ -2463,6 +2463,15 @@ void DHistogramAction_Neutrals::Initialize(const std::shared_ptr<const JEvent>& 
 		locHistName = "FCALNeutralShowerDeltaTVsE";
 		dHist_FCALNeutralShowerDeltaTVsE = GetOrCreate_Histogram<TH2I>(locHistName, ";FCAL Neutral Shower Energy (GeV);FCAL Neutral Shower #Deltat (ns)", dNum2DShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
 
+		//ECAL
+		locHistName = "ECALTrackDOCA";
+		dHist_ECALTrackDOCA = GetOrCreate_Histogram<TH1I>(locHistName, ";ECAL Shower Distance to Nearest Track (cm)", dNumTrackDOCABins, dMinTrackDOCA, dMaxTrackDOCA);
+		locHistName = "ECALNeutralShowerEnergy";
+		dHist_ECALNeutralShowerEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";ECAL Neutral Shower Energy (GeV)", dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
+		locHistName = "ECALNeutralShowerDeltaT";
+		dHist_ECALNeutralShowerDeltaT = GetOrCreate_Histogram<TH1I>(locHistName, ";ECAL Neutral Shower #Deltat (Propagated - RF) (ns)", dNumDeltaTBins, dMinDeltaT, dMaxDeltaT);
+		locHistName = "ECALNeutralShowerDeltaTVsE";
+		dHist_ECALNeutralShowerDeltaTVsE = GetOrCreate_Histogram<TH2I>(locHistName, ";ECAL Neutral Shower Energy (GeV);ECAL Neutral Shower #Deltat (ns)", dNum2DShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
 
 		//CCAL
 		//locHistName = "CCALTrackDOCA";
@@ -2533,6 +2542,19 @@ bool DHistogramAction_Neutrals::Perform_Action(const std::shared_ptr<const JEven
 				dHist_FCALNeutralShowerEnergy->Fill(locNeutralShowers[loc_i]->dEnergy);
 				dHist_FCALNeutralShowerDeltaT->Fill(locDeltaT);
 				dHist_FCALNeutralShowerDeltaTVsE->Fill(locNeutralShowers[loc_i]->dEnergy, locDeltaT);
+			}
+			else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_ECAL)
+			  {
+				const DECALShower* locECALShower = NULL;
+				locNeutralShowers[loc_i]->GetSingle(locECALShower);
+
+				double locDistance = 9.9E9;
+				if(locDetectorMatches->Get_DistanceToNearestTrack(locECALShower, locDistance))
+					dHist_ECALTrackDOCA->Fill(locDistance);
+
+				dHist_ECALNeutralShowerEnergy->Fill(locNeutralShowers[loc_i]->dEnergy);
+				dHist_ECALNeutralShowerDeltaT->Fill(locDeltaT);
+				dHist_ECALNeutralShowerDeltaTVsE->Fill(locNeutralShowers[loc_i]->dEnergy, locDeltaT);
 			}
 			else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_BCAL)
 			{
