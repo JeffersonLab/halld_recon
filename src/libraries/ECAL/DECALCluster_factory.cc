@@ -10,6 +10,8 @@
 
 #include "DECALCluster_factory.h"
 #include <JANA/JEvent.h>
+#include <HDGEOMETRY/DGeometry.h>
+#include <DANA/DGeometryManager.h>
 
 //------------------
 // Init
@@ -46,7 +48,13 @@ void DECALCluster_factory::Init()
 //------------------
 void DECALCluster_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  event->GetSingle(dECALGeom);
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto dgeom = geo_manager->GetDGeometry(runnumber);
+  if (dgeom->HaveInsert()){
+    event->GetSingle(dECALGeom);
+  }
 }
 
 //------------------
