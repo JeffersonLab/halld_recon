@@ -73,6 +73,7 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	PARSE_SSP           = true;
 	SKIP_SSP_FORMAT_ERROR = false;
 	PARSE_GEMSRS        = true;
+	PARSE_HELICITY      = true;
         NSAMPLES_GEMSRS     = 9;
 	
 	LINK_TRIGGERTIME    = true;
@@ -1403,7 +1404,7 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
 //----------------
 void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
-	//if(!PARSE_F250){ iptr = &iptr[(*iptr) + 1]; return; }
+	if(!PARSE_HELICITY){ iptr = &iptr[(*iptr) + 1]; return; }
 
 	auto pe_iter = current_parsed_events.begin();
 	DParsedEvent *pe = NULL;
@@ -1464,8 +1465,8 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 					if(VERBOSE>7) cout << "      Helicity Decoder Data Header (0x"<<hex<<*iptr<<dec<<") header reserved=" << header_reserved << " header number words="<<header_number_words <<endl;
 					
 					// sanity checks
-					if(header_reserved != 0x18)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JException("Bad helicity decoder header data", __FILE__, __LINE__);}
-					if(header_number_words != 14)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JException("Bad helicity decoder header payload", __FILE__, __LINE__);}
+					if(header_reserved != 0x18)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JExceptionDataFormat("Bad helicity decoder header data", __FILE__, __LINE__);}
+					if(header_number_words != 14)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JExceptionDataFormat("Bad helicity decoder header payload", __FILE__, __LINE__);}
 
 					iptr++;
 					

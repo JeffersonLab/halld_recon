@@ -93,6 +93,7 @@ class DEVIOWorkerThread{
 		bool  PARSE_SSP;
 	        bool  SKIP_SSP_FORMAT_ERROR;
 		bool  PARSE_GEMSRS;
+		bool  PARSE_HELICITY;
                 int   NSAMPLES_GEMSRS;
 
 		bool  LINK_TRIGGERTIME;
