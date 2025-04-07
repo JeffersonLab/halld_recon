@@ -2169,6 +2169,30 @@ void DHistogramAction_DetectorPID::Initialize(const std::shared_ptr<const JEvent
 
 			gDirectory->cd("..");
 
+			//ECAL
+			CreateAndChangeTo_Directory("ECAL", "ECAL");
+
+			locHistName = string("DeltaBetaVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);#Delta#beta");
+			dHistMap_DeltaBetaVsP[SYS_ECAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaBetaBins, dMinDeltaBeta, dMaxDeltaBeta);
+
+			locHistName = string("DeltaTVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);#Deltat_{ECAL - RF}");
+			dHistMap_DeltaTVsP[SYS_ECAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
+
+/*
+			//Uncomment when ready!
+			locHistName = string("TimePullVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);#Deltat/#sigma_{#Deltat}");
+			dHistMap_TimePullVsP[SYS_ECAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DPullBins, dMinPull, dMaxPull);
+
+			locHistName = string("TimeFOMVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);Timing PID Confidence Level");
+			dHistMap_TimeFOMVsP[SYS_ECAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DFOMBins, 0.0, 1.0);
+*/
+
+			gDirectory->cd("..");
+
 			//CCAL
 			CreateAndChangeTo_Directory("CCAL", "CCAL");
 
