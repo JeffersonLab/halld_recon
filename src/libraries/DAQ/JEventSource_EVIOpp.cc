@@ -102,7 +102,7 @@ void JEventSource_EVIOpp::Open() {
 	PARSE_TRIGGER = true;
 	PARSE_SSP = true;
 	PARSE_GEMSRS = false;
-	PARSE_HELICITY = false;
+	PARSE_HELICITY = true;
         NSAMPLES_GEMSRS = 9;
 	APPLY_TRANSLATION_TABLE = true;
 	IGNORE_EMPTY_BOR = false;
