@@ -223,7 +223,7 @@ DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
         event->GetSingle(dFCALGeometry);
 
 	// ECAL geometry
-        event->GetSingle(dECALGeometry);
+	if (locGeometry->HaveInsert()) event->GetSingle(dECALGeometry);
 
 	//TOF calibration constants & geometry
 	event->GetSingle(dTOFGeometry);
