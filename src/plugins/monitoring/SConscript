@@ -59,6 +59,7 @@ subdirs = [
 'timing_online',
 'DIRC_online',
 'TRD_online',
+'TRDTrack',
 'RSAI_KO',
 'BEAM_online',
 'lumi_mon',
