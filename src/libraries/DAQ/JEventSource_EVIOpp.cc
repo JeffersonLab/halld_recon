@@ -241,6 +241,7 @@ void JEventSource_EVIOpp::Open() {
 		w->PARSE_TRIGGER       = PARSE_TRIGGER;
 		w->PARSE_SSP           = PARSE_SSP;
 		w->PARSE_GEMSRS        = PARSE_GEMSRS;
+		w->PARSE_HELICITY      = PARSE_HELICITY;
                 w->NSAMPLES_GEMSRS     = NSAMPLES_GEMSRS;
 		w->LINK_TRIGGERTIME    = LINK_TRIGGERTIME;
 		w->LINK_CONFIG         = LINK_CONFIG;
