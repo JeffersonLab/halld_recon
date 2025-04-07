@@ -162,7 +162,7 @@ void JEventProcessor_TRD_online::Init() {
     trdDir->cd();
     gDirectory->mkdir("Point")->cd();
 	hPoint_NHits = new TH1I("Point_NHits","TRD Calibrated Point Multiplicity;Calibrated Points;Events",250,0.5,0.5+250);
-    hPoint_XYT = new TH3I("Point_XYT","TRD 3D Points;X [cm];Y [cm];8*(Peak Time) [ns]",800,-89.5,-10.5,400,-69.5,-30.5,200,0.,200.*8.);
+    hPoint_XYT = new TH3I("Point_XYT","TRD 3D Points;X [cm];Y [cm];8*(Peak Time) [ns]",800,-89.5,-9.5,400,-69.5,-29.5,200,0.,200.*8.);
 	hPoint_Time = new TH1I("Point_Time","TRD Point Time;8*(Peak Time) [ns]; ",200,0.,200.*8.);
 	hPoint_dE = new TH1I("Point_dE","TRD Point Charge;Average dE [q]; ",450,0.,3000.);
 	hPoint_dEDiff = new TH1I("Point_dEDiff","TRD Point Charge X,Y Weighted Diff.;(dE_x - dE_y)/(dE_x + dE_y); ",100,-1.,1.);
@@ -170,11 +170,11 @@ void JEventProcessor_TRD_online::Init() {
 	hPoint_dE_XY = new TH2I("Point_dE_XY","TRD Point Charge Corr. in X,Y;X Strip dE [q]; Y Strip dE [q]",450,0.,3000.,450,0.,3000.);
 	hPoint_TimeVsdEX= new TH2I("Point_TimeVsdEX","TRD Point Charge of X in Time;X Strip dE [q];8*(Peak Time) [ns]",450,0.,3000.,200,0.,200.*8.);
 	hPoint_TimeVsdEY= new TH2I("Point_TimeVsdEY","TRD Point Charge of Y in Time;Y Strip dE [q];8*(Peak Time) [ns]",450,0.,3000.,200,0.,200.*8.);
-	hPoint_OccupancyX = new TH1I("Point_OccupancyX","TRD Point X;X [cm]; ",800,-89.5,-10.5);
-	hPoint_OccupancyY = new TH1I("Point_OccupancyY","TRD Point Y;Y [cm]; ",400,-69.5,-30.5);
-	hPoint_XYDisplay = new TH2I("Point_XYDisplay","TRD 2D Point Display;X [cm];Y [cm]",800,-89.5,-10.5,400,-69.5,-30.5);
-	hPoint_TimeVsX= new TH2I("Point_TimeVsX","TRD Point X in Time;X [cm];8*(Peak Time) [ns]",800,-89.5,-10.5,200,0.,200.*8.);
-	hPoint_TimeVsY= new TH2I("Point_TimeVsY","TRD Point Y in Time;Y [cm];8*(Peak Time) [ns]",400,-69.5,-30.5,200,0.,200.*8.);
+	hPoint_OccupancyX = new TH1I("Point_OccupancyX","TRD Point X;X [cm]; ",800,-89.5,-9.5);
+	hPoint_OccupancyY = new TH1I("Point_OccupancyY","TRD Point Y;Y [cm]; ",400,-69.5,-29.5);
+	hPoint_XYDisplay = new TH2I("Point_XYDisplay","TRD 2D Point Display;X [cm];Y [cm]",800,-89.5,-9.5,400,-69.5,-29.5);
+	hPoint_TimeVsX= new TH2I("Point_TimeVsX","TRD Point X in Time;X [cm];8*(Peak Time) [ns]",800,-89.5,-9.5,200,0.,200.*8.);
+	hPoint_TimeVsY= new TH2I("Point_TimeVsY","TRD Point Y in Time;Y [cm];8*(Peak Time) [ns]",400,-69.5,-29.5,200,0.,200.*8.);
 	hPoint_TimeDiff = new TH1I("Point_TimeDiff","TRD Point Time Difference;abs(X Time - Y Time) [ns]; ",80,-40.,40.);
 	
     trdDir->cd();

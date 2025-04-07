@@ -25,7 +25,7 @@ void DTRDPoint_factory::Init()
   // Some parameters for defining matching
   DRIFT_VELOCITY=0.0033; // cm/ns
 
-  TIME_DIFF_MAX = 48.;
+  TIME_DIFF_MAX = 40.;
   app->SetDefaultParameter("TRD:XY_TIME_DIFF",TIME_DIFF_MAX);
 	
   dE_DIFF_MAX = 10000.;

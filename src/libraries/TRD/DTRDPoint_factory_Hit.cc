@@ -22,7 +22,7 @@ void DTRDPoint_factory_Hit::Init()
 {
 		auto app = GetApplication();
 		
-		TIME_DIFF_MAX = 48.;
+		TIME_DIFF_MAX = 40.;
 		app->SetDefaultParameter("TRD:XY_TIME_DIFF",TIME_DIFF_MAX);
 		
 		dE_DIFF_MAX = 10000.;
