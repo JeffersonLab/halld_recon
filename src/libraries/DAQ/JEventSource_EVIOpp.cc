@@ -102,6 +102,7 @@ void JEventSource_EVIOpp::Open() {
 	PARSE_TRIGGER = true;
 	PARSE_SSP = true;
 	PARSE_GEMSRS = false;
+	PARSE_HELICITY = false;
         NSAMPLES_GEMSRS = 9;
 	APPLY_TRANSLATION_TABLE = true;
 	IGNORE_EMPTY_BOR = false;
@@ -149,6 +150,7 @@ void JEventSource_EVIOpp::Open() {
 	japp->SetDefaultParameter("EVIO:PARSE_TRIGGER", PARSE_TRIGGER, "Set this to 0 to disable parsing of the built trigger bank from CODA (for benchmarking/debugging)");
 	japp->SetDefaultParameter("EVIO:PARSE_SSP", PARSE_SSP, "Set this to 0 to disable parsing of the SSP (DIRC data) bank from CODA (for benchmarking/debugging)");
 	japp->SetDefaultParameter("EVIO:PARSE_GEMSRS", PARSE_GEMSRS, "Set this to 0 to disable parsing of the SRS (GEM data) bank from CODA (for benchmarking/debugging)");
+	japp->SetDefaultParameter("EVIO:PARSE_HELICITY", PARSE_HELICITY, "Set this to 0 to disable parsing of the helicity decoder bank from CODA (for benchmarking/debugging)");
   japp->SetDefaultParameter("EVIO:NSAMPLES_GEMSRS", NSAMPLES_GEMSRS, "Set this to number of readout samples for SRS (GEM data) bank from CODA (for benchmarking/debugging)");
 	japp->SetDefaultParameter("EVIO:APPLY_TRANSLATION_TABLE", APPLY_TRANSLATION_TABLE, "Apply the translation table to create DigiHits (you almost always want this on)");
 	japp->SetDefaultParameter("EVIO:IGNORE_EMPTY_BOR", IGNORE_EMPTY_BOR, "Set to non-zero to continue processing data even if an empty BOR event is encountered.");
