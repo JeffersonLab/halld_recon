@@ -495,6 +495,9 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		map<int, TH2I*> dHistMap_FCALEOverPVsP;
 		map<int, TH2I*> dHistMap_FCALEOverPVsTheta;
 
+  	        map<int, TH2I*> dHistMap_ECALEOverPVsP;
+		map<int, TH2I*> dHistMap_ECALEOverPVsTheta;
+
 		map<DetectorSystem_t, map<int, TH2I*> > dHistMap_dEdXVsP;
 		map<DetectorSystem_t, map<Particle_t, TH2I*> > dHistMap_DeltadEdXVsP;
 //		map<DetectorSystem_t, map<Particle_t, TH2I*> > dHistMap_dEdXPullVsP;

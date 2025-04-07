@@ -1919,6 +1919,30 @@ void DHistogramAction_DetectorPID::Initialize(const std::shared_ptr<const JEvent
 
 		gDirectory->cd("..");
 
+		//ECAL
+		CreateAndChangeTo_Directory("ECAL", "ECAL");
+
+		locHistName = "BetaVsP_q0";
+		locHistTitle = "ECAL q^{0};Shower Energy (GeV);#beta";
+		dHistMap_BetaVsP[SYS_ECAL][0] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DBetaBins, dMinBeta, dMaxBeta);
+
+		locHistName = "DeltaTVsShowerE_Photon";
+		locHistTitle = string("ECAL ") + locParticleROOTName + string(";Shower Energy (GeV);#Deltat_{FCAL - RF}");
+		dHistMap_DeltaTVsP[SYS_ECAL][Gamma] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
+
+/*
+		//Uncomment when ready!
+		locHistName = "TimePullVsShowerE_Photon";
+		locHistTitle = string("FCAL ") + locParticleROOTName + string(";Shower Energy (GeV);#Deltat/#sigma_{#Deltat}");
+		dHistMap_TimePullVsP[SYS_FCAL][Gamma] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DPullBins, dMinPull, dMaxPull);
+
+		locHistName = "TimeFOMVsShowerE_Photon";
+		locHistTitle = string("FCAL ") + locParticleROOTName + string(";Shower Energy (GeV);Timing PID Confidence Level");
+		dHistMap_TimeFOMVsP[SYS_FCAL][Gamma] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DFOMBins, 0.0, 1.0);
+*/
+
+		gDirectory->cd("..");
+
 		//CCAL
 		CreateAndChangeTo_Directory("CCAL", "CCAL");
 
@@ -1978,6 +2002,23 @@ void DHistogramAction_DetectorPID::Initialize(const std::shared_ptr<const JEvent
 			locHistName = string("EOverPVsTheta_") + locParticleName;
 			locHistTitle = string("BCAL ") + locParticleROOTName + string(";#theta#circ;E_{Shower}/p_{Track} (c);");
 			dHistMap_BCALEOverPVsTheta[locCharge] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DBCALThetaBins, dMinBCALTheta, dMaxBCALTheta, dNum2DEOverPBins, dMinEOverP, dMaxEOverP);
+
+			gDirectory->cd("..");
+
+			//ECAL
+			CreateAndChangeTo_Directory("ECAL", "ECAL");
+
+			locHistName = string("BetaVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(";p (GeV/c);#beta");
+			dHistMap_BetaVsP[SYS_ECAL][locCharge] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DBetaBins, dMinBeta, dMaxBeta);
+
+			locHistName = string("EOverPVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(";p (GeV/c);E_{Shower}/p_{Track} (c);");
+			dHistMap_ECALEOverPVsP[locCharge] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DEOverPBins, dMinEOverP, dMaxEOverP);
+
+			locHistName = string("EOverPVsTheta_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(";#theta#circ;E_{Shower}/p_{Track} (c);");
+			dHistMap_ECALEOverPVsTheta[locCharge] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DFCALThetaBins, dMinFCALTheta, dMaxFCALTheta, dNum2DEOverPBins, dMinEOverP, dMaxEOverP);
 
 			gDirectory->cd("..");
 
@@ -2259,6 +2300,11 @@ bool DHistogramAction_DetectorPID::Perform_Action(const std::shared_ptr<const JE
 					dHistMap_BetaVsP[SYS_FCAL][0]->Fill(locShowerEnergy, locBeta_Timing);
 					dHistMap_DeltaTVsP[SYS_FCAL][Gamma]->Fill(locShowerEnergy, locDeltaT);
 				}
+				else if(locNeutralShower->dDetectorSystem == SYS_ECAL)
+				{
+					dHistMap_BetaVsP[SYS_ECAL][0]->Fill(locShowerEnergy, locBeta_Timing);
+					dHistMap_DeltaTVsP[SYS_ECAL][Gamma]->Fill(locShowerEnergy, locDeltaT);
+				}
 				else if(locNeutralShower->dDetectorSystem == SYS_CCAL)
 				{
 					dHistMap_BetaVsP[SYS_CCAL][0]->Fill(locShowerEnergy, locBeta_Timing);
@@ -2283,6 +2329,7 @@ bool DHistogramAction_DetectorPID::Perform_Action(const std::shared_ptr<const JE
 
 			//if RF time is indeterminate, start time will be NaN
 			auto locBCALShowerMatchParams = locChargedTrackHypothesis->Get_BCALShowerMatchParams();
+			auto locECALShowerMatchParams = locChargedTrackHypothesis->Get_ECALShowerMatchParams();
 			auto locFCALShowerMatchParams = locChargedTrackHypothesis->Get_FCALShowerMatchParams();
 			auto locTOFHitMatchParams = locChargedTrackHypothesis->Get_TOFHitMatchParams();
 			auto locSCHitMatchParams = locChargedTrackHypothesis->Get_SCHitMatchParams();
@@ -2351,6 +2398,25 @@ bool DHistogramAction_DetectorPID::Perform_Action(const std::shared_ptr<const JE
 						dHistMap_DeltaBetaVsP[SYS_BCAL][locPID]->Fill(locP, locDeltaBeta);
 						double locDeltaT = locBCALShower->t - locBCALShowerMatchParams->dFlightTime - locStartTime;
 						dHistMap_DeltaTVsP[SYS_BCAL][locPID]->Fill(locP, locDeltaT);
+					}
+				}
+			}
+			if(locECALShowerMatchParams != NULL)
+			{
+				const DECALShower* locECALShower = locECALShowerMatchParams->dECALShower;
+				double locEOverP = locECALShower->E/locP;
+				dHistMap_ECALEOverPVsP[locCharge]->Fill(locP, locEOverP);
+				dHistMap_ECALEOverPVsTheta[locCharge]->Fill(locTheta, locEOverP);
+				if(locEventRFBunch->dNumParticleVotes > 1)
+				{
+					double locBeta_Timing = locECALShowerMatchParams->dPathLength/(29.9792458*(locECALShower->t - locChargedTrackHypothesis->t0()));
+					dHistMap_BetaVsP[SYS_ECAL][locCharge]->Fill(locP, locBeta_Timing);
+					if(dHistMap_DeltaBetaVsP[SYS_ECAL].find(locPID) != dHistMap_DeltaBetaVsP[SYS_ECAL].end())
+					{
+						double locDeltaBeta = locChargedTrackHypothesis->lorentzMomentum().Beta() - locBeta_Timing;
+						dHistMap_DeltaBetaVsP[SYS_ECAL][locPID]->Fill(locP, locDeltaBeta);
+						double locDeltaT = locECALShower->t - locECALShowerMatchParams->dFlightTime - locStartTime;
+						dHistMap_DeltaTVsP[SYS_ECAL][locPID]->Fill(locP, locDeltaT);
 					}
 				}
 			}
