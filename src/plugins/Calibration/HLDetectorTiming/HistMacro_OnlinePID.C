@@ -40,8 +40,8 @@
 	locDirectory->cd();
 
         //Setpoints
-        double nominalSCTime = 10.;
-        double nominalTOFTime = 30.;
+        double nominalSCTime = -3.;
+        double nominalTOFTime = 19.;
 
 	//Get Histograms
  	TH1I* SC_Timing          = (TH1I*)gDirectory->Get("Physics Triggers/SC/SCHit Matched time");
