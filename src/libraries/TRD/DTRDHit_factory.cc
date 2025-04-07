@@ -9,6 +9,8 @@ using namespace std;
 
 #include <DAQ/Df125Config.h>
 #include <DAQ/Df125FDCPulse.h>
+#include <TH1.h>
+#include <TH2.h>
 
 #include "TRD/DTRDHit_factory.h"
 using namespace jana;
@@ -48,6 +50,7 @@ jerror_t DTRDHit_factory::init(void)
 	gPARMS->SetDefaultParameter("TRD:XY_TIME_DIFF", XY_TIME_DIFF, 
 			      "Time difference between hits in X and Y planes to be considered a coincidence (default: 20.)");
 
+	xycorr = new TH2I("xycorr","x-y hit correlation",720,-0.5,719.5,720,-0.5,719.5);
 	return NOERROR;
 }
 
@@ -132,6 +135,7 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     loop->Get(digihits);
 
 	vector<DTRDHit*> hits_plane[2]; // one for each plane
+	vector<DTRDHit*> hits_pamp[2][10]; // one for each pre-amp board
     
     // make hits out of all DTRDDigiHit objects	
     for (unsigned int i=0; i < digihits.size(); i++) {
@@ -218,29 +222,96 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    hit->AddAssociatedObject(digihit);
 
 		if (!IS_XY_TIME_DIFF_CUT) _data.push_back(hit);
-		else hits_plane[digihit->plane-1].push_back(hit);
+		else {
+			hits_plane[digihit->plane-1].push_back(hit);
+		}
 		// _data.push_back(hit);
     }
 
+    
+    int nfreq=17;
+
 	// loops to check the time coincidence of hits in the two planes and add them to the _data vector
 	if (IS_XY_TIME_DIFF_CUT) {
+		float phase[2][10][20]={0};
 		for (unsigned int i=0; i < hits_plane[0].size(); i++) {
+		  if(hits_plane[0].size()>60000)continue;
 			for (unsigned int j=0; j < hits_plane[1].size(); j++) {
+			  if(hits_plane[1].size()>60000)continue;
+			//	cout<<" i,j,diff="<<i<<" "<<j<<" "<<abs(hits_plane[0][i]->t - hits_plane[1][j]->t)<<endl;
+                                int xstrip=hits_plane[0][i]->strip;
+				int ystrip=hits_plane[1][j]->strip;
+				//if(ystrip!=232&&(xstrip<600||(ystrip!=3&&ystrip!=4&&ystrip!=233&&ystrip!=193&&ystrip!=195&&ystrip!=196&&(ystrip<337||ystrip>344)&&(ystrip<313||ystrip>335)))){
 				if (abs(hits_plane[0][i]->t - hits_plane[1][j]->t) < XY_TIME_DIFF) {
-					_data.push_back(hits_plane[0][i]);
+
+					//_data.push_back(hits_plane[0][i]);
+			                int pamp=(hits_plane[0][i]->strip)/120;
+					hits_pamp[0][pamp].push_back(hits_plane[0][i]);
+					// time in sample modulo nfreq (number of samples correspoding to the noise freq.)
+					// f ranges from 0 to nfreq-1
+					int ph=((int)hits_plane[0][i]->t/8)%nfreq;
+					//cout<<" x,pamp,size,f= "<<pamp<<" "<<hits_pamp[0][pamp].size()<<" "<<f<<endl;;
+					phase[0][pamp][ph]+=1;
+					xycorr->Fill(xstrip,ystrip);
 					break;
 				}
+				//}
 			}
 		}
 	
 		for (unsigned int i=0; i < hits_plane[1].size(); i++) {
+		  if(hits_plane[1].size()>60000)continue;
 			for (unsigned int j=0; j < hits_plane[0].size(); j++) {
+				if(hits_plane[0].size()>60000)continue;
 				if (abs(hits_plane[1][i]->t - hits_plane[0][j]->t) < XY_TIME_DIFF) {
-					_data.push_back(hits_plane[1][i]);
+					//_data.push_back(hits_plane[1][i]);
+			                int pamp=(hits_plane[1][i]->strip)/120;
+					if(pamp>6)cout<<" y plane strip,pamp= "<<hits_plane[1][i]->strip<<" "<<pamp<<endl;
+					hits_pamp[1][pamp].push_back(hits_plane[1][i]);
+					int ph=((int)hits_plane[1][i]->t/8)%nfreq;
+					//cout<<" y,pamp,size,f= "<<pamp<<" "<<hits_pamp[1][pamp].size()<<" "<<f<<endl;;
+					phase[1][pamp][ph]+=1;
 					break;
 				}
 			}
 		}	
+
+        int fmax[2][10]={-1};	
+        int amax[2][10]={0};	
+	for (int plane=0;plane<2;plane++){
+	for (int pamp=0;pamp<10;pamp++){
+		for (unsigned int i=0; i < nfreq; i++) {
+                    int fp=phase[plane][pamp][i];
+		    if(fp>amax[plane][pamp]){
+		       amax[plane][pamp]=fp;
+		       fmax[plane][pamp]=i;
+		    }
+		//if(hits_pamp[plane][pamp].size()>0)cout<<" hit_size,plne,pamp,i,phase,fmax= "<<hits_pamp[plane][pamp].size()<<" "<<plane<<" "<<pamp<<" "<<i<<" "<<phase[plane][pamp][i]<<" "<<fmax[plane][pamp]<<endl;		
+		}
+	}
+	}
+
+
+		
+	for (int plane=0;plane<2;plane++){
+	for (int pamp=0;pamp<10;pamp++){
+		for (unsigned int i=0; i < hits_pamp[plane][pamp].size(); i++) {
+		//cout<<" pamp= "<<pamp<<endl;
+		// ff -> phase of the hit time
+		int ff=((int)hits_pamp[plane][pamp][i]->t/8)%nfreq;
+		int diff=abs(ff-fmax[plane][pamp]);
+		int cdiff=std::min(diff,nfreq-diff);
+		//if(!(amax[plane][pamp]<3||cdiff>3)){
+		// to do: set the thresholds for amax and cdiff (5 and 3 in the example bewlow) parameters
+		if(!(amax[plane][pamp]<5)||cdiff>3){
+			//cout<<" plane,pamp,t,strip= "<<plane<<" "<<pamp<<" "<<(hits_pamp[plane][pamp][i]->t/8)<<" "<<hits_pamp[plane][pamp][i]->strip<<endl; 
+		} else {
+			_data.push_back(hits_pamp[plane][pamp][i]);
+		}
+		}
+	}
+	}
+
 	}
 		    
     return NOERROR;

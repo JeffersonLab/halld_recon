@@ -14,6 +14,9 @@ using namespace std;
 #include "TTAB/DTranslationTable.h"
 #include "DTRDDigiHit.h"
 #include "DTRDHit.h"
+#include <TH1.h>
+#include <TH2.h>
+
 
 // store constants so that they can be accessed by pixel number
 typedef  vector<double>  trd_digi_constants_t;
@@ -33,6 +36,8 @@ class DTRDHit_factory:public jana::JFactory<DTRDHit>{
   		double HIGH_TCUT;
 		bool IS_XY_TIME_DIFF_CUT;
 		double XY_TIME_DIFF;
+
+		TH2I *xycorr;
 
 		// calibration constants stored in channel format
 		vector<trd_digi_constants_t> time_offsets;
