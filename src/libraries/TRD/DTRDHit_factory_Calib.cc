@@ -8,12 +8,9 @@
 using namespace std;
 
 #include "DANA/DEvent.h"
-
 #include <DAQ/Df125Config.h>
 #include <DAQ/Df125FDCPulse.h>
-
 #include "TRD/DTRDHit_factory_Calib.h"
-
 
 //------------------
 // Init
