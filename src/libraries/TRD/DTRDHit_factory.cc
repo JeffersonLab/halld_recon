@@ -303,7 +303,7 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		int cdiff=std::min(diff,nfreq-diff);
 		//if(!(amax[plane][pamp]<3||cdiff>3)){
 		// to do: set the thresholds for amax and cdiff (5 and 3 in the example bewlow) parameters
-		if(!(amax[plane][pamp]<5)||cdiff>3){
+		if(!(amax[plane][pamp]<20||cdiff>17)){
 			//cout<<" plane,pamp,t,strip= "<<plane<<" "<<pamp<<" "<<(hits_pamp[plane][pamp][i]->t/8)<<" "<<hits_pamp[plane][pamp][i]->strip<<endl; 
 		} else {
 			_data.push_back(hits_pamp[plane][pamp][i]);
