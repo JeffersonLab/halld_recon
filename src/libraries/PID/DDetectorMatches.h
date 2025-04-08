@@ -19,6 +19,7 @@
 #include <FMWPC/DFMWPCCluster.h>
 #include <BCAL/DBCALShower.h>
 #include <FCAL/DFCALShower.h>
+#include <ECAL/DECALShower.h>
 #include <START_COUNTER/DSCHit.h>
 #include <DIRC/DDIRCPmtHit.h>
 #include <DIRC/DDIRCTruthPmtHit.h>
@@ -47,6 +48,22 @@ class DBCALShowerMatchParams
 			double locRSq = dBCALShower->x*dBCALShower->x + dBCALShower->y*dBCALShower->y;
 			return sqrt(dDeltaZToShower*dDeltaZToShower + dDeltaPhiToShower*dDeltaPhiToShower*locRSq);
 		}
+};
+
+class DECALShowerMatchParams
+{
+public:
+  DECALShowerMatchParams(void) : dECALShower(NULL),dx(0.0), dFlightTime(0.0),
+				 dFlightTimeVariance(0.0), dPathLength(0.0),
+				 dDOCAToShower(0.0){}
+  
+  const DECALShower* dECALShower;
+
+  double dx; //the distance the track traveled through the detector system up to the shower position
+  double dFlightTime; //flight time from DKinematicData::position() to the shower
+  double dFlightTimeVariance;
+  double dPathLength; //path length from DKinematicData::position() to the shower
+  double dDOCAToShower; //DOCA of track to shower
 };
 
 class DFCALSingleHitMatchParams
@@ -204,10 +221,12 @@ class DDetectorMatches : public JObject
 		inline bool Get_FMWPCMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DFMWPCMatchParams> >& locMatchParams) const;
 		inline bool Get_SCMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DSCHitMatchParams> >& locMatchParams) const;
 		inline bool Get_DIRCMatchParams(const DTrackingData* locTrack, shared_ptr<const DDIRCMatchParams>& locMatchParams) const;
-  inline bool Get_TRDMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DTRDMatchParams> >& locMatchParams) const;
+  		inline bool Get_TRDMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DTRDMatchParams> >& locMatchParams) const;
+  		inline bool Get_ECALMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALShowerMatchParams> >& locMatchParams) const;
 	
 		inline bool Get_IsMatchedToTrack(const DBCALShower* locBCALShower) const;
 		inline bool Get_IsMatchedToTrack(const DFCALShower* locFCALShower) const;
+  		inline bool Get_IsMatchedToTrack(const DECALShower* locECALShower) const;
 		inline bool Get_IsMatchedToHit(const DTrackingData* locTrack) const;
 		inline bool Get_IsMatchedToDetector(const DTrackingData* locTrack, DetectorSystem_t locDetectorSystem) const;
 
@@ -216,23 +235,26 @@ class DDetectorMatches : public JObject
 		inline bool Get_TrackMatchParams(const DTOFPoint* locTOFPoint, vector<shared_ptr<const DTOFHitMatchParams> >& locMatchParams) const;
 		inline bool Get_TrackMatchParams(const DSCHit* locSCHit, vector<shared_ptr<const DSCHitMatchParams> >& locMatchParams) const;
 		inline bool Get_DIRCTrackMatchParamsMap(map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParamsMap);
-		inline bool Get_TrackMatchParams(const DCTOFPoint* locCTOFPoint, vector<shared_ptr<const DCTOFHitMatchParams> >& locMatchParams) const;	
+		inline bool Get_TrackMatchParams(const DCTOFPoint* locCTOFPoint, vector<shared_ptr<const DCTOFHitMatchParams> >& locMatchParams) const;
+  		inline bool Get_TrackMatchParams(const DECALShower* locECALShower, vector<shared_ptr<const DECALShowerMatchParams> >& locMatchParams) const;
 
 		inline bool Get_DistanceToNearestTrack(const DBCALShower* locBCALShower, double& locDistance) const;
 		inline bool Get_DistanceToNearestTrack(const DBCALShower* locBCALShower, double& locDeltaPhi, double& locDeltaZ) const;
 		inline bool Get_DistanceToNearestTrack(const DFCALShower* locFCALShower, double& locDistance) const;
+  		inline bool Get_DistanceToNearestTrack(const DECALShower* locECALShower, double& locDistance) const;
 
 		inline bool Get_FlightTimePCorrelation(const DTrackingData* locTrack, DetectorSystem_t locDetectorSystem, double& locCorrelation) const;
 
 		//Get # Matches
 		inline size_t Get_NumTrackBCALMatches(void) const;
 		inline size_t Get_NumTrackFCALMatches(void) const;
+  		inline size_t Get_NumTrackECALMatches(void) const;
 		inline size_t Get_NumTrackTOFMatches(void) const;
 		inline size_t Get_NumTrackSCMatches(void) const;
 		inline size_t Get_NumTrackDIRCMatches(void) const;
 		inline size_t Get_NumTrackCTOFMatches(void) const;
 		inline size_t Get_NumTrackFMWPCMatches(void) const;
-  inline size_t Get_NumTrackTRDMatches(void) const;
+  		inline size_t Get_NumTrackTRDMatches(void) const;
 
 		//SETTERS:
 		inline void Add_Match(const DTrackingData* locTrack, const DBCALShower* locBCALShower, const shared_ptr<const DBCALShowerMatchParams>& locShowerMatchParams);
@@ -244,10 +266,12 @@ class DDetectorMatches : public JObject
 		inline void Add_Match(const DTrackingData* locTrack, const shared_ptr<const DDIRCMatchParams>& locDIRCMatchParams);
 		inline void Add_Match(const DTrackingData *locTrack,
 				      const shared_ptr<const DFMWPCMatchParams>& locFMWPCMatchParams);
-  inline void Add_Match(const DTrackingData* locTrack, const shared_ptr<const DTRDMatchParams>& locHitMatchParams);
+  		inline void Add_Match(const DTrackingData* locTrack, const shared_ptr<const DTRDMatchParams>& locHitMatchParams);
+  		inline void Add_Match(const DTrackingData* locTrack, const DECALShower* locECALShower, const shared_ptr<const DECALShowerMatchParams>& locShowerMatchParams);
 
 		inline void Set_DistanceToNearestTrack(const DBCALShower* locBCALShower, double locDeltaPhi, double locDeltaZ);
 		inline void Set_DistanceToNearestTrack(const DFCALShower* locFCALShower, double locDistanceToNearestTrack);
+  		inline void Set_DistanceToNearestTrack(const DECALShower* locECALShower, double locDistanceToNearestTrack);
 		inline void Set_FlightTimePCorrelation(const DTrackingData* locTrack, DetectorSystem_t locDetectorSystem, double locCorrelation);
 
 		void Summarize(JObjectSummary& summary) const override
@@ -260,6 +284,7 @@ class DDetectorMatches : public JObject
 			summary.add(Get_NumTrackCTOFMatches(), "#_Track_CTOF_Matches", "%d");
 			summary.add(Get_NumTrackFMWPCMatches(), "#_Track_FMWPC_Matches", "%d");
 			summary.add(Get_NumTrackTRDMatches(), "#_Track_TRD_Matches", "%d");
+			summary.add(Get_NumTrackECALMatches(), "#_Track_ECAL_Matches", "%d");
 		}
 
 	private:
@@ -273,7 +298,8 @@ class DDetectorMatches : public JObject
 		map<const DTrackingData*, vector<shared_ptr<const DFMWPCMatchParams> > > dTrackFMWPCMatchParams;
 		map<const DTrackingData*, vector<shared_ptr<const DSCHitMatchParams> > > dTrackSCMatchParams;
 		map<const DTrackingData*, shared_ptr<const DDIRCMatchParams> > dTrackDIRCMatchParams;
-  map<const DTrackingData*, vector<shared_ptr<const DTRDMatchParams> > > dTrackTRDMatchParams;
+  		map<const DTrackingData*, vector<shared_ptr<const DTRDMatchParams> > > dTrackTRDMatchParams;
+  		map<const DTrackingData*, vector<shared_ptr<const DECALShowerMatchParams> > > dTrackECALMatchParams;
 
 		//reverse-direction maps of the above (match params are the same objects)
 		map<const DBCALShower*, vector<shared_ptr<const DBCALShowerMatchParams> > > dBCALTrackMatchParams;
@@ -282,6 +308,7 @@ class DDetectorMatches : public JObject
 		map<const DCTOFPoint*, vector<shared_ptr<const DCTOFHitMatchParams> > > dCTOFTrackMatchParams;
 		map<const DSCHit*, vector<shared_ptr<const DSCHitMatchParams> > > dSCTrackMatchParams;
 		map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > dDIRCTrackMatchParams;
+  		map<const DECALShower*, vector<shared_ptr<const DECALShowerMatchParams> > > dECALTrackMatchParams;
 
 		//correlations between: (the flight time from a given detector system hit/shower to DKinematicData::position()), and the momentum at DKinematicData::position()
 			//Note that it is assumed that these correlations will not change between the different objects of each type
@@ -290,6 +317,7 @@ class DDetectorMatches : public JObject
 		//for BDT: help to determine if a shower is neutral or not
 		map<const DBCALShower*, pair<double, double> > dBCALShowerDistanceToNearestTrack; //first double is delta-phi, second is delta-z
 		map<const DFCALShower*, double> dFCALShowerDistanceToNearestTrack;
+  		map<const DECALShower*, double> dECALShowerDistanceToNearestTrack;
 };
 
 inline bool DDetectorMatches::Get_BCALMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DBCALShowerMatchParams> >& locMatchParams) const
@@ -300,6 +328,16 @@ inline bool DDetectorMatches::Get_BCALMatchParams(const DTrackingData* locTrack,
 		return false;
 	locMatchParams = locIterator->second;
 	return true;
+}
+
+inline bool DDetectorMatches::Get_ECALMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALShowerMatchParams> >& locMatchParams) const
+{
+  locMatchParams.clear();
+  auto locIterator = dTrackECALMatchParams.find(locTrack);
+  if(locIterator == dTrackECALMatchParams.end())
+    return false;
+  locMatchParams = locIterator->second;
+  return true;
 }
 
 inline bool DDetectorMatches::Get_FCALSingleHitMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DFCALSingleHitMatchParams> >& locMatchParams) const
@@ -391,9 +429,17 @@ inline bool DDetectorMatches::Get_IsMatchedToTrack(const DFCALShower* locFCALSho
 	return (dFCALTrackMatchParams.find(locFCALShower) != dFCALTrackMatchParams.end());
 }
 
+inline bool DDetectorMatches::Get_IsMatchedToTrack(const DECALShower* locECALShower) const
+{
+  return (dECALTrackMatchParams.find(locECALShower) != dECALTrackMatchParams.end());
+}
+
+
 inline bool DDetectorMatches::Get_IsMatchedToHit(const DTrackingData* locTrack) const
 {
 	if(dTrackBCALMatchParams.find(locTrack) != dTrackBCALMatchParams.end())
+		return true;
+	if(dTrackECALMatchParams.find(locTrack) != dTrackECALMatchParams.end())
 		return true;
 	if(dTrackFCALMatchParams.find(locTrack) != dTrackFCALMatchParams.end())
 		return true;
@@ -408,6 +454,8 @@ inline bool DDetectorMatches::Get_IsMatchedToDetector(const DTrackingData* locTr
 {
 	if(locDetectorSystem == SYS_BCAL)
 		return (dTrackBCALMatchParams.find(locTrack) != dTrackBCALMatchParams.end());
+	else if(locDetectorSystem == SYS_ECAL)
+		return (dTrackECALMatchParams.find(locTrack) != dTrackECALMatchParams.end());
 	else if(locDetectorSystem == SYS_FCAL)
 		return (dTrackFCALMatchParams.find(locTrack) != dTrackFCALMatchParams.end());
 	else if(locDetectorSystem == SYS_TOF)
@@ -429,6 +477,16 @@ inline bool DDetectorMatches::Get_TrackMatchParams(const DBCALShower* locBCALSho
 	locMatchParams.clear();
 	auto locIterator = dBCALTrackMatchParams.find(locBCALShower);
 	if(locIterator == dBCALTrackMatchParams.end())
+		return false;
+	locMatchParams = locIterator->second;
+	return true;
+}
+
+inline bool DDetectorMatches::Get_TrackMatchParams(const DECALShower* locECALShower, vector<shared_ptr<const DECALShowerMatchParams> >& locMatchParams) const
+{
+	locMatchParams.clear();
+	auto locIterator = dECALTrackMatchParams.find(locECALShower);
+	if(locIterator == dECALTrackMatchParams.end())
 		return false;
 	locMatchParams = locIterator->second;
 	return true;
@@ -500,6 +558,15 @@ inline bool DDetectorMatches::Get_DistanceToNearestTrack(const DBCALShower* locB
 	return true;
 }
 
+inline bool DDetectorMatches::Get_DistanceToNearestTrack(const DECALShower* locECALShower, double& locDistance) const
+{
+	auto locIterator = dECALShowerDistanceToNearestTrack.find(locECALShower);
+	if(locIterator == dECALShowerDistanceToNearestTrack.end())
+		return false;
+	locDistance = locIterator->second;
+	return true;
+}
+
 inline bool DDetectorMatches::Get_DistanceToNearestTrack(const DFCALShower* locFCALShower, double& locDistance) const
 {
 	auto locIterator = dFCALShowerDistanceToNearestTrack.find(locFCALShower);
@@ -528,6 +595,15 @@ inline size_t DDetectorMatches::Get_NumTrackBCALMatches(void) const
 	auto locIterator = dTrackBCALMatchParams.begin();
 	unsigned int locNumTrackMatches = 0;
 	for(; locIterator != dTrackBCALMatchParams.end(); ++locIterator)
+		locNumTrackMatches += locIterator->second.size();
+	return locNumTrackMatches;
+}
+
+inline size_t DDetectorMatches::Get_NumTrackECALMatches(void) const
+{
+	auto locIterator = dTrackECALMatchParams.begin();
+	unsigned int locNumTrackMatches = 0;
+	for(; locIterator != dTrackECALMatchParams.end(); ++locIterator)
 		locNumTrackMatches += locIterator->second.size();
 	return locNumTrackMatches;
 }
@@ -598,6 +674,11 @@ inline void DDetectorMatches::Add_Match(const DTrackingData* locTrack, const DBC
 	dTrackBCALMatchParams[locTrack].push_back(locShowerMatchParams);
 	dBCALTrackMatchParams[locBCALShower].push_back(locShowerMatchParams);
 }
+inline void DDetectorMatches::Add_Match(const DTrackingData* locTrack, const DECALShower* locECALShower, const shared_ptr<const DECALShowerMatchParams>& locShowerMatchParams)
+{
+	dTrackECALMatchParams[locTrack].push_back(locShowerMatchParams);
+	dECALTrackMatchParams[locECALShower].push_back(locShowerMatchParams);
+}
 inline void DDetectorMatches::Add_Match(const DTrackingData* locTrack, const shared_ptr<const DFCALSingleHitMatchParams>& locFCALSingleHitMatchParams){
   dTrackFCALSingleHitMatchParams[locTrack].push_back(locFCALSingleHitMatchParams);
 }
@@ -636,6 +717,10 @@ inline void DDetectorMatches::Add_Match(const DTrackingData* locTrack, const sha
 inline void DDetectorMatches::Set_DistanceToNearestTrack(const DBCALShower* locBCALShower, double locDeltaPhi, double locDeltaZ)
 {
 	dBCALShowerDistanceToNearestTrack[locBCALShower] = pair<double, double>(locDeltaPhi, locDeltaZ);
+}
+inline void DDetectorMatches::Set_DistanceToNearestTrack(const DECALShower* locECALShower, double locDistanceToNearestTrack)
+{
+	dECALShowerDistanceToNearestTrack[locECALShower] = locDistanceToNearestTrack;
 }
 inline void DDetectorMatches::Set_DistanceToNearestTrack(const DFCALShower* locFCALShower, double locDistanceToNearestTrack)
 {

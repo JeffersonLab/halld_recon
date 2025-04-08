@@ -57,6 +57,7 @@ class DNeutralShower : public JObject
     summary.add(dSpacetimeVertex.Y(), "y", "%3.2f");
     summary.add(dSpacetimeVertex.Z(), "z", "%3.2f");
     summary.add(dSpacetimeVertex.T(), "t", "%3.2f");
+    summary.add(SystemName(dDetectorSystem), "Detector", "%s");
   }
 };
 
