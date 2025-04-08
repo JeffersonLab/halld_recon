@@ -62,6 +62,7 @@ DECALGeometry::DECALGeometry(const DGeometry *geom){
       m_row[m_numActiveBlocks]=my_row;
       m_column[m_numActiveBlocks]=col;
       m_activeBlock[my_row][col] = true;
+      m_channelNumber[my_row][col]=m_numActiveBlocks;
       
       m_numActiveBlocks++;
     }
