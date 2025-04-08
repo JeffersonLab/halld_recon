@@ -96,6 +96,9 @@ void DNeutralShower_factory::Process(const std::shared_ptr<const JEvent>& event)
   vector<const DFCALShower*> locFCALShowers;
   event->Get(locFCALShowers);
 
+  vector<const DECALShower*> locECALShowers;
+  event->Get(locECALShowers);
+
   vector<const DCCALShower*> locCCALShowers;
   event->Get(locCCALShowers);
 
@@ -154,6 +157,34 @@ void DNeutralShower_factory::Process(const std::shared_ptr<const JEvent>& event)
 
       Insert(locNeutralShower);
     }
+
+  // Loop over all DECALShowers, create DNeutralShower if didn't match to any tracks
+  // The chance of an actual neutral shower matching to a bogus track is very small
+  for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i){
+    if(locDetectorMatches->Get_IsMatchedToTrack(locECALShowers[loc_i]))
+      continue;
+
+    // create DNeutralShower
+    DNeutralShower* locNeutralShower = new DNeutralShower();
+    locNeutralShower->dBCALFCALShower = static_cast<const JObject*>(locECALShowers[loc_i]);
+    locNeutralShower->dDetectorSystem = SYS_ECAL;
+    locNeutralShower->dShowerID = locShowerID;
+    ++locShowerID;
+
+    locNeutralShower->dEnergy = locECALShowers[loc_i]->E;
+    locNeutralShower->dSpacetimeVertex.SetVect(locECALShowers[loc_i]->pos);
+    locNeutralShower->dSpacetimeVertex.SetT(locECALShowers[loc_i]->t);
+    locNeutralShower->AddAssociatedObject(locECALShowers[loc_i]);
+
+    locNeutralShower->dQuality = 1;
+
+    auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
+    locCovMatrix->ResizeTo(5, 5);
+    *locCovMatrix = locECALShowers[loc_i]->ExyztCovariance;
+    locNeutralShower->dCovarianceMatrix = locCovMatrix;
+
+    Insert(locNeutralShower);
+  }
 
   // Loop over all DFCALShowers, create DNeutralShower if didn't match to any tracks
   // The chance of an actual neutral shower matching to a bogus track is very small

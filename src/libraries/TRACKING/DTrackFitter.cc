@@ -63,6 +63,7 @@ DTrackFitter::DTrackFitter(const std::shared_ptr<const JEvent>& event)
 	extrapolations.emplace(SYS_TRD,myvector);
 	extrapolations.emplace(SYS_FMWPC,myvector);
 	extrapolations.emplace(SYS_CTOF,myvector);
+	extrapolations.emplace(SYS_ECAL,myvector);
 	extrapolations.emplace(SYS_NULL,myvector);	
 
 	extrapolations[SYS_TOF].reserve(1);
@@ -75,6 +76,7 @@ DTrackFitter::DTrackFitter(const std::shared_ptr<const JEvent>& event)
 	extrapolations[SYS_TRD].reserve(5);
 	extrapolations[SYS_FMWPC].reserve(6);
 	extrapolations[SYS_CTOF].reserve(1);
+	extrapolations[SYS_ECAL].reserve(2);
 	extrapolations[SYS_NULL].reserve(1);
 	
 	pulls.reserve(30);

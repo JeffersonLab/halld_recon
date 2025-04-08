@@ -50,6 +50,9 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	vector<const DFCALShower*> locFCALShowers;
 	event->Get(locFCALShowers);
 
+	vector<const DECALShower*> locECALShowers;
+	event->Get(locECALShowers);
+
 	vector<const DBCALShower*> locBCALShowers;
 	event->Get(locBCALShowers);
 
@@ -80,6 +83,7 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 		  MatchToCTOF(locParticleID, locTrackTimeBasedVector[loc_i], locCTOFPoints, locDetectorMatches);
 		  MatchToFMWPC(locTrackTimeBasedVector[loc_i], locFMWPCClusters, locDetectorMatches);
 		}
+		MatchToECAL(locParticleID, locTrackTimeBasedVector[loc_i], locECALShowers, locDetectorMatches);
 	}
 
 	//Find nearest tracks to showers
@@ -87,6 +91,8 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 		MatchToTrack(locParticleID, locBCALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
 	for(size_t loc_i = 0; loc_i < locFCALShowers.size(); ++loc_i)
 		MatchToTrack(locParticleID, locFCALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
+	for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i)
+		MatchToTrack(locParticleID, locECALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
 
 	// Try to find matches between tracks and single hits in FCAL
 	if (ENABLE_FCAL_SINGLE_HITS){
@@ -255,6 +261,20 @@ void DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID, con
 	}
 }
 
+void DDetectorMatches_factory::MatchToECAL(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DECALShower*>& locECALShowers, DDetectorMatches* locDetectorMatches) const
+{
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_ECAL);
+  if (extrapolations.size()==0) return;
+
+  double locInputStartTime = locTrackTimeBased->t0();
+  for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i)
+    {
+      shared_ptr<DECALShowerMatchParams>locShowerMatchParams;
+      if(locParticleID->Cut_MatchDistance(extrapolations, locECALShowers[loc_i], locInputStartTime, locShowerMatchParams))
+	    locDetectorMatches->Add_Match(locTrackTimeBased, locECALShowers[loc_i], locShowerMatchParams);
+	}
+}
+
 void DDetectorMatches_factory::MatchToSC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DSCHit*>& locSCHits, DDetectorMatches* locDetectorMatches) const
 {
   vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_START);
@@ -331,6 +351,24 @@ void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, co
 			locMinDistance = locShowerMatchParams->dDOCAToShower;
 	}
 	locDetectorMatches->Set_DistanceToNearestTrack(locFCALShower, locMinDistance);
+}
+
+void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, const DECALShower* locECALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const
+{
+  double locMinDistance = 999.0;
+  for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
+    {
+      map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations=locTrackTimeBasedVector[loc_i]->extrapolations;
+      if (extrapolations.size()==0) return;
+      
+      shared_ptr<DECALShowerMatchParams> locShowerMatchParams;
+      double locInputStartTime = locTrackTimeBasedVector[loc_i]->t0();
+      if(!locParticleID->Distance_ToTrack(extrapolations.at(SYS_ECAL), locECALShower, locInputStartTime, locShowerMatchParams))
+	continue;
+      if(locShowerMatchParams->dDOCAToShower < locMinDistance)
+	locMinDistance = locShowerMatchParams->dDOCAToShower;
+    }
+  locDetectorMatches->Set_DistanceToNearestTrack(locECALShower, locMinDistance);
 }
 
 // Try to find matches between a track and a single hit in FCAL
