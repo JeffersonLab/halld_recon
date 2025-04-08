@@ -108,10 +108,10 @@ void DTRDHit_factory_Calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 	if (DEvent::GetCalib(event, "/TRD/plane2/timing_offsets", time_offsets[1]))
 		jout << "Error loading /TRD/plane2/timing_offsets !" << endl;
 	
-	if(time_offsets[0].size() != num_x_strips)
+	if(static_cast<long int>(time_offsets[0].size()) != num_x_strips)
 		jerr << "Error loading TRD plane 1 timing offsets (found " << time_offsets[0].size() 
 			 << " entries, expected " << num_x_strips << " entries)" << endl;
-	if(time_offsets[1].size() != num_y_strips)
+	if(static_cast<long int>(time_offsets[1].size()) != num_y_strips)
 		jerr << "Error loading TRD plane 2 timing offsets (found " << time_offsets[1].size() 
 			 << " entries, expected " << num_x_strips << " entries)" << endl;
 	
