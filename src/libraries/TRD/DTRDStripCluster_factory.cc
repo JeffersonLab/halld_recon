@@ -71,24 +71,17 @@ void DTRDStripCluster_factory::Init()
     return;	
 }
 
-
 ///
 /// DTRDStripCluster_factory::StripToPosition():
 /// calculate position along plane
 ///
 double DTRDStripCluster_factory::StripToPosition(int iplane, const DTRDHit *hit)
 {
-	// better to pull this from CCDB, also probably the pitch as well
-	double ny = 0;
-	if(iplane == 0) {
-		ny = NUM_X_PLANES;
-	} else if(iplane == 1) {
-		ny = NUM_Y_PLANES;
-	} 
-	double ymi = 0.;     double yma = ny;
-	double biny = (yma-ymi)/ny;
-
-	return double(hit->strip)/double(ny)*(yma-ymi)+ymi-biny/2.; 
+  // better to pull this from CCDB, also probably the pitch as well
+  if(iplane == 0) {
+    return STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
+  }
+  return STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
 }
 
 
@@ -99,114 +92,115 @@ double DTRDStripCluster_factory::StripToPosition(int iplane, const DTRDHit *hit)
 ///
 void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& event) 
 {
-	vector<DTRDStripCluster*> results;
+  vector<DTRDStripCluster*> results;
 
-	vector<const DTRDHit*> allHits;
-	vector<const DTRDHit*> planeHits[2];
-	
-	event->Get<DTRDHit>(allHits);
-	
-	if (allHits.size() == 0) 
-		return;
-
-	// require a minimum number of hits
-    if (static_cast<long int>(allHits.size()) < MINIMUM_HITS_FOR_CLUSTERING) {
-    	return;
+  vector<const DTRDHit*> allHits;
+  vector<const DTRDHit*> planeHits[2];
+  
+  event->Get<DTRDHit>(allHits);
+  
+  if (allHits.size() == 0) 
+    return;
+  
+  // require a minimum number of hits
+  if (static_cast<int>(allHits.size()) < MINIMUM_HITS_FOR_CLUSTERING) {
+    return;
+  }
+  
+  // Sort hits by layer number and by time
+  sort(allHits.begin(),allHits.end(),DTRDHit_cmp);
+  
+  // Sift through all hits and select out X and Y hits.
+  // Also apply the raw hit analysis
+  for (vector<const DTRDHit*>::iterator i = allHits.begin(); i != allHits.end(); ++i) {
+    // sort hits
+    int stripPlane = (*i)->plane-1;
+    //int strip = (*i)->strip-1;
+    if( (stripPlane<0) || (stripPlane>=2) ){ // only two planes
+      static int Nwarn = 0;
+      if( Nwarn<10 ){
+		jerr << " stripPlane is outside of array bounds!! stripPlane="<< stripPlane << std::endl;
+		if( ++Nwarn==10 )jerr << " LAST WARNING!" << std::endl;
+      }
+      continue;
     }
-
-	// Sort hits by layer number and by time
-	sort(allHits.begin(),allHits.end(),DTRDHit_cmp);
+    planeHits[stripPlane].push_back(*i);
+    
+  }
+  
+  // cout << "Event " << eventNo << " has " << allHits.size() << " hits" << endl;
+  // cout << "Number of hits in plane 1: " << planeHits[0].size() << endl;
+  // cout << "Number of hits in plane 2: " << planeHits[1].size() << endl;
+  
+  // do the clustering
+  
+  for(uint iplane = 0; iplane < 2; iplane++) {
+    
+    if(planeHits[iplane].size()>0){			
+      map<int,vector<Point>> time_slices;
+      
+      for(size_t ihit=0; ihit < planeHits[iplane].size(); ihit++) {
+	const DTRDHit* hit = planeHits[iplane][ihit];
+ 	
+	// const float CL_DIST=2.7; // mm
 	
-	// Sift through all hits and select out X and Y hits.
-	// Also apply the raw hit analysis
-	for (vector<const DTRDHit*>::iterator i = allHits.begin(); i != allHits.end(); ++i) {
-		// sort hits
-		int stripPlane = (*i)->plane-1;
-		//int strip = (*i)->strip-1;
-		if( (stripPlane<0) || (stripPlane>=2) ){ // only two planes
-			static int Nwarn = 0;
-			if( Nwarn<10 ){
-				jerr << " stripPlane is outside of array bounds!! stripPlane="<< stripPlane << std::endl;
-				if( ++Nwarn==10 )jerr << " LAST WARNING!" << std::endl;
-			}
-			continue;
-		}
-		planeHits[stripPlane].push_back(*i);
-		
-	}
-
-	// cout << "Event " << eventNo << " has " << allHits.size() << " hits" << endl;
-	// cout << "Number of hits in plane 1: " << planeHits[0].size() << endl;
-	// cout << "Number of hits in plane 2: " << planeHits[1].size() << endl;
-
-	// do the clustering
-	
- 	for(uint iplane = 0; iplane < 2; iplane++) {
- 
- 		if(planeHits[iplane].size()>0){			
-			vector<Point> points;
-
- 			for(int ihit=0; ihit < static_cast<long int>(planeHits[iplane].size()); ihit++) {
- 				const DTRDHit* hit = planeHits[iplane][ihit];
- 				
-				// const float CL_DIST=2.7; // mm
-							
-				double c1 = hit->q;          // energy
-				double x1=hit->t;         // UPDATE: probably need to convert
-				double y1=StripToPosition(iplane, hit);
+	double c1 = hit->q;          // energy
+	if (c1 < CLUSTERING_THRESHOLD) continue;
 				
-				if (c1 < CLUSTERING_THRESHOLD) continue;
-
-				// cout << "Hit " << ihit << " in plane " << iplane+1 << " has energy " << c1 << " and position " << y1 << endl;
-
-				points.emplace_back(hit, x1, y1, c1);
-
-			}
-			
-			DBSCAN(points, eps, minPts);
-			const int NClusters = GetNCluster(points);
-			// cout << "Number of clusters: " << NClusters << endl;
-			for (int iClusterId=1; iClusterId<=NClusters; iClusterId++) {
-				if (GetTotalClusterEnergy(points, iClusterId) < min_total_q) continue;
-				
-				// make a new cluster
-				DTRDStripCluster *new_cluster = new DTRDStripCluster;
-				new_cluster->plane = iplane+1;
-				new_cluster->q_tot = GetTotalClusterEnergy(points, iClusterId);
-				pair<double,double> centroid = GetClusterCentroid(points, iClusterId);
-				new_cluster->t_avg = centroid.first;
-				new_cluster->num_hits = GetClusterNHits(points, iClusterId);
-
-				Point p_max_q = GetMaxQPoint(points, iClusterId);
-				new_cluster->q_max = p_max_q.weight;
-				new_cluster->t_max = p_max_q.x;
-
-				if (iplane==0)	{
-					new_cluster->pos.SetXYZ(centroid.second, 0, 0);
-					new_cluster->pos_max.SetXYZ(p_max_q.y, 0, 0);
-				}
-				else {
-					new_cluster->pos.SetXYZ(0, centroid.second, 0);
-					new_cluster->pos_max.SetXYZ(0, p_max_q.y, 0);
-				}
-				for (auto &point : points) {
-					if (point.clusterId == iClusterId) {
-						new_cluster->members.push_back(point.hit);
-						new_cluster->AddAssociatedObject(point.hit);
-					}
-				}
-				results.push_back(new_cluster);
-			} //----------- end  clustering loop ---------------
-		}
-	}
-
-
-	// Ensure that the data are still in order of planes.
-	std::sort(results.begin(), results.end(), DTRDStripCluster_gPlane_cmp);
+	double x1=hit->t;         // UPDATE: probably need to convert
+	double y1=StripToPosition(iplane, hit);
+	int time_slice=static_cast<int>(hit->t);
 	
-	Set(results);
+	// cout << "Hit " << ihit << " in plane " << iplane+1 << " has energy " << c1 << " and position " << y1 << endl;
 	
-	return;	
+	time_slices[time_slice].emplace_back(hit, x1, y1, c1);
+      }
+      for (auto const& ts: time_slices){
+	vector<Point>points=ts.second;
+	DBSCAN(points, eps, minPts);
+	const int NClusters = GetNCluster(points);
+	// cout << "Number of clusters: " << NClusters << endl;
+	for (int iClusterId=1; iClusterId<=NClusters; iClusterId++) {
+	  if (GetTotalClusterEnergy(points, iClusterId) < min_total_q) continue;
+	  
+	  // make a new cluster
+	  DTRDStripCluster *new_cluster = new DTRDStripCluster;
+	  new_cluster->plane = iplane+1;
+	  new_cluster->q_tot = GetTotalClusterEnergy(points, iClusterId);
+	  pair<double,double> centroid = GetClusterCentroid(points, iClusterId);
+	  new_cluster->t_avg = centroid.first;
+	  new_cluster->num_hits = GetClusterNHits(points, iClusterId);
+	  
+	  Point p_max_q = GetMaxQPoint(points, iClusterId);
+	  new_cluster->q_max = p_max_q.weight;
+	  new_cluster->t_max = p_max_q.x;
+	  
+	  if (iplane==0)	{
+	    new_cluster->pos.SetXYZ(centroid.second, 0, 0);
+	    new_cluster->pos_max.SetXYZ(p_max_q.y, 0, 0);
+	  }
+	  else {
+	    new_cluster->pos.SetXYZ(0, centroid.second, 0);
+	    new_cluster->pos_max.SetXYZ(0, p_max_q.y, 0);
+	  }
+	  for (auto &point : points) {
+	    if (point.clusterId == iClusterId) {
+	      new_cluster->members.push_back(point.hit);
+	      new_cluster->AddAssociatedObject(point.hit);
+	    }
+	  }
+	  results.push_back(new_cluster);
+	} //----------- end  clustering loop ---------------
+      }
+    }
+  }
+    
+  // Ensure that the data are still in order of planes.
+  std::sort(results.begin(), results.end(), DTRDStripCluster_gPlane_cmp);
+  
+  Set(results);
+  
+  return;	
 }			
 
 
@@ -233,7 +227,7 @@ void DTRDStripCluster_factory::ExpandCluster(vector<Point> &points, Point &point
 		}
 	}
 
-	if (static_cast<long int>(seeds.size()) < minPts) {
+	if (seeds.size() < static_cast<size_t>(minPts)) {
 		point.clusterId = 0; // Mark as noise
 		return;
 	}
@@ -258,7 +252,7 @@ void DTRDStripCluster_factory::ExpandCluster(vector<Point> &points, Point &point
 				}
 			}
 
-			if (static_cast<long int>(result.size()) >= minPts) {
+			if (result.size() >= static_cast<size_t>(minPts)) {
 				for (auto &res : result) {
 					if (res->clusterId == -1 || res->clusterId == 0) {
 						if (res->clusterId == -1) {

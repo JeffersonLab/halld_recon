@@ -263,6 +263,9 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	shared_ptr<const DFCALSingleHitMatchParams> locFCALSingleHitMatchParams;
 	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;	
 	shared_ptr<const DCTOFHitMatchParams> locCTOFHitMatchParams;
+	shared_ptr<const DTRDMatchParams> locTRDMatchParams;
+	shared_ptr<const DECALShowerMatchParams> locECALShowerMatchParams;
+
 	if(dPIDAlgorithm->Get_BestBCALMatchParams(locTrackTimeBased, locDetectorMatches, locBCALShowerMatchParams))
 		locChargedTrackHypothesis->Set_BCALShowerMatchParams(locBCALShowerMatchParams);
 	if(dPIDAlgorithm->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams))
@@ -275,6 +278,11 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 		locChargedTrackHypothesis->Set_DIRCMatchParams(locDIRCMatchParams);
 	if(dPIDAlgorithm->Get_BestCTOFMatchParams(locTrackTimeBased, locDetectorMatches, locCTOFHitMatchParams))
 	  locChargedTrackHypothesis->Set_CTOFHitMatchParams(locCTOFHitMatchParams);
+	if(dPIDAlgorithm->Get_BestTRDMatchParams(locTrackTimeBased, locDetectorMatches, locTRDMatchParams)){
+	  locChargedTrackHypothesis->Set_TRDMatchParams(locTRDMatchParams);
+	}
+	if(dPIDAlgorithm->Get_BestECALMatchParams(locTrackTimeBased, locDetectorMatches, locECALShowerMatchParams))
+	  locChargedTrackHypothesis->Set_ECALShowerMatchParams(locECALShowerMatchParams);
 	// Matching to CPP wire chambers
 	vector<shared_ptr<const DFMWPCMatchParams> > locFMWPCMatchParamsVec;
 	if (locDetectorMatches->Get_FMWPCMatchParams(locTrackTimeBased,

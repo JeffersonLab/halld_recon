@@ -41,7 +41,8 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 			Point(const DTRDHit *hit, double x, double y, double weight) : hit(hit), x(x), y(y), weight(weight), visited(false), clusterId(-1) {}
 		};
 		double PointsDistance(Point p1, Point p2){
-			return sqrt(pow(p1.x/8.-p2.x/8., 2) + pow(p1.y-p2.y, 2));
+		  //return sqrt(pow(p1.x/8.-p2.x/8., 2) + pow(p1.y-p2.y, 2));
+		  return fabs(p1.y-p2.y);
 		}
 		void ExpandCluster(vector<Point> &points, Point &point, int clusterId, double eps, int minPts);
 		void DBSCAN(vector<Point> &points, double eps, int minPts);
@@ -82,8 +83,10 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 		// double zStart;
 		// double zEnd;
 
-		const int NUM_X_PLANES = 720;
-		const int NUM_Y_PLANES = 432;
+  const int NUM_X_STRIPS = 720;
+  //const int NUM_Y_STRIPS = 432;
+  const int NUM_Y_STRIPS = 528; // but only 432 are instrumented?
+  const double STRIP_PITCH=0.1;
 
 };
 

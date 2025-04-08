@@ -20,16 +20,18 @@ bool DTRDPoint_cmp(const DTRDPoint* a, const DTRDPoint *b){
 //------------------
 void DTRDPoint_factory::Init()
 {
-	auto app = GetApplication();
+  auto app = GetApplication();
   
   // Some parameters for defining matching
-  	TIME_DIFF_MAX = 48.;
-  	app->SetDefaultParameter("TRD:XY_TIME_DIFF",TIME_DIFF_MAX);
-	
-	dE_DIFF_MAX = 10000.;
-    app->SetDefaultParameter("TRDPOINT:dE_DIFF_MAX",dE_DIFF_MAX,
-        "Difference between Point_Hit charge in X and Y planes to be considered a coincidence (default: 10000.)");
+  DRIFT_VELOCITY=0.0033; // cm/ns
 
+  TIME_DIFF_MAX = 48.;
+  app->SetDefaultParameter("TRD:XY_TIME_DIFF",TIME_DIFF_MAX);
+	
+  dE_DIFF_MAX = 10000.;
+  app->SetDefaultParameter("TRDPOINT:dE_DIFF_MAX",dE_DIFF_MAX,
+			   "Difference between Point_Hit charge in X and Y planes to be considered a coincidence (default: 10000.)");
+  
 }
 
 
@@ -44,7 +46,13 @@ void DTRDPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   auto dgeom = geo_manager->GetDGeometry(runnumber);
 
   // Get GEM geometry from xml (CCDB or private HDDS)
-  dgeom->GetTRDZ(dTRDz);
+  dgeom->GetGEMTRDz(dTRDz);
+
+  vector<double>xvec,yvec;
+  if(dgeom->GetGEMTRDxy_vec(xvec,yvec)){
+    dTRDx=xvec[0];
+    dTRDy=yvec[0];
+  }
 
   return;
 }
@@ -92,8 +100,8 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 			
 				// save new point
 				DTRDPoint* newPoint = new DTRDPoint;     
-				newPoint->x = stripClusX[i]->pos.x();
-				newPoint->y = stripClusY[j]->pos.x();
+				newPoint->x = dTRDx+stripClusX[i]->pos.x();
+				newPoint->y = dTRDy+stripClusY[j]->pos.y();
 				newPoint->t_x = stripClusX[i]->t_avg;
 				newPoint->t_y = stripClusY[j]->t_avg;
 				newPoint->time = (stripClusX[i]->t_avg*stripClusX[i]->q_tot + stripClusY[j]->t_avg*stripClusY[j]->q_tot) / dE;
@@ -103,7 +111,8 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 				newPoint->status = 1;
 				//newPoint->itrack = 0;
 				//newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE + dTRDz[0];
-				newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE;  // FOR TESTING
+				//newPoint->z = dTRDz+(stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE;  // FOR TESTING
+				newPoint->z=dTRDz-DRIFT_VELOCITY*newPoint->time;
 
 				newPoint->AddAssociatedObject(stripClusX[i]);
 				newPoint->AddAssociatedObject(stripClusY[j]);
