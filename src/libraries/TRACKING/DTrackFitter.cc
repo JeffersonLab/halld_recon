@@ -73,7 +73,7 @@ DTrackFitter::DTrackFitter(const std::shared_ptr<const JEvent>& event)
 	extrapolations[SYS_CDC].reserve(200);
 	extrapolations[SYS_START].reserve(1);
 	extrapolations[SYS_DIRC].reserve(1);
-	extrapolations[SYS_TRD].reserve(5);
+	extrapolations[SYS_TRD].reserve(1);
 	extrapolations[SYS_FMWPC].reserve(6);
 	extrapolations[SYS_CTOF].reserve(1);
 	extrapolations[SYS_ECAL].reserve(2);

@@ -24,6 +24,7 @@
 #include <FCAL/DFCALShower.h>
 #include <DIRC/DDIRCPmtHit.h>
 #include <DIRC/DDIRCTruthBarHit.h>
+#include <TRD/DTRDSegment.h>
 #include <TMath.h>
 
 using namespace std;
@@ -52,6 +53,7 @@ class DDetectorMatches_factory : public JFactoryT<DDetectorMatches>
 		void MatchToDIRC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DDIRCPmtHit*>& locDIRCHits, DDetectorMatches* locDetectorMatches, const vector<const DDIRCTruthBarHit*>& locDIRCBarHits) const;
 		void MatchToCTOF(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DCTOFPoint*>& locCTOFPoints, DDetectorMatches* locDetectorMatches) const;
 		void MatchToFMWPC(const DTrackTimeBased* locTrackTimeBased, const vector<const DFMWPCCluster*>& locFMWPCClusters, DDetectorMatches* locDetectorMatches) const;
+  void MatchToTRD(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DTRDSegment*>& locTRDSegments, DDetectorMatches* locDetectorMatches) const;
 
 		void MatchToFCAL(const DParticleID* locParticleID,
 				 const DTrackTimeBased *locTrackTimeBased,

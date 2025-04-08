@@ -69,6 +69,9 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	vector<const DFMWPCCluster *> locFMWPCClusters;
 	event->Get(locFMWPCClusters);
 
+	vector<const DTRDSegment *> locTRDSegments;
+	event->Get(locTRDSegments);
+
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches();
 
 	//Match tracks to showers/hits
@@ -83,6 +86,7 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 		  MatchToCTOF(locParticleID, locTrackTimeBasedVector[loc_i], locCTOFPoints, locDetectorMatches);
 		  MatchToFMWPC(locTrackTimeBasedVector[loc_i], locFMWPCClusters, locDetectorMatches);
 		}
+		MatchToTRD(locParticleID, locTrackTimeBasedVector[loc_i], locTRDSegments, locDetectorMatches);
 		MatchToECAL(locParticleID, locTrackTimeBasedVector[loc_i], locECALShowers, locDetectorMatches);
 	}
 
@@ -304,6 +308,18 @@ void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, con
 	// run DIRC LUT algorithm and add detector match
 	if(locParticleID->Cut_MatchDIRC(extrapolations, locDIRCHits, locInputStartTime, locTrackTimeBased->PID(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams))
 		locDetectorMatches->Add_Match(locTrackTimeBased, locDIRCMatchParams);
+}
+
+void DDetectorMatches_factory::MatchToTRD(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DTRDSegment*>& locTRDSegments, DDetectorMatches* locDetectorMatches) const
+{
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_TRD);
+  if (extrapolations.size()==0) return;
+
+  for(size_t loc_i = 0; loc_i < locTRDSegments.size(); ++loc_i){
+    shared_ptr<DTRDMatchParams> locTRDMatchParams;
+    if(locParticleID->Cut_MatchDistance(extrapolations, locTRDSegments[loc_i], locTRDMatchParams))
+      locDetectorMatches->Add_Match(locTrackTimeBased, locTRDMatchParams);
+  }
 }
 
 void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, const DBCALShower* locBCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const

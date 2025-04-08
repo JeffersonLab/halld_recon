@@ -62,6 +62,9 @@ DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
   ADD_FCAL_DATA_FOR_CPP=false;
   app->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
 
+  TRD_MATCH_CUT=4.0; //cm^2
+  app->SetDefaultParameter("PID:TRD_MATCH_CUT",TRD_MATCH_CUT);
+  
   const DRootGeom *RootGeom = geo_manager->GetRootGeom(run_number);
   // Get material properties for chamber gas
   double rho_Z_over_A_LnI=0,radlen=0;
@@ -1720,6 +1723,42 @@ bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &
   return true;
 }
 
+bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DTRDSegment* locTRDSegment,shared_ptr<DTRDMatchParams>& locTRDMatchParams, DVector3* locOutputProjPos, DVector3* locOutputProjMom) const
+{
+  if(extrapolations.size()==0)
+    return false;
+
+  // Find the track projection to the TOF
+  DVector3 locProjPos=extrapolations[0].position;
+  DVector3 locProjMom=extrapolations[0].momentum;
+  double locFlightTime=extrapolations[0].t;
+
+  if(locOutputProjMom != nullptr){
+    *locOutputProjPos = locProjPos;
+    *locOutputProjMom = locProjMom;
+  }
+  double locDeltaX = locTRDSegment->x - locProjPos.X();
+  double locDeltaY = locTRDSegment->y - locProjPos.Y();
+  double locPz=locProjMom.z();
+  double locTx=locProjMom.x()/locPz;
+  double locTy=locProjMom.y()/locPz;
+  double locDeltaTx=locTRDSegment->tx-locTx;
+  double locDeltaTy=locTRDSegment->ty-locTy;
+  
+  //SET MATCHING INFORMATION
+  if(locTRDMatchParams == nullptr)
+    locTRDMatchParams = std::make_shared<DTRDMatchParams>();
+
+  locTRDMatchParams->dTRDSegment = locTRDSegment;
+  locTRDMatchParams->dFlightTime = locFlightTime;
+  locTRDMatchParams->dDeltaXToSegment = locDeltaX;
+  locTRDMatchParams->dDeltaYToSegment = locDeltaY;
+  locTRDMatchParams->dDeltaTxToSegment = locDeltaTx;
+  locTRDMatchParams->dDeltaTyToSegment = locDeltaTy;
+
+  return true;
+}
+
 /********************************************************** CUT MATCH DISTANCE **********************************************************/
 
 bool DParticleID::Cut_MatchDistance(const DReferenceTrajectory* rt, const DBCALShower* locBCALShower, double locInputStartTime, shared_ptr<DBCALShowerMatchParams>& locShowerMatchParams, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
@@ -2013,6 +2052,26 @@ bool DParticleID::Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &ext
 
 }
 
+bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DTRDSegment* locTRDSegment,shared_ptr<DTRDMatchParams>& locTRDMatchParams, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
+{
+  DVector3 locProjPos, locProjMom;
+  if(!Distance_ToTrack(extrapolations, locTRDSegment, locTRDMatchParams, &locProjPos, &locProjMom))
+    return false;
+
+  if(locOutputProjMom != nullptr)
+    {
+      *locOutputProjPos = locProjPos;
+      *locOutputProjMom = locProjMom;
+    }
+
+  double locDeltaX = locTRDMatchParams->dDeltaXToSegment;
+  double locDeltaY = locTRDMatchParams->dDeltaYToSegment;
+  double locDeltaRsq=locDeltaX*locDeltaX+locDeltaY*locDeltaY;
+  if (locDeltaRsq>TRD_MATCH_CUT) return false;
+
+  return true;
+}
+
 
 /********************************************************** GET BEST MATCH **********************************************************/
 
@@ -2215,6 +2274,33 @@ bool DParticleID::Get_DIRCMatchParams(const DTrackingData* locTrack, const DDete
 	locBestMatchParams = locDIRCMatchParams;
 	return true;
 }
+
+bool DParticleID::Get_BestTRDMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DTRDMatchParams>& locBestMatchParams) const
+{
+  //choose the "best" hit to use for computing quantities
+  vector<shared_ptr<const DTRDMatchParams> > locTRDMatchParams;
+  if(!locDetectorMatches->Get_TRDMatchParams(locTrack, locTRDMatchParams))
+    return false;
+
+  locBestMatchParams = Get_BestTRDMatchParams(locTRDMatchParams);
+  return true;
+}
+
+shared_ptr<const DTRDMatchParams> DParticleID::Get_BestTRDMatchParams(vector<shared_ptr<const DTRDMatchParams> >& locTRDMatchParams) const
+{
+  double locMinDistance = 9.9E9;
+  shared_ptr<const DTRDMatchParams> locBestMatchParams;
+  for(size_t loc_i = 0; loc_i < locTRDMatchParams.size(); ++loc_i)
+    {
+      double locDeltaR = locTRDMatchParams[loc_i]->Get_DistanceToTrack();
+      if(locDeltaR >= locMinDistance)
+	continue;
+      locMinDistance = locDeltaR;
+      locBestMatchParams = locTRDMatchParams[loc_i];
+    }
+  return locBestMatchParams;
+}
+
 
 /********************************************************** GET CLOSEST TO TRACK **********************************************************/
 

@@ -357,7 +357,8 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
    dTOFz+=tof_face[2]+tof_plane[2];
    dTOFz*=0.5;  // mid plane between tof planes
-   geom->GetTRDZ(dTRDz_vec); // TRD planes
+   // TRD plane
+   geom->GetGEMTRDz(dGEMTRDz);
       
    // Get start counter geometry;
    if (geom->GetStartCounterGeom(sc_pos, sc_norm)){
@@ -8663,10 +8664,11 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   bool hit_tof=false; 
   bool hit_dirc=false;
   bool hit_fcal=false;
+  bool hit_gemtrd=false;
   bool got_fmwpc=(dFMWPCz_vec.size()>0)?true:false;
   bool got_ecal=(dECALz<1000.)?true:false;
+  bool got_gemtrd=(dGEMTRDz<1000.)?true:false;
   unsigned int fmwpc_index=0;
-  unsigned int trd_index=0;
   while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
 	 && fabs(S(state_y))<y_max){
     // Bail if the momentum has dropped below some minimum
@@ -8733,12 +8735,13 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     if (ds<0.5 && z<406. && r2>65.*65.) ds=0.5;
     dz=ds*dz_ds;
     newz=z+dz;
-    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
-      newz=dTRDz_vec[trd_index]+EPS;
-      ds=(newz-z)/dz_ds;   
-    }
+
     if (hit_tof==false && newz>dTOFz){
       newz=dTOFz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
+    if (got_gemtrd==true && hit_gemtrd==false && newz>dGEMTRDz){
+      newz=dGEMTRDz+EPS;
       ds=(newz-z)/dz_ds;
     }
     if (hit_dirc==false && newz>dDIRCz){
@@ -8773,10 +8776,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     Step(z,newz,dEdx,S); 
     z=newz;
 
-    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
+    if (got_gemtrd==true && hit_gemtrd==false && newz>dGEMTRDz){
+      hit_gemtrd=true;
       AddExtrapolation(SYS_TRD,z,S,t,s);
-      trd_index++;
-    }
+    }  
     if (hit_dirc==false && newz>dDIRCz){
       hit_dirc=true;
       AddExtrapolation(SYS_DIRC,z,S,t,s);
