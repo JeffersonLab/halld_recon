@@ -18,7 +18,10 @@
 #include <TOF/DTOFPoint.h>
 #include <START_COUNTER/DSCHit.h>
 #include <FCAL/DFCALShower.h>
+#include <FCAL/DFCALHit.h>
 #include <ECAL/DECALShower.h>
+#include <ECAL/DECALCluster.h>
+#include <ECAL/DECALHit.h>
 #include <BCAL/DBCALShower.h>
 #include <CCAL/DCCALShower.h>
 #include "DResourcePool.h"
