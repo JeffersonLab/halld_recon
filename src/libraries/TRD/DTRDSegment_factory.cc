@@ -42,7 +42,8 @@ void DTRDSegment_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 void DTRDSegment_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   vector<const DTRDPoint*> points;
-  event->Get<DTRDPoint>(points);  
+  //event->Get<DTRDPoint>(points);
+  event->Get<DTRDPoint>(points,"Hit");  
   
   vector<vector<const DTRDPoint *>>segments;
   FindSegments(points,segments);

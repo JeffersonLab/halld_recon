@@ -92,12 +92,12 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 			// calculate strip cluster time and position
 			double t_diff = stripClusX[i]->t_avg - stripClusY[j]->t_avg;
 			double dE = stripClusX[i]->q_tot + stripClusY[j]->q_tot;
-			double dE_high = (stripClusX[i]->q_tot + dE_DIFF_MAX);
-            double dE_low = (stripClusX[i]->q_tot - dE_DIFF_MAX);
+			//double dE_high = (stripClusX[i]->q_tot + dE_DIFF_MAX);
+            //double dE_low = (stripClusX[i]->q_tot - dE_DIFF_MAX);
 
             // some requirements for a good point
-            if(fabs(t_diff) < TIME_DIFF_MAX && (stripClusY[j]->q_tot < dE_high) && (stripClusY[j]->q_tot > dE_low )) {
-			
+            //if(fabs(t_diff) < TIME_DIFF_MAX && (stripClusY[j]->q_tot < dE_high) && (stripClusY[j]->q_tot > dE_low )) {
+			if(fabs(t_diff) < TIME_DIFF_MAX) {
 				// save new point
 				DTRDPoint* newPoint = new DTRDPoint;     
 				newPoint->x = dTRDx+stripClusX[i]->pos.x();
