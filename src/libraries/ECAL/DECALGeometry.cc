@@ -26,14 +26,18 @@ DECALGeometry::DECALGeometry(const DGeometry *geom){
   geom->GetECALZ(m_insertFrontZ);
   
   // Initialize active block map
+  int ch=0;
   for( int row = 0; row < kECALBlocksTall; row++ ){
     for( int col = 0; col < kECALBlocksWide; col++ ){
       m_activeBlock[row][col]=false;
+      m_channelNumber[row][col]=ch;
+      m_row[ch]=row;
+      m_column[ch]=col;
+      ch++;
     }
   }
   
   // extract the positions of the PWO crystals
-  m_numActiveBlocks=0;
   for( int i = 0; i < 42; i++ ){
     string my_row_string="XTrow"+to_string(i);
     string my_mpos_string="//composition[@name='"+my_row_string
@@ -57,14 +61,9 @@ DECALGeometry::DECALGeometry(const DGeometry *geom){
     for (int col=col0;col<col0+ncopy;col++){
       double x=m_FCALx+x0+double(col-col0)*dx;
       double y=m_FCALy+pos[1]+phi*x; //use small angle approximation
-      
+
       m_positionOnFace[my_row][col].Set(x,y);
-      m_row[m_numActiveBlocks]=my_row;
-      m_column[m_numActiveBlocks]=col;
       m_activeBlock[my_row][col] = true;
-      m_channelNumber[my_row][col]=m_numActiveBlocks;
-      
-      m_numActiveBlocks++;
     }
   }
   
