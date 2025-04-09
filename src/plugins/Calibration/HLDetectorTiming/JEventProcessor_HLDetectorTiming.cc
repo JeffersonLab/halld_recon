@@ -217,9 +217,9 @@ void JEventProcessor_HLDetectorTiming::CreateHistograms(string dirname)
 	dECALTotalEnergy[dirname] = new TH1F( "ECAL total energy", "ECAL total energy;ECAL energy [GeV]", 400, 0, 8000 );
 	dECALHitTimes[dirname] = new TH1F( "ECALHit time", "ECALHit time;t [ns];", nBins, xMin, xMax );
 	dECALHitOccupancy[dirname] = new TH2F( "ECALHit Occupancy", "ECAL Hit Occupancy; column; row",
-	                     				   41, -1.5, 39.5, 41, -1.5, 39.5);
+	                     				   42, -1.5, 40.5, 42, -1.5, 40.5);
 	dECALHitLocalTimes[dirname] = new TH2F( "ECALHit Local Time", "ECAL Hit Local Time [ns]; column; row",
-	                     					41, -1.5, 39.5, 41, -1.5, 39.5);
+	                     					42, -1.5, 40.5, 42, -1.5, 40.5);
 	dECALHitTimesPerChannel[dirname] = new TH2F( "ECALHit Per Channel Time", "ECALHit time;t [ns]; CCDB Index",
 	                     					    1600, 0.5, 1600+0.5, 250, -50, 50);
 
@@ -1151,8 +1151,8 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 			if(!passed) continue;
 			
 			dFCALHitTimes[key]->Fill(fcalHitVector[i]->t);
-			dFCALHitOccupancy[key]->Fill(fcalHitVector[i]->row, fcalHitVector[i]->column);
-			dFCALHitLocalTimes[key]->Fill(fcalHitVector[i]->row, fcalHitVector[i]->column, locTime);
+			dFCALHitOccupancy[key]->Fill(fcalHitVector[i]->column, fcalHitVector[i]->row);
+			dFCALHitLocalTimes[key]->Fill(fcalHitVector[i]->column, fcalHitVector[i]->row, locTime);
 			if(DO_OPTIONAL) {
 				dFCALHitTimesPerChannel[key]->Fill(fcalGeom.channel(fcalHitVector[i]->row, fcalHitVector[i]->column), fcalHitVector[i]->t);
 			}
@@ -1187,8 +1187,8 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 			if(!passed) continue;
 			
 			dECALHitTimes[key]->Fill(ecalHitVector[i]->t);
-			dECALHitOccupancy[key]->Fill(ecalHitVector[i]->row, ecalHitVector[i]->column);
-			dECALHitLocalTimes[key]->Fill(ecalHitVector[i]->row, ecalHitVector[i]->column, locTime);
+			dECALHitOccupancy[key]->Fill(ecalHitVector[i]->column, ecalHitVector[i]->row);
+			dECALHitLocalTimes[key]->Fill(ecalHitVector[i]->column, ecalHitVector[i]->row, locTime);
 			if(DO_OPTIONAL) {
 				dECALHitTimesPerChannel[key]->Fill(ecalGeom.channel(ecalHitVector[i]->row, ecalHitVector[i]->column), ecalHitVector[i]->t);
 			}
