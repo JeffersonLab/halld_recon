@@ -32,8 +32,8 @@ private:
   TH2D *hTRDSegmentMatchXY_el, *hTRDSegmentMatchTxTy_el, *hTRDSegmentXY_el, *hTRDSegmentMatchXY_pi, *hTRDSegmentMatchTxTy_pi, *hTRDSegmentXY_pi;
   TH1D *hTRDSegmentMatchX_el, *hTRDSegmentMatchY_el, *hTRDSegmentMatchTx_el, *hTRDSegmentMatchTy_el, *hTRDSegmentMatchX_pi, *hTRDSegmentMatchY_pi, *hTRDSegmentMatchTx_pi, *hTRDSegmentMatchTy_pi;
   //-Sim
-  TH2D *hTRDProjectionXY, *hProjectionXYDiff, *hProjectionXYHitDiff, *hSegmentXYDiff, *hTRDXCorr, *hTRDYCorr;
-  TH1D *hTRDProjectionPx, *hTRDProjectionPy, *hTRDProjectionPz, *hProjectionXDiff, *hProjectionYDiff, *hProjectionXHitDiff, *hProjectionYHitDiff, *hSegmentXDiff, *hSegmentYDiff;
+  TH2D *hTRDExtrapXY, *hExtrapXYDiff, *hExtrapXYHitDiff, *hSegmentExtrapXYDiff, *hTRDXCorr, *hTRDYCorr, *hExtrapThetavsP, *hExtrapThetavsP_Selected;
+  TH1D *hTRDExtrapPx, *hTRDExtrapPy, *hTRDExtrapPz, *hExtrapXDiff, *hExtrapYDiff, *hExtrapXHitDiff, *hExtrapYHitDiff, *hSegmentExtrapXDiff, *hSegmentExtrapYDiff, *hExtrapTheta;
   //-Projection
   TH2D *hProjectionXYDiff_el, *hProjectionXYHitDiff_el, *hProjectionXYDiff_pi, *hProjectionXYHitDiff_pi;
   TH1D *hProjectionXDiff_el, *hProjectionYDiff_el, *hProjectionXHitDiff_el, *hProjectionYHitDiff_el, *hProjectionXDiff_pi, *hProjectionYDiff_pi, *hProjectionXHitDiff_pi, *hProjectionYHitDiff_pi;
@@ -41,8 +41,8 @@ private:
   TH2D *hfCALXY_el, *hfCALMatchXY_el, *hfCALMatchXYDisplay_el, *hfCALXY_pi, *hfCALMatchXY_pi, *hfCALMatchXYDisplay_pi;
   TH1D *hfCALShower_el, *hfCALEP_TRD_el, *hfCALMatchX_el, *hfCALMatchY_el, *hfCALShower_pi, *hfCALEP_TRD_pi, *hfCALMatchX_pi, *hfCALMatchY_pi, *hfCALEP_cut_el, *hfCALEP_cut_pi, *hfCALEP_el, *hfCALEP_pi;
  
-  TH2D *hFCALProjectionXY, *hProjectionXYDiff_new, *hFCALShowerDisplay;
-  TH1D *hFCALProjectionPx, *hFCALProjectionPy, *hFCALProjectionPz, *hProjectionXDiff_new, *hProjectionYDiff_new, *hFCALProjectionE, *hFCALProjectionEP;
+  TH2D *hFCALExtrapXY, *hExtrapXYDiff_FCAL, *hFCALShowerDisplay, *hFCALExtrapEPvsP;
+  TH1D *hFCALExtrapPx, *hFCALExtrapPy, *hFCALExtrapPz, *hExtrapXDiff_FCAL, *hExtrapYDiff_FCAL, *hFCALExtrapE, *hFCALExtrapEP;
    
   TH1D *hTRDFlightTime_el, *hTRDEnergy_el, *hTRDMomentum_el, *hTRDTheta_el, *hTRDEnergyDiff_el, *hTRDFlightTime_pi, *hTRDEnergy_pi, *hTRDMomentum_pi, *hTRDTheta_pi, *hTRDEnergyDiff_pi;
   
