@@ -424,7 +424,8 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       myCluster->E=peak_fractions[k]*Esum;
 
       // Save channel with the hit containing the highest energy
-      myCluster->channel_Emax=dECALGeom->channel(ir_max,ic_max);
+      myCluster->channel_Emax=dECALGeom->channel(min_row-1+ir_max,
+						 min_col-1+ic_max);
       
       // Compute energy-weighted time
       double fsum=0.,t=0.,fmax=0.;
