@@ -17,6 +17,7 @@
 #include "PID/DEventRFBunch.h"
 #include "TTAB/DTTabUtilities.h"
 #include "TTAB/DTranslationTable.h"
+#include "ECAL/DECALGeometry.h"
 #include "FCAL/DFCALGeometry.h"
 #include "BCAL/DBCALGeometry.h"
 #include "CCAL/DCCALGeometry.h"
@@ -211,6 +212,18 @@ void JEventProcessor_HLDetectorTiming::CreateHistograms(string dirname)
 	                     					    2800, 0.5, 2800.+0.5, 250, -50, 50);
 
     newDir->cd();
+	newDir->mkdir("ECAL")->cd();
+
+	dECALTotalEnergy[dirname] = new TH1F( "ECAL total energy", "ECAL total energy;ECAL energy [GeV]", 400, 0, 8000 );
+	dECALHitTimes[dirname] = new TH1F( "ECALHit time", "ECALHit time;t [ns];", nBins, xMin, xMax );
+	dECALHitOccupancy[dirname] = new TH2F( "ECALHit Occupancy", "ECAL Hit Occupancy; column; row",
+	                     				   42, -1.5, 40.5, 42, -1.5, 40.5);
+	dECALHitLocalTimes[dirname] = new TH2F( "ECALHit Local Time", "ECAL Hit Local Time [ns]; column; row",
+	                     					42, -1.5, 40.5, 42, -1.5, 40.5);
+	dECALHitTimesPerChannel[dirname] = new TH2F( "ECALHit Per Channel Time", "ECALHit time;t [ns]; CCDB Index",
+	                     					    1600, 0.5, 1600+0.5, 250, -50, 50);
+
+    newDir->cd();
 	newDir->mkdir("DIRC")->cd();
 
 	dDIRCHitTimes[dirname] = new TH1F( "DIRCHit time", "DIRCHit time;t [ns];", nBins, xMin, xMax );
@@ -402,6 +415,12 @@ void JEventProcessor_HLDetectorTiming::CreateHistograms(string dirname)
 	dFCALShowerRFTimeVsEnergy_NoTracks[dirname] = new TH2F( "FCAL - RF Time vs. Energy (Neutral)", 
 										"Shower Energy [GeV]; t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries", 
 										100, 0., 10., NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dECALShowerRFTime_NoTracks[dirname] = new TH1F( "ECAL - RF Time (Neutral)", 
+										"t_{ECAL} - t_{RF} at Target (Neutral); t_{ECAL} - t_{RF} [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dECALShowerRFTimeVsEnergy_NoTracks[dirname] = new TH2F( "ECAL - RF Time vs. Energy (Neutral)", 
+										"Shower Energy [GeV]; t_{ECAL} - t_{RF} at Target (Neutral); t_{ECAL} - t_{RF} [ns]; Entries", 
+										100, 0., 10., NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
 	dCCALShowerRFTime_NoTracks[dirname] = new TH1F( "CCAL - RF Time vs. Energy (Neutral)", 
 										"t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries", 
 										2000, -50, 50 );
@@ -447,6 +466,10 @@ void JEventProcessor_HLDetectorTiming::CreateHistograms(string dirname)
 	dFCALShowerRFTime[dirname] = new TH1F( "FCAL - RF Time", "t_{FCAL} - t_{RF} at Target; t_{FCAL} - t_{RF} [ns]; Entries", 
 										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
 	dFCALShowerSCTime[dirname] = new TH1F( "FCAL - SC Target Time", "t_{FCAL} - t_{SC} at Target; t_{FCAL} - t_{SC} [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dECALShowerRFTime[dirname] = new TH1F( "ECAL - RF Time", "t_{ECAL} - t_{RF} at Target; t_{ECAL} - t_{RF} [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dECALShowerSCTime[dirname] = new TH1F( "ECAL - SC Target Time", "t_{ECAL} - t_{SC} at Target; t_{ECAL} - t_{SC} [ns]; Entries", 
 										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
 
 
@@ -798,6 +821,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     vector<const DTOFHit *> tofHitVector;
     vector<const DTOFPoint *> tofPointVector;
     vector<const DFCALHit *> fcalHitVector;
+    vector<const DECALHit *> ecalHitVector;
     vector<const DCCALHit *> ccalHitVector;
     vector<const DDIRCPmtHit *> dircPmtHitVector;
     vector<const DTAGMHit *> tagmHitVector;
@@ -815,6 +839,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     event->Get(tofHitVector);
     event->Get(tofPointVector);
     event->Get(fcalHitVector);
+    event->Get(ecalHitVector);
     if(CCAL_CALIB) {
       event->Get(ccalHitVector);
     }
@@ -845,6 +870,15 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
         return; //OBJECT_NOT_AVAILABLE;
 	}
 	const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
+
+	// extract the ECAL Geometry
+	vector<const DECALGeometry*> ecalGeomVect;
+	event->Get( ecalGeomVect );
+	if (ecalGeomVect.size() < 1){
+        cout << "ECAL Geometry not available?" << endl;
+        return; //OBJECT_NOT_AVAILABLE;
+	}
+	const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
 
 
     // TTabUtilities object used for RF time conversion
@@ -1117,10 +1151,46 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 			if(!passed) continue;
 			
 			dFCALHitTimes[key]->Fill(fcalHitVector[i]->t);
-			dFCALHitOccupancy[key]->Fill(fcalHitVector[i]->row, fcalHitVector[i]->column);
-			dFCALHitLocalTimes[key]->Fill(fcalHitVector[i]->row, fcalHitVector[i]->column, locTime);
+			dFCALHitOccupancy[key]->Fill(fcalHitVector[i]->column, fcalHitVector[i]->row);
+			dFCALHitLocalTimes[key]->Fill(fcalHitVector[i]->column, fcalHitVector[i]->row, locTime);
 			if(DO_OPTIONAL) {
 				dFCALHitTimesPerChannel[key]->Fill(fcalGeom.channel(fcalHitVector[i]->row, fcalHitVector[i]->column), fcalHitVector[i]->t);
+			}
+		}
+    }
+
+	// similar plots for the ECAL as for the FCAL
+    double ecalHitETot = 0;
+    double ecalHitEwtT = 0;
+    for (i = 0; i < ecalHitVector.size(); i++){
+        ecalHitETot += ecalHitVector[i]->E;
+        ecalHitEwtT += ecalHitVector[i]->E * ecalHitVector[i]->t;
+    }
+    ecalHitEwtT /= ecalHitETot;
+    
+    // FCAL energy
+	for (auto const& cut : passed_cuts) {
+		const string &key = cut.first;
+		bool passed = cut.second;
+		if(!passed) continue;
+
+		dECALTotalEnergy[key]->Fill(ecalHitETot);
+	}
+	    
+	// ECAL timing
+    for (i = 0; i < ecalHitVector.size(); i++){
+		double locTime = ( ecalHitVector[i]->t - ecalHitEwtT )*k_to_nsec; // CHECK
+
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+			
+			dECALHitTimes[key]->Fill(ecalHitVector[i]->t);
+			dECALHitOccupancy[key]->Fill(ecalHitVector[i]->column, ecalHitVector[i]->row);
+			dECALHitLocalTimes[key]->Fill(ecalHitVector[i]->column, ecalHitVector[i]->row, locTime);
+			if(DO_OPTIONAL) {
+				dECALHitTimesPerChannel[key]->Fill(ecalGeom.channel(ecalHitVector[i]->row, ecalHitVector[i]->column), ecalHitVector[i]->t);
 			}
 		}
     }
@@ -1389,6 +1459,13 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 
 					}
 				}
+			} else if(neutralShowerVector[i]->dDetectorSystem == SYS_ECAL) {
+				dECALShowerRFTimeVsEnergy_NoTracks[key]->Fill(neutralShowerVector[i]->dEnergy, locDeltaT);
+				if(neutralShowerVector[i]->dEnergy > 0.2) {
+					dECALShowerRFTime_NoTracks[key]->Fill(locDeltaT);
+				}
+			
+				//  should we do no-tracking alignment for the TOF with the ECAL as well?				
 			} else {  // neutralShowerVector[i]->dDetectorSystem == SYS_BCAL
 				dBCALShowerRFTimeVsEnergy_NoTracks[key]->Fill(neutralShowerVector[i]->dEnergy, locDeltaT);
 				if(neutralShowerVector[i]->dEnergy > 0.1) {
