@@ -47,20 +47,34 @@ void JEventProcessor_TRDTrack::Init()
 	trdDir->cd();
 	
 	//--Book Histograms
-	hProjectionXDiff=new TH1D("ProjectionXDiff","Track Projection X Difference from TRD Points;x(Proj) - x(TRD Point) [cm]",500,-5.,5.);
-    hProjectionYDiff=new TH1D("ProjectionYDiff","Track Projection Y Difference from TRD Points;y(Proj) - y(TRD Point) [cm]",500,-5.,5.);
-    hProjectionXYDiff=new TH2D("ProjectionXYDiff","Track Projection XY Difference from TRD Points;x(Proj) - x(TRD Point) [cm];y(Proj) - y(TRD Point) [cm]",500,-5.,5.,500,-5.,5.);
-    hProjectionXHitDiff=new TH1D("ProjectionXHitDiff","Track Projection X Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm]",500,-5.,5.);
-    hProjectionYHitDiff=new TH1D("ProjectionYHitDiff","Track Projection Y Difference from TRD Point_Hits;y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.);
-    hProjectionXYHitDiff=new TH2D("ProjectionXYHitDiff","Track Projection XY Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm];y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.,500,-5.,5.);
-	hSegmentXDiff=new TH1D("SegmentXDiff","Track Projection X Difference from TRD Segment;x(Proj) - x(TRD Segment) [cm]",500,-5.,5.);
-    hSegmentYDiff=new TH1D("SegmentYDiff","Track Projection Y Difference from TRD Segment;y(Proj) - y(TRD Segment) [cm]",500,-5.,5.);
-    hSegmentXYDiff=new TH2D("SegmentXYDiff","Track Projection XY Difference from TRD Segment;x(Proj) - x(TRD Segment) [cm];y(Proj) - y(TRD Segment) [cm]",500,-5.,5.,500,-5.,5.);
+	hnumTrackMatches=new TH1D("hnumTrackMatches","Num Tracks Matched with TRD;Num Tracks",25,-0.5,24.5);
+	hProjectionXDiff=new TH1D("ProjectionXDiff","Track Projection X Difference from TRD Points;x(Proj) - x(TRD Point) [cm]",1000,-10.,10.);
+    hProjectionYDiff=new TH1D("ProjectionYDiff","Track Projection Y Difference from TRD Points;y(Proj) - y(TRD Point) [cm]",1000,-10.,10.);
+    hProjectionXYDiff=new TH2D("ProjectionXYDiff","Track Projection XY Difference from TRD Points;x(Proj) - x(TRD Point) [cm];y(Proj) - y(TRD Point) [cm]",1000,-10.,10.,1000,-10.,10.);
+    hProjectionXHitDiff=new TH1D("ProjectionXHitDiff","Track Projection X Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm]",1000,-10.,10.);
+    hProjectionYHitDiff=new TH1D("ProjectionYHitDiff","Track Projection Y Difference from TRD Point_Hits;y(Proj) - y(TRD Point_Hit) [cm]",1000,-10.,10.);
+    hProjectionXYHitDiff=new TH2D("ProjectionXYHitDiff","Track Projection XY Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm];y(Proj) - y(TRD Point_Hit) [cm]",1000,-10.,10.,1000,-10.,10.);
+	hSegmentXDiff=new TH1D("SegmentXDiff","Track Projection X Difference from TRD Segment;x(Proj) - x(TRD Segment) [cm]",1000,-10.,10.);
+    hSegmentYDiff=new TH1D("SegmentYDiff","Track Projection Y Difference from TRD Segment;y(Proj) - y(TRD Segment) [cm]",1000,-10.,10.);
+    hSegmentXYDiff=new TH2D("SegmentXYDiff","Track Projection XY Difference from TRD Segment;x(Proj) - x(TRD Segment) [cm];y(Proj) - y(TRD Segment) [cm]",1000,-10.,10.,1000,-10.,10.);
 	hTRDProjectionXY=new TH2D("TRDProjectionXY",";x(Track) [cm];y(Track) [cm]",280,-140.,140.,280,-140.,140.);
     hTRDProjectionPx=new TH1D("TRDProjectionPx","TRD Track Projection X Mom.;Px [GeV/c]",200,-5.,5.);
     hTRDProjectionPy=new TH1D("TRDProjectionPy","TRD Track Projection Y Mom.;Py [GeV/c]",200,-5.,5.);
     hTRDProjectionPz=new TH1D("TRDProjectionPz","TRD Track Projection Z Mom.;Pz [GeV/c]",440,-2.,20.);
 	
+	hFCALProjectionXY=new TH2D("FCALProjectionXY",";x(Track) [cm];y(Track) [cm]",280,-140.,140.,280,-140.,140.);
+    hFCALProjectionPx=new TH1D("FCALProjectionPx","FCAL Track Projection X Mom.;Px [GeV/c]",200,-5.,5.);
+    hFCALProjectionPy=new TH1D("FCALProjectionPy","FCAL Track Projection Y Mom.;Py [GeV/c]",200,-5.,5.);
+    hFCALProjectionPz=new TH1D("FCALProjectionPz","FCAL Track Projection Z Mom.;Pz [GeV/c]",440,-2.,20.);
+	hProjectionXDiff_new=new TH1D("ProjectionXDiff_new","Track Projection X Difference between TRD and FCAL;x(FCAL) - x(TRD Point) [cm]",500,-5.,5.);
+    hProjectionYDiff_new=new TH1D("ProjectionYDiff_new","Track Projection Y Difference between TRD and FCAL;y(FCAL) - y(TRD Point) [cm]",500,-5.,5.);
+    hProjectionXYDiff_new=new TH2D("ProjectionXYDiff_new","Track Projection XY Difference between TRD and FCAL;x(FCAL) - x(TRD Point) [cm];y(FCAL) - y(TRD Point) [cm]",500,-5.,5.,500,-5.,5.);
+	hFCALProjectionE=new TH1D("FCALProjectionE","FCAL Track Projection Energy;E [GeV]",320,-1.,15.);
+	hFCALProjectionEP=new TH1D("FCALProjectionEP","FCAL Track Projection E / P;E / P [GeV/c]",750,-0.5,3.);
+	hFCALShowerDisplay=new TH2D("FCALShowerDisplay","fCAL Shower XY Display;x(fCAL) [cm];y(fCAL) [cm]",280,-140.,140.,280,-140,140);
+	
+	hTRDXCorr=new TH2D("TRDXCorr",";x(Track Extrap.) [cm];x(TRD Point_Hit) [cm]",800,-90.,-10.,800,-90.,-10.);
+	hTRDYCorr=new TH2D("TRDYCorr",";y(Track Extrap.) [cm];y(TRD Point_Hit) [cm]",400,-70.,-30.,400,-70.,-30.);
 	
 	//--Electron Subdirectory
 	gDirectory->mkdir("Electron")->cd();
@@ -81,6 +95,7 @@ void JEventProcessor_TRDTrack::Init()
 	
 	hfCALEP_TRD_el=new TH1D("fCALEP_TRD_el","fCAL Track Projection E/P (Electrons);(fCAL E) / (Measured Track Pz)",750,-0.5,3.);
 	hfCALEP_cut_el=new TH1D("fCALEP_cut_el","fCAL Track Projection E/P (Electrons) With Cut;(fCAL E) / (Measured Track Pz)",750,-0.5,3.);
+	hfCALEP_el=new TH1D("fCALEP_el","fCAL Track Projection E/P (Electrons);(fCAL E) / (Track Pz)",750,-0.5,3.);
 	hfCALShower_el=new TH1D("fCALShower_el","fCAL Shower Energy;E [GeV]",320,-1.,15.);
 	hfCALMatchX_el=new TH1D("fCALMatchX_el","fCAL Track X Difference;x(fCAL) - x(TRD) [cm]",270,-22.,5.);
 	hfCALMatchY_el=new TH1D("fCALMatchY_el","fCAL Track Y Difference;y(fCAL) - y(TRD) [cm]",270,-22.,5.);
@@ -94,7 +109,7 @@ void JEventProcessor_TRDTrack::Init()
 	hProjectionXHitDiff_el=new TH1D("ProjectionXHitDiff_el","Track Projection X Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm]",500,-5.,5.);
     hProjectionYHitDiff_el=new TH1D("ProjectionYHitDiff_el","Track Projection Y Difference from TRD Point_Hits;y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.);
     hProjectionXYHitDiff_el=new TH2D("ProjectionXYHitDiff_el","Track Projection XY Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm];y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.,500,-5.,5.);
-	
+		
 	
 	//--Pion Subdirectory
 	trdDir->cd();
@@ -116,6 +131,7 @@ void JEventProcessor_TRDTrack::Init()
 
     hfCALEP_TRD_pi=new TH1D("fCALEP_TRD_pi","fCAL Track Projection E/P (Pions);(fCAL E) / (Measured Track Pz)",750,-0.5,3.);
 	hfCALEP_cut_pi=new TH1D("fCALEP_cut_pi","fCAL Track Projection E/P (Pions) With Cut;(fCAL E) / (Measured Track Pz)",750,-0.5,3.);
+	hfCALEP_pi=new TH1D("fCALEP_pi","fCAL Track Projection E/P (Pions);(fCAL E) / (Track Pz)",750,-0.5,3.);
     hfCALShower_pi=new TH1D("fCALShower_pi","fCAL Shower Energy;E [GeV]",320,-1.,15.);
     hfCALMatchX_pi=new TH1D("fCALMatchX_pi","fCAL Track X Difference;x(fCAL) - x(TRD) [cm]",270,-22.,5.);
     hfCALMatchY_pi=new TH1D("fCALMatchY_pi","fCAL Track Y Difference;y(fCAL) - y(TRD) [cm]",270,-22.,5.);
@@ -159,44 +175,73 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
     event->Get(tracks);
 	vector<const DTrackTimeBased*>trackTBases; 
     event->Get(trackTBases);
+	vector<const DFCALShower*> FCALshowers;
+    event->Get(FCALshowers);
 	
   	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	
-	for (unsigned int i=0;i<trackTBases.size();i++){
-		vector<DTrackFitter::Extrapolation_t> extrapolations = trackTBases[i]->extrapolations.at(SYS_TRD);
-		if (extrapolations.size()>0){
-			if (i==0) hTRDProjectionPx->Fill(extrapolations[0].momentum.x());
-			if (i==0) hTRDProjectionPy->Fill(extrapolations[0].momentum.y());
-			if (i==0) hTRDProjectionPz->Fill(extrapolations[0].momentum.z());
-			if (i==0) hTRDProjectionXY->Fill(extrapolations[0].position.x(), extrapolations[0].position.y());
+	for (unsigned int i=0; i<trackTBases.size(); i++){
+		vector<DTrackFitter::Extrapolation_t> trd_extrapolations = trackTBases[i]->extrapolations.at(SYS_TRD);
+		vector<DTrackFitter::Extrapolation_t> fcal_extrapolations = trackTBases[i]->extrapolations.at(SYS_FCAL);
+		if (trd_extrapolations.size()>0) {
+			
+			hTRDProjectionPx->Fill(trd_extrapolations[0].momentum.x());
+			hTRDProjectionPy->Fill(trd_extrapolations[0].momentum.y());
+			hTRDProjectionPz->Fill(trd_extrapolations[0].momentum.z());
+			hTRDProjectionXY->Fill(trd_extrapolations[0].position.x(), trd_extrapolations[0].position.y());
 			for (const auto& point : pointHits) {
-				if (i==0) hProjectionXHitDiff->Fill(extrapolations[0].position.x() - (point->x));
-                if (i==0) hProjectionYHitDiff->Fill(extrapolations[0].position.y() - (point->y));
-                if (i==0) hProjectionXYHitDiff->Fill(extrapolations[0].position.x() - (point->x), extrapolations[0].position.y() - (point->y));
+				hProjectionXHitDiff->Fill(trd_extrapolations[0].position.x() - (point->x));
+                hProjectionYHitDiff->Fill(trd_extrapolations[0].position.y() - (point->y));
+                hProjectionXYHitDiff->Fill(trd_extrapolations[0].position.x() - (point->x), trd_extrapolations[0].position.y() - (point->y));
+				hTRDXCorr->Fill(trd_extrapolations[0].position.x(), point->x);
+				hTRDYCorr->Fill(trd_extrapolations[0].position.y(), point->y);	
 			}
 			for (const auto& point : points) {
-                if (i==0) hProjectionXDiff->Fill(extrapolations[0].position.x() - (point->x));
-                if (i==0) hProjectionYDiff->Fill(extrapolations[0].position.y() - (point->y));
-                if (i==0) hProjectionXYDiff->Fill(extrapolations[0].position.x() - (point->x), extrapolations[0].position.y() - (point->y));
+                hProjectionXDiff->Fill(trd_extrapolations[0].position.x() - (point->x));
+                hProjectionYDiff->Fill(trd_extrapolations[0].position.y() - (point->y));
+                hProjectionXYDiff->Fill(trd_extrapolations[0].position.x() - (point->x), trd_extrapolations[0].position.y() - (point->y));
             }
 			for (const auto& segment : segments) {
-                if (i==0) hSegmentXDiff->Fill(extrapolations[0].position.x() - (segment->x));
-                if (i==0) hSegmentYDiff->Fill(extrapolations[0].position.y() - (segment->y));
-                if (i==0) hSegmentXYDiff->Fill(extrapolations[0].position.x() - (segment->x), extrapolations[0].position.y() - (segment->y));
+                hSegmentXDiff->Fill(trd_extrapolations[0].position.x() - (segment->x));
+                hSegmentYDiff->Fill(trd_extrapolations[0].position.y() - (segment->y));
+                hSegmentXYDiff->Fill(trd_extrapolations[0].position.x() - (segment->x), trd_extrapolations[0].position.y() - (segment->y));
             }
+			
+			if (fcal_extrapolations.size()>0){
+				hnumTrackMatches->Fill(1);
+				hFCALProjectionPx->Fill(fcal_extrapolations[0].momentum.x());
+				hFCALProjectionPy->Fill(fcal_extrapolations[0].momentum.y());
+            	hFCALProjectionPz->Fill(fcal_extrapolations[0].momentum.z());
+            	hFCALProjectionXY->Fill(fcal_extrapolations[0].position.x(), fcal_extrapolations[0].position.y());
+				hProjectionXDiff_new->Fill(fcal_extrapolations[0].position.x() - trd_extrapolations[0].position.x());
+				hProjectionYDiff_new->Fill(fcal_extrapolations[0].position.y() - trd_extrapolations[0].position.y());
+				hProjectionXYDiff_new->Fill(fcal_extrapolations[0].position.x() - trd_extrapolations[0].position.x(), fcal_extrapolations[0].position.y() - trd_extrapolations[0].position.y());
+				double extrap_FCALEnergy = 0.;
+				for (const auto& shower : FCALshowers) {
+					hFCALShowerDisplay->Fill(shower->getPosition().X(), shower->getPosition().Y());
+					if (abs(shower->getPosition().X() - fcal_extrapolations[0].position.x()) < 5) {
+						extrap_FCALEnergy = shower->getEnergy();
+						break;
+					}
+				}
+				if (extrap_FCALEnergy>0.) hFCALProjectionE->Fill(extrap_FCALEnergy);
+				if (extrap_FCALEnergy>0.) hFCALProjectionEP->Fill(extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag());
+			}
 		}
 	}
 	
+
   	for (unsigned int j=0;j<tracks.size();j++){
     	const DChargedTrackHypothesis *hyp=tracks[j]->Get_Hypothesis(Electron);
     	if (hyp!=nullptr){
+			double p=hyp->momentum().Mag();
 			hnumElTracks->Fill(tracks.size());
       		shared_ptr<const DTRDMatchParams>trdparms=hyp->Get_TRDMatchParams();
 			shared_ptr<const DFCALShowerMatchParams>fcalparms=hyp->Get_FCALShowerMatchParams();
-      		if (trdparms!=nullptr && fcalparms!=nullptr){
-				hfCALEP_TRD_el->Fill(fcalparms->dFCALShower->getEnergy() / hyp->momentum().Pz());
-				if ((fcalparms->dFCALShower->getEnergy() / hyp->momentum().Pz()) > 0.85){
-					hfCALEP_cut_el->Fill(fcalparms->dFCALShower->getEnergy() / hyp->momentum().Pz());
+			if (trdparms!=nullptr && fcalparms!=nullptr){
+				hfCALEP_TRD_el->Fill(fcalparms->dFCALShower->getEnergy() / p);
+				if ((fcalparms->dFCALShower->getEnergy() / p) > 0.85){
+					hfCALEP_cut_el->Fill(fcalparms->dFCALShower->getEnergy() / p);
 					hTRDSegmentMatchX_el->Fill(-1.*(trdparms->dDeltaXToSegment));
 					hTRDSegmentMatchY_el->Fill(-1.*(trdparms->dDeltaYToSegment));
 					hTRDSegmentMatchXY_el->Fill(-1.*(trdparms->dDeltaXToSegment), -1.*(trdparms->dDeltaYToSegment));
@@ -230,18 +275,20 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
 			if (fcalparms!=nullptr){
 				hfCALShower_el->Fill(fcalparms->dFCALShower->getEnergy());
 				hfCALXY_el->Fill(fcalparms->dFCALShower->getPosition().X(), fcalparms->dFCALShower->getPosition().Y());
+				hfCALEP_el->Fill(fcalparms->dFCALShower->getEnergy() / p);
 			}
     	} // End Electron Hypothesis
 		
 		const DChargedTrackHypothesis *hyp_pi=tracks[j]->Get_Hypothesis(PiMinus);
 		if (hyp_pi!=nullptr){
             hnumPiTracks->Fill(tracks.size());
+			double p=hyp_pi->momentum().Mag();
             shared_ptr<const DTRDMatchParams>trdparms=hyp_pi->Get_TRDMatchParams();
             shared_ptr<const DFCALShowerMatchParams>fcalparms=hyp_pi->Get_FCALShowerMatchParams();
             if (trdparms!=nullptr && fcalparms!=nullptr){
-                hfCALEP_TRD_pi->Fill(fcalparms->dFCALShower->getEnergy() / hyp_pi->momentum().Pz());
-                if ((fcalparms->dFCALShower->getEnergy() / hyp_pi->momentum().Pz()) > 0. && (fcalparms->dFCALShower->getEnergy() / hyp_pi->momentum().Pz()) < 0.8){
-					hfCALEP_cut_pi->Fill(fcalparms->dFCALShower->getEnergy() / hyp_pi->momentum().Pz());
+                hfCALEP_TRD_pi->Fill(fcalparms->dFCALShower->getEnergy() / p);
+                if ((fcalparms->dFCALShower->getEnergy() / p) > 0. && (fcalparms->dFCALShower->getEnergy() / p) < 0.8){
+					hfCALEP_cut_pi->Fill(fcalparms->dFCALShower->getEnergy() / p);
                     hTRDSegmentMatchX_pi->Fill(-1.*(trdparms->dDeltaXToSegment));
                     hTRDSegmentMatchY_pi->Fill(-1.*(trdparms->dDeltaYToSegment));
                     hTRDSegmentMatchXY_pi->Fill(-1.*(trdparms->dDeltaXToSegment), -1.*(trdparms->dDeltaYToSegment));
@@ -264,7 +311,7 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
                         hProjectionYDiff_pi->Fill(trdparms->dTRDSegment->y - point->y);
                         hProjectionXYDiff_pi->Fill(trdparms->dTRDSegment->x - point->x, trdparms->dTRDSegment->y - point->y);
                     }
-					 hfCALMatchX_pi->Fill(fcalparms->dFCALShower->getPosition().X() - trdparms->dTRDSegment->x);
+					hfCALMatchX_pi->Fill(fcalparms->dFCALShower->getPosition().X() - trdparms->dTRDSegment->x);
                     hfCALMatchY_pi->Fill(fcalparms->dFCALShower->getPosition().Y() - trdparms->dTRDSegment->y);
                     hfCALMatchXYDisplay_pi->Fill(fcalparms->dFCALShower->getPosition().X(), fcalparms->dFCALShower->getPosition().Y());
                     hfCALMatchXY_pi->Fill(fcalparms->dFCALShower->getPosition().X() - trdparms->dTRDSegment->x, fcalparms->dFCALShower->getPosition().Y() - trdparms->dTRDSegment->y);
@@ -274,6 +321,7 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
             if (fcalparms!=nullptr){
                 hfCALShower_pi->Fill(fcalparms->dFCALShower->getEnergy());
                 hfCALXY_pi->Fill(fcalparms->dFCALShower->getPosition().X(), fcalparms->dFCALShower->getPosition().Y());
+				hfCALEP_pi->Fill(fcalparms->dFCALShower->getEnergy() / p);
             }
         } // End Pion Hypothesis
 		

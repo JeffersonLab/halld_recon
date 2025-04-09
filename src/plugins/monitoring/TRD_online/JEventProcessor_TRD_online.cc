@@ -12,6 +12,7 @@ using namespace std;
 #include <TRD/DTRDHit.h>
 #include <TRD/DTRDStripCluster.h>
 #include <TRD/DTRDPoint.h>
+#include <TRD/DTRDSegment.h>
 #include <DAQ/Df125FDCPulse.h>
 
 #include <TDirectory.h>
@@ -69,6 +70,12 @@ static TH2I *hPoint_XYDisplay;
 static TH2I *hPoint_dE_XY;
 static TH2I *hPoint_TimeVsdEX;
 static TH2I *hPoint_TimeVsdEY;
+
+static TH1I *hSegment_NHits;
+static TH1I *hSegment_TimeX;
+static TH1I *hSegment_TimeY;
+static TH1I *hSegment_OccupancyX;
+static TH1I *hSegment_OccupancyY;
 
 //----------------------------------------------------------------------------------
 
@@ -202,6 +209,14 @@ void JEventProcessor_TRD_online::Init() {
         }
     }
     
+	trdDir->cd();
+    gDirectory->mkdir("Segment")->cd();
+    hSegment_NHits = new TH1I("Segment_NHits","TRD Track Segment Multiplicity;Calibrated Track Segments;Events",20,-0.5,20-0.5);
+    hSegment_TimeX = new TH1I("Segment_TimeX","TRD Track Segment X Time;Tx 8*(Peak Time) [ns]; ",200,0.,200.*8.);
+    hSegment_TimeY = new TH1I("Segment_TimeY","TRD Track Segment Y Time;Ty 8*(Peak Time) [ns]; ",200,0.,200.*8.);
+    hSegment_OccupancyX = new TH1I("Segment_OccupancyX","TRD Track Segment X Occupancy;X [cm]; ",800,-90.,-10.);
+    hSegment_OccupancyY = new TH1I("Segment_OccupancyY","TRD Track Segment Y Occupancy;Y [cm]; ",400,-70.,-30.);
+	
     // back to main dir
     mainDir->cd();
 }
@@ -262,6 +277,8 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     event->Get(clusters);
 	vector<const DTRDPoint*> points;
     event->Get(points,"Hit");
+	vector<const DTRDSegment*> segments;
+    event->Get(segments);
 	
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
@@ -373,6 +390,20 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
         hPoint_TimeVsY->Fill(point->y,point->time);
         hPoint_XYDisplay->Fill(point->x,point->y);
     }
+	
+	
+	///////////////////////////
+    //      TRD Segments       //
+    ///////////////////////////
+
+    hSegment_NHits->Fill(segments.size());
+    for (const auto& segment : segments) {
+		hSegment_TimeX->Fill(segment->tx);
+		hSegment_TimeY->Fill(segment->ty);
+		hSegment_OccupancyX->Fill(segment->x);
+		hSegment_OccupancyY->Fill(segment->y);
+	}
+	
 	
     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	
