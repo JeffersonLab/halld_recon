@@ -37,10 +37,9 @@ int main(int narg, char *argv[])
 	// creating the TApplication object since that modifies the argument list.
 	DApplication dapp(narg, argv);
 	japp = dapp.GetJApp();
-	int nevents = 1;
 	
 	// Check if user specified a run number via config. parameter
-	try{ japp->GetParameter("RUNNUMBER", RUNNUMBER); }catch(...){}
+    RUNNUMBER = japp->RegisterParameter("RUNNUMBER", 0);
 	
 	// Create a ROOT TApplication object
 	TApplication app("HDView", &narg, argv);
@@ -48,42 +47,26 @@ int main(int narg, char *argv[])
 	// This is done AFTER creating the TApplication object so when the
 	// init routine is called, the window will be mapped and it can
 	// draw the detectors.
-	InitJANAPlugin(japp);
 	myproc = new MyProcessor();
 	japp->Add(myproc);
 
-	// Call the JApplication's Init() routine to attach any plugins
-	japp->Initialize();
-	// Create the JEventLoop object explicitly.
-	jevent = new JEvent(japp);
-	// event->SetAutoFree(0); // prevent auto-freeing of event after OneEvent is called
-
-
-	// We need to re-call myproc->init here (it was already called from the japp->Init()
-	// call above). This is because the previous call was done before the JEventLoop
-	// object existed and so the hdv_mainframe object wasn't created etc... We have
-	// to call japp->Init() before instantiated the JEventLoop so that the plugins
-	// are attached and the JEventLoop can capture the full list of factories and
-	// processors.
-	myproc->Init();
-
 	// If the PRINT_FACTORY_LIST flag was set, then print the factory list
-	if(PRINT_FACTORY_LIST)PrintFactoryList(japp);
-	// Process the first event
-	// event->OneEvent();
+	if(PRINT_FACTORY_LIST) {
+        PrintFactoryList(japp);
+    }
 
-	// Hand control to the ROOT "event" loop
-	japp->GetJParameterManager()->PrintParameters();
-	japp->SetDefaultParameter("jana:nevents", nevents);
-	japp->Run(true, false);
+    // Start JANA2 run in nonblocking (unsupervised) mode
+	japp->Run(false,false);
+
+    // Run ROOT UI, blocking until UI event loop finishes
 	app.SetReturnFromRun(true);
-	app.Run();
-	
-	// Clean-up the app (call erun and fini methods, delete sources)
-	//japp->Fini(); // This now actually done in hdv_mainframe::DoQuit()
-		
-	if(japp)delete japp;
-	return 0;
+	app.Run(); 
+
+    // Shut down JANA2 processing
+    japp->Stop(true, true);
+    int exitcode = japp->GetExitCode();
+	delete japp;
+	return exitcode;
 }
 
 //-----------
