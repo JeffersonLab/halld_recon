@@ -22,7 +22,7 @@ class DECALCluster:public JObject{
   };
 
   double E,Efit,t,x,y;
-  int status;
+  int status,channel_Emax;
   
   void Summarize(JObjectSummary& summary) const override {
     summary.add(x, "x [cm]", "%f");
