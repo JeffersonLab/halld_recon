@@ -1727,9 +1727,12 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		shift[1].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		shift[2].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
 		shift[3].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space
-		double insertSize=fcalgeom->insertSize();
+
+        //double insertSize=fcalgeom->insertSize();
+        double insertSize=0; // TODO: FCAL datamodel change in bbe8e81d: Make sure we are handling this correctly
 		if (insertSize>0){
-		  blocksize=fcalgeom->insertBlockSize();
+		  // blocksize=fcalgeom->insertBlockSize(); // TODO: Fix me
+          blocksize = 0;
 		  shift[4].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
 		  shift[5].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		  shift[6].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
@@ -2109,9 +2112,11 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		shift[2].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
 		shift[3].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space
 	
-		double insertSize=fcalgeom->insertSize();
+		//double insertSize=fcalgeom->insertSize();
+        double insertSize=0; // TODO: Fix me
 		if (insertSize>0){
-		  blocksize=fcalgeom->insertBlockSize();
+		  //blocksize=fcalgeom->insertBlockSize(); // TODO: Fix me
+          blocksize = 0;
 		  shift[4].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
 		  shift[5].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		  shift[6].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
