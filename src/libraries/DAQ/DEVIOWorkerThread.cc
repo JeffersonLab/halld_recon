@@ -1415,7 +1415,8 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 	//iptr++; /// DEBUG
 	//iptr++; /// DEBUG
 
-	//uint32_t *istart_pulse_data = iptr;
+	uint32_t *istart_helicity_data = iptr;
+    uint32_t Nwords = ((uint64_t)iend - (uint64_t)iptr)/sizeof(uint32_t);
 
     // Loop over data words
     for(; iptr<iend; iptr++){
@@ -1465,8 +1466,24 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 					if(VERBOSE>7) cout << "      Helicity Decoder Data Header (0x"<<hex<<*iptr<<dec<<") header reserved=" << header_reserved << " header number words="<<header_number_words <<endl;
 					
 					// sanity checks
-					if(header_reserved != 0x18)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JExceptionDataFormat("Bad helicity decoder header data", __FILE__, __LINE__);}
-					if(header_number_words != 14)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JExceptionDataFormat("Bad helicity decoder header payload", __FILE__, __LINE__);}
+					if(header_reserved != 0x18)  { 
+						jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<"  reserved field = 0x"<<hex<<header_reserved<<dec<<"  (expected=0x18)"<<endl; 
+
+// 						cout << "----- Dump block to help with debugging -----" << endl;
+						cout.flush(); cerr.flush();
+						DumpBinary(istart_helicity_data, iend, Nwords, iptr);
+
+						throw JExceptionDataFormat("Bad helicity decoder header data", __FILE__, __LINE__);
+					}
+					if(header_number_words != 14)  { 
+						jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<"  number words = "<<header_number_words<<"  (expected=14)"<<endl; 
+
+// 						cout << "----- Dump block to help with debugging -----" << endl;
+						cout.flush(); cerr.flush();
+						DumpBinary(istart_helicity_data, iend, Nwords, iptr);
+
+						throw JExceptionDataFormat("Bad helicity decoder header payload", __FILE__, __LINE__);
+					}
 
 					iptr++;
 					
@@ -1581,15 +1598,19 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 			default:
  				if(VERBOSE>7) cout << "      Helicity Decoder unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
 				jerr << "Helicity Decoder unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
+// 				cout << "----- Dump block to help with debugging -----" << endl;
+ 				cout.flush(); cerr.flush();
+ 				DumpBinary(istart_helicity_data, iend, Nwords, iptr);
+
                 // make additional debugging output for special error types
-                if(data_type == 11) {
-                    cout << "          FADC slot mask = "<<" 0x"<<hex<<*(iptr+1)<<dec<<endl;
-                    cout << "          Token status = "<<" 0x"<<hex<<*(iptr+2)<<dec<<endl;
-                    cout << "          Bus error status = "<<" 0x"<<hex<<*(iptr+3)<<dec<<endl;
-                    if(pe) {
-                        cout << "          Associated with event number = "<<pe->event_number<<endl;
-                    }
-                }
+//                 if(data_type == 11) {
+//                     cout << "          FADC slot mask = "<<" 0x"<<hex<<*(iptr+1)<<dec<<endl;
+//                     cout << "          Token status = "<<" 0x"<<hex<<*(iptr+2)<<dec<<endl;
+//                     cout << "          Bus error status = "<<" 0x"<<hex<<*(iptr+3)<<dec<<endl;
+//                     if(pe) {
+//                         cout << "          Associated with event number = "<<pe->event_number<<endl;
+//                     }
+//                 }
 
 // 				if (continue_on_format_error) {  // comment out for now??
 // 					iptr = iend;
