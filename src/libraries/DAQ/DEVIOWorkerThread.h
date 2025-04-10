@@ -28,7 +28,10 @@ class JEventSource_EVIOpp;
 
 class DEVIOWorkerThread{
 	public:
-			
+  int PrintLimitFDC;
+  int PrintLimitCDC;
+  int PrintLimitTRD;
+  
 		enum JOBTYPE{
 			JOB_NONE       = 0x0,
 			JOB_QUIT       = 0x1,
