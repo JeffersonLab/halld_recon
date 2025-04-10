@@ -205,8 +205,6 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& locEvent)
 	auto eventnumber = locEvent->GetEventNumber();
 	jevent = const_cast<JEvent*>(locEvent.get());
 	jevent->SetSequential(true);
-	last_jevent->Finish();
-	last_jevent = const_cast<JEvent*>(locEvent.get());
 	static uint64_t Nevents_since_last_draw = 0;
 	static bool save_continuous = (GO == 1);
 	static long save_sleep_time = hdvmf->GetSleepTime();
@@ -285,11 +283,13 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& locEvent)
 		hdvmf->SetTrig(trigstring);
 
 		string source = "<no source>";
-		if(last_jevent->GetJEventSource())source = last_jevent->GetJEventSource()->GetResourceName();
+        if (locEvent->GetJEventSource()) {
+            source = locEvent->GetJEventSource()->GetResourceName();
+        }
 
-		cout<<"----------- New Event "<<eventnumber<<"  (run " << last_jevent->GetRunNumber()<<") -------------"<<endl;
+		cout<<"----------- New Event "<<eventnumber<<"  (run " << locEvent->GetRunNumber()<<") -------------"<<endl;
 		hdvmf->SetEvent(eventnumber);
-		hdvmf->SetRun(last_jevent->GetRunNumber());
+		hdvmf->SetRun(locEvent->GetRunNumber());
 		hdvmf->SetSource(source.c_str());
 		hdvmf->DoMyRedraw();	
 	}else{

@@ -115,7 +115,6 @@ class MyProcessor:public JEventProcessor
   hdv_fulllistframe *fulllistmf=NULL;
   hdv_debugerframe *debugermf;
   JEvent* jevent;
-  JEvent* last_jevent;
   DRootGeom *RootGeom;
   DGeometry *geom;
   string MATERIAL_MAP_MODEL;
