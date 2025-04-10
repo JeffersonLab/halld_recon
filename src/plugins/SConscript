@@ -5,6 +5,8 @@ Import('*')
 
 Import('env osname')
 
-subdirs = ['Analysis', 'Utilities', 'monitoring', 'Calibration', 'include', 'Alignment']
+subdirs = ['Analysis', 'Utilities', 'monitoring', 'Calibration', 'include']
+sbms.OptionallyBuild(env, ['Alignment'])
+
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)
 
