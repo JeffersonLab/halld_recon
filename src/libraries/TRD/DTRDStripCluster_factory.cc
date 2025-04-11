@@ -60,8 +60,8 @@ void DTRDStripCluster_factory::Init()
 	CLUSTERING_THRESHOLD = 1.2;
     app->SetDefaultParameter("TRDCLUSTER:CLUSTERING_THRESHOLD",CLUSTERING_THRESHOLD);
 
-	eps = 20.0;
-	minPts = 6;
+	eps = 3.0;
+	minPts = 1;
 	min_total_q = 0.0;
 
 	app->SetDefaultParameter("TRDCLUSTER:DBSCAN_EPS",eps,"DBSCAN epsilon value (default: 20.0)");
@@ -156,41 +156,41 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
 	time_slices[time_slice].emplace_back(hit, x1, y1, c1);
       }
       for (auto const& ts: time_slices){
-	vector<Point>points=ts.second;
-	DBSCAN(points, eps, minPts);
-	const int NClusters = GetNCluster(points);
-	// cout << "Number of clusters: " << NClusters << endl;
-	for (int iClusterId=1; iClusterId<=NClusters; iClusterId++) {
-	  if (GetTotalClusterEnergy(points, iClusterId) < min_total_q) continue;
-	  
-	  // make a new cluster
-	  DTRDStripCluster *new_cluster = new DTRDStripCluster;
-	  new_cluster->plane = iplane+1;
-	  new_cluster->q_tot = GetTotalClusterEnergy(points, iClusterId);
-	  pair<double,double> centroid = GetClusterCentroid(points, iClusterId);
-	  new_cluster->t_avg = centroid.first;
-	  new_cluster->num_hits = GetClusterNHits(points, iClusterId);
-	  
-	  Point p_max_q = GetMaxQPoint(points, iClusterId);
-	  new_cluster->q_max = p_max_q.weight;
-	  new_cluster->t_max = p_max_q.x;
-	  
-	  if (iplane==0)	{
-	    new_cluster->pos.SetXYZ(centroid.second, 0, 0);
-	    new_cluster->pos_max.SetXYZ(p_max_q.y, 0, 0);
-	  }
-	  else {
-	    new_cluster->pos.SetXYZ(0, centroid.second, 0);
-	    new_cluster->pos_max.SetXYZ(0, p_max_q.y, 0);
-	  }
-	  for (auto &point : points) {
-	    if (point.clusterId == iClusterId) {
-	      new_cluster->members.push_back(point.hit);
-	      new_cluster->AddAssociatedObject(point.hit);
-	    }
-	  }
-	  results.push_back(new_cluster);
-	} //----------- end  clustering loop ---------------
+		vector<Point>points=ts.second;
+		DBSCAN(points, eps, minPts);
+		const int NClusters = GetNCluster(points);
+		// cout << "Number of clusters: " << NClusters << endl;
+		for (int iClusterId=1; iClusterId<=NClusters; iClusterId++) {
+		  if (GetTotalClusterEnergy(points, iClusterId) < min_total_q) continue;
+		
+		  // make a new cluster
+		  DTRDStripCluster *new_cluster = new DTRDStripCluster;
+		  new_cluster->plane = iplane+1;
+		  new_cluster->q_tot = GetTotalClusterEnergy(points, iClusterId);
+		  pair<double,double> centroid = GetClusterCentroid(points, iClusterId);
+		  new_cluster->t_avg = centroid.first;
+		  new_cluster->num_hits = GetClusterNHits(points, iClusterId);
+		
+		  Point p_max_q = GetMaxQPoint(points, iClusterId);
+		  new_cluster->q_max = p_max_q.weight;
+		  new_cluster->t_max = p_max_q.x;
+		
+		  if (iplane==0)	{
+		    new_cluster->pos.SetXYZ(centroid.second, 0, 0);
+		    new_cluster->pos_max.SetXYZ(p_max_q.y, 0, 0);
+		  }
+		  else {
+		    new_cluster->pos.SetXYZ(0, centroid.second, 0);
+		    new_cluster->pos_max.SetXYZ(0, p_max_q.y, 0);
+		  }
+		  for (auto &point : points) {
+		    if (point.clusterId == iClusterId) {
+		      new_cluster->members.push_back(point.hit);
+		      new_cluster->AddAssociatedObject(point.hit);
+		    }
+		  }
+		  results.push_back(new_cluster);
+		} //----------- end  clustering loop ---------------
       }
     }
   }

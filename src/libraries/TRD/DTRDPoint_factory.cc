@@ -71,8 +71,7 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 	vector<const DTRDStripCluster*> stripClus;
 	event->Get(stripClus);
 
-//     cout << "DTRDPoint_factory::Process() ..." << endl;
-//     cout << "  num input clusters = " << stripClus.size() << endl;
+    // if (stripClus.size() > 10) cout << "DTRDPoint_factory::Process() ... num input clusters = " << stripClus.size() << endl;
 
 	// Sift through clusters and select out X and Y plane wires
 	vector<const DTRDStripCluster*> stripClusX,stripClusY;
@@ -83,7 +82,6 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 		else if (stripClus[i]->plane == 2)
 			stripClusY.push_back(stripClus[i]);
 	}
-
 	
 	// match clusters in X and Y planes
 	for(uint i=0; i<stripClusX.size(); i++){
@@ -96,7 +94,9 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
             double dE_low = (stripClusX[i]->q_tot - dE_DIFF_MAX);
 
             // some requirements for a good point
-            if(fabs(t_diff) < TIME_DIFF_MAX && (stripClusY[j]->q_tot < dE_high) && (stripClusY[j]->q_tot > dE_low )) {
+			// cout << "t_diff = " << t_diff << " dE = " << dE << " dE_high = " << dE_high << " dE_low = " << dE_low << endl;
+			if(fabs(t_diff) < TIME_DIFF_MAX) {
+            // if(fabs(t_diff) < TIME_DIFF_MAX && (stripClusY[j]->q_tot < dE_high) && (stripClusY[j]->q_tot > dE_low )) {
 			
 				// save new point
 				DTRDPoint* newPoint = new DTRDPoint;     
