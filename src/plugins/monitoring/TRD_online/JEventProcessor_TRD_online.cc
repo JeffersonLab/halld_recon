@@ -12,6 +12,7 @@ using namespace std;
 #include <TRD/DTRDHit.h>
 #include <TRD/DTRDStripCluster.h>
 #include <TRD/DTRDPoint.h>
+#include <TRD/DTRDSegment.h>
 #include <DAQ/Df125FDCPulse.h>
 
 #include <TDirectory.h>
@@ -48,10 +49,10 @@ static TH2I *hHit_TimeVsdE[NTRDplanes];
 static TH2I *hHit_StripVsdE[NTRDplanes];
 
 const int NEventsClusterMonitor = 10;
-static TH2I *hClusterHits_TimeVsStrip[NTRDplanes];
-static TH2I *hCluster_TimeVsStrip[NTRDplanes];
-static TH2I *hClusterHits_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
-static TH2I *hCluster_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
+static TH2I *hClusterHits_TimeVsPos[NTRDplanes];
+static TH2I *hCluster_TimeVsPos[NTRDplanes];
+static TH2I *hClusterHits_TimeVsPosEvent[NTRDplanes][NEventsClusterMonitor];
+static TH2I *hCluster_TimeVsPosEvent[NTRDplanes][NEventsClusterMonitor];
 static TH2I *hDigiHit_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
 
 static TH3I *hPoint_XYT;
@@ -65,10 +66,15 @@ static TH1I *hPoint_OccupancyX;
 static TH1I *hPoint_OccupancyY;
 static TH2I *hPoint_TimeVsX;
 static TH2I *hPoint_TimeVsY;
+static TH2I *hPoint_ZVsX;
+static TH2I *hPoint_ZVsY;
 static TH2I *hPoint_XYDisplay;
 static TH2I *hPoint_dE_XY;
 static TH2I *hPoint_TimeVsdEX;
 static TH2I *hPoint_TimeVsdEY;
+static TH1I *hSegment_Members_Event[NEventsClusterMonitor];
+static TH2I *hPoint_ZVsX_Event[NEventsClusterMonitor];
+static TH2I *hPoint_ZVsY_Event[NEventsClusterMonitor];
 
 //----------------------------------------------------------------------------------
 
@@ -91,7 +97,6 @@ JEventProcessor_TRD_online::JEventProcessor_TRD_online() {
 
 
 //----------------------------------------------------------------------------------
-
 
 JEventProcessor_TRD_online::~JEventProcessor_TRD_online() {
 }
@@ -175,12 +180,26 @@ void JEventProcessor_TRD_online::Init() {
 	hPoint_XYDisplay = new TH2I("Point_XYDisplay","TRD 2D Point Display;X [cm];Y [cm]",800,-90,-10,400,-70,-30);
 	hPoint_TimeVsX= new TH2I("Point_TimeVsX","TRD Point X in Time;X [cm];8*(Peak Time) [ns]",800,-90,-10,200,0.,200.*8.);
 	hPoint_TimeVsY= new TH2I("Point_TimeVsY","TRD Point Y in Time;Y [cm];8*(Peak Time) [ns]",400,-70,-30,200,0.,200.*8.);
+    hPoint_ZVsX = new TH2I("Point_ZVsX","TRD Point X vs. Z;Z [cm];X [cm]",100,528,533,100,-90,-10);
+    hPoint_ZVsY = new TH2I("Point_ZVsY","TRD Point Y vs. Z;Z [cm];Y [cm]",100,528,533,100,-70,-30);
 	hPoint_TimeDiff = new TH1I("Point_TimeDiff","TRD Point Time Difference;abs(X Time - Y Time) [ns]; ",80,-40.,40.);
+
+    const TString Segment_Members_Vars[8] = {"x","y","tx","ty","var_x","var_y","var_tx","var_ty"};
+    for (int i=0; i<NEventsClusterMonitor; i++) {
+        hPoint_ZVsX_Event[i] = new TH2I(Form("Point_ZVsX_Event%d",i),Form("TRD Point X vs. Z;Z [cm];X [cm]",i),100,528,533,100,-90,-10);
+        hPoint_ZVsY_Event[i] = new TH2I(Form("Point_ZVsY_Event%d",i),Form("TRD Point Y vs. Z;Z [cm];Y [cm]",i),100,528,533,100,-70,-30);
+        hSegment_Members_Event[i] = new TH1I(Form("Segment_Members_Event%d",i),Form("TRD Segment Members Event %d",i),8,0.,8.);
+        for (int j=0; j<8; j++) {
+            hSegment_Members_Event[i]->GetXaxis()->SetBinLabel(j+1,Segment_Members_Vars[j]);
+        }
+    }
 	
     trdDir->cd();
 	
 	// cluster-level hists
     eventClusterCount = 0;
+
+    eventPointCount = 0;
 
     gDirectory->mkdir("Cluster")->cd();
     // hCluster_NClusters = new TH1I("Cluster_NClusters","TRD number of cluster per event;clusters;events",20,0.5,0.5+20);
@@ -193,15 +212,15 @@ void JEventProcessor_TRD_online::Init() {
         else
 	{    NTRDstrips = NTRD_ystrips;}
 
-            hClusterHits_TimeVsStrip[i] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d",i),Form("TRD Plane %d Cluster Hits Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
-            hCluster_TimeVsStrip[i] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d",i),Form("TRD Plane %d Cluster Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+            hClusterHits_TimeVsPos[i] = new TH2I(Form("ClusterHits_TimeVsPos_Plane%d",i),Form("TRD Plane %d Cluster Hits Time vs. Position;8*(Peak Time) [ns];Position [cm]",i),250,0,2000.0,100,-50,50);
+            hCluster_TimeVsPos[i] = new TH2I(Form("Cluster_TimeVsPos_Plane%d",i),Form("TRD Plane %d Cluster Time vs. Position;8*(Peak Time) [ns];Position [cm]",i),250,0.,2000.0,100,-50,50);
         for(int j=0; j<NEventsClusterMonitor; j++) {
-            hClusterHits_TimeVsStripEvent[i][j] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Hits Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
-            hCluster_TimeVsStripEvent[i][j] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
+            hClusterHits_TimeVsPosEvent[i][j] = new TH2I(Form("ClusterHits_TimeVsPos_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Hits Time vs. Pos;8*(Peak Time) [ns];Position [cm]",i),250,0,2000.0,100,-50,50);
+            hCluster_TimeVsPosEvent[i][j] = new TH2I(Form("Cluster_TimeVsPos_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Time vs. Pos;8*(Peak Time) [ns];Position [cm]",i),250,0.,2000.0,100,-50,50);
 			hDigiHit_TimeVsStripEvent[i][j] = new TH2I(Form("DigiHit_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d DigiHit Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
         }
     }
-    
+ 
     // back to main dir
     mainDir->cd();
 }
@@ -260,8 +279,13 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     event->Get(hits);
     vector<const DTRDStripCluster*> clusters;
     event->Get(clusters);
+
 	vector<const DTRDPoint*> points;
-    event->Get(points,"Hit");
+    event->Get(points);
+    
+    vector<const DTRDSegment*> segments;
+    event->Get(segments);
+
 	
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
@@ -313,8 +337,13 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 	///////////////////////////
     //    TRD Clusters       //
     ///////////////////////////
+
+
+    const int NUM_X_STRIPS = 720;
+    const int NUM_Y_STRIPS = 528;
+    const double STRIP_PITCH=0.1;
 	
-    if (clusters.size() > 2 && eventClusterCount < NEventsClusterMonitor) {
+    if (clusters.size() > 10 && eventClusterCount < NEventsClusterMonitor) {
     	cout << "Event " << eventnumber << " has " << clusters.size() << " clusters, eventClusterCount = " << eventClusterCount << endl;
     	for (const auto& cluster : clusters) {
     		int plane = cluster->plane-1;
@@ -322,12 +351,15 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
         	if (plane == 0) pos = cluster->pos.x();
         	else pos = cluster->pos.y();
 
-        	hCluster_TimeVsStripEvent[plane][eventClusterCount]->Fill(cluster->t_avg, pos);
+        	hCluster_TimeVsPosEvent[plane][eventClusterCount]->Fill(cluster->t_avg, pos);
     	}
 
         for (const auto& hit : hits) {
             int plane = hit->plane-1;
-            hClusterHits_TimeVsStripEvent[plane][eventClusterCount]->Fill(hit->t, hit->strip);
+            double pos = 0;
+            if (plane == 0) pos = STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
+            else pos = STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
+            hClusterHits_TimeVsPosEvent[plane][eventClusterCount]->Fill(hit->t, pos);
         }
 		
 		for (const auto& hit : digihits) {
@@ -335,8 +367,14 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
             hDigiHit_TimeVsStripEvent[plane][eventClusterCount]->Fill(8.*hit->peak_time, hit->strip);
         }
 
+        // cout << "TRD_online:Process() ... num input clusters = " << clusters.size() << endl;
+        // cout << "TRD_online:Process() ... num input points = " << points.size() << endl;
+        // cout << "TRD_online:Process() ... num input segments = " << segments.size() << endl;
+
         eventClusterCount++;
     }
+
+    if (segments.size() > 1) cout << "TRD_online:Process() ... num input segments = " << segments.size() << endl;
 
     for (const auto& cluster : clusters) {
         int plane = cluster->plane-1;
@@ -344,17 +382,23 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
         if (plane == 0) pos = cluster->pos.x();
         else pos = cluster->pos.y();
 
-        hCluster_TimeVsStrip[plane]->Fill(cluster->t_avg, pos);
+        hCluster_TimeVsPos[plane]->Fill(cluster->t_avg, pos);
     }
 
     for (const auto& hit : hits) {
+
         int plane = hit->plane-1;
-        hClusterHits_TimeVsStrip[plane]->Fill(hit->t, hit->strip);
+        double pos = 0;
+        if (plane == 0) pos = STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
+        else pos = STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
+        hClusterHits_TimeVsPos[plane]->Fill(hit->t, pos);
     }
 		
 	///////////////////////////
     //      TRD Points       //
     ///////////////////////////
+
+    // cout << "Event " << eventnumber << " has " << points.size() << " points" << endl;
 		
 	hPoint_NHits->Fill(points.size());
     for (const auto& point : points) {
@@ -371,8 +415,34 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 	    hPoint_dERatio->Fill((point->dE_x / point->dE_y));
     	hPoint_TimeVsX->Fill(point->x,point->time);
         hPoint_TimeVsY->Fill(point->y,point->time);
+        hPoint_ZVsX->Fill(point->z,point->x);
+        hPoint_ZVsY->Fill(point->z,point->y);
         hPoint_XYDisplay->Fill(point->x,point->y);
+        // cout << "TRD_online:Process() ... point x = " << point->x << ", y = " << point->y << ", z = " << point->z << endl;
     }
+
+    ///////////////////////////
+    //      TRD Segments       //
+    ///////////////////////////
+
+    if (clusters.size() > 10 && eventPointCount < NEventsClusterMonitor && segments.size() == 1) {
+        for (const auto& point: points) {
+            hPoint_ZVsX_Event[eventPointCount]->Fill(point->z, point->x);
+            hPoint_ZVsY_Event[eventPointCount]->Fill(point->z, point->y);
+        }
+        for (const auto& segment: segments) {
+            hSegment_Members_Event[eventPointCount]->SetBinContent(1, segment->x);
+            hSegment_Members_Event[eventPointCount]->SetBinContent(2, segment->y);
+            hSegment_Members_Event[eventPointCount]->SetBinContent(3, segment->tx);
+            hSegment_Members_Event[eventPointCount]->SetBinContent(4, segment->ty);
+            hSegment_Members_Event[eventPointCount]->SetBinContent(5, segment->var_x);
+            hSegment_Members_Event[eventPointCount]->SetBinContent(6, segment->var_y);
+            hSegment_Members_Event[eventPointCount]->SetBinContent(7, segment->var_tx);
+            hSegment_Members_Event[eventPointCount]->SetBinContent(8, segment->var_ty);
+        }
+        eventPointCount++;
+    }
+
 	
     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	

@@ -21,6 +21,7 @@ private:
 
     int wirePlaneOffset;
     int eventClusterCount; ///< Counter for number of events processed for cluster monitoring
+    int eventPointCount; ///< Counter for number of events processed for point and segment monitoring
 };
 
 #endif // _JEventProcessor_TRD_online_
