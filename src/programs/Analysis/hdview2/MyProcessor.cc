@@ -107,13 +107,19 @@ MyProcessor::~MyProcessor()
 
 }
 
+const JEvent& MyProcessor::GetCurrentEvent() {
+    throw JException("No event found!");
+}
+
+void MyProcessor::NextEvent() {
+}
+
 //------------------------------------------------------------------
 // Init 
 //------------------------------------------------------------------
 void MyProcessor::Init(void)
 {
 		Bfield = NULL;
-		jevent = NULL;
 
 		// Tell factory to keep around a few density histos
 		//gPARMS->SetParameter("TRKFIND:MAX_DEBUG_BUFFERS",	16);
@@ -199,12 +205,9 @@ void MyProcessor::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 //------------------------------------------------------------------
 // Process 
 //------------------------------------------------------------------
-void MyProcessor::Process(const std::shared_ptr<const JEvent>& locEvent)
+void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 {
-	if(!jevent)return; //NOERROR;
-	auto eventnumber = locEvent->GetEventNumber();
-	jevent = const_cast<JEvent*>(locEvent.get());
-	jevent->SetSequential(true);
+	auto eventnumber = event->GetEventNumber();
 	static uint64_t Nevents_since_last_draw = 0;
 	static bool save_continuous = (GO == 1);
 	static long save_sleep_time = hdvmf->GetSleepTime();
@@ -229,7 +232,7 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& locEvent)
 			tag = c.substr(pos+1,c.size());
 			c.erase(pos);
 		}
-		auto fac = jevent->GetFactory(c, tag.c_str());
+		auto fac = event->GetFactory(c, tag.c_str());
 		if( !fac ){
 			jerr << "No factory found for type: " << c << " !" << endl;
 			jerr << "Double check that there is not a typo in the name and run again." << endl;
@@ -273,7 +276,7 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& locEvent)
 		char trigstring[10];
 		const DL1Trigger *trig = NULL;
 		try {
-			jevent->GetSingle(trig);
+			event->GetSingle(trig);
 		} catch (...) {}
 		if (trig) {
 			sprintf(trigstring,"0x%04x",trig->trig_mask); 
@@ -283,7 +286,7 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& locEvent)
 		hdvmf->SetTrig(trigstring);
 
 		string source = "<no source>";
-        if (locEvent->GetJEventSource()) {
+        if (event->GetJEventSource()) {
             source = locEvent->GetJEventSource()->GetResourceName();
         }
 
@@ -336,8 +339,6 @@ void MyProcessor::FillGraphics(void)
 	graphics_xz.clear();  // The objects placed in these will be deleted by hdv_mainframe
 	graphics_yz.clear();  // The objects placed in these will be deleted by hdv_mainframe
 	graphics_tof_hits.clear();  // The objects placed in these will be deleted by hdv_mainframe
-
-	if(!jevent)return;
 
 	vector<const DSCHit *>schits;
 	jevent->Get(schits);

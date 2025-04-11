@@ -27,6 +27,7 @@
 #include <FMWPC/DFMWPCHit.h>
 #include <FMWPC/DFMWPCCluster.h>
 #include <FMWPC/DFMWPCMatchedTrack.h>
+#include <condition_variable>
 
 class DQuickFit;
 class DTrackCandidate_factory;
@@ -62,6 +63,9 @@ class MyProcessor:public JEventProcessor
   void Init() override; ///< Called once at program start
 	void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;	///< Called everytime a new run number is detected.
 	void Process(const std::shared_ptr<const JEvent>& locEvent) override;///< Called every event.
+
+    const JEvent& GetCurrentEvent();
+    void NextEvent();
   
   //void DrawXY(void);
   //void DrawRPhi(void);
@@ -110,11 +114,14 @@ class MyProcessor:public JEventProcessor
 
 
  private:	
-  
+
+    const JEvent *m_current_event = nullptr;
+    std::mutex m_mutex;
+    std::condition_variable m_condvar;
+
   hdv_mainframe *hdvmf;
   hdv_fulllistframe *fulllistmf=NULL;
   hdv_debugerframe *debugermf;
-  JEvent* jevent;
   DRootGeom *RootGeom;
   DGeometry *geom;
   string MATERIAL_MAP_MODEL;
