@@ -11,7 +11,6 @@
 
 #include <JANA/JEventProcessor.h>
 #include <JANA/JEvent.h>
-#include <JANA/JEvent.h>
 
 #include <GlueX.h>
 
@@ -51,8 +50,6 @@ class hdv_debugerframe;
 #define MAX_LINES 100
 #define MAX_CIRCLES 100
 
-class MyProcessor;
-extern MyProcessor *gMYPROC;
 
 class MyProcessor:public JEventProcessor
 {
@@ -115,9 +112,9 @@ class MyProcessor:public JEventProcessor
 
  private:	
 
-    const JEvent *m_current_event = nullptr;
-    std::mutex m_mutex;
-    std::condition_variable m_condvar;
+  const JEvent *m_current_event = nullptr;
+  std::mutex m_mutex;
+  std::condition_variable m_condvar;
 
   hdv_mainframe *hdvmf;
   hdv_fulllistframe *fulllistmf=NULL;

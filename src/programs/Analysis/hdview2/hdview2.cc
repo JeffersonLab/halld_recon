@@ -14,10 +14,7 @@ std::vector< std::string> REQUIRED_CLASSES_FOR_DRAWING;
 REQUIRED_CLASSES_LOGIC_t REQUIRED_CLASSES_LOGIC=REQUIRED_CLASSES_LOGIC_OR;
 
 
-TCanvas *maincanvas=NULL;
 extern JApplication *japp;
-JEvent *jevent =NULL;
-MyProcessor *myproc = NULL;
 
 int32_t RUNNUMBER = 9999; // set with RUNNUMBER config paramter
 
@@ -47,8 +44,8 @@ int main(int narg, char *argv[])
 	// This is done AFTER creating the TApplication object so when the
 	// init routine is called, the window will be mapped and it can
 	// draw the detectors.
-	myproc = new MyProcessor();
-	japp->Add(myproc);
+	gMYPROC = new MyProcessor(); // Owned by japp
+	japp->Add(gMYPROC);
 
 	// If the PRINT_FACTORY_LIST flag was set, then print the factory list
 	if(PRINT_FACTORY_LIST) {

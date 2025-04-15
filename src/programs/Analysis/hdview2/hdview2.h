@@ -17,9 +17,6 @@ using namespace std;
 #include "DANA/DApplication.h"
 #include "MyProcessor.h"
 
-extern TCanvas *maincanvas;
-extern DApplication *dapp;
-extern MyProcessor *myproc;
 
 extern int32_t RUNNUMBER;
 
