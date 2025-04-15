@@ -30,7 +30,7 @@ class DTRDHit_factory_Calib:public JFactoryT<DTRDHit>{
 		
 		double PEAK_THRESHOLD;
   		double LOW_TCUT;
-  		double HIGH_TCUT;
+//  		double HIGH_TCUT;
 
 		// calibration constants stored in channel format
 		vector<trd_digi_constants_t> time_offsets;
