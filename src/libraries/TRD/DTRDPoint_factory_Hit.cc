@@ -97,8 +97,8 @@ void DTRDPoint_factory_Hit::Process(const std::shared_ptr<const JEvent>& event)
 			//if(fabs(t_diff) < TIME_DIFF_MAX && (hitY[j]->q < dE_high) && (hitY[j]->q > dE_low )) {
 			if(fabs(t_diff) < TIME_DIFF_MAX) {	
 				//Remove noisy patches
-				if (hitX[i]->strip>600 && (hitY[j]->strip==3 || hitY[j]->strip==4 || hitY[j]->strip==193 || hitY[j]->strip==195 || hitY[j]->strip==196 || hitY[j]->strip==233))
-					continue;
+//				if (hitX[i]->strip>600 && (hitY[j]->strip==3 || hitY[j]->strip==4 || hitY[j]->strip==193 || hitY[j]->strip==195 || hitY[j]->strip==196 || hitY[j]->strip==233))
+//					continue;
 				
 				// save new point
 				DTRDPoint* point = new DTRDPoint;

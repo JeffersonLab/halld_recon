@@ -33,12 +33,12 @@ void DTRDHit_factory_Calib::Init()
     app->SetDefaultParameter("TRD:PEAK_THRESHOLD", PEAK_THRESHOLD, 
 			      "Threshold in fADC units for hit amplitudes (default: 100.)");
 
-  	LOW_TCUT = -10000.;
-  	HIGH_TCUT = 10000.;
+  	LOW_TCUT = 0.;
+  	//HIGH_TCUT = 1110.;
     app->SetDefaultParameter("TRD:LOW_TCUT", LOW_TCUT, 
-			      "Throw away hits which come before this time (default: -10000.)");
-    app->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
-			      "Throw away hits which come after this time (default: 10000.)");
+			      "Throw away hits which come before this time (default: 0.)");
+    //app->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
+	//		      "Throw away hits which come after this time (default: 1110.)");
 	
 	return;
 }
@@ -157,7 +157,7 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
         // There are a few values from the new data type that are critical for the interpretation of the data
         uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
       	uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
-      	//uint16_t NW   = 0;
+      	uint16_t NW   = 0; //HIGH_TCUT/t_scale;
      	//uint16_t IE   = 0;
 
       	int pulse_peak = 0;
@@ -173,7 +173,8 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
             	//IBIT = config->IBIT == 0xffff ? 4 : config->IBIT;
             	ABIT = config->ABIT == 0xffff ? 3 : config->ABIT;
             	PBIT = config->PBIT == 0xffff ? 0 : config->PBIT;
-            	//NW   = config->NW   == 0xffff ? 80 : config->NW;
+				//NW   = config->NW   == 0xffff ? 80 : config->NW; ///////////////////////
+            	NW   = config->NW;
             	//IE   = config->IE   == 0xffff ? 16 : config->IE;
          	} else {         	
             	static int Nwarnings = 0;
@@ -200,11 +201,15 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 	    if(pulse_height < PEAK_THRESHOLD)
 	    	continue;
 
-	    // Time cut now
+	    // Time cut now (Set the upper Time Cut based on the firmware timestamp)
 	    double T = (double)digihit->peak_time * t_scale;
-	    if( (T < LOW_TCUT) || (T > HIGH_TCUT) )
+	    if( (T < LOW_TCUT) || (T > ((NW-21.)*t_scale)) )
 	    	continue;
-
+		
+		// Remove bad strips
+		else if ( ((digihit->plane==2) && (digihit->strip==120 || digihit->strip==240 || digihit->strip==360)) || ((digihit->plane==1) && (digihit->strip==107 || digihit->strip==114 || digihit->strip==579 || digihit->strip==596 || digihit->strip==597 || digihit->strip==615 || digihit->strip==627)) )
+			continue;
+		
 	    // Build hit object
 	    DTRDHit *hit = new DTRDHit;
 	    hit->plane = digihit->plane;

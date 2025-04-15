@@ -32,7 +32,7 @@ private:
   TH2D *hTRDSegmentMatchXY_el, *hTRDSegmentMatchTxTy_el, *hTRDSegmentXY_el, *hTRDSegmentMatchXY_pi, *hTRDSegmentMatchTxTy_pi, *hTRDSegmentXY_pi;
   TH1D *hTRDSegmentMatchX_el, *hTRDSegmentMatchY_el, *hTRDSegmentMatchTx_el, *hTRDSegmentMatchTy_el, *hTRDSegmentMatchX_pi, *hTRDSegmentMatchY_pi, *hTRDSegmentMatchTx_pi, *hTRDSegmentMatchTy_pi;
   //-Sim
-  TH2D *hTRDExtrapXY, *hExtrapXYDiff, *hExtrapXYHitDiff, *hSegmentExtrapXYDiff, *hTRDXCorr, *hTRDYCorr, *hExtrapThetavsP, *hExtrapThetavsP_Selected;
+  TH2D *hTRDExtrapXY, *hExtrapXYDiff, *hExtrapXYHitDiff, *hSegmentExtrapXYDiff, *hTRDXCorr, *hTRDYCorr, *hExtrapThetavsP, *hExtrapThetavsP_Selected, *hExtrapXHitDiffvsTime, *hExtrapYHitDiffvsTime;
   TH1D *hTRDExtrapPx, *hTRDExtrapPy, *hTRDExtrapPz, *hExtrapXDiff, *hExtrapYDiff, *hExtrapXHitDiff, *hExtrapYHitDiff, *hSegmentExtrapXDiff, *hSegmentExtrapYDiff, *hExtrapTheta;
   //-Projection
   TH2D *hProjectionXYDiff_el, *hProjectionXYHitDiff_el, *hProjectionXYDiff_pi, *hProjectionXYHitDiff_pi;
@@ -46,8 +46,12 @@ private:
    
   TH1D *hTRDFlightTime_el, *hTRDEnergy_el, *hTRDMomentum_el, *hTRDTheta_el, *hTRDEnergyDiff_el, *hTRDFlightTime_pi, *hTRDEnergy_pi, *hTRDMomentum_pi, *hTRDTheta_pi, *hTRDEnergyDiff_pi;
   
-  TH1D *hnumElTracks, *hnumPiTracks, *hnumTrackMatches;
+  TH1D *hnumElTracks, *hnumPiTracks, *hnumTrackMatches, *hnumTracks, *hnumTracksInTRD, *hnumTracksGoodExtrap;
   
+  //--New
+  TH2D *hFCALExtrapXY_TRD, *hExtrapXYDiff_FCAL_TRD, *hFCALExtrapEPvsP_TRD, *hExtrapThetavsP_TRD, *hExtrapThetavsP_Selected_TRD, *hSeenPointsXY, *hExtrapsXY, *hSeenPointsFCALXY, *hExtrapsFCALXY, *hSeenPointsSingleXY;
+  TH1D *hExtrapTheta_TRD, *hExtrapXDiff_FCAL_TRD, *hExtrapYDiff_FCAL_TRD, *hFCALExtrapE_TRD, *hFCALExtrapEP_TRD, *hnumSeenExtrap, *hnumPointsSeen, *hnumExtrap, *hnumSeenExtrapFCAL, *hnumPointsSeenFCAL;
+    
   
   std::shared_ptr<JLockService> lockService; //Used to access all the services, its value should be set inside Init()
 };
