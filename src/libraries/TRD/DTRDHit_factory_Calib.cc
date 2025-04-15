@@ -207,7 +207,7 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 	    	continue;
 		
 		// Remove bad strips
-		else if ( ((digihit->plane==2) && (digihit->strip==120 || digihit->strip==240 || digihit->strip==360)) || ((digihit->plane==1) && (digihit->strip==107 || digihit->strip==114 || digihit->strip==579 || digihit->strip==596 || digihit->strip==597 || digihit->strip==615 || digihit->strip==627)) )
+		else if ( ((digihit->plane==2) && (digihit->strip==120 || digihit->strip==240 || digihit->strip==360)) || ((digihit->plane==1) && (digihit->strip==107 || digihit->strip==114 || digihit->strip==579 || digihit->strip==596 || digihit->strip==597 || digihit->strip==615 || digihit->strip==627 || digihit->strip==720)) )
 			continue;
 		
 	    // Build hit object
