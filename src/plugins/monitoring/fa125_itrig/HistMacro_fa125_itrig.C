@@ -76,7 +76,7 @@
           TH1I *hevents = (TH1I*)gDirectory->Get("num_events");
 
           if(hevents){
-             Nevents = (double)num_events->GetBinContent(1);
+             Nevents = (double)hevents->GetBinContent(1);
              std::cout << "HistMacro_fa125_itrig: Nevents=" << Nevents << std::endl;
           }else{
              std::cout << "HistMacro_fa125_itrig: unable to find /fa125_itrig/num_events !" << std::endl;
