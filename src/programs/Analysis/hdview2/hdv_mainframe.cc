@@ -111,7 +111,8 @@ static vector<vector <DFDCWire *> >fdcwires;
 hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(p,w,h)
 {
   //Get pointer to DGeometry object
-  const DGeometry *dgeom  = DEvent::GetDGeometry(std::shared_ptr<const JEvent>(jevent));
+  const auto& event = gMYPROC->GetCurrentEvent();
+  const DGeometry *dgeom  = DEvent::GetDGeometry(event.shared_from_this());
   
   tofgeom = new DTOFGeometry(dgeom);
   fcalgeom= new DFCALGeometry(dgeom);
@@ -866,17 +867,17 @@ void hdv_mainframe::DoQuit(void)
 //-------------------
 void hdv_mainframe::DoNext(void)
 {
-	if(jevent){
-		if(SKIP_EPICS_EVENTS){
-			while(true){
-				// event->OneEvent();
-				vector<const DEPICSvalue*> epicsvalues;
-				jevent->Get(epicsvalues);
-				if(epicsvalues.empty()) break;
-				cout << "Skipping EPICS event " << jevent->GetEventNumber() << endl;
-			}
-		}
-	}
+    if(SKIP_EPICS_EVENTS){
+        while(true){
+            gMYPROC->NextEvent(); // Notify gMYPROC to resume
+            const auto& event = gMYPROC->GetCurrentEvent(); // Block until next event present
+
+            vector<const DEPICSvalue*> epicsvalues;
+            event.Get(epicsvalues);
+            if(epicsvalues.empty()) break;
+            cout << "Skipping EPICS event " << event.GetEventNumber() << endl;
+        }
+    }
 }
 
 //-------------------

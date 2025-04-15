@@ -19,7 +19,6 @@ using namespace std;
 
 extern TCanvas *maincanvas;
 extern DApplication *dapp;
-extern JEvent *jevent;
 extern MyProcessor *myproc;
 
 extern int32_t RUNNUMBER;

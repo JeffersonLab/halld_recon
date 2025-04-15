@@ -37,7 +37,6 @@ using namespace std;
 #include <TSpline.h>
 
 // Declared in hdview2.cc
-extern JEvent *jevent;
 extern MyProcessor *myproc;
 
 // Defined in hdv_mainframe.cc
@@ -245,19 +244,18 @@ void fmwpc_mainframe::DoNewEvent(void)
 	DoUpdateMenus();
 	DoMyRedraw();
 
+    const auto& current_jevent = gMYPROC->GetCurrentEvent();
+
     // Update run, event info
-    if( jevent ) {
-        std::stringstream ss;
-        ss << jevent->GetRunNumber();
-        run->SetTitle(ss.str().c_str());
-        run->Draw();
+    std::stringstream ss;
+    ss << current_jevent.GetRunNumber();
+    run->SetTitle(ss.str().c_str());
+    run->Draw();
 
-        ss.str("");
-        ss << jevent->GetEventNumber();
-        event->SetTitle(ss.str().c_str());
-        event->Draw();
-
-    }
+    ss.str("");
+    ss << current_jevent.GetEventNumber();
+    event->SetTitle(ss.str().c_str());
+    event->Draw();
 }
 
 //---------------------------------
@@ -437,6 +435,7 @@ void fmwpc_mainframe::DrawAxes(TCanvas *c, vector<TObject*> &graphics, const cha
 //-------------------
 void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std::string view)
 {
+    const auto& event = gMYPROC->GetCurrentEvent();
 
     // Draw chambers
     int wires_into_screen = view=="top"; // true=wires into screen ; false=wires parallel to screen
@@ -514,18 +513,16 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
     vector<const DCTOFTDCDigiHit*> ctoftdcdigihits;
     vector<const DCTOFHit*> ctofhits;
     vector<const DCTOFPoint*> ctofpoints;
-    if( jevent != NULL ) {
-        jevent->Get(tbts);
-        jevent->Get(fcalhits);
-        jevent->Get(fmwpcdigihits);
-        jevent->Get(fmwpchits);
-        jevent->Get(fmwpcclusters);
-        jevent->Get(fmwpcmatchedtracks);
-        jevent->Get(ctofdigihits);
-        jevent->Get(ctoftdcdigihits);
-        jevent->Get(ctofhits);
-        jevent->Get(ctofpoints);
-    }
+    event.Get(tbts);
+    event.Get(fcalhits);
+    event.Get(fmwpcdigihits);
+    event.Get(fmwpchits);
+    event.Get(fmwpcclusters);
+    event.Get(fmwpcmatchedtracks);
+    event.Get(ctofdigihits);
+    event.Get(ctoftdcdigihits);
+    event.Get(ctofhits);
+    event.Get(ctofpoints);
 
     // Draw FCALHits
     if( checkbuttons["Draw FCALHits"]->GetState() == kButtonDown) {

@@ -640,6 +640,8 @@ void trk_mainframe::DrawHitsForOneTrack(
 	int index,
 	vector<const DCDCTrackHit*> &cdctrackhits)
 {
+    const auto& event = gMYPROC->GetCurrentEvent();
+
 	// Clear current hits list
 	if(index==0){
 		TRACKHITS.clear();
@@ -652,7 +654,7 @@ void trk_mainframe::DrawHitsForOneTrack(
 
     // Get fdc drift time - distance function
     vector<const DTrackFitter*> fitters;
-    jevent->Get(fitters, "KalmanSIMD");
+    event.Get(fitters, "KalmanSIMD");
     const DTrackFitterKalmanSIMD *fitter=0;
     if (fitters.size() > 0) {
         fitter = dynamic_cast<const DTrackFitterKalmanSIMD *>(fitters[0]);
