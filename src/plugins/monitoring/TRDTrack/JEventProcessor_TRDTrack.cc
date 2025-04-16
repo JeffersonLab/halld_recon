@@ -43,7 +43,7 @@ void JEventProcessor_TRDTrack::Init()
 	
 	// create root folder for TRD and cd to it, store main dir
 	TDirectory *mainDir = gDirectory;
-	TDirectory *trdDir = gDirectory->mkdir("TRD");
+	TDirectory *trdDir = gDirectory->mkdir("TRDTrack");
 	trdDir->cd();
 	
 	//--Book Histograms
