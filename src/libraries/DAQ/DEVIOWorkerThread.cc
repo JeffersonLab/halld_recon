@@ -1400,7 +1400,7 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
 }
 
 //----------------
-// Parsef250Bank
+// ParseHelicityDecoderBank
 //----------------
 void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
@@ -1411,12 +1411,13 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 	
 	uint32_t slot = 0;
 	uint32_t itrigger = -1;
-	
-	//iptr++; /// DEBUG
-	//iptr++; /// DEBUG
 
 	uint32_t *istart_helicity_data = iptr;
     uint32_t Nwords = ((uint64_t)iend - (uint64_t)iptr)/sizeof(uint32_t);
+
+// 	cout << "----- Dump block to help with debugging -----" << endl;
+// 	cout.flush(); cerr.flush();
+// 	DumpBinary(istart_helicity_data, iend, Nwords, iptr);
 
     // Loop over data words
     for(; iptr<iend; iptr++){
@@ -1441,6 +1442,7 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
             case 2: // Event Header
                 itrigger = (*iptr>>0) & 0x3FFFFF;
 				pe = *pe_iter++;
+				cout << " run number = " << pe->run_number  << " event number = " << pe->event_number << endl;
                 if(VERBOSE>7) cout << "      Helicity Decoder Event Header: itrigger="<<itrigger<<", rocid="<<rocid<<", slot="<<slot<<")" <<" (0x"<<hex<<*iptr<<dec<<")" <<endl;
                 break;
             case 3: // Trigger Time
@@ -1468,7 +1470,8 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 					// sanity checks
 					if(header_reserved != 0x18)  { 
 						jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<"  reserved field = 0x"<<hex<<header_reserved<<dec<<"  (expected=0x18)"<<endl; 
-
+						jerr << "  run number = " << pe->run_number  << " event number = " << pe->event_number << endl;
+						
 // 						cout << "----- Dump block to help with debugging -----" << endl;
 						cout.flush(); cerr.flush();
 						DumpBinary(istart_helicity_data, iend, Nwords, iptr);
@@ -1477,6 +1480,7 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 					}
 					if(header_number_words != 14)  { 
 						jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<"  number words = "<<header_number_words<<"  (expected=14)"<<endl; 
+						jerr << "  run number = " << pe->run_number  << " event number = " << pe->event_number << endl;
 
 // 						cout << "----- Dump block to help with debugging -----" << endl;
 						cout.flush(); cerr.flush();
@@ -1598,7 +1602,7 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 			default:
  				if(VERBOSE>7) cout << "      Helicity Decoder unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
 				jerr << "Helicity Decoder unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
-// 				cout << "----- Dump block to help with debugging -----" << endl;
+						//jerr << "  run number = " << pe->run_number  << " event number = " << pe->event_number << endl;
  				cout.flush(); cerr.flush();
  				DumpBinary(istart_helicity_data, iend, Nwords, iptr);
 
