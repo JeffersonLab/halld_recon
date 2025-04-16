@@ -669,8 +669,10 @@ def Add_HDF5(env):
 		env.AppendUnique(CPPPATH = HDF5_CPPPATH)
 		HDF5_LIBPATH = ["%s/lib" % (hdf5_root)]
 		env.AppendUnique(LIBPATH = HDF5_LIBPATH)
-		env.AppendUnique(LIBS=['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
-		env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
+		#env.AppendUnique(LIBS=['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
+		env.AppendUnique(LIBS=['hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
+		#env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
+		env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
 		env.AppendUnique(CXXFLAGS = ['-DHDF5_SUPPORT'])
 
 ##################################
