@@ -15,13 +15,17 @@ using namespace std;
 #include "DTRDDigiHit.h"
 #include "DTRDHit.h"
 
-// store constants so that they can be accessed by pixel number
+// store constants so that they can be accessed by strip number
 typedef  vector<double>  trd_digi_constants_t;
 
 class DTRDHit_factory_Calib:public JFactoryT<DTRDHit>{
 	public:
 		DTRDHit_factory_Calib() {  SetTag("Calib");  };
 		~DTRDHit_factory_Calib(){};
+
+        static const int k_counter_bad = 0;
+        static const int k_counter_good = 1;
+        static const int k_counter_noisy = 2;
 
 		// overall scale factors
 		double a_scale;
@@ -34,6 +38,7 @@ class DTRDHit_factory_Calib:public JFactoryT<DTRDHit>{
 
 		// calibration constants stored in channel format
 		vector<trd_digi_constants_t> time_offsets;
+		vector< vector<int>> strip_quality;
 
 	private:
 		void Init() override;
