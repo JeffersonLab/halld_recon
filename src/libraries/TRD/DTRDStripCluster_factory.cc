@@ -81,7 +81,7 @@ double DTRDStripCluster_factory::StripToPosition(int iplane, const DTRDHit *hit)
   if(iplane == 0) {
     return -1.*STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
   }
-  return -1.0*STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
+  return STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
 }
 
 
