@@ -13,6 +13,7 @@ using namespace std;
 #include <TRD/DTRDStripCluster.h>
 #include <TRD/DTRDPoint.h>
 #include <TRD/DTRDSegment.h>
+#include <PID/DChargedTrack.h>
 #include <DAQ/Df125FDCPulse.h>
 
 #include <TDirectory.h>
@@ -48,12 +49,15 @@ static TH2I *hHit_TimeVsStrip[NTRDplanes];
 static TH2I *hHit_TimeVsdE[NTRDplanes];
 static TH2I *hHit_StripVsdE[NTRDplanes];
 
-const int NEventsClusterMonitor = 10;
+const int NEventsMonitor = 10;
+const int NMaxExtrapolations = 5;
+const int NMaxSegments = 5;
+
 static TH2I *hClusterHits_TimeVsPos[NTRDplanes];
 static TH2I *hCluster_TimeVsPos[NTRDplanes];
-static TH2I *hClusterHits_TimeVsPosEvent[NTRDplanes][NEventsClusterMonitor];
-static TH2I *hCluster_TimeVsPosEvent[NTRDplanes][NEventsClusterMonitor];
-static TH2I *hDigiHit_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
+static TH2I *hClusterHits_TimeVsPosEvent[NTRDplanes][NEventsMonitor];
+static TH2I *hCluster_TimeVsPosEvent[NTRDplanes][NEventsMonitor];
+static TH2I *hDigiHit_TimeVsStripEvent[NTRDplanes][NEventsMonitor];
 
 static TH3I *hPoint_XYT;
 static TH1I *hPoint_NHits;
@@ -72,9 +76,14 @@ static TH2I *hPoint_XYDisplay;
 static TH2I *hPoint_dE_XY;
 static TH2I *hPoint_TimeVsdEX;
 static TH2I *hPoint_TimeVsdEY;
-static TH1I *hSegment_Members_Event[NEventsClusterMonitor];
-static TH2I *hPoint_ZVsX_Event[NEventsClusterMonitor];
-static TH2I *hPoint_ZVsY_Event[NEventsClusterMonitor];
+static TH1D *hSegment_Members_Event[NEventsMonitor][NMaxSegments];
+static TH1D *hExtrapolation_Members_Event[NEventsMonitor][NMaxExtrapolations];
+static TH2I *hPoint_ZVsX_Event[NEventsMonitor];
+static TH2I *hPoint_ZVsY_Event[NEventsMonitor];
+static TH1I *hNExtrapolations;
+
+// vector<TH1D*> hSegment_Members_Event[NEventsMonitor];
+// vector<TH1D*> hExtrapolation_Members_Event[NEventsMonitor];
 
 //----------------------------------------------------------------------------------
 
@@ -184,21 +193,33 @@ void JEventProcessor_TRD_online::Init() {
     hPoint_ZVsY = new TH2I("Point_ZVsY","TRD Point Y vs. Z;Z [cm];Y [cm]",100,528,533,100,-70,-30);
 	hPoint_TimeDiff = new TH1I("Point_TimeDiff","TRD Point Time Difference;abs(X Time - Y Time) [ns]; ",80,-40.,40.);
 
+
     const TString Segment_Members_Vars[8] = {"x","y","tx","ty","var_x","var_y","var_tx","var_ty"};
-    for (int i=0; i<NEventsClusterMonitor; i++) {
-        hPoint_ZVsX_Event[i] = new TH2I(Form("Point_ZVsX_Event%d",i),Form("TRD Point X vs. Z;Z [cm];X [cm]",i),100,528,533,100,-90,-10);
-        hPoint_ZVsY_Event[i] = new TH2I(Form("Point_ZVsY_Event%d",i),Form("TRD Point Y vs. Z;Z [cm];Y [cm]",i),100,528,533,100,-70,-30);
-        hSegment_Members_Event[i] = new TH1I(Form("Segment_Members_Event%d",i),Form("TRD Segment Members Event %d",i),8,0.,8.);
-        for (int j=0; j<8; j++) {
-            hSegment_Members_Event[i]->GetXaxis()->SetBinLabel(j+1,Segment_Members_Vars[j]);
+    const TString Extrapolation_Members_Vars[8] = {"x","y","dxdz","dydz"};
+    for (int i=0; i<NEventsMonitor; i++) {
+        
+        for (int j=0; j<NMaxSegments; j++) {
+            hSegment_Members_Event[i][j] = new TH1D(Form("Segment_Members_Event%d_Segment%d",i,j),Form("TRD Segment Members Event %d Segment %d",i,j),8,0.,8.);
+            for (int k=0; k<8; k++) {
+                hSegment_Members_Event[i][j]->GetXaxis()->SetBinLabel(k+1,Segment_Members_Vars[k]);
+            }
         }
+        
+        for (int j=0; j<NMaxExtrapolations; j++) {
+            hExtrapolation_Members_Event[i][j] = new TH1D(Form("Extrapolation_Members_Event%d_Extrapolation%d",i,j),Form("TRD Extrapolation Members Event %d Extrapolation %d",i,j),4,0.,4.);
+            for (int k=0; k<4; k++) {
+                hExtrapolation_Members_Event[i][j]->GetXaxis()->SetBinLabel(k+1,Extrapolation_Members_Vars[k]);
+            }
+        }
+        
+        hPoint_ZVsX_Event[i] = new TH2I(Form("Point_ZVsX_Event%d",i),Form("TRD Point X vs. Z;Z [cm];X [cm]",i),100,528,533,100,-90,-10);
+        hPoint_ZVsY_Event[i] = new TH2I(Form("Point_ZVsY_Event%d",i),Form("TRD Point Y vs. Z;Z [cm];Y [cm]",i),100,528,533,100,-70,-30);        
     }
-	
+
     trdDir->cd();
 	
 	// cluster-level hists
     eventClusterCount = 0;
-
     eventPointCount = 0;
 
     gDirectory->mkdir("Cluster")->cd();
@@ -214,15 +235,20 @@ void JEventProcessor_TRD_online::Init() {
 
             hClusterHits_TimeVsPos[i] = new TH2I(Form("ClusterHits_TimeVsPos_Plane%d",i),Form("TRD Plane %d Cluster Hits Time vs. Position;8*(Peak Time) [ns];Position [cm]",i),250,0,2000.0,100,-50,50);
             hCluster_TimeVsPos[i] = new TH2I(Form("Cluster_TimeVsPos_Plane%d",i),Form("TRD Plane %d Cluster Time vs. Position;8*(Peak Time) [ns];Position [cm]",i),250,0.,2000.0,100,-50,50);
-        for(int j=0; j<NEventsClusterMonitor; j++) {
+        for(int j=0; j<NEventsMonitor; j++) {
             hClusterHits_TimeVsPosEvent[i][j] = new TH2I(Form("ClusterHits_TimeVsPos_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Hits Time vs. Pos;8*(Peak Time) [ns];Position [cm]",i),250,0,2000.0,100,-50,50);
             hCluster_TimeVsPosEvent[i][j] = new TH2I(Form("Cluster_TimeVsPos_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Time vs. Pos;8*(Peak Time) [ns];Position [cm]",i),250,0.,2000.0,100,-50,50);
 			hDigiHit_TimeVsStripEvent[i][j] = new TH2I(Form("DigiHit_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d DigiHit Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
         }
     }
+
+    trdDir->cd();
+    gDirectory->mkdir("Track")->cd();
+    hNExtrapolations = new TH1I("NExtrapolations","Number of Extrapolations at TRD Plane per Event;Number of Extrapolations;Events",10,-0.5,9.5);
  
     // back to main dir
     mainDir->cd();
+
 }
 
 //----------------------------------------------------------------------------------
@@ -284,7 +310,10 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     event->Get(points);
     
     vector<const DTRDSegment*> segments;
-    event->Get(segments);
+    event->Get(segments,"Extrapolation");
+
+    vector<const DChargedTrack*> tracks;
+    event->Get(tracks);
 
 	
     // FILL HISTOGRAMS
@@ -343,7 +372,7 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     const int NUM_Y_STRIPS = 528;
     const double STRIP_PITCH=0.1;
 	
-    if (clusters.size() > 10 && eventClusterCount < NEventsClusterMonitor) {
+    if (clusters.size() > 10 && segments.size() > 0 && tracks.size() > 0 && eventPointCount < NEventsMonitor) {
     	cout << "Event " << eventnumber << " has " << clusters.size() << " clusters, eventClusterCount = " << eventClusterCount << endl;
     	for (const auto& cluster : clusters) {
     		int plane = cluster->plane-1;
@@ -425,23 +454,89 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     //      TRD Segments       //
     ///////////////////////////
 
-    if (clusters.size() > 10 && eventPointCount < NEventsClusterMonitor && segments.size() == 1) {
+    if (clusters.size() > 10 && segments.size() > 0 && tracks.size() > 0 && eventPointCount < NEventsMonitor) {
+        cout << "Event " << eventnumber << " has " << clusters.size() << " clusters, " << segments.size() << " segments, " << tracks.size() << " tracks" << endl;
+        vector<vector<DTrackFitter::Extrapolation_t>> v_extrapolations;
+        vector<DTrackFitter::Extrapolation_t> extrapolations;
+        for (const auto& track: tracks) {
+            const DChargedTrackHypothesis *hyp = track->Get_Hypothesis(Electron);
+            if (hyp == nullptr) continue;
+            const DTrackTimeBased *trackTB = hyp->Get_TrackTimeBased();
+            if (trackTB == nullptr) continue;
+            extrapolations = trackTB->extrapolations.at(SYS_TRD);         
+            cout << "TRD_online:Process() ... extrapolations.size() = " << extrapolations.size() << endl;
+            if (extrapolations.size() == 0) continue;
+            v_extrapolations.push_back(extrapolations);
+        }
+
+        if (v_extrapolations.size() == 0) {
+            cout << "TRD_online:Process() ... no extrapolations found" << endl;
+            lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+            return;
+        }
+
+        unsigned int iExtrapolation = 0;
+        for (const auto& extrapolations : v_extrapolations) {
+            DTrackFitter::Extrapolation_t extrapolation = extrapolations[0];
+            if ((extrapolations[0].position.x() < -83.47 || extrapolations[0].position.x() > -11.47) || 
+                (extrapolations[0].position.y() < -68.6 || extrapolations[0].position.y() > -32.61)) continue;
+            double extrp_x = extrapolation.position.x();
+            double extrp_y = extrapolation.position.y();
+            double extrp_dxdz = extrapolation.momentum.x()/extrapolation.momentum.z();
+            double extrp_dydz = extrapolation.momentum.y()/extrapolation.momentum.z();
+            // cout << "TRD_online:Process() ... segment x = " << segment_x << ", y = " << segment_y << ", tx = " << segment_tx << ", ty = " << segment_ty << endl;
+            // cout << "TRD_online:Process() ... extrapolation x = " << extrp_x << ", y = " << extrp_y << ", dxdz = " << extrp_dxdz << ", dydz = " << extrp_dydz << endl;
+            hExtrapolation_Members_Event[eventPointCount][iExtrapolation]->SetBinContent(1, extrp_x);
+            hExtrapolation_Members_Event[eventPointCount][iExtrapolation]->SetBinContent(2, extrp_y);
+            hExtrapolation_Members_Event[eventPointCount][iExtrapolation]->SetBinContent(3, extrp_dxdz);
+            hExtrapolation_Members_Event[eventPointCount][iExtrapolation]->SetBinContent(4, extrp_dydz);
+            iExtrapolation++;
+            if (iExtrapolation >= NMaxExtrapolations) break;
+        }
+
+        // double segment_x = 0.;
+        // double segment_y = 0.;
+        // double segment_tx = 0.;
+        // double segment_ty = 0.;
+        for (unsigned int iSegment = 0; iSegment < segments.size(); iSegment++) {
+            const auto& segment = segments[iSegment];
+            hSegment_Members_Event[eventPointCount][iSegment]->SetBinContent(1, segment->x);
+            hSegment_Members_Event[eventPointCount][iSegment]->SetBinContent(2, segment->y);
+            hSegment_Members_Event[eventPointCount][iSegment]->SetBinContent(3, segment->tx);
+            hSegment_Members_Event[eventPointCount][iSegment]->SetBinContent(4, segment->ty);
+            hSegment_Members_Event[eventPointCount][iSegment]->SetBinContent(5, segment->var_x);
+            hSegment_Members_Event[eventPointCount][iSegment]->SetBinContent(6, segment->var_y);
+            hSegment_Members_Event[eventPointCount][iSegment]->SetBinContent(7, segment->var_tx);
+            hSegment_Members_Event[eventPointCount][iSegment]->SetBinContent(8, segment->var_ty);
+            // segment_x = segment->x;
+            // segment_y = segment->y;
+            // segment_tx = segment->tx;
+            // segment_ty = segment->ty;
+        }
+
         for (const auto& point: points) {
             hPoint_ZVsX_Event[eventPointCount]->Fill(point->z, point->x);
             hPoint_ZVsY_Event[eventPointCount]->Fill(point->z, point->y);
         }
-        for (const auto& segment: segments) {
-            hSegment_Members_Event[eventPointCount]->SetBinContent(1, segment->x);
-            hSegment_Members_Event[eventPointCount]->SetBinContent(2, segment->y);
-            hSegment_Members_Event[eventPointCount]->SetBinContent(3, segment->tx);
-            hSegment_Members_Event[eventPointCount]->SetBinContent(4, segment->ty);
-            hSegment_Members_Event[eventPointCount]->SetBinContent(5, segment->var_x);
-            hSegment_Members_Event[eventPointCount]->SetBinContent(6, segment->var_y);
-            hSegment_Members_Event[eventPointCount]->SetBinContent(7, segment->var_tx);
-            hSegment_Members_Event[eventPointCount]->SetBinContent(8, segment->var_ty);
-        }
+
         eventPointCount++;
     }
+
+    int NExtrapolations = 0;
+    for (const auto& track: tracks) {
+        const DChargedTrackHypothesis *hyp = track->Get_Hypothesis(Electron);
+        if (hyp == nullptr) continue;
+        const DTrackTimeBased *trackTB = hyp->Get_TrackTimeBased();
+        if (trackTB == nullptr) continue;
+        vector<DTrackFitter::Extrapolation_t> extrapolations = trackTB->extrapolations.at(SYS_TRD);
+        if (extrapolations.size() == 0) continue;
+        DTrackFitter::Extrapolation_t extrapolation = extrapolations[0];
+        if ((extrapolation.position.x() < -83.47 || extrapolation.position.x() > -11.47) || 
+            (extrapolation.position.y() < -68.6 || extrapolation.position.y() > -32.61)) continue;
+        NExtrapolations++;
+    }
+
+    hNExtrapolations->Fill(NExtrapolations);
 
 	
     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
