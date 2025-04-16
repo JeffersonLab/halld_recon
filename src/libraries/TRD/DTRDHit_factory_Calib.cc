@@ -112,6 +112,23 @@ void DTRDHit_factory_Calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 		jerr << "Error loading TRD plane 2 timing offsets (found " << time_offsets[1].size() 
 			 << " entries, expected " << num_x_strips << " entries)" << endl;
 	
+	vector<int> empty_table_int;
+	strip_quality.push_back(empty_table_int);
+	strip_quality.push_back(empty_table_int);
+	if (DEvent::GetCalib(event, "/TRD/plane1/strip_quality", strip_quality[0]))
+		jout << "Error loading /TRD/plane1/strip_quality !" << endl;
+	if (DEvent::GetCalib(event, "/TRD/plane2/strip_quality", strip_quality[1]))
+		jout << "Error loading /TRD/plane2/strip_quality !" << endl;
+	
+	if(static_cast<long int>(strip_quality[0].size()) != num_x_strips)
+		jerr << "Error loading TRD plane 1 strip qualities (found " << strip_quality[0].size() 
+			 << " entries, expected " << num_x_strips << " entries)" << endl;
+	if(static_cast<long int>(strip_quality[1].size()) != num_y_strips)
+		jerr << "Error loading TRD plane 2 strip qualities (found " << strip_quality[1].size() 
+			 << " entries, expected " << num_x_strips << " entries)" << endl;
+	
+	
+
 	// also set time window from CCDB
 
     return;
@@ -144,6 +161,11 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 	    // explicitly reject these
 	    if(digihit->pulse_time == 179)
 	    	continue;
+
+        // throw away hits from bad or noisy counters
+        int quality = strip_quality[digihit->plane-1][digihit->strip-1];
+        if (quality == k_counter_bad || quality == k_counter_noisy)
+            continue;
 	    
 		// The translation table has:
 		// ---------------------------------------------------
@@ -205,8 +227,8 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 	    double T = (double)digihit->peak_time * t_scale;
 	    if( (T < LOW_TCUT) || (T > ((NW-21.)*t_scale)) )
 	    	continue;
-		
-	    // Build hit object
+	    
+		// Build hit object
 	    DTRDHit *hit = new DTRDHit;
 	    hit->plane = digihit->plane;
 	    hit->strip = digihit->strip;
