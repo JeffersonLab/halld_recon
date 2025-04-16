@@ -120,7 +120,7 @@ void JEventProcessor_highlevel_online::FillF1Hist(vector<const T*> hits)
 				pair<int,int> rocid_slot(f1hit->rocid, f1hit->slot);
 				double fbin = f1tdc_bin_map[rocid_slot];
 				double tdiff = F1tdiff(hit);
-				dF1TDC_fADC_tdiff->Fill(fbin, tdiff);
+				dF1TDC_fADC_tdiff->Fill(fbin+1, tdiff);
 			}
 		}
 
