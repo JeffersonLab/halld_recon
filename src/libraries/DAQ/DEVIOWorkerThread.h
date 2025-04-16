@@ -28,7 +28,10 @@ class JEventSource_EVIOpp;
 
 class DEVIOWorkerThread{
 	public:
-			
+  int PrintLimitFDC;
+  int PrintLimitCDC;
+  int PrintLimitTRD;
+  
 		enum JOBTYPE{
 			JOB_NONE       = 0x0,
 			JOB_QUIT       = 0x1,
@@ -91,7 +94,9 @@ class DEVIOWorkerThread{
 		bool  PARSE_EVENTTAG;
 		bool  PARSE_TRIGGER;
 		bool  PARSE_SSP;
+	        bool  SKIP_SSP_FORMAT_ERROR;
 		bool  PARSE_GEMSRS;
+		bool  PARSE_HELICITY;
                 int   NSAMPLES_GEMSRS;
 
 		bool  LINK_TRIGGERTIME;

@@ -17,8 +17,6 @@
 using namespace std;
 using namespace std::chrono;
 
-
-
 //---------------------------------
 // DEVIOWorkerThread    (Constructor)
 //---------------------------------
@@ -47,7 +45,14 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	// for someone to notify it. That won't happen before this
 	// constructor completes so we do the remaining initializations
 	// below.
-	
+
+
+  PrintLimitFDC = 0;
+  PrintLimitCDC = 0;
+  PrintLimitTRD = 0;
+  
+
+  
 	VERBOSE             = 0;
 	Nrecycled           = 0;     // Incremented in JEventSource_EVIOpp::Dispatcher()
 	MAX_EVENT_RECYCLES  = 1000;  // In EVIO events (not L1 trigger events!) overwritten in JEventSource_EVIOpp constructor
@@ -71,7 +76,9 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	PARSE_EVENTTAG      = true;
 	PARSE_TRIGGER       = true;
 	PARSE_SSP           = true;
+	SKIP_SSP_FORMAT_ERROR = false;
 	PARSE_GEMSRS        = true;
+	PARSE_HELICITY      = true;
         NSAMPLES_GEMSRS     = 9;
 	
 	LINK_TRIGGERTIME    = true;
@@ -1402,7 +1409,7 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
 //----------------
 void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
-	//if(!PARSE_F250){ iptr = &iptr[(*iptr) + 1]; return; }
+	if(!PARSE_HELICITY){ iptr = &iptr[(*iptr) + 1]; return; }
 
 	auto pe_iter = current_parsed_events.begin();
 	DParsedEvent *pe = NULL;
@@ -1463,8 +1470,8 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 					if(VERBOSE>7) cout << "      Helicity Decoder Data Header (0x"<<hex<<*iptr<<dec<<") header reserved=" << header_reserved << " header number words="<<header_number_words <<endl;
 					
 					// sanity checks
-					if(header_reserved != 0x18)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JException("Bad helicity decoder header data", __FILE__, __LINE__);}
-					if(header_number_words != 14)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JException("Bad helicity decoder header payload", __FILE__, __LINE__);}
+					if(header_reserved != 0x18)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JExceptionDataFormat("Bad helicity decoder header data", __FILE__, __LINE__);}
+					if(header_number_words != 14)  { jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<endl; throw JExceptionDataFormat("Bad helicity decoder header payload", __FILE__, __LINE__);}
 
 					iptr++;
 					
@@ -1977,11 +1984,18 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					// Word 2:
 					++iptr;
 					if(iptr>=iend){
-						jerr << " Truncated f125 CDC hit (block ends before continuation word!)" << endl;
+					  PrintLimitCDC++;
+					  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings supressed"  << endl;	
+					  if (PrintLimitCDC<10) {
+					    jerr << " Truncated f125 CDC hit (block ends before continuation word!)" << endl;
 						continue;
+					  }
 					}
 					if( ((*iptr>>31) & 0x1) != 0 ){
-						jerr << " Truncated f125 CDC hit (missing continuation word!)" << endl;
+					  PrintLimitCDC++;
+					  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings supressed"  << endl;	
+					  if (PrintLimitCDC<10)
+					    jerr << " Truncated f125 CDC hit (missing continuation word!)" << endl;
 						--iptr;
 						continue;
 					}
@@ -2036,11 +2050,17 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					      // Word 2:
 					      ++iptr;
 					      if(iptr>=iend){
-						    jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
+						PrintLimitFDC++;
+						if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings supressed"  << endl;	
+						if (PrintLimitFDC<10)
+						  jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
 						    break;
 					      }
 					      if( ((*iptr>>31) & 0x1) != 0 ){
-						    jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
+						PrintLimitFDC++;
+						if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings supressed"  << endl;	
+						if (PrintLimitFDC<10)
+						  jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
 						    --iptr; 
 						    break;
 					      }
@@ -2125,11 +2145,17 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					       // Word 2:
 					      ++iptr;
 					      if(iptr>=iend){
-						    jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
+						PrintLimitFDC++;
+						if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings supressed"  << endl;	
+						if (PrintLimitFDC<10)
+						  jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
 						    break;
 					      }
-					      if( ((*iptr>>31) & 0x1) != 0 ){						 
- 						    jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
+					      if( ((*iptr>>31) & 0x1) != 0 ){
+						PrintLimitFDC++;
+						  if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings supressed"  << endl;	
+						if (PrintLimitFDC<10)
+						  jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
 						    --iptr;
 						    break;
 					      }
@@ -2402,6 +2428,8 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
 	if(!PARSE_SSP){ iptr = &iptr[(*iptr) + 1]; return; }
+
+	int continue_on_format_error = SKIP_SSP_FORMAT_ERROR;
 	
 	auto pe_iter = current_parsed_events.begin();
 	DParsedEvent *pe = NULL;
@@ -2439,6 +2467,13 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
 				if( slot != slot_bh ){
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;
+					
+					if (continue_on_format_error) {
+						iptr = iend;
+						return;
+					}	
+					else
+						throw JException("Bad SSP Data!", __FILE__, __LINE__);
 				}
 				break;
 			case 3:  // Trigger Time

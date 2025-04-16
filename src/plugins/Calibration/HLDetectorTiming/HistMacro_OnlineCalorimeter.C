@@ -45,9 +45,9 @@
 	locDirectory->cd();
 
 	//Setpoints
-	double nominalFCALTime = 27.;
-	double nominalBCALADCTime = 22.;
-	double nominalBCALTDCTime = 22.;
+	double nominalFCALTime = 25.;
+	double nominalBCALADCTime = 24.;
+	double nominalBCALTDCTime = 24.;
 
 	//Get Histograms
  	TH1I* BCAL_ADC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit ADC time");

@@ -10187,7 +10187,7 @@ void DTrackFitterKalmanSIMD::AddExtrapolation(DetectorSystem_t detector,
 
 // Propagate the track in the forward direction through the FCAL
 void DTrackFitterKalmanSIMD::PropagateThroughFCAL(const DetectorSystem_t detector,const double dEdx,const double dz,double &z,DMatrix5x1 &S,double &t,double &s){
-  AddExtrapolation(SYS_FCAL,z,S,t,s);
+  AddExtrapolation(detector,z,S,t,s);
 
   // Propagate the track to the back of the FCAL/ECAL block
   double length=(detector==SYS_FCAL)?45.:20.;
@@ -10242,5 +10242,5 @@ void DTrackFitterKalmanSIMD::PropagateThroughFCAL(const DetectorSystem_t detecto
     }
   }
   // add another extrapolation point at downstream end of FCAL/ECAL
-  AddExtrapolation(SYS_FCAL,z,S,t,s);
+  AddExtrapolation(detector,z,S,t,s);
 }

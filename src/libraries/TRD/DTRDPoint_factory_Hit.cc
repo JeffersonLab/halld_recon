@@ -61,7 +61,7 @@ double DTRDPoint_factory_Hit::StripToPosition(int iplane, const DTRDHit *hit)
 {
   // better to pull this from CCDB, also probably the pitch as well
   if(iplane == 0) {
-    return STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
+    return -1.*STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
   }
   return STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
 }
@@ -87,19 +87,18 @@ void DTRDPoint_factory_Hit::Process(const std::shared_ptr<const JEvent>& event)
 	// match hits in X and Y planes
 	for(uint i=0; i<hitX.size(); i++){
 		for(uint j=0; j<hitY.size(); j++){
-			
 			// calculate hit time and energy
 			double t_diff = hitX[i]->t - hitY[j]->t;
 			double dE = ( hitX[i]->q + hitY[j]->q );
-			double dE_high = (hitX[i]->q + dE_DIFF_MAX);
-			double dE_low = (hitX[i]->q - dE_DIFF_MAX);
+			//double dE_high = (hitX[i]->q + dE_DIFF_MAX);
+			//double dE_low = (hitX[i]->q - dE_DIFF_MAX);
 			
 			// some requirements for a good point
-			if(fabs(t_diff) < TIME_DIFF_MAX && (hitY[j]->q < dE_high) && (hitY[j]->q > dE_low )) {
-				
+			//if(fabs(t_diff) < TIME_DIFF_MAX && (hitY[j]->q < dE_high) && (hitY[j]->q > dE_low )) {
+			if(fabs(t_diff) < TIME_DIFF_MAX) {	
 				//Remove noisy patches
-				if (hitX[i]->strip>600 && (hitY[j]->strip==3 || hitY[j]->strip==4 || hitY[j]->strip==193 || hitY[j]->strip==195 || hitY[j]->strip==196 || hitY[j]->strip==233))
-					continue;
+//				if (hitX[i]->strip>600 && (hitY[j]->strip==3 || hitY[j]->strip==4 || hitY[j]->strip==193 || hitY[j]->strip==195 || hitY[j]->strip==196 || hitY[j]->strip==233))
+//					continue;
 				
 				// save new point
 				DTRDPoint* point = new DTRDPoint;

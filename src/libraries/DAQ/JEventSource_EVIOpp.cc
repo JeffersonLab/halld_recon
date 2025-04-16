@@ -50,7 +50,12 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
     SetTypeName(NAME_OF_THIS);
 	EnableGetObjects(true);  // Check the source first for existing objects; only invoke the factory to create them if they aren't found in the source.
 	EnableFinishEvent(true); // Ensure ::FinishEvent gets called. By default, it is disabled (false).
+}
 
+//----------------
+// Open
+//----------------
+void JEventSource_EVIOpp::Open() {
 	DONE = false;
 	DISPATCHER_END = false;
 	NEVENTS_PROCESSED = 0;
@@ -58,6 +63,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 	NEVENTBUFF_STALLED   = 0;
 	NPARSER_STALLED      = 0;
 
+	auto source_name = GetResourceName();
 	// Initialize dedicated logger
 	evioout.SetGroup("EVIO");
 	evioout.ShowTimestamp(true);
@@ -95,7 +101,9 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 	PARSE_EVENTTAG = true;
 	PARSE_TRIGGER = true;
 	PARSE_SSP = true;
+	SKIP_SSP_FORMAT_ERROR = false;
 	PARSE_GEMSRS = false;
+	PARSE_HELICITY = true;
         NSAMPLES_GEMSRS = 9;
 	APPLY_TRANSLATION_TABLE = true;
 	IGNORE_EMPTY_BOR = false;
@@ -142,7 +150,9 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 	japp->SetDefaultParameter("EVIO:PARSE_EVENTTAG", PARSE_EVENTTAG, "Set this to 0 to disable parsing of event tag data in the data stream (for benchmarking/debugging)");
 	japp->SetDefaultParameter("EVIO:PARSE_TRIGGER", PARSE_TRIGGER, "Set this to 0 to disable parsing of the built trigger bank from CODA (for benchmarking/debugging)");
 	japp->SetDefaultParameter("EVIO:PARSE_SSP", PARSE_SSP, "Set this to 0 to disable parsing of the SSP (DIRC data) bank from CODA (for benchmarking/debugging)");
+	japp->SetDefaultParameter("EVIO:SKIP_SSP_FORMAT_ERROR", SKIP_SSP_FORMAT_ERROR, "Set this to 1 to skip SSP format errors (for benchmarking/debugging)");
 	japp->SetDefaultParameter("EVIO:PARSE_GEMSRS", PARSE_GEMSRS, "Set this to 0 to disable parsing of the SRS (GEM data) bank from CODA (for benchmarking/debugging)");
+	japp->SetDefaultParameter("EVIO:PARSE_HELICITY", PARSE_HELICITY, "Set this to 0 to disable parsing of the helicity decoder bank from CODA (for benchmarking/debugging)");
   japp->SetDefaultParameter("EVIO:NSAMPLES_GEMSRS", NSAMPLES_GEMSRS, "Set this to number of readout samples for SRS (GEM data) bank from CODA (for benchmarking/debugging)");
 	japp->SetDefaultParameter("EVIO:APPLY_TRANSLATION_TABLE", APPLY_TRANSLATION_TABLE, "Apply the translation table to create DigiHits (you almost always want this on)");
 	japp->SetDefaultParameter("EVIO:IGNORE_EMPTY_BOR", IGNORE_EMPTY_BOR, "Set to non-zero to continue processing data even if an empty BOR event is encountered.");
@@ -232,7 +242,9 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 		w->PARSE_EVENTTAG      = PARSE_EVENTTAG;
 		w->PARSE_TRIGGER       = PARSE_TRIGGER;
 		w->PARSE_SSP           = PARSE_SSP;
+		w->SKIP_SSP_FORMAT_ERROR = SKIP_SSP_FORMAT_ERROR;
 		w->PARSE_GEMSRS        = PARSE_GEMSRS;
+		w->PARSE_HELICITY      = PARSE_HELICITY;
                 w->NSAMPLES_GEMSRS     = NSAMPLES_GEMSRS;
 		w->LINK_TRIGGERTIME    = LINK_TRIGGERTIME;
 		w->LINK_CONFIG         = LINK_CONFIG;
@@ -258,7 +270,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 
 	// Record start time
 	tstart = high_resolution_clock::now();
-
+	
 }
 
 //----------------
@@ -266,7 +278,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 //----------------
 JEventSource_EVIOpp::~JEventSource_EVIOpp()
 {
-	// Set DONE flag to tell dispatcher thread to quit
+		// Set DONE flag to tell dispatcher thread to quit
 	// as well as anyone in a wait state
 	DONE = true;
 	PARSED_EVENTS_CV.notify_all();

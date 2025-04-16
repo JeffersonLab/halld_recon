@@ -85,6 +85,12 @@ static TH1I *hNExtrapolations;
 // vector<TH1D*> hSegment_Members_Event[NEventsMonitor];
 // vector<TH1D*> hExtrapolation_Members_Event[NEventsMonitor];
 
+static TH1I *hSegment_NHits;
+static TH1I *hSegment_TimeX;
+static TH1I *hSegment_TimeY;
+static TH1I *hSegment_OccupancyX;
+static TH1I *hSegment_OccupancyY;
+
 //----------------------------------------------------------------------------------
 
 
@@ -241,11 +247,18 @@ void JEventProcessor_TRD_online::Init() {
 			hDigiHit_TimeVsStripEvent[i][j] = new TH2I(Form("DigiHit_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d DigiHit Time vs. Strip;8*(Peak Time) [ns];Strip",i),250,0.,2000.0,NTRDstrips,-0.5,-0.5+NTRDstrips);
         }
     }
+    trdDir->cd();
+    gDirectory->mkdir("Segment")->cd();
+    hSegment_NHits = new TH1I("Segment_NHits","TRD Track Segment Multiplicity;Calibrated Track Segments;Events",20,-0.5,20-0.5);
+    hSegment_TimeX = new TH1I("Segment_TimeX","TRD Track Segment X Time;Tx 8*(Peak Time) [ns]; ",200,0.,200.*8.);
+    hSegment_TimeY = new TH1I("Segment_TimeY","TRD Track Segment Y Time;Ty 8*(Peak Time) [ns]; ",200,0.,200.*8.);
+    hSegment_OccupancyX = new TH1I("Segment_OccupancyX","TRD Track Segment X Occupancy;X [cm]; ",800,-90.,-10.);
+    hSegment_OccupancyY = new TH1I("Segment_OccupancyY","TRD Track Segment Y Occupancy;Y [cm]; ",400,-70.,-30.);
 
     trdDir->cd();
     gDirectory->mkdir("Track")->cd();
     hNExtrapolations = new TH1I("NExtrapolations","Number of Extrapolations at TRD Plane per Event;Number of Extrapolations;Events",10,-0.5,9.5);
- 
+
     // back to main dir
     mainDir->cd();
 
@@ -538,6 +551,20 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 
     hNExtrapolations->Fill(NExtrapolations);
 
+	
+	
+	///////////////////////////
+    //      TRD Segments       //
+    ///////////////////////////
+
+    hSegment_NHits->Fill(segments.size());
+    for (const auto& segment : segments) {
+		hSegment_TimeX->Fill(segment->tx);
+		hSegment_TimeY->Fill(segment->ty);
+		hSegment_OccupancyX->Fill(segment->x);
+		hSegment_OccupancyY->Fill(segment->y);
+	}
+	
 	
     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	

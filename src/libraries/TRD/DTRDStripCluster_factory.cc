@@ -18,11 +18,11 @@ static bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
 /// their strip (wire or strip) numbers. Typically only used for a single layer
 /// of hits.
 ///
-static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
-	if(a->strip != b->strip) return a->strip < b->strip;
-	if(a->t       != b->t      ) return a->t < b->t;
-	return a->pulse_height < b->pulse_height;
-}
+// static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
+// 	if(a->strip != b->strip) return a->strip < b->strip;
+// 	if(a->t       != b->t      ) return a->t < b->t;
+// 	return a->pulse_height < b->pulse_height;
+// }
 
 ///
 /// DTRDHit_time_cmp()
@@ -31,11 +31,11 @@ static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
 /// significant.
 ///
 
-static bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) {
-  if (fabs(a->t-b->t)>HIT_TIME_DIFF_MIN && (a->t < b->t))
-    return true;
-  return false;
-}
+// static bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) {
+//   if (fabs(a->t-b->t)>HIT_TIME_DIFF_MIN && (a->t < b->t))
+//     return true;
+//   return false;
+// }
 
 ///
 /// DTRDStripCluster_gPlane_cmp():
@@ -79,7 +79,7 @@ double DTRDStripCluster_factory::StripToPosition(int iplane, const DTRDHit *hit)
 {
   // better to pull this from CCDB, also probably the pitch as well
   if(iplane == 0) {
-    return STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
+    return -1.*STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
   }
   return -1.0*STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
 }
@@ -119,8 +119,8 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
     if( (stripPlane<0) || (stripPlane>=2) ){ // only two planes
       static int Nwarn = 0;
       if( Nwarn<10 ){
-	jerr << " stripPlane is outside of array bounds!! stripPlane="<< stripPlane << std::endl;
-	if( ++Nwarn==10 )jerr << " LAST WARNING!" << std::endl;
+		jerr << " stripPlane is outside of array bounds!! stripPlane="<< stripPlane << std::endl;
+		if( ++Nwarn==10 )jerr << " LAST WARNING!" << std::endl;
       }
       continue;
     }
@@ -194,7 +194,7 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
       }
     }
   }
-  
+    
   // Ensure that the data are still in order of planes.
   std::sort(results.begin(), results.end(), DTRDStripCluster_gPlane_cmp);
   

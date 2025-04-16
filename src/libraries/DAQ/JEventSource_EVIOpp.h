@@ -121,13 +121,12 @@ class JEventSource_EVIOpp: public JEventSource{
 
 		                    JEventSource_EVIOpp(std::string source_name);
 		           virtual ~JEventSource_EVIOpp();
-		virtual const char* className(void){return static_className();}
-		 static const char* static_className(void){return "JEventSource_EVIOpp";}
-		
+				  
 		               void Dispatcher(void);
 		           jerror_t SkipEVIOBlocks(uint32_t N);
 		
-		           void GetEvent(std::shared_ptr<JEvent> event) override;
+		           void Open(); // called when JANA is ready to accept events from this event source
+				   void GetEvent(std::shared_ptr<JEvent> event) override;
 		               void FinishEvent(JEvent &event) override;
 		           bool GetObjects(const std::shared_ptr<const JEvent> &event, JFactory* factory) override;
 
@@ -199,7 +198,9 @@ class JEventSource_EVIOpp: public JEventSource{
 		bool     PARSE_EVENTTAG;
 		bool     PARSE_TRIGGER;
 		bool     PARSE_SSP;
+	        bool     SKIP_SSP_FORMAT_ERROR;
 		bool     PARSE_GEMSRS;
+		bool     PARSE_HELICITY;
                 int      NSAMPLES_GEMSRS;
 		bool     APPLY_TRANSLATION_TABLE;
 		int      ET_STATION_NEVENTS;
