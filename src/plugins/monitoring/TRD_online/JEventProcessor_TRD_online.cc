@@ -12,6 +12,7 @@ using namespace std;
 #include <TRD/DTRDHit.h>
 #include <TRD/DTRDStripCluster.h>
 #include <TRD/DTRDPoint.h>
+#include <TRD/DTRDSegment.h>
 #include <DAQ/Df125FDCPulse.h>
 
 #include <TDirectory.h>
@@ -69,6 +70,12 @@ static TH2I *hPoint_XYDisplay;
 static TH2I *hPoint_dE_XY;
 static TH2I *hPoint_TimeVsdEX;
 static TH2I *hPoint_TimeVsdEY;
+
+static TH1I *hSegment_NHits;
+static TH1I *hSegment_TimeX;
+static TH1I *hSegment_TimeY;
+static TH1I *hSegment_OccupancyX;
+static TH1I *hSegment_OccupancyY;
 
 //----------------------------------------------------------------------------------
 
@@ -138,7 +145,7 @@ void JEventProcessor_TRD_online::Init() {
     // hit-level hists
     trdDir->cd();
     gDirectory->mkdir("Hit")->cd();
-    hHit_NHits = new TH1I("Hit_NHits","TRD Calibrated Hit Multiplicity;Calibrated Hits;Events",150,0.5,0.5+150);
+    hHit_NHits = new TH1I("Hit_NHits","TRD Calibrated Hit Multiplicity;Calibrated Hits;Events",250,0.5,0.5+250);
     hHit_NPKs = new TH1I("Hit_NPKs","TRD fADC Peak Multiplicity for Stored Hits;Raw Peaks;Events",15,0.5,0.5+15);
 	// histograms for each plane
     for(int i=0; i<NTRDplanes; i++) {
@@ -148,7 +155,7 @@ void JEventProcessor_TRD_online::Init() {
 		else
 			NTRDstrips = NTRD_ystrips;
 		
-		hHit_NHits_[i] = new TH1I(Form("Hit_NHits_Plane%d",i),Form("TRD Plane %d Calibrated Hit Multiplicity;Calibrated Hits;Events",i),150,0.5,0.5+150);
+		hHit_NHits_[i] = new TH1I(Form("Hit_NHits_Plane%d",i),Form("TRD Plane %d Calibrated Hit Multiplicity;Calibrated Hits;Events",i),250,0.5,0.5+250);
 		hHit_Occupancy[i] = new TH1I(Form("Hit_Occupancy_Plane%d",i),Form("TRD Plane %d Hit Occupancy;Strip;Calibrated Hits / Counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
 		hHit_Time[i] = new TH1I(Form("Hit_Time_Plane%d",i),Form("TRD Plane %d Time;8*(Peak Time) [ns];Calibrated Hits / 2 ns",i),250,0.0,2000.0);
 		hHit_PulseHeight[i] = new TH1I(Form("Hit_PulseHeight_Plane%d",i),Form("TRD Plane %d Pulse Height;Pulse Height [fADC units];Calibrated Hits / 1 unit",i),450,0.0,3000.0);
@@ -161,8 +168,8 @@ void JEventProcessor_TRD_online::Init() {
 	// point-level hists
     trdDir->cd();
     gDirectory->mkdir("Point")->cd();
-	hPoint_NHits = new TH1I("Point_NHits","TRD Calibrated Point Multiplicity;Calibrated Points;Events",150,0.5,0.5+150);
-    hPoint_XYT = new TH3I("Point_XYT","TRD 3D Points;X Strip;Y Strip;8*(Peak Time) [ns]",720,-0.5,719.5,360,-0.5,359.5,200,0.,200.*8.);
+	hPoint_NHits = new TH1I("Point_NHits","TRD Calibrated Point Multiplicity;Calibrated Points;Events",250,0.5,0.5+250);
+    hPoint_XYT = new TH3I("Point_XYT","TRD 3D Points;X [cm];Y [cm];8*(Peak Time) [ns]",800,-90,-10,400,-70,-30,200,0.,200.*8.);
 	hPoint_Time = new TH1I("Point_Time","TRD Point Time;8*(Peak Time) [ns]; ",200,0.,200.*8.);
 	hPoint_dE = new TH1I("Point_dE","TRD Point Charge;Average dE [q]; ",450,0.,3000.);
 	hPoint_dEDiff = new TH1I("Point_dEDiff","TRD Point Charge X,Y Weighted Diff.;(dE_x - dE_y)/(dE_x + dE_y); ",100,-1.,1.);
@@ -170,11 +177,11 @@ void JEventProcessor_TRD_online::Init() {
 	hPoint_dE_XY = new TH2I("Point_dE_XY","TRD Point Charge Corr. in X,Y;X Strip dE [q]; Y Strip dE [q]",450,0.,3000.,450,0.,3000.);
 	hPoint_TimeVsdEX= new TH2I("Point_TimeVsdEX","TRD Point Charge of X in Time;X Strip dE [q];8*(Peak Time) [ns]",450,0.,3000.,200,0.,200.*8.);
 	hPoint_TimeVsdEY= new TH2I("Point_TimeVsdEY","TRD Point Charge of Y in Time;Y Strip dE [q];8*(Peak Time) [ns]",450,0.,3000.,200,0.,200.*8.);
-	hPoint_OccupancyX = new TH1I("Point_OccupancyX","TRD Point X;X Strip; ",720,-0.5,719.5);
-	hPoint_OccupancyY = new TH1I("Point_OccupancyY","TRD Point Y;Y Strip; ",360,-0.5,359.5);
-	hPoint_XYDisplay = new TH2I("Point_XYDisplay","TRD Point Display;X Strip;Y Strip",720,-0.5,719.5,360,-0.5,359.5);
-	hPoint_TimeVsX= new TH2I("Point_TimeVsX","TRD Point X in Time;X Strip;8*(Peak Time) [ns]",720,-0.5,719.5,200,0.,200.*8.);
-	hPoint_TimeVsY= new TH2I("Point_TimeVsY","TRD Point Y in Time;Y Strip;8*(Peak Time) [ns]",360,-0.5,359.5,200,0.,200.*8.);
+	hPoint_OccupancyX = new TH1I("Point_OccupancyX","TRD Point X;X [cm]; ",800,-90,-10);
+	hPoint_OccupancyY = new TH1I("Point_OccupancyY","TRD Point Y;Y [cm]; ",400,-70,-30);
+	hPoint_XYDisplay = new TH2I("Point_XYDisplay","TRD 2D Point Display;X [cm];Y [cm]",800,-90,-10,400,-70,-30);
+	hPoint_TimeVsX= new TH2I("Point_TimeVsX","TRD Point X in Time;X [cm];8*(Peak Time) [ns]",800,-90,-10,200,0.,200.*8.);
+	hPoint_TimeVsY= new TH2I("Point_TimeVsY","TRD Point Y in Time;Y [cm];8*(Peak Time) [ns]",400,-70,-30,200,0.,200.*8.);
 	hPoint_TimeDiff = new TH1I("Point_TimeDiff","TRD Point Time Difference;abs(X Time - Y Time) [ns]; ",80,-40.,40.);
 	
     trdDir->cd();
@@ -202,6 +209,14 @@ void JEventProcessor_TRD_online::Init() {
         }
     }
     
+	trdDir->cd();
+    gDirectory->mkdir("Segment")->cd();
+    hSegment_NHits = new TH1I("Segment_NHits","TRD Track Segment Multiplicity;Calibrated Track Segments;Events",20,-0.5,20-0.5);
+    hSegment_TimeX = new TH1I("Segment_TimeX","TRD Track Segment X Time;Tx 8*(Peak Time) [ns]; ",200,0.,200.*8.);
+    hSegment_TimeY = new TH1I("Segment_TimeY","TRD Track Segment Y Time;Ty 8*(Peak Time) [ns]; ",200,0.,200.*8.);
+    hSegment_OccupancyX = new TH1I("Segment_OccupancyX","TRD Track Segment X Occupancy;X [cm]; ",800,-90.,-10.);
+    hSegment_OccupancyY = new TH1I("Segment_OccupancyY","TRD Track Segment Y Occupancy;Y [cm]; ",400,-70.,-30.);
+	
     // back to main dir
     mainDir->cd();
 }
@@ -262,6 +277,8 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     event->Get(clusters);
 	vector<const DTRDPoint*> points;
     event->Get(points,"Hit");
+	vector<const DTRDSegment*> segments;
+    event->Get(segments);
 	
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
@@ -373,6 +390,20 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
         hPoint_TimeVsY->Fill(point->y,point->time);
         hPoint_XYDisplay->Fill(point->x,point->y);
     }
+	
+	
+	///////////////////////////
+    //      TRD Segments       //
+    ///////////////////////////
+
+    hSegment_NHits->Fill(segments.size());
+    for (const auto& segment : segments) {
+		hSegment_TimeX->Fill(segment->tx);
+		hSegment_TimeY->Fill(segment->ty);
+		hSegment_OccupancyX->Fill(segment->x);
+		hSegment_OccupancyY->Fill(segment->y);
+	}
+	
 	
     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	

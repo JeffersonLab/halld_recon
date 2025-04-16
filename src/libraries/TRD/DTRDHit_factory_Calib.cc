@@ -8,12 +8,9 @@
 using namespace std;
 
 #include "DANA/DEvent.h"
-
 #include <DAQ/Df125Config.h>
 #include <DAQ/Df125FDCPulse.h>
-
 #include "TRD/DTRDHit_factory_Calib.h"
-
 
 //------------------
 // Init
@@ -36,12 +33,12 @@ void DTRDHit_factory_Calib::Init()
     app->SetDefaultParameter("TRD:PEAK_THRESHOLD", PEAK_THRESHOLD, 
 			      "Threshold in fADC units for hit amplitudes (default: 100.)");
 
-  	LOW_TCUT = -10000.;
-  	HIGH_TCUT = 10000.;
+  	LOW_TCUT = 0.;
+  	//HIGH_TCUT = 1110.;
     app->SetDefaultParameter("TRD:LOW_TCUT", LOW_TCUT, 
-			      "Throw away hits which come before this time (default: -10000.)");
-    app->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
-			      "Throw away hits which come after this time (default: 10000.)");
+			      "Throw away hits which come before this time (default: 0.)");
+    //app->SetDefaultParameter("TRD:HIGH_TCUT", HIGH_TCUT, 
+	//		      "Throw away hits which come after this time (default: 1110.)");
 	
 	return;
 }
@@ -115,6 +112,23 @@ void DTRDHit_factory_Calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 		jerr << "Error loading TRD plane 2 timing offsets (found " << time_offsets[1].size() 
 			 << " entries, expected " << num_x_strips << " entries)" << endl;
 	
+	vector<int> empty_table_int;
+	strip_quality.push_back(empty_table_int);
+	strip_quality.push_back(empty_table_int);
+	if (DEvent::GetCalib(event, "/TRD/plane1/strip_quality", strip_quality[0]))
+		jout << "Error loading /TRD/plane1/strip_quality !" << endl;
+	if (DEvent::GetCalib(event, "/TRD/plane2/strip_quality", strip_quality[1]))
+		jout << "Error loading /TRD/plane2/strip_quality !" << endl;
+	
+	if(static_cast<long int>(strip_quality[0].size()) != num_x_strips)
+		jerr << "Error loading TRD plane 1 strip qualities (found " << strip_quality[0].size() 
+			 << " entries, expected " << num_x_strips << " entries)" << endl;
+	if(static_cast<long int>(strip_quality[1].size()) != num_y_strips)
+		jerr << "Error loading TRD plane 2 strip qualities (found " << strip_quality[1].size() 
+			 << " entries, expected " << num_x_strips << " entries)" << endl;
+	
+	
+
 	// also set time window from CCDB
 
     return;
@@ -147,6 +161,11 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 	    // explicitly reject these
 	    if(digihit->pulse_time == 179)
 	    	continue;
+
+        // throw away hits from bad or noisy counters
+        int quality = strip_quality[digihit->plane-1][digihit->strip-1];
+        if (quality == k_counter_bad || quality == k_counter_noisy)
+            continue;
 	    
 		// The translation table has:
 		// ---------------------------------------------------
@@ -160,7 +179,7 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
         // There are a few values from the new data type that are critical for the interpretation of the data
         uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
       	uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
-      	//uint16_t NW   = 0;
+      	uint16_t NW   = 0; //HIGH_TCUT/t_scale;
      	//uint16_t IE   = 0;
 
       	int pulse_peak = 0;
@@ -176,7 +195,8 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
             	//IBIT = config->IBIT == 0xffff ? 4 : config->IBIT;
             	ABIT = config->ABIT == 0xffff ? 3 : config->ABIT;
             	PBIT = config->PBIT == 0xffff ? 0 : config->PBIT;
-            	//NW   = config->NW   == 0xffff ? 80 : config->NW;
+				//NW   = config->NW   == 0xffff ? 80 : config->NW; ///////////////////////
+            	NW   = config->NW;
             	//IE   = config->IE   == 0xffff ? 16 : config->IE;
          	} else {         	
             	static int Nwarnings = 0;
@@ -203,12 +223,12 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 	    if(pulse_height < PEAK_THRESHOLD)
 	    	continue;
 
-	    // Time cut now
+	    // Time cut now (Set the upper Time Cut based on the firmware timestamp)
 	    double T = (double)digihit->peak_time * t_scale;
-	    if( (T < LOW_TCUT) || (T > HIGH_TCUT) )
+	    if( (T < LOW_TCUT) || (T > ((NW-21.)*t_scale)) )
 	    	continue;
-
-	    // Build hit object
+	    
+		// Build hit object
 	    DTRDHit *hit = new DTRDHit;
 	    hit->plane = digihit->plane;
 	    hit->strip = digihit->strip;
