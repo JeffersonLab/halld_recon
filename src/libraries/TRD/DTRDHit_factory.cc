@@ -32,21 +32,21 @@ void DTRDHit_factory::Init()
 
 	auto app = GetApplication();
 
-	IS_XY_TIME_DIFF_CUT = false;
+	IS_XY_TIME_DIFF_CUT = true;
 	app->SetDefaultParameter("TRD:IS_XY_TIME_DIFF_CUT", IS_XY_TIME_DIFF_CUT, 
-			      "Apply time difference cut between X and Y hits (default: false)");
+			      "Apply time difference cut between X and Y hits (default: true)");
 
-	XY_TIME_DIFF = 40.;
+	XY_TIME_DIFF = 25.;
 	app->SetDefaultParameter("TRD:XY_TIME_DIFF", XY_TIME_DIFF, 
-			      "Time difference between hits in X and Y planes to be considered a coincidence (default: 40.)");
+			      "Time difference in ns between hits in X and Y planes to be considered a coincidence (default: 25.)");
 	
 	HIT_SIZE_MAX = 100000.;
     app->SetDefaultParameter("TRD:HIT_SIZE_MAX", HIT_SIZE_MAX, 
                   "Maximum number of hits on a strip in either X or Y in an event, for noise cleaning (default: 100000.)");
 	
-	CDIFF_MIN = 3;
+	CDIFF_MIN = 17;
     app->SetDefaultParameter("TRD:CDIFF_MIN", CDIFF_MIN, 
-                  "Maximum circular difference between phases for X or Y hits (default: 3)");
+                  "Maximum circular difference between phases for X or Y hits (default: 17)");
 	
 	FREQ_COUNT = 10;
     app->SetDefaultParameter("TRD:FREQ_COUNT", FREQ_COUNT,
