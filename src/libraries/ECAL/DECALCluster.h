@@ -23,7 +23,9 @@ class DECALCluster:public JObject{
 
   double E,Efit,t,x,y;
   int status,channel_Emax;
-  
+  bool isNearBorder;
+  int nBlocks;
+
   void Summarize(JObjectSummary& summary) const override {
     summary.add(x, "x [cm]", "%f");
     summary.add(y, "y [cm]", "%f");

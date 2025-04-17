@@ -21,13 +21,17 @@ struct DECALShower : public JObject {
   double E,t;
   DVector3 pos;
   TMatrixFSym ExyztCovariance;
-
+  bool isNearBorder;
+  int nBlocks;
+  
   void Summarize(JObjectSummary& summary) const override {
     summary.add(E, "E(GeV)", "%f");
     summary.add(t, "t(ns)", "%f");
     summary.add(pos.x(), "x(cm)", "%f");
     summary.add(pos.y(), "y(cm)", "%f");
     summary.add(pos.z(), "z(cm)", "%f");
+    summary.add(nBlocks,"Number of blocks","%d");
+    summary.add(isNearBorder,"Near border?","%d");
   }
 };
 
