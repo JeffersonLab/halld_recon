@@ -998,11 +998,6 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 
 			case 0xDEC:  // Helicity decoder board, SD 2025-01-28
 				if(VERBOSE>3) jout <<" -- JLab Helicity Decoder  rocid="<< rocid << endl;
-//				jout << "found Helicity decoder board!  (len = " << data_block_bank_len << ")" << endl;            	
-// 				cout << "----- First few words to help with debugging -----" << endl;
-// 				cout.flush(); cerr.flush();
-// 				DumpBinary(&iptr[-2], iend, 32, &iptr[-1]);
-				
                 ParseHelicityDecoderBank(rocid, iptr, iend);
  				break;
 			case 0:
@@ -1415,13 +1410,8 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 	uint32_t *istart_helicity_data = iptr;
     uint32_t Nwords = ((uint64_t)iend - (uint64_t)iptr)/sizeof(uint32_t);
 
-// 	cout << "----- Dump block to help with debugging -----" << endl;
-// 	cout.flush(); cerr.flush();
-// 	DumpBinary(istart_helicity_data, iend, Nwords, iptr);
-
     // Loop over data words
     for(; iptr<iend; iptr++){
-
         // Skip all non-data-type-defining words at this
         // level. When we do encounter one, the appropriate
         // case block below should handle parsing all of
@@ -1438,11 +1428,22 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
                 pe_iter = current_parsed_events.begin();
 				pe = NULL;
                 if(VERBOSE>7) cout << "      Helicity Decoder Block Trailer"<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
-                break;
+				// use this as a signal to stop parsing, since it seems like a better signal that this is actually
+				// the end of the HD board data
+				// at least, during the commissioning at the beginning of the 2025 run, the bank length was not always correct
+                if(VERBOSE>3) cout << "      Moving to end of block..."<<endl;
+                // usually there are multiple trailer words
+                while(*iptr == 0xfcc000ed) iptr++;
+
+				// Chop off filler words
+				for(; iptr<iend; iptr++){
+					if(((*iptr)&0xf8000000) != 0xf8000000) break;
+				}
+				return;
+                //break;
             case 2: // Event Header
                 itrigger = (*iptr>>0) & 0x3FFFFF;
 				pe = *pe_iter++;
-				cout << " run number = " << pe->run_number  << " event number = " << pe->event_number << endl;
                 if(VERBOSE>7) cout << "      Helicity Decoder Event Header: itrigger="<<itrigger<<", rocid="<<rocid<<", slot="<<slot<<")" <<" (0x"<<hex<<*iptr<<dec<<")" <<endl;
                 break;
             case 3: // Trigger Time
@@ -1602,26 +1603,15 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 			default:
  				if(VERBOSE>7) cout << "      Helicity Decoder unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
 				jerr << "Helicity Decoder unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
-						//jerr << "  run number = " << pe->run_number  << " event number = " << pe->event_number << endl;
  				cout.flush(); cerr.flush();
  				DumpBinary(istart_helicity_data, iend, Nwords, iptr);
-
-                // make additional debugging output for special error types
-//                 if(data_type == 11) {
-//                     cout << "          FADC slot mask = "<<" 0x"<<hex<<*(iptr+1)<<dec<<endl;
-//                     cout << "          Token status = "<<" 0x"<<hex<<*(iptr+2)<<dec<<endl;
-//                     cout << "          Bus error status = "<<" 0x"<<hex<<*(iptr+3)<<dec<<endl;
-//                     if(pe) {
-//                         cout << "          Associated with event number = "<<pe->event_number<<endl;
-//                     }
-//                 }
 
 // 				if (continue_on_format_error) {  // comment out for now??
 // 					iptr = iend;
 // 					return;
 // 				}
 // 				else
-					//throw JExceptionDataFormat("Unexpected word type in Helicity Decoder block!", __FILE__, __LINE__);
+				throw JExceptionDataFormat("Unexpected word type in Helicity Decoder block!", __FILE__, __LINE__);
         }
     }
 
