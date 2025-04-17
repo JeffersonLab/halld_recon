@@ -47,7 +47,9 @@ DNeutralShower_factory::DNeutralShower_factory()
 
   SC_Energy_CUT = 0.2;
   japp->SetDefaultParameter("NeutralShower:SC_Energy_CUT", SC_Energy_CUT);
-  
+
+  ECAL_FCAL_CUT = 80.;
+  japp->SetDefaultParameter("NeutralShower:ECAL_FCAL_CUT", ECAL_FCAL_CUT);
 }
 
 
@@ -74,6 +76,9 @@ void DNeutralShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event
   // Get start counter geometry;
   locGeometry->GetStartCounterGeom(sc_pos,sc_norm);
 
+  // Get FCAL geometry
+  event->GetSingle(dFCALGeometry);
+  
   std::map<string, float> beam_spot;
   jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   m_beamSpotX = beam_spot.at("x");
@@ -172,46 +177,46 @@ void DNeutralShower_factory::Process(const std::shared_ptr<const JEvent>& event)
     bool gotMatch=false;
     // If there were no FCAL showers, skip to creation of DNeutralShower
     if (numShowers>0){
-      // Otherwise compare positions between FCAL and ECAL showers
-      DVector3 locEcalPos=locECALShowers[loc_i]->pos;
-      const DECALCluster *locECALCluster=locECALShowers[loc_i]->GetSingle<DECALCluster>();
-      //vector<const DECALHit *>locEcalHits;
-      //locECALCluster->Get(locEcalHits);
-      
-      for (size_t loc_j=0;loc_j<numShowers;loc_j++){
-	DVector3 locFcalPos=mData[loc_j]->dSpacetimeVertex.Vect();
-	double locDx=locEcalPos.X()-locFcalPos.X();
-	double locDy=locEcalPos.Y()-locFcalPos.Y();
-	double locR2=locDx*locDx+locDy*locDy;
-	if (locR2<100.){
-	  gotMatch=true;
-	  
-	  // Flag that this shower is a combination of ECAL and FCAL showers
-	  mData[loc_j]->dDetectorSystem=SYS_ECAL_FCAL;
-	  
-	  // Get the FCAL cluster object
+      // Check if the ECAL shower has hits near the FCAL-ECAL border
+      if (locECALShowers[loc_i]->isNearBorder){
+	// Compare positions between ECAL and FCAL showers
+	DVector3 locEcalPos=locECALShowers[loc_i]->pos;
+	for (size_t loc_j=0;loc_j<numShowers;loc_j++){
 	  const DFCALShower *locFCALShower=static_cast<const DFCALShower*>(mData[loc_j]->dBCALFCALShower);
-	  const DFCALCluster *locFCALCluster=locFCALShower->GetSingle<DFCALCluster>();
-
-	  // Get the combined energy
-	  double locE_ECAL=locECALCluster->E;
-	  double locE_FCAL=locFCALCluster->getEnergy();
-	  double locE=locE_ECAL+locE_FCAL;
-	  mData[loc_j]->dEnergy=locE;
-	  
-	  // Energy-weighted time 
-	  double locTime=(locE_ECAL*locECALCluster->t
-			  +locE_FCAL*locFCALCluster->getTime())/locE;
-	  mData[loc_j]->dSpacetimeVertex.SetT(locTime);
-	  
-	  // Energy-weighted position
-	  DVector3 locPos=(locE_ECAL/locE)*locEcalPos+(locE_FCAL/locE)*locFcalPos;
-	  mData[loc_j]->dSpacetimeVertex.SetVect(locPos);
-	  
-	  // Add the ECAL shower as an associated object
-	  mData[loc_j]->AddAssociatedObject(locECALShowers[loc_i]);
-	  
-	  break;
+	  if (locFCALShower->getIsNearBorder()){
+	    DVector3 locFcalPos=mData[loc_j]->dSpacetimeVertex.Vect();
+	    double locDx=locEcalPos.X()-locFcalPos.X();
+	    double locDy=locEcalPos.Y()-locFcalPos.Y();
+	    double locR2=locDx*locDx+locDy*locDy;
+	    if (locR2<ECAL_FCAL_CUT){
+	      gotMatch=true;
+	      
+	      // Flag that this shower is a combination of ECAL and FCAL showers
+	      mData[loc_j]->dDetectorSystem=SYS_ECAL_FCAL;
+	      
+	      // Get the combined energy
+	      double locE_ECAL=locECALShowers[loc_i]->E;
+	      double locE_FCAL=mData[loc_j]->dEnergy;
+	      double locEtot=locE_ECAL+locE_FCAL;
+	      double ecal_frac=locE_ECAL/locEtot;
+	      double fcal_frac=1.-ecal_frac;
+	      mData[loc_j]->dEnergy=locEtot;
+	    
+	      // Energy-weighted time
+	      double locTime=ecal_frac*locECALShowers[loc_i]->t
+		+fcal_frac*mData[loc_j]->dSpacetimeVertex.T();
+	      mData[loc_j]->dSpacetimeVertex.SetT(locTime);
+	      
+	      // Energy-weighted position
+	      DVector3 locPos=ecal_frac*locEcalPos+fcal_frac*locFcalPos;
+	      mData[loc_j]->dSpacetimeVertex.SetVect(locPos);
+	      
+	      // Add the ECAL shower as an associated object
+	      mData[loc_j]->AddAssociatedObject(locECALShowers[loc_i]);
+	      
+	      break;
+	    }
+	  }
 	}
       }
     }

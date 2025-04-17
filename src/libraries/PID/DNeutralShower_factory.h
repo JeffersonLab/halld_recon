@@ -19,6 +19,7 @@
 #include <START_COUNTER/DSCHit.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALHit.h>
+#include <FCAL/DFCALGeometry.h>
 #include <ECAL/DECALShower.h>
 #include <ECAL/DECALCluster.h>
 #include <ECAL/DECALHit.h>
@@ -56,6 +57,7 @@ class DNeutralShower_factory:public JFactoryT<DNeutralShower>
 
   double getFCALQuality( const DFCALShower* fcalShower, double rfTime ) const;
   double TOF_RF_CUT;
+  double ECAL_FCAL_CUT;
   double SC_RF_CUT_MIN;
   double SC_RF_CUT_MAX;
   double SC_Energy_CUT;
@@ -64,6 +66,7 @@ class DNeutralShower_factory:public JFactoryT<DNeutralShower>
   
   vector<vector<DVector3> >sc_pos;
   vector<vector<DVector3> >sc_norm;
+  const DFCALGeometry *dFCALGeometry=nullptr;
   
 };
 
