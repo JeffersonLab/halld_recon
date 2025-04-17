@@ -225,7 +225,7 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 
 	    // Time cut now (Set the upper Time Cut based on the firmware timestamp)
 	    double T = (double)digihit->peak_time * t_scale;
-	    if( (T < LOW_TCUT) || (T > ((NW-21.)*t_scale)) )
+	    if( (T < LOW_TCUT) || (T > ((NW-22.)*t_scale)) )
 	    	continue;
 	    
 		// Build hit object
