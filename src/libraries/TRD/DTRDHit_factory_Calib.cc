@@ -209,7 +209,6 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 
 			// calculate the correct pulse peak and pedestal      	
       		pulse_peak = FDCPulseObj->peak_amp << ABIT;
-      		//pulse_peak = digihit->pulse_peak << ABIT;
       		scaled_ped = raw_ped << PBIT;
       	}
 		else {

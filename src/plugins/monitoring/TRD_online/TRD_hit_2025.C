@@ -37,21 +37,21 @@
 	    c1->cd(1);
 	    stripOcc0->Draw("");
     }
-	if(stripOcc1) {
-        c1->cd(2);
-        stripOcc1->Draw("");
-    }
     if(stripTime0) {
-	    c1->cd(3);
+	    c1->cd(2);
 	    stripTime0->Draw("colz");
     }
-    if(stripTime1) {
-      c1->cd(4);
-	    stripTime1->Draw("colz");
-    }
 	if(totalPulse0) {
-        c1->cd(5);
+        c1->cd(3);
         totalPulse0->Draw("");
+    }
+	if(stripOcc1) {
+        c1->cd(4);
+        stripOcc1->Draw("");
+    }
+	if(stripTime1) {
+      c1->cd(5);
+        stripTime1->Draw("colz");
     }
     if(totalPulse1) {
         c1->cd(6);

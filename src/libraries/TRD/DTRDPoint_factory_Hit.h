@@ -30,13 +30,12 @@ class DTRDPoint_factory_Hit : public JFactoryT<DTRDPoint> {
 	private:		
   		double TIME_DIFF_MAX;
    		double dE_DIFF_MAX;
-		//vector<double>dTRDz;
-		//double DRIFT_VELOCITY;
+		double DRIFT_VELOCITY;
  	   	double dTRDx=0.,dTRDy=0.,dTRDz=0.;
 		
 		const int NUM_X_STRIPS = 720;
-  		//const int NUM_Y_STRIPS = 432;
-  		const int NUM_Y_STRIPS = 528; // but only 432 are instrumented as of Spring 2025
+  		//const int NUM_Y_STRIPS = 360;
+  		const int NUM_Y_STRIPS = 528; // but only 360 are instrumented as of Spring 2025
   		const double STRIP_PITCH=0.1; //1mm
 
 };
