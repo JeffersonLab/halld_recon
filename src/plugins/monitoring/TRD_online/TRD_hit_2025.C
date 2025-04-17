@@ -2,20 +2,25 @@
 // which histograms to fetch for the macro.
 //
 
-// hnamepath: /TRD/Hit/Hit_StripVsdE_Plane0
-// hnamepath: /TRD/Hit/Hit_StripVsdE_Plane1
 // hnamepath: /TRD/Hit/Hit_TimeVsStrip_Plane0
 // hnamepath: /TRD/Hit/Hit_TimeVsStrip_Plane1
+// hnamepath: /TRD/Hit/Hit_Occupancy_Plane0
+// hnamepath: /TRD/Hit/Hit_Occupancy_Plane1
+// hnamepath: /TRD/Hit/Hit_PulseHeight_Plane0
+// hnamepath: /TRD/Hit/Hit_PulseHeight_Plane1
 
 {
     TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("TRD/Hit");
     if(dir) dir->cd();
 
-    TH2I* stripdE0 = (TH2I*)gDirectory->FindObjectAny("Hit_StripVsdE_Plane0");
     TH2I* stripTime0 = (TH2I*)gDirectory->FindObjectAny("Hit_TimeVsStrip_Plane0");
-    TH2I* stripdE1 = (TH2I*)gDirectory->FindObjectAny("Hit_StripVsdE_Plane1");
+	TH1I* stripOcc0 = (TH1I*)gDirectory->FindObjectAny("Hit_Occupancy_Plane0");
+    TH1I* totalPulse0 = (TH1I*)gDirectory->FindObjectAny("Hit_PulseHeight_Plane0");
     TH2I* stripTime1 = (TH2I*)gDirectory->FindObjectAny("Hit_TimeVsStrip_Plane1");
-
+	TH1I* stripOcc1 = (TH1I*)gDirectory->FindObjectAny("Hit_Occupancy_Plane1");
+	TH1I* totalPulse1 = (TH1I*)gDirectory->FindObjectAny("Hit_PulseHeight_Plane1");
+	
+	
     if(gPad == NULL){
         TCanvas *c1 = new TCanvas("c1","TRD Hit Monitor",150,10,990,660);
         c1->cd(0);
@@ -24,25 +29,34 @@
     }
     if(!gPad) return;
     TCanvas* c1 = gPad->GetCanvas();
-    c1->Divide(2,2);
+    c1->Divide(3,2);
     double tsize = 0.0475;
     gStyle->SetOptStat("emr");
 
-    if(stripdE0) {
+    if(stripOcc0) {
 	    c1->cd(1);
-	    stripdE0->Draw("colz");
+	    stripOcc0->Draw("");
     }
     if(stripTime0) {
-	    c1->cd(3);
+	    c1->cd(2);
 	    stripTime0->Draw("colz");
     }
-    if(stripdE1) {
-	    c1->cd(2);
-	    stripdE1->Draw("colz");
+	if(totalPulse0) {
+        c1->cd(3);
+        totalPulse0->Draw("");
     }
-    if(stripTime1) {
-      c1->cd(4);
-	    stripTime1->Draw("colz");
+	if(stripOcc1) {
+        c1->cd(4);
+        stripOcc1->Draw("");
     }
+	if(stripTime1) {
+      c1->cd(5);
+        stripTime1->Draw("colz");
+    }
+    if(totalPulse1) {
+        c1->cd(6);
+        totalPulse1->Draw("");
+    }
+
 
 }
