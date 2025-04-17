@@ -205,14 +205,14 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
     event->Get(tracks);
 	vector<const DFCALShower*> FCALshowers;
     event->Get(FCALshowers);
-	
+
   	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	
 	hnumTracks->Fill(tracks.size());
 	
-  	for (unsigned int j=0;j<tracks.size();j++){
+  	for (unsigned int j=0; j<tracks.size(); j++) {
     	const DChargedTrackHypothesis *hyp_el=tracks[j]->Get_Hypothesis(Electron);
-    	if (hyp_el!=nullptr){
+    	if (hyp_el!=nullptr) {
 			double p=hyp_el->momentum().Mag();
 			hnumElTracks->Fill(tracks.size());
       		shared_ptr<const DTRDMatchParams>trdparms=hyp_el->Get_TRDMatchParams();
@@ -237,7 +237,6 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
 					hnumTracksInTRD->Fill(tracks.size());
 				}
 				
-				//--NEW
 				double extrap_FCALEnergy = 0.;
             	double p_track=fcal_extrapolations[0].momentum.Mag();
                 for (const auto& shower : FCALshowers) {
@@ -247,7 +246,7 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
                         break;
                     }
                 }
-                if (extrap_FCALEnergy>0.&&p_track>1.) {
+                if (extrap_FCALEnergy>0. && p_track>1.) {
 				
 				
 				if (inTRD) { 
@@ -278,7 +277,7 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
             	}
 				if (i > 0) hnumPointsSeen->Fill(i);
 				if (i2 > 0) hnumPointsSeenFCAL->Fill(i2);
-				}
+				} //--END  if (extrap_FCALEnergy>0. && p_track>1.)
 				
             	for (const auto& point : points) {
                 	hExtrapXDiff->Fill(trd_extrapolations[0].position.x() - (point->x));
@@ -292,60 +291,61 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
 	                hSegmentExtrapXYDiff->Fill(trd_extrapolations[0].position.x() - (segment->x), trd_extrapolations[0].position.y() - (segment->y));
     	        }
 				
-            	    hnumTrackMatches->Fill(1);
-                	hFCALExtrapPx->Fill(fcal_extrapolations[0].momentum.x());
-	                hFCALExtrapPy->Fill(fcal_extrapolations[0].momentum.y());
-    	            hFCALExtrapPz->Fill(fcal_extrapolations[0].momentum.z());
-        	        hFCALExtrapXY->Fill(fcal_extrapolations[0].position.x(), fcal_extrapolations[0].position.y());
-            	    hExtrapXDiff_FCAL->Fill(fcal_extrapolations[0].position.x() - trd_extrapolations[0].position.x());
-                	hExtrapYDiff_FCAL->Fill(fcal_extrapolations[0].position.y() - trd_extrapolations[0].position.y());
-                	hExtrapXYDiff_FCAL->Fill(fcal_extrapolations[0].position.x() - trd_extrapolations[0].position.x(), fcal_extrapolations[0].position.y() - trd_extrapolations[0].position.y());
-					hExtrapThetavsP->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta(), fcal_extrapolations[0].momentum.Mag());
-					hExtrapTheta->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta());
-                	extrap_FCALEnergy = 0.;
-	                for (const auto& shower : FCALshowers) {
-        	            if (abs(shower->getPosition().X() - fcal_extrapolations[0].position.x()) < 5) {
-            	            extrap_FCALEnergy = shower->getEnergy();
-                	        break;
-                    	}
-	                }
-					bool ext_electron = false;
-    	            if (extrap_FCALEnergy>0.) {
-						hFCALExtrapE->Fill(extrap_FCALEnergy);
-        	        	hFCALExtrapEP->Fill(extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag());
-						hFCALExtrapEPvsP->Fill(extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag(), fcal_extrapolations[0].momentum.Mag());
-						if (fcal_extrapolations[0].momentum.Mag() >= 0.5 && fcal_extrapolations[0].momentum.Mag() <= 1.5 && (extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag()) >= 0.68 && (extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag()) <= 1.2) {
-							hExtrapThetavsP_Selected->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta(), fcal_extrapolations[0].momentum.Mag());
-							ext_electron = true;
-						}
+            	hnumTrackMatches->Fill(1);
+              	hFCALExtrapPx->Fill(fcal_extrapolations[0].momentum.x());
+	            hFCALExtrapPy->Fill(fcal_extrapolations[0].momentum.y());
+    	        hFCALExtrapPz->Fill(fcal_extrapolations[0].momentum.z());
+                hFCALExtrapXY->Fill(fcal_extrapolations[0].position.x(), fcal_extrapolations[0].position.y());
+           	    hExtrapXDiff_FCAL->Fill(fcal_extrapolations[0].position.x() - trd_extrapolations[0].position.x());
+              	hExtrapYDiff_FCAL->Fill(fcal_extrapolations[0].position.y() - trd_extrapolations[0].position.y());
+               	hExtrapXYDiff_FCAL->Fill(fcal_extrapolations[0].position.x() - trd_extrapolations[0].position.x(), fcal_extrapolations[0].position.y() - trd_extrapolations[0].position.y());
+				hExtrapThetavsP->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta(), fcal_extrapolations[0].momentum.Mag());
+				hExtrapTheta->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta());
+               	extrap_FCALEnergy = 0.;
+	            for (const auto& shower : FCALshowers) {
+       	            if (abs(shower->getPosition().X() - fcal_extrapolations[0].position.x()) < 5) {
+            	        extrap_FCALEnergy = shower->getEnergy();
+                	    break;
+                   	}
+	            }
+				bool ext_electron = false;
+    	        if (extrap_FCALEnergy>0.) {
+					hFCALExtrapE->Fill(extrap_FCALEnergy);
+        	        hFCALExtrapEP->Fill(extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag());
+					hFCALExtrapEPvsP->Fill(extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag(), fcal_extrapolations[0].momentum.Mag());
+					if (fcal_extrapolations[0].momentum.Mag() >= 0.5 && (extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag()) >= 0.68 && (extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag()) <= 1.2) {
+						hExtrapThetavsP_Selected->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta(), fcal_extrapolations[0].momentum.Mag());
+						ext_electron = true;
 					}
-					
-					//--New
-
-					if ((trd_extrapolations[0].position.x() > -83.47) && (trd_extrapolations[0].position.x() < -11.47) && (trd_extrapolations[0].position.y() > -68.6) && (trd_extrapolations[0].position.y() < -32.61)) {
-						hFCALExtrapXY_TRD->Fill(fcal_extrapolations[0].position.x(), fcal_extrapolations[0].position.y());
-                        hExtrapXDiff_FCAL_TRD->Fill(fcal_extrapolations[0].position.x() - trd_extrapolations[0].position.x());
-                        hExtrapYDiff_FCAL_TRD->Fill(fcal_extrapolations[0].position.y() - trd_extrapolations[0].position.y());
-                        hExtrapXYDiff_FCAL_TRD->Fill(fcal_extrapolations[0].position.x() - trd_extrapolations[0].position.x(), fcal_extrapolations[0].position.y() - trd_extrapolations[0].position.y());
-                        hExtrapThetavsP_TRD->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta(), fcal_extrapolations[0].momentum.Mag());
-                        hExtrapTheta_TRD->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta());
-                        double extrap_FCALEnergy = 0.;
-                        for (const auto& shower : FCALshowers) {
-                            hFCALShowerDisplay->Fill(shower->getPosition().X(), shower->getPosition().Y());
-                            if (abs(shower->getPosition().X() - fcal_extrapolations[0].position.x()) < 5) {
-                                extrap_FCALEnergy = shower->getEnergy();
-                                break;
-                            }
+				}
+				
+				if (inTRD) {
+					hFCALExtrapXY_TRD->Fill(fcal_extrapolations[0].position.x(), fcal_extrapolations[0].position.y());
+                    hExtrapXDiff_FCAL_TRD->Fill(fcal_extrapolations[0].position.x() - trd_extrapolations[0].position.x());
+                    hExtrapYDiff_FCAL_TRD->Fill(fcal_extrapolations[0].position.y() - trd_extrapolations[0].position.y());
+                    hExtrapXYDiff_FCAL_TRD->Fill(fcal_extrapolations[0].position.x() - trd_extrapolations[0].position.x(), fcal_extrapolations[0].position.y() - trd_extrapolations[0].position.y());
+                    hExtrapThetavsP_TRD->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta(), fcal_extrapolations[0].momentum.Mag());
+                    hExtrapTheta_TRD->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta());
+                    double extrap_FCALEnergy = 0.;
+                    for (const auto& shower : FCALshowers) {
+                        hFCALShowerDisplay->Fill(shower->getPosition().X(), shower->getPosition().Y());
+                        if (abs(shower->getPosition().X() - fcal_extrapolations[0].position.x()) < 5) {
+                            extrap_FCALEnergy = shower->getEnergy();
+                            break;
                         }
-                        if (extrap_FCALEnergy>0.) {
-                            hFCALExtrapE_TRD->Fill(extrap_FCALEnergy);
-                            hFCALExtrapEP_TRD->Fill(extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag());
-                            hFCALExtrapEPvsP_TRD->Fill(extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag(), fcal_extrapolations[0].momentum.Mag());
-							if (ext_electron == true) hExtrapThetavsP_Selected_TRD->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta(), fcal_extrapolations[0].momentum.Mag());
-                        }
-					}
-        	}
+                    }
+                    if (extrap_FCALEnergy>0.) {
+                        hFCALExtrapE_TRD->Fill(extrap_FCALEnergy);
+                        hFCALExtrapEP_TRD->Fill(extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag());
+                        hFCALExtrapEPvsP_TRD->Fill(extrap_FCALEnergy / fcal_extrapolations[0].momentum.Mag(), fcal_extrapolations[0].momentum.Mag());
+						if (ext_electron == true) hExtrapThetavsP_Selected_TRD->Fill((180./3.141592)*fcal_extrapolations[0].momentum.Theta(), fcal_extrapolations[0].momentum.Mag());
+                    }
+				} //--END (inTRD) condition
+        	} //--END if (trd_extrapolations && fcal_extrapolations)
+		
 			
+			
+			//--NOT YET USEFUL until segment building is fixed..........
 			
 			if (trdparms!=nullptr && fcalparms!=nullptr){
 				hfCALEP_TRD_el->Fill(fcalparms->dFCALShower->getEnergy() / p);
