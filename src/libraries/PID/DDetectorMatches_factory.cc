@@ -70,7 +70,8 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	event->Get(locFMWPCClusters);
 
 	vector<const DTRDSegment *> locTRDSegments;
-	event->Get(locTRDSegments);
+	// event->Get(locTRDSegments);
+	event->Get(locTRDSegments,"Extrapolation");
 
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches();
 

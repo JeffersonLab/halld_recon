@@ -1266,7 +1266,7 @@ bool DParticleID::ProjectTo_SC(const DReferenceTrajectory* rt, unsigned int locS
 
 bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DECALShower* locECALShower, double locInputStartTime, shared_ptr<DECALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos, DVector3* locOutputProjMom) const
 {
-  if(extrapolations.size()==0)
+  if(extrapolations.size()<2)
     return false;
 
   // Check that the hit is not out of time with respect to the track
@@ -1334,7 +1334,7 @@ bool DParticleID::Distance_ToTrack(double locStartTime,const DTrackFitter::Extra
 
 bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DFCALShower* locFCALShower, double locInputStartTime, shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos, DVector3* locOutputProjMom) const
 {
-  if(extrapolations.size()==0)
+  if(extrapolations.size()<2)
     return false;
 
   // Check that the hit is not out of time with respect to the track

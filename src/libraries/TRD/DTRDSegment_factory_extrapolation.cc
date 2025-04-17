@@ -52,9 +52,6 @@ void DTRDSegment_factory_extrapolation::Process(const std::shared_ptr<const JEve
   }
 
   // cout << "Number of tracks: " << tracks.size() << endl;
-  
-  // vector<vector<const DTRDPoint *>>segments;
-  // FindSegments(points,segments);
 
   vector<TrackPoint> trackPoints;
   vector<DTrackFitter::Extrapolation_t> trackExtrapolations;
@@ -117,7 +114,6 @@ void DTRDSegment_factory_extrapolation::FindSegments(const vector<const DTRDPoin
 				      vector<vector<const DTRDPoint *>>&segments) const{
   vector<const DTRDPoint *>mysegment_points;
   for (unsigned int i=0;i<points.size();i++){
-    // Do some pattern recognition here
     mysegment_points.push_back(points[i]);
   }
   segments.push_back(mysegment_points);
@@ -200,5 +196,3 @@ void DTRDSegment_factory_extrapolation::FindSegmentPoints(vector<TrackPoint> &tr
     }
   }
 }
-
-// void DTRDSegment_factory_extrapolation::GetChi2Fit

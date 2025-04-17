@@ -43,7 +43,6 @@ private:
   void FindSegmentPoints(vector<TrackPoint> &trackPoints, vector<DTrackFitter::Extrapolation_t> &trackExtrapolations, double distToExtrp);
   double dTRDz;
   double distToExtrp;
-  double Chi2;
   int DEBUG_LEVEL;
 };
 

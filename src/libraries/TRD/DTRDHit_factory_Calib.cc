@@ -209,7 +209,6 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 
 			// calculate the correct pulse peak and pedestal      	
       		pulse_peak = FDCPulseObj->peak_amp << ABIT;
-      		//pulse_peak = digihit->pulse_peak << ABIT;
       		scaled_ped = raw_ped << PBIT;
       	}
 		else {
@@ -225,7 +224,7 @@ void DTRDHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 
 	    // Time cut now (Set the upper Time Cut based on the firmware timestamp)
 	    double T = (double)digihit->peak_time * t_scale;
-	    if( (T < LOW_TCUT) || (T > ((NW-21.)*t_scale)) )
+	    if( (T < LOW_TCUT) || (T > ((NW-22.)*t_scale)) )
 	    	continue;
 	    
 		// Build hit object

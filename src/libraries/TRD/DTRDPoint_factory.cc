@@ -23,9 +23,9 @@ void DTRDPoint_factory::Init()
   auto app = GetApplication();
   
   // Some parameters for defining matching
-  DRIFT_VELOCITY=0.0033; // cm/ns
+  DRIFT_VELOCITY=0.0033; // cm/ns //Estimate - Will need changed later
 
-  TIME_DIFF_MAX = 40.;
+  TIME_DIFF_MAX = 25.;
   app->SetDefaultParameter("TRD:XY_TIME_DIFF",TIME_DIFF_MAX);
 	
   dE_DIFF_MAX = 10000.;
@@ -90,11 +90,8 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 			// calculate strip cluster time and position
 			double t_diff = stripClusX[i]->t_avg - stripClusY[j]->t_avg;
 			double dE = stripClusX[i]->q_tot + stripClusY[j]->q_tot;
-			//double dE_high = (stripClusX[i]->q_tot + dE_DIFF_MAX);
-            //double dE_low = (stripClusX[i]->q_tot - dE_DIFF_MAX);
 
             // some requirements for a good point
-			// cout << "t_diff = " << t_diff << " dE = " << dE << " dE_high = " << dE_high << " dE_low = " << dE_low << endl;
 			if(fabs(t_diff) < TIME_DIFF_MAX) {
             // if(fabs(t_diff) < TIME_DIFF_MAX && (stripClusY[j]->q_tot < dE_high) && (stripClusY[j]->q_tot > dE_low )) {
 			

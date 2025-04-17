@@ -22,7 +22,9 @@ void DTRDPoint_factory_Hit::Init()
 {
 		auto app = GetApplication();
 		
-		TIME_DIFF_MAX = 40.;
+		DRIFT_VELOCITY=0.0033; // cm/ns //Estimate - Will need changed later
+		
+		TIME_DIFF_MAX = 25.;
 		app->SetDefaultParameter("TRD:XY_TIME_DIFF",TIME_DIFF_MAX);
 		
 		dE_DIFF_MAX = 10000.;
@@ -90,15 +92,9 @@ void DTRDPoint_factory_Hit::Process(const std::shared_ptr<const JEvent>& event)
 			// calculate hit time and energy
 			double t_diff = hitX[i]->t - hitY[j]->t;
 			double dE = ( hitX[i]->q + hitY[j]->q );
-			//double dE_high = (hitX[i]->q + dE_DIFF_MAX);
-			//double dE_low = (hitX[i]->q - dE_DIFF_MAX);
 			
 			// some requirements for a good point
-			//if(fabs(t_diff) < TIME_DIFF_MAX && (hitY[j]->q < dE_high) && (hitY[j]->q > dE_low )) {
 			if(fabs(t_diff) < TIME_DIFF_MAX) {	
-				//Remove noisy patches
-//				if (hitX[i]->strip>600 && (hitY[j]->strip==3 || hitY[j]->strip==4 || hitY[j]->strip==193 || hitY[j]->strip==195 || hitY[j]->strip==196 || hitY[j]->strip==233))
-//					continue;
 				
 				// save new point
 				DTRDPoint* point = new DTRDPoint;
@@ -112,9 +108,8 @@ void DTRDPoint_factory_Hit::Process(const std::shared_ptr<const JEvent>& event)
 				point->dE_y = hitY[j]->q;
 				point->status = 1;
 				//newPoint->itrack = 0;
-				point->z = dTRDz+(hitX[i]->t*hitX[i]->q + hitY[j]->t*hitY[j]->q) / dE;  //Not Useful Yet
-				
-
+				//point->z = dTRDz+(hitX[i]->t*hitX[i]->q + hitY[j]->t*hitY[j]->q) / dE;  //Not Useful Yet
+				point->z=dTRDz-DRIFT_VELOCITY*point->time;
 				point->AddAssociatedObject(hitX[i]);
 				point->AddAssociatedObject(hitY[j]);
 
