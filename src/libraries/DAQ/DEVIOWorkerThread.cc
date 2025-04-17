@@ -998,7 +998,7 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 
 			case 0xDEC:  // Helicity decoder board, SD 2025-01-28
 				if(VERBOSE>3) jout <<" -- JLab Helicity Decoder  rocid="<< rocid << endl;
-                ParseHelicityDecoderBank(rocid, iptr, iend);
+                ParseHelicityDecoderBank(rocid, iptr, iend_data_block_bank);
  				break;
 			case 0:
 			case 1:
@@ -1428,19 +1428,19 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
                 pe_iter = current_parsed_events.begin();
 				pe = NULL;
                 if(VERBOSE>7) cout << "      Helicity Decoder Block Trailer"<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
-				// use this as a signal to stop parsing, since it seems like a better signal that this is actually
-				// the end of the HD board data
-				// at least, during the commissioning at the beginning of the 2025 run, the bank length was not always correct
-                if(VERBOSE>3) cout << "      Moving to end of block..."<<endl;
-                // usually there are multiple trailer words
-                while(*iptr == 0xfcc000ed) iptr++;
-
-				// Chop off filler words
-				for(; iptr<iend; iptr++){
-					if(((*iptr)&0xf8000000) != 0xf8000000) break;
-				}
-				return;
-                //break;
+                break;
+// 				// use this as a signal to stop parsing, since it seems like a better signal that this is actually
+// 				// the end of the HD board data
+// 				// at least, during the commissioning at the beginning of the 2025 run, the bank length was not always correct
+//                 if(VERBOSE>3) cout << "      Moving to end of block..."<<endl;
+//                 // usually there are multiple trailer words
+//                 while(*iptr == 0xfcc000ed) iptr++;
+// 
+// 				// Chop off filler words
+// 				for(; iptr<iend; iptr++){
+// 					if(((*iptr)&0xf8000000) != 0xf8000000) break;
+// 				}
+// 				return;
             case 2: // Event Header
                 itrigger = (*iptr>>0) & 0x3FFFFF;
 				pe = *pe_iter++;
@@ -1475,7 +1475,7 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 					}
 					if(header_number_words != 14)  { 
 						jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<"  number words = "<<header_number_words<<"  (expected=14)"<<endl; 
-\						throw JExceptionDataFormat("Bad helicity decoder header payload", __FILE__, __LINE__);
+						throw JExceptionDataFormat("Bad helicity decoder header payload", __FILE__, __LINE__);
 					}
 
 					iptr++;
