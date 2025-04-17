@@ -1406,7 +1406,6 @@ bool DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       Particle_t ptype = iter->getPtype();
       tra->setPID(ptype);
 
-      //      const hddm_r::TrackFit &fit = iter->getTrackFit();
       tra->Ndof = fit.getNdof();
       tra->chisq = fit.getChisq();
       tra->FOM = TMath::Prob(tra->chisq, tra->Ndof);
