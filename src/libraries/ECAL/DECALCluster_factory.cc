@@ -87,11 +87,20 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
   // Associate groups of adjacent hits into cluster candidates
   vector<vector<HitInfo>>clusterCandidates;
   FindClusterCandidates(hits,clusterCandidates);
-  
+
   for (unsigned int i=0;i<clusterCandidates.size();i++){
     // The list of hits in the cluster
     vector<HitInfo>clusterHits=clusterCandidates[i];
     unsigned int num_hits=clusterHits.size();
+    
+    // Find the minimum and maximum row and column numbers
+    int min_row=1000,min_col=1000,max_row=0,max_col=0;
+    for (unsigned int j=0;j<num_hits;j++){
+      if (clusterHits[j].row<min_row) min_row=clusterHits[j].row;
+      if (clusterHits[j].column<min_col) min_col=clusterHits[j].column;
+      if (clusterHits[j].row>max_row) max_row=clusterHits[j].row;
+      if (clusterHits[j].column>max_col) max_col=clusterHits[j].column;
+    }
     
     // Do not attempt a fit if the cluster size is too small
     if (num_hits<4){
@@ -126,8 +135,17 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       myCluster->x=x;
       myCluster->y=y;
       myCluster->channel_Emax=ch_Emax;
+      myCluster->nBlocks=num_hits;
       myCluster->status=DECALCluster::SHOWER_FOUND;
 
+      // flag if the cluster is near the border with the FCAL
+      if (min_row>0&&max_row<39&&min_col>0&&max_col<39){
+	myCluster->isNearBorder=false;
+      }
+      else{
+	myCluster->isNearBorder=true;
+      }
+      
       Insert(myCluster);
       
       continue;
@@ -136,15 +154,6 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
     //------------------------------------------------------------------------
     // Handle cluster candidates containing more than 3 hits
     //------------------------------------------------------------------------
-
-    // Find the minimum and maximum row and column numbers
-    int min_row=1000,min_col=1000,max_row=0,max_col=0;
-    for (unsigned int j=0;j<num_hits;j++){
-      if (clusterHits[j].row<min_row) min_row=clusterHits[j].row;
-      if (clusterHits[j].column<min_col) min_col=clusterHits[j].column;
-      if (clusterHits[j].row>max_row) max_row=clusterHits[j].row;
-      if (clusterHits[j].column>max_col) max_col=clusterHits[j].column;
-    }
 
     // Create arrays to represent the cluster of hits to aid in peak search
     int num_rows=max_row-min_row+3;
@@ -415,7 +424,8 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
     // Add the clusters to the output of the factory
     for (unsigned int k=0;k<npeaks;k++){
       DECALCluster *myCluster= new DECALCluster;
-      
+
+      myCluster->nBlocks=clusterHits.size();
       myCluster->status=peaks[k].status;
       myCluster->x=peaks[k].x;
       myCluster->y=peaks[k].y;
@@ -453,6 +463,13 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	    myCluster->AddAssociatedObject(ecal_hits[clusterHits[index-1].id]);
 	  }
 	}
+      }
+      // flag if the cluster is near the border with the FCAL
+      if (min_row>0&&max_row<39&&min_col>0&&max_col<39){
+	myCluster->isNearBorder=false;
+      }
+      else{
+	myCluster->isNearBorder=true;
       }
 
       Insert(myCluster);
