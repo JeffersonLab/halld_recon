@@ -1471,23 +1471,11 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 					// sanity checks
 					if(header_reserved != 0x18)  { 
 						jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<"  reserved field = 0x"<<hex<<header_reserved<<dec<<"  (expected=0x18)"<<endl; 
-						jerr << "  run number = " << pe->run_number  << " event number = " << pe->event_number << endl;
-						
-// 						cout << "----- Dump block to help with debugging -----" << endl;
-						cout.flush(); cerr.flush();
-						DumpBinary(istart_helicity_data, iend, Nwords, iptr);
-
 						throw JExceptionDataFormat("Bad helicity decoder header data", __FILE__, __LINE__);
 					}
 					if(header_number_words != 14)  { 
 						jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="<<slot<<"  number words = "<<header_number_words<<"  (expected=14)"<<endl; 
-						jerr << "  run number = " << pe->run_number  << " event number = " << pe->event_number << endl;
-
-// 						cout << "----- Dump block to help with debugging -----" << endl;
-						cout.flush(); cerr.flush();
-						DumpBinary(istart_helicity_data, iend, Nwords, iptr);
-
-						throw JExceptionDataFormat("Bad helicity decoder header payload", __FILE__, __LINE__);
+\						throw JExceptionDataFormat("Bad helicity decoder header payload", __FILE__, __LINE__);
 					}
 
 					iptr++;
