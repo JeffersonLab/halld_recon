@@ -93,10 +93,12 @@ class DHelicityData:public DDAQAddress{
 		// the second argument to AddString is printf style format
 		void Summarize(JObjectSummary& summary) const override {
 			DDAQAddress::Summarize(summary);
-			summary.add(expected_helicity_state, NAME_OF(expected_helicity_state), "%d");
-			summary.add(pattern_sync_count, NAME_OF(pattern_sync_count), "%d");
-			summary.add(pair_sync_count, NAME_OF(pair_sync_count), "%d");
-			summary.add(time_from_start_tstable, NAME_OF(time_from_start_tstable), "%d");
+			summary.add(trigger_helicity_state, NAME_OF(trigger_helicity_state), "%d");
+			summary.add(trigger_tstable, NAME_OF(trigger_tstable), "%d");
+			summary.add(trigger_pattern_sync, NAME_OF(trigger_pattern_sync), "%d");
+			summary.add(trigger_pair_sync, NAME_OF(trigger_pair_sync), "%d");
+			summary.add(trigger_helicity_state_pattern_start, NAME_OF(trigger_helicity_state_pattern_start), "%d");
+			summary.add(trigger_event_polarity, NAME_OF(trigger_event_polarity), "%d");
 		}
 
 };
