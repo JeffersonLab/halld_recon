@@ -42,7 +42,7 @@
 		F1TDC_fADC_tdiff->GetXaxis()->SetLabelOffset(0.01);
 		F1TDC_fADC_tdiff->GetYaxis()->SetTitleSize(0.045);
 		F1TDC_fADC_tdiff->GetYaxis()->SetTitleOffset(0.7);
-		F1TDC_fADC_tdiff->GetXaxis()->SetRangeUser(1,48);
+		F1TDC_fADC_tdiff->GetXaxis()->SetRangeUser(1,49);
 		F1TDC_fADC_tdiff->LabelsOption("V","X");
 		F1TDC_fADC_tdiff->SetStats(0);
 		F1TDC_fADC_tdiff->Draw("COLZ");
@@ -56,7 +56,7 @@
  		gPad->SetBottomMargin(0.25);
  		gPad->SetLeftMargin(0.08);
  		gPad->SetRightMargin(0.12);
-		F1TDC_fADC_tdiff_bottom->GetXaxis()->SetRangeUser(49,100);
+		F1TDC_fADC_tdiff_bottom->GetXaxis()->SetRangeUser(50,99);
 		F1TDC_fADC_tdiff_bottom->SetStats(0);
 		F1TDC_fADC_tdiff_bottom->Draw("COLZ");
 	}
