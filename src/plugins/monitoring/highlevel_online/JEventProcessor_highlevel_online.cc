@@ -14,7 +14,7 @@
 #include <DAQ/DCODAEventInfo.h>
 #include <DAQ/DEPICSvalue.h>
 #include <DANA/DEvent.h>
-
+#include <PAIR_SPECTROMETER/DPSCHit.h>
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -30,6 +30,7 @@ extern "C"{
 // Hit types that include F1TDC information
 #define F1Types(X) \
 	X(DRFTime)  \
+	X(DPSCHit)   \
 	X(DSCHit)   \
 	X(DFDCHit)  \
 	X(DBCALUnifiedHit)
@@ -64,6 +65,13 @@ template<> bool   F1CheckTDCOnly<DSCHit  >(const DSCHit*          hit){ return !
 template<> double F1tdiff<DSCHit         >(const DSCHit*          hit){ return hit->t_TDC - hit->t_fADC;       }
 template<> double F1tdiff2<DSCHit        >(const DSCHit* hit, const DSCHit* hit2){ return hit->t_TDC - hit2->t_fADC; }
 template<> bool   F1CheckSameChannel<DSCHit >(const DSCHit* hit,const DSCHit* hit2){ return hit->sector==hit2->sector;    }
+
+template<> bool   F1Check<DPSCHit        >(const DPSCHit*          hit){ return hit->has_fADC && hit->has_TDC;  }
+template<> bool   F1CheckADCOnly<DPSCHit >(const DPSCHit*          hit){ return hit->has_fADC && !hit->has_TDC; }
+template<> bool   F1CheckTDCOnly<DPSCHit >(const DPSCHit*          hit){ return !hit->has_fADC && hit->has_TDC; }
+template<> double F1tdiff<DPSCHit        >(const DPSCHit*          hit){ return hit->time_tdc - hit->time_fadc;       }
+template<> double F1tdiff2<DPSCHit       >(const DPSCHit* hit, const DPSCHit* hit2){ return hit->time_tdc - hit2->time_fadc; }
+template<> bool   F1CheckSameChannel<DPSCHit >(const DPSCHit* hit,const DPSCHit* hit2){ return hit->module==hit2->module;    }
 
 template<> bool   F1Check<DTAGHHit       >(const DTAGHHit*        hit){ return hit->has_fADC && hit->has_TDC; }
 template<> bool   F1CheckADCOnly<DTAGHHit>(const DTAGHHit*        hit){	return hit->has_fADC && !(hit->has_TDC); }
