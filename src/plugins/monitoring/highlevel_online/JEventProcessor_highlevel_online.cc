@@ -15,6 +15,7 @@
 #include <DAQ/DEPICSvalue.h>
 #include <DANA/DEvent.h>
 #include <PAIR_SPECTROMETER/DPSCHit.h>
+#include <FDC/DFDCHit.h>
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -147,7 +148,7 @@ void JEventProcessor_highlevel_online::FillF1Hist(vector<const T*> hits)
 							pair<int,int> rocid_slot(f1hit->rocid, f1hit->slot);
 							double fbin = f1tdc_bin_map[rocid_slot];
 							double tdiff = F1tdiff2(hit2,hit);
-							dF1TDC_fADC_tdiff->Fill(fbin, tdiff);
+							dF1TDC_fADC_tdiff->Fill(fbin+1, tdiff);
 						}
 					}
 				}
@@ -329,10 +330,11 @@ void JEventProcessor_highlevel_online::Init()
 		if( slot<=13 ) f1tdc_rocid_slot[33].insert(slot); // BCAL3
 		if( slot<=13 ) f1tdc_rocid_slot[39].insert(slot); // BCAL9
 		if( slot<=13 ) f1tdc_rocid_slot[42].insert(slot); // BCAL12
-		if( slot<=17 ) f1tdc_rocid_slot[51].insert(slot); // FDC1
+		if( slot<=16 ) f1tdc_rocid_slot[51].insert(slot); // FDC1
 		if( slot<=16 ) f1tdc_rocid_slot[54].insert(slot); // FDC4
 		if( slot<=16 ) f1tdc_rocid_slot[63].insert(slot); // FDC13
 		if( slot<=16 ) f1tdc_rocid_slot[64].insert(slot); // FDC14
+		
 	}
 	
 	// Create map that can be used to find the correct bin given the rocid,slot
@@ -353,7 +355,7 @@ void JEventProcessor_highlevel_online::Init()
 		int jbin  = p.second;
 		char str[256];
 		sprintf(str, "R %d - S %d", rocid, slot);
-		dF1TDC_fADC_tdiff->GetXaxis()->SetBinLabel(jbin, str);
+		dF1TDC_fADC_tdiff->GetXaxis()->SetBinLabel(jbin+1, str);
 	}
 	
 
