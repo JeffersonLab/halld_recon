@@ -50,7 +50,7 @@ private:
   TH1D *hExtrapTheta_TRD, *hExtrapXDiff_FCAL_TRD, *hExtrapYDiff_FCAL_TRD, *hFCALExtrapE_TRD, *hFCALExtrapEP_TRD, *hnumSeenExtrap, *hnumPointsSeen, *hnumExtrap, *hnumSeenExtrapFCAL, *hnumPointsSeenFCAL, *hExtrapsX, *hExtrapsY, *hSeenPointsSingleX, *hSeenPointsSingleY;
    
   TH1D *hnumSeenExtrapFCAL_el, *hnumExtrap_el, *hnumSeenExtrap_el, *hExtrapsX_el, *hExtrapsY_el, *hSeenPointsX_el, *hSeenPointsY_el, *hSeenPointsSingleX_el, *hSeenPointsSingleY_el, *hnumSeenExtrapFCAL_pi, *hnumExtrap_pi, *hnumSeenExtrap_pi, *hExtrapsX_pi, *hExtrapsY_pi, *hSeenPointsX_pi, *hSeenPointsY_pi, *hSeenPointsSingleX_pi, *hSeenPointsSingleY_pi, *hnumPointsSeen_el, *hnumPointsSeenFCAL_el, *hnumPointsSeen_pi, *hnumPointsSeenFCAL_pi;
-  TH2D *hnumExtrapsXY_el, *hSeenPointsSingleXY_el, *hSeenPointsXY_el, *hSeenPointsFCALXY_el, *hProjectionXHitDiffvsTime_el, *hProjectionYHitDiffvsTime_el, *hTRDXCorr_el, *hTRDYCorr_el, *hnumExtrapsXY_pi, *hSeenPointsSingleXY_pi, *hSeenPointsXY_pi, *hSeenPointsFCALXY_pi, *hProjectionXHitDiffvsTime_pi, *hProjectionYHitDiffvsTime_pi, *hTRDXCorr_pi, *hTRDYCorr_pi, *hExtrapsXY_el, *hExtrapsXY_pi;
+  TH2D *hnumExtrapsXY_el, *hSeenPointsSingleXY_el, *hSeenPointsXY_el, *hSeenPointsFCALXY_el, *hProjectionXHitvsTime_el, *hProjectionYHitvsTime_el, *hProjectionXHitvsTime_QW_el, *hProjectionYHitvsTime_QW_el, *hTRDXCorr_el, *hTRDYCorr_el, *hnumExtrapsXY_pi, *hSeenPointsSingleXY_pi, *hSeenPointsXY_pi, *hSeenPointsFCALXY_pi, *hProjectionXHitvsTime_pi, *hProjectionYHitvsTime_pi, *hProjectionXHitvsTime_QW_pi, *hProjectionYHitvsTime_QW_pi, *hTRDXCorr_pi, *hTRDYCorr_pi, *hExtrapsXY_el, *hExtrapsXY_pi;
   
   std::shared_ptr<JLockService> lockService; //Used to access all the services, its value should be set inside Init()
 };

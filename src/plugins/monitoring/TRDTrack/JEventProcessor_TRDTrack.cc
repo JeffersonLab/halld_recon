@@ -133,8 +133,10 @@ void JEventProcessor_TRDTrack::Init()
 	hProjectionXHitDiff_el=new TH1D("ProjectionXHitDiff_el","Track Projection X Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm]",500,-5.,5.);
     hProjectionYHitDiff_el=new TH1D("ProjectionYHitDiff_el","Track Projection Y Difference from TRD Point_Hits;y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.);
     hProjectionXYHitDiff_el=new TH2D("ProjectionXYHitDiff_el","Track Projection XY Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm];y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.,500,-5.,5.);
-	hProjectionXHitDiffvsTime_el=new TH2D("ProjectionXHitDiffvsTime_el","Track Projection X Difference from TRD Point_Hits vs Drift Time;x(Proj) - x(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",500,-5.,5.,400,0.,200.*8);
-	hProjectionYHitDiffvsTime_el=new TH2D("ProjectionYHitDiffvsTime_el","Track Projection Y Difference from TRD Point_Hits vs Drift Time;y(Proj) - y(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",500,-5.,5.,400,0.,200.*8);
+	hProjectionXHitvsTime_el=new TH2D("ProjectionXHitvsTime_el","TRD Point_Hits vs Drift Time;x(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",750,-85.,-10.,400,0.,200.*8);
+	hProjectionYHitvsTime_el=new TH2D("ProjectionYHitvsTime_el","TRD Point_Hits vs Drift Time;y(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",400,-70.,-30.,400,0.,200.*8);
+	hProjectionXHitvsTime_QW_el=new TH2D("ProjectionXHitvsTime_QW_el","TRD Point_Hits vs Drift Time (q-weighted);x(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",750,-85.,-10.,400,0.,200.*8);
+	hProjectionYHitvsTime_QW_el=new TH2D("ProjectionYHitvsTime_QW_el","TRD Point_Hits vs Drift Time (q-weighted);y(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",400,-70.,-30.,400,0.,200.*8);
 	hTRDXCorr_el=new TH2D("TRDXCorr_el","X Corr. Between Track Projection and TRD Point_Hits;x(Track Proj) [cm];x(TRD Point_Hit) [cm]",750,-85.,-10.,750,-85.,-10.);
     hTRDYCorr_el=new TH2D("TRDYCorr_el","Y Corr. Between Track Projection and TRD Point_Hits;y(Track Proj) [cm];y(TRD Point_Hit) [cm]",400,-70.,-30.,400,-70.,-30.);
 	hnumSeenExtrap_el=new TH1D("numSeenExtrap_el","Num Track Extrapolations Seen in TRD; # Track Extrap.",3,-0.5,2.5);
@@ -177,8 +179,10 @@ void JEventProcessor_TRDTrack::Init()
 	hProjectionXHitDiff_pi=new TH1D("ProjectionXHitDiff_pi","Track Projection X Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm]",500,-5.,5.);
     hProjectionYHitDiff_pi=new TH1D("ProjectionYHitDiff_pi","Track Projection Y Difference from TRD Point_Hits;y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.);
     hProjectionXYHitDiff_pi=new TH2D("ProjectionXYHitDiff_pi","Track Projection XY Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm];y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.,500,-5.,5.);
-	hProjectionXHitDiffvsTime_pi=new TH2D("ProjectionXHitDiffvsTime_pi","Track Projection X Difference from TRD Point_Hits vs Drift Time;x(Proj) - x(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",500,-5.,5.,400,0.,200.*8);
-    hProjectionYHitDiffvsTime_pi=new TH2D("ProjectionYHitDiffvsTime_pi","Track Projection Y Difference from TRD Point_Hits vs Drift Time;y(Proj) - y(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",500,-5.,5.,400,0.,200.*8);
+    hProjectionXHitvsTime_pi=new TH2D("ProjectionXHitvsTime_pi","TRD Point_Hits vs Drift Time;x(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",750,-85.,-10.,400,0.,200.*8);
+    hProjectionYHitvsTime_pi=new TH2D("ProjectionYHitvsTime_pi","TRD Point_Hits vs Drift Time;y(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",400,-70.,-30.,400,0.,200.*8);
+    hProjectionXHitvsTime_QW_pi=new TH2D("ProjectionXHitvsTime_QW_pi","TRD Point_Hits vs Drift Time (q-weighted);x(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",750,-85.,-10.,400,0.,200.*8);
+    hProjectionYHitvsTime_QW_pi=new TH2D("ProjectionYHitvsTime_QW_pi","TRD Point_Hits vs Drift Time (q-weighted);y(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",400,-70.,-30.,400,0.,200.*8);
     hTRDXCorr_pi=new TH2D("TRDXCorr_pi","X Corr. Between Track Projection and TRD Point_Hits;x(Track Proj) [cm];x(TRD Point_Hit) [cm]",750,-85.,-10.,750,-85.,-10.);
     hTRDYCorr_pi=new TH2D("TRDYCorr_pi","Y Corr. Between Track Projection and TRD Point_Hits;y(Track Proj) [cm];y(TRD Point_Hit) [cm]",400,-70.,-30.,400,-70.,-30.);
 	hnumSeenExtrap_pi=new TH1D("numSeenExtrap_pi","Num Track Extrapolations Seen in TRD; # Track Extrap.",3,-0.5,2.5);
@@ -392,7 +396,7 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
 			
 			if (fcalparms!=nullptr && inTRD) {
 				hfCALEP_TRD_el->Fill(fcalparms->dFCALShower->getEnergy() / p);
-				if ((fcalparms->dFCALShower->getEnergy() / p) > 0.85) {
+				if ((fcalparms->dFCALShower->getEnergy() / p) > 1.) {
 					hfCALEP_cut_el->Fill(fcalparms->dFCALShower->getEnergy() / p);
 					hTRDEnergy_el->Fill(hyp_el->energy());
 					hTRDMomentum_el->Fill(hyp_el->momentum().Mag());
@@ -409,8 +413,10 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
         	        	hProjectionYHitDiff_el->Fill(trd_extrapolations[0].position.y() - point->y);
             	    	hProjectionXYHitDiff_el->Fill(trd_extrapolations[0].position.x() - point->x, trd_extrapolations[0].position.y() - point->y);
 						
-						hProjectionXHitDiffvsTime_el->Fill(trd_extrapolations[0].position.x() - point->x, point->time);
-                    	hProjectionYHitDiffvsTime_el->Fill(trd_extrapolations[0].position.y() - point->y, point->time);
+						hProjectionXHitvsTime_el->Fill(point->x, point->time);
+                    	hProjectionYHitvsTime_el->Fill(point->y, point->time);
+						hProjectionXHitvsTime_QW_el->Fill(point->x, point->time, point->dE_x);
+                    	hProjectionYHitvsTime_QW_el->Fill(point->y, point->time, point->dE_y);
                     	hTRDXCorr_el->Fill(trd_extrapolations[0].position.x(), point->x);
                     	hTRDYCorr_el->Fill(trd_extrapolations[0].position.y(), point->y);
 						hfCALMatchXDiff_el->Fill(fcalparms->dFCALShower->getPosition().X() - point->x);
@@ -472,7 +478,7 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
 			
             if (fcalparms!=nullptr && inTRD) {
                 hfCALEP_TRD_pi->Fill(fcalparms->dFCALShower->getEnergy() / p);
-                if ((fcalparms->dFCALShower->getEnergy() / p) > 0. && (fcalparms->dFCALShower->getEnergy() / p) < 0.8){
+                if ((fcalparms->dFCALShower->getEnergy() / p) > 0. && (fcalparms->dFCALShower->getEnergy() / p) < 0.5){
 					hfCALEP_cut_pi->Fill(fcalparms->dFCALShower->getEnergy() / p);
                     hTRDEnergy_pi->Fill(hyp_pi->energy());
                     hTRDMomentum_pi->Fill(hyp_pi->momentum().Mag());
@@ -489,8 +495,10 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
                         hProjectionXHitDiff_pi->Fill(trd_extrapolations[0].position.x() - point->x);
                         hProjectionYHitDiff_pi->Fill(trd_extrapolations[0].position.y() - point->y);
                         hProjectionXYHitDiff_pi->Fill(trd_extrapolations[0].position.x() - point->x, trd_extrapolations[0].position.y() - point->y);
-						hProjectionXHitDiffvsTime_pi->Fill(trd_extrapolations[0].position.x() - point->x, point->time);
-                        hProjectionYHitDiffvsTime_pi->Fill(trd_extrapolations[0].position.y() - point->y, point->time);
+						hProjectionXHitvsTime_pi->Fill(point->x, point->time);
+                        hProjectionYHitvsTime_pi->Fill(point->y, point->time);
+						hProjectionXHitvsTime_QW_pi->Fill(point->x, point->time, point->dE_x);
+                        hProjectionYHitvsTime_QW_pi->Fill(point->y, point->time, point->dE_y);
                         hTRDXCorr_pi->Fill(trd_extrapolations[0].position.x(), point->x);
                         hTRDYCorr_pi->Fill(trd_extrapolations[0].position.y(), point->y);
 						hfCALMatchXDiff_pi->Fill(fcalparms->dFCALShower->getPosition().X() - point->x);
