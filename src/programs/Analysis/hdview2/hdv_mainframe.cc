@@ -861,14 +861,8 @@ void hdv_mainframe::SetRange(void)
 void hdv_mainframe::DoQuit(void)
 {
 	SavePreferences();
-
-	japp->Stop();
-	delete japp;
-	japp = NULL;
-
-	// This is supposed to return from the Run() method in "main()"
-	// since we call SetReturnFromRun(true), but it doesn't seem to work.
-	gApplication->Terminate(0);	
+	japp->Stop(false, true); // Tell JANA not to emit any more events, but save everything thus far
+    DoNext(); // Release the final event from the JEventProcessor_EventViewer so that processing can finish
 }
 
 //-------------------
@@ -876,17 +870,7 @@ void hdv_mainframe::DoQuit(void)
 //-------------------
 void hdv_mainframe::DoNext(void)
 {
-    if(SKIP_EPICS_EVENTS){
-        while(true){
-            gMYPROC->NextEvent(); // Notify gMYPROC to resume
-            const auto& event = gMYPROC->GetCurrentEvent(); // Block until next event present
-
-            vector<const DEPICSvalue*> epicsvalues;
-            event.Get(epicsvalues);
-            if(epicsvalues.empty()) break;
-            cout << "Skipping EPICS event " << event.GetEventNumber() << endl;
-        }
-    }
+    gMYPROC->NextEvent();
 }
 
 //-------------------
@@ -938,8 +922,9 @@ void hdv_mainframe::DoOpenTrackInspector(void)
 	if(trkmf==NULL){
 		trkmf = new trk_mainframe(this, NULL, 100, 100);
 		if(trkmf){
-			next->Connect("Clicked()","trk_mainframe", trkmf, "DoNewEvent()");
-			prev->Connect("Clicked()","trk_mainframe", trkmf, "DoNewEvent()");
+            // TODO: NWB: Delete this when I'm sure the new version works
+			//next->Connect("Clicked()","trk_mainframe", trkmf, "DoNewEvent()");
+			//prev->Connect("Clicked()","trk_mainframe", trkmf, "DoNewEvent()");
 		}
 	}else{
 		trkmf->RaiseWindow();
@@ -955,8 +940,8 @@ void hdv_mainframe::DoOpenFMWPCInspector(void)
     if(fmwpcmf==NULL){
         fmwpcmf = new fmwpc_mainframe(this, NULL, 100, 100);
         if(fmwpcmf){
-            next->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
-            prev->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
+            //next->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
+            //prev->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
         }
     }else{
         fmwpcmf->RaiseWindow();
@@ -2717,8 +2702,10 @@ void hdv_mainframe::RedrawAuxillaryWindows(void)
 	// specifies to only draw events with certain objects and some events
 	// are skipped. The hdv_mainframe window is automatically redrawn, in
 	// those cases so that is not included here.
+    std::cout << "Redrawing Aux windows" << std::endl;
 	if( trkmf ) trkmf->DoNewEvent();
 	if( fmwpcmf ) fmwpcmf->DoNewEvent();
+    std::cout << "Redrawing Aux windows" << std::endl;
 	
 }
 

@@ -53,16 +53,12 @@ int main(int narg, char *argv[])
     }
 
     // Start JANA2 run in nonblocking (unsupervised) mode
-	japp->Run(false,false);
-
-    // Run ROOT UI, blocking until UI event loop finishes
-	app.SetReturnFromRun(true);
-	app.Run(); 
-
-    // Shut down JANA2 processing
-    japp->Stop(true, true);
+    japp->SetTicker(false);
+    japp->SetTimeoutEnabled(false);
+	japp->Run();
     int exitcode = japp->GetExitCode();
 	delete japp;
+	app.Terminate(0);
 	return exitcode;
 }
 

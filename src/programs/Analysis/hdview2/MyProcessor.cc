@@ -7,6 +7,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <TSystem.h>
+#include <TGClient.h>
 using namespace std;
 
 #include <TLorentzVector.h>
@@ -65,9 +67,11 @@ using namespace std;
 #include "START_COUNTER/DSCHit.h"
 #include "DVector2.h"
 #include "TRIGGER/DL1Trigger.h"
+#include "DAQ/DEPICSvalue.h"
 
 extern hdv_mainframe *hdvmf;
 extern int GO; // defined in hdview2.cc
+extern bool SKIP_EPICS_EVENTS;
 
 // These are declared in hdv_mainframe.cc, but as static so we need to do it here as well (yechh!)
 static float FCAL_Zmin = 622.8;
@@ -108,10 +112,13 @@ MyProcessor::~MyProcessor()
 }
 
 const JEvent& MyProcessor::GetCurrentEvent() {
-    throw JException("No event found!");
+    std::unique_lock<std::mutex> lock(m_mutex);
+    return *m_current_event;
 }
 
 void MyProcessor::NextEvent() {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    m_current_event = nullptr;
 }
 
 //------------------------------------------------------------------
@@ -119,27 +126,27 @@ void MyProcessor::NextEvent() {
 //------------------------------------------------------------------
 void MyProcessor::Init(void)
 {
-		Bfield = NULL;
+    // Tell factory to keep around a few density histos
+    //gPARMS->SetParameter("TRKFIND:MAX_DEBUG_BUFFERS",	16);
 
-		// Tell factory to keep around a few density histos
-		//gPARMS->SetParameter("TRKFIND:MAX_DEBUG_BUFFERS",	16);
-		
-		RMAX_INTERIOR = 65.0;
-		RMAX_EXTERIOR = 88.0;
-		ZMAX = 890.0;
-		auto app = GetApplication();
-		app->SetDefaultParameter("RT:RMAX_INTERIOR",	RMAX_INTERIOR, "cm track drawing Rmax inside solenoid region");
-		app->SetDefaultParameter("RT:RMAX_EXTERIOR",	RMAX_EXTERIOR, "cm track drawing Rmax outside solenoid region");
-		app->SetDefaultParameter("RT:ZMAX",	ZMAX, "cm track drawing ZMax");
+    auto app = GetApplication();
 
-		BCALVERBOSE = 0;
-		app->SetDefaultParameter("BCALVERBOSE", BCALVERBOSE, "Verbosity level for BCAL objects and display");
+    RMAX_INTERIOR = 65.0;
+    app->SetDefaultParameter("RT:RMAX_INTERIOR", RMAX_INTERIOR, "cm track drawing Rmax inside solenoid region");
 
-		gMYPROC = this;
+    RMAX_EXTERIOR = 88.0;
+    app->SetDefaultParameter("RT:RMAX_EXTERIOR", RMAX_EXTERIOR, "cm track drawing Rmax outside solenoid region");
 
-	
-	
-	return; //NOERROR;
+    ZMAX = 890.0;
+    app->SetDefaultParameter("RT:ZMAX", ZMAX, "cm track drawing ZMax");
+
+    BCALVERBOSE = 0;
+    app->SetDefaultParameter("BCALVERBOSE", BCALVERBOSE, "Verbosity level for BCAL objects and display");
+
+	MATERIAL_MAP_MODEL="DGeometry";
+	app->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL", MATERIAL_MAP_MODEL);
+
+	gMYPROC = this;
 }
 
 //------------------------------------------------------------------
@@ -147,24 +154,56 @@ void MyProcessor::Init(void)
 //------------------------------------------------------------------
 void MyProcessor::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	// Make sure detectors have been drawn
-	//if(!drew_detectors)DrawDetectors();
-		vector<string> facnames;
-		for (auto factory : event->GetFactorySet()->GetAllFactories()) {
-			auto fac_name = factory->GetObjectName();
-			auto fac_tag = factory->GetTag();
+    // Read in Magnetic field map
+	auto app = GetApplication();
+	auto runnumber = event->GetRunNumber();
+	auto geo_manager = app->GetService<DGeometryManager>();
+	Bfield = DEvent::GetBfield(event);
 
-			if (!fac_tag.empty()) {
-				facnames.push_back(fac_name + ":" + fac_tag);
-			} else {
-				facnames.push_back(fac_name);
-			}
-		}
+	RootGeom = geo_manager->GetRootGeom(runnumber);
+	geom = geo_manager->GetDGeometry(runnumber);
+	geom->GetFDCWires(fdcwires);
 
-        // TODO: Problem: hdv_mainframe constructor needs GetCurrentEvent()
-        //       However, this won't be set until Process(), and will block until then, leading to deadlock
-        //       Solution is to either set the current event here as well (and handle that correctly in Process)
-        //                      or move all of this into Process
+	DEvent::GetCalib(event, "PID/photon_track_matching", photon_track_matching);
+	DELTA_R_FCAL = photon_track_matching["DELTA_R_FCAL"];
+}
+
+//------------------------------------------------------------------
+// Process 
+//------------------------------------------------------------------
+void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
+{
+    LOG_INFO(GetLogger()) << "Entering EventViewer::Process with event #" << event->GetEventNumber() << LOG_END;
+
+    m_current_event = event.get();
+
+    if(SKIP_EPICS_EVENTS){
+        std::vector<const DEPICSvalue*> epicsvalues;
+        event->Get(epicsvalues);
+        if(!epicsvalues.empty()) {
+            cout << "Skipping EPICS event " << event->GetEventNumber() << endl;
+            return;
+        }
+    }
+
+    if (hdvmf == nullptr) {
+        LOG_INFO(GetLogger()) << "Creating hdview_mainframe. Should only happen on first event";
+        // This should only be true on the very first event
+
+        // Figure out factory names
+        vector<string> facnames;
+        for (auto factory : event->GetFactorySet()->GetAllFactories()) {
+            auto fac_name = factory->GetObjectName();
+            auto fac_tag = factory->GetTag();
+
+            if (!fac_tag.empty()) {
+                facnames.push_back(fac_name + ":" + fac_tag);
+            } else {
+                facnames.push_back(fac_name);
+            }
+        }
+
+        LOG_INFO(GetLogger()) << "Creating hdv_mainframe";
 
 		hdvmf = new hdv_mainframe(gClient->GetRoot(), 1400, 700);
 		hdvmf->SetCandidateFactories(facnames);
@@ -187,31 +226,9 @@ void MyProcessor::BeginRun(const std::shared_ptr<const JEvent>& event)
 		  BCALHitMatrixD->GetXaxis()->SetTitle("Sector number");
 		  BCALParticles->GetXaxis()->SetTitle("Phi angle [deg]");
 		}
-	// Read in Magnetic field map
-	auto app = GetApplication();
-	auto runnumber = event->GetRunNumber();
-	auto geo_manager = app->GetService<DGeometryManager>();
-	Bfield = DEvent::GetBfield(event);
+        LOG_INFO(GetLogger()) << "Finished creating hdv_mainframe";
+    }
 
-	RootGeom = geo_manager->GetRootGeom(runnumber);
-	geom = geo_manager->GetDGeometry(runnumber);
-	geom->GetFDCWires(fdcwires);
-
-	
-	MATERIAL_MAP_MODEL="DGeometry";
-	app->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL",			MATERIAL_MAP_MODEL);
-
-	DEvent::GetCalib(event, "PID/photon_track_matching", photon_track_matching);
-	DELTA_R_FCAL = photon_track_matching["DELTA_R_FCAL"];
-
-	return; //NOERROR;
-}
-
-//------------------------------------------------------------------
-// Process 
-//------------------------------------------------------------------
-void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
-{
 	auto eventnumber = event->GetEventNumber();
 	static uint64_t Nevents_since_last_draw = 0;
 	static bool save_continuous = (GO == 1);
@@ -268,13 +285,6 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 			Nevents_since_last_draw = 0;
 			hdvmf->SetCheckButton("continuous", save_continuous);
 			hdvmf->SetSleepTime(save_sleep_time);
-			
-			// At this point, the "clicked()" signal may have been sent to 
-			// the other auxillary windows (e.g. trk_mainframe), but enough 
-			// of a delay occurred that they will have already redrawn and 
-			// need to be redrawn again for this current event. The main
-			// window should be OK, since DoMyRedraw is getting called below.
-			hdvmf->RedrawAuxillaryWindows();
 		}
 	
 		// get the trigger bits
@@ -299,7 +309,12 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 		hdvmf->SetEvent(eventnumber);
 		hdvmf->SetRun(event->GetRunNumber());
 		hdvmf->SetSource(source.c_str());
+        LOG_INFO(GetLogger()) << "Redrawing all frames";
+
 		hdvmf->DoMyRedraw();	
+		hdvmf->RedrawAuxillaryWindows();
+
+        LOG_INFO(GetLogger()) << "Finished redrawing all frames";
 	}else{
 	
 		// If this is the first event in a sequence we are skipping the draw
@@ -318,9 +333,19 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 		if( Nevents_since_last_draw%1 == 0 ) cout.flush();
 	}
 
-	// japp->SetSequentialEventComplete(); // will be done automatically in FinishEvent because SetSequential(true) is done for this event
-	
-	return; //NOERROR;
+    LOG_INFO(GetLogger()) << "Finished drawing. Processing ROOT events";
+    bool ready_for_next_event = false;
+    while (!ready_for_next_event) {
+
+        // Hand over control to the ROOT's GUI event loop
+        gSystem->ProcessEvents();
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_current_event == nullptr) {
+            ready_for_next_event = true;
+        }
+    }
+
+    LOG_INFO(GetLogger()) << "EventViewer has finished with event #" << event->GetEventNumber() << LOG_END;
 }
 
 //------------------------------------------------------------------

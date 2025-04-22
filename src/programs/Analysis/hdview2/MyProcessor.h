@@ -26,7 +26,6 @@
 #include <FMWPC/DFMWPCHit.h>
 #include <FMWPC/DFMWPCCluster.h>
 #include <FMWPC/DFMWPCMatchedTrack.h>
-#include <condition_variable>
 
 class DQuickFit;
 class DTrackCandidate_factory;
@@ -72,7 +71,7 @@ class MyProcessor:public JEventProcessor
   //jerror_t DrawTrack(double q, TVector3 pos, TVector3 mom, int color);
   //jerror_t DrawDetectors(void);
   
-  const DMagneticFieldMap *Bfield;
+  const DMagneticFieldMap *Bfield = nullptr;
   uint64_t eventNo;
   
   enum poly_type{
@@ -114,9 +113,8 @@ class MyProcessor:public JEventProcessor
 
   const JEvent *m_current_event = nullptr;
   std::mutex m_mutex;
-  std::condition_variable m_condvar;
 
-  hdv_mainframe *hdvmf;
+  hdv_mainframe *hdvmf = nullptr;
   hdv_fulllistframe *fulllistmf=NULL;
   hdv_debugerframe *debugermf;
   DRootGeom *RootGeom;
