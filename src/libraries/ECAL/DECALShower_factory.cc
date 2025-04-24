@@ -91,7 +91,8 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       cov(3,3)=X0_over_E*X0_over_E*cov(0,0);
       cov(3,0)=cov(0,3)=X0_over_E*cov(0,0);
       shower->ExyztCovariance=cov;
-
+      shower->AddAssociatedObject(cluster);
+	
       Insert(shower);
     } // Check on mininum energy
   } // loop over clusters

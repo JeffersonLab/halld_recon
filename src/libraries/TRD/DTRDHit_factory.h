@@ -23,7 +23,8 @@ class DTRDHit_factory:public JFactoryT<DTRDHit>{
 		bool IS_XY_TIME_DIFF_CUT;
 		double XY_TIME_DIFF;
 		double HIT_SIZE_MAX;
-		
+		int CDIFF_MIN;
+		int FREQ_COUNT;		
 	private:
 		void Init() override;
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;

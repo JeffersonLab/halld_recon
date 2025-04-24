@@ -29,13 +29,6 @@ public:
   DFCALCluster( const int nhits );
   ~DFCALCluster();
   
-  enum cluster_status_t{
-    SHOWER_FOUND,  // Normal clusterization result
-    EXTRA_PEAK, // extra peak found in set of hits
-    SPLIT_CLUSTER, // Additional shower candidate added 
-    AT_BOUNDARY,  // Cluster at boundary of lead glass and insert
-  };
-  
   typedef struct {
     oid_t id;
     int ch;

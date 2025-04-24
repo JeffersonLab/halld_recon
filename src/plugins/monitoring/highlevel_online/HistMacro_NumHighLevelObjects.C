@@ -56,7 +56,7 @@
  		gPad->SetBottomMargin(0.25);
  		gPad->SetLeftMargin(0.08);
  		gPad->SetRightMargin(0.12);
-		F1TDC_fADC_tdiff_bottom->GetXaxis()->SetRangeUser(49,100);
+		F1TDC_fADC_tdiff_bottom->GetXaxis()->SetRangeUser(49,98);
 		F1TDC_fADC_tdiff_bottom->SetStats(0);
 		F1TDC_fADC_tdiff_bottom->Draw("COLZ");
 	}
