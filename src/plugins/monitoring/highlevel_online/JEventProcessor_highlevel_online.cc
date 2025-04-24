@@ -13,6 +13,7 @@
 #include <DAQ/DF1TDCHit.h>
 #include <DAQ/DCODAEventInfo.h>
 #include <DAQ/DEPICSvalue.h>
+#include <DAQ/DBeamHelicity.h>
 #include <DANA/DEvent.h>
 #include <PAIR_SPECTROMETER/DPSCHit.h>
 #include <FDC/DFDCHit.h>
@@ -358,6 +359,9 @@ void JEventProcessor_highlevel_online::Init()
 		dF1TDC_fADC_tdiff->GetXaxis()->SetBinLabel(jbin+1, str);
 	}
 	
+	/*************************************************************** Helicity ***************************************************************/
+
+	dHist_heli_asym_gtp = new TH2I("Heli_asym_gtp", "Helicity Asymmetry per Trigger bit from GTP; Trig. bit (1-32); Helicity Asymmetry ", 34, 0.5, 34.5, 2, -0.5, 1.5);
 
 	// back to main dir
 	main->cd();
@@ -471,6 +475,9 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 
 	vector<const DChargedTrack*> locChargedTracks;
 	locEvent->Get(locChargedTracks, "PreSelect");
+
+	std::vector<const DBeamHelicity*> locBeamHelicities;
+	locEvent->Get(locBeamHelicities);
 
 	// The following declares containers for all types in F1Types
 	// (defined at top of this file) and fills them.
@@ -1161,6 +1168,19 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 		}
 	}
 
+	/*************************************************************** Helicity ***************************************************************/
+
+
+	// Save helicity by trigger bit
+	for (size_t i=0; i < locBeamHelicities.size(); ++i)
+	  {
+	    for(int locTriggerBit = 1; locTriggerBit <= 32; ++locTriggerBit)
+	      {
+		if(locgtpTrigBits[locTriggerBit - 1])
+		  if (locBeamHelicities[i]->valid)
+		    dHist_heli_asym_gtp->Fill(locTriggerBit, locBeamHelicities[i]->helicity);
+	      }
+	  }
 
 	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
