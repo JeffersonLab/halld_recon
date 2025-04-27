@@ -18,8 +18,8 @@ void DTRDSegment_factory_extrapolation::Init()
 {
   auto app = GetApplication();
   
-  DEBUG_LEVEL=0;
-  app->SetDefaultParameter("TRD:DEBUG_LEVEL", DEBUG_LEVEL);
+  // DEBUG_LEVEL=0;
+  // app->SetDefaultParameter("TRD:DEBUG_LEVEL", DEBUG_LEVEL);
 
   distToExtrp = 2.0; // cm  
   app->SetDefaultParameter("TRD:DistToExtrp", distToExtrp, "Distance to extrapolation point (default: 2.0 cm)");
