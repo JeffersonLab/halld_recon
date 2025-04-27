@@ -1,7 +1,7 @@
-// hnamepath: /p2pi/rhoDecPhipp
-// hnamepath: /p2pi/rhoDecPhipm
-// hnamepath: /p2pi/rhoDecPhimp
-// hnamepath: /p2pi/rhoDecPhimm
+// hnamepath: /p2pi_preco/Custom_p2pi_hists/rhoDecPhipp
+// hnamepath: /p2pi_preco/Custom_p2pi_hists/rhoDecPhipm
+// hnamepath: /p2pi_preco/Custom_p2pi_hists/rhoDecPhimp
+// hnamepath: /p2pi_preco/Custom_p2pi_hists/rhoDecPhimm
 //
 // e-mail: Derek.Glazier@glasgow.ac.uk
 // e-mail: Peter.Hurck@glasgow.ac.uk
@@ -11,16 +11,16 @@
 	TDirectory *locTopDirectory = gDirectory;
 
 	//Goto Beam Path
-	TDirectory *locDirectory = (TDirectory*)gDirectory->FindObjectAny("p2pi");
+	TDirectory *locDirectory = (TDirectory*)gDirectory->FindObjectAny("p2pi_preco");
 	if(!locDirectory)
 		return;
 	locDirectory->cd();
 
 	//get CircMonitor histograms from file
-	auto hist_rhoDecPhipp   = gDirectory->Get<TH1>("rhoDecPhipp");
-	auto hist_rhoDecPhipm   = gDirectory->Get<TH1>("rhoDecPhipm");
-	auto hist_rhoDecPhimp   = gDirectory->Get<TH1>("rhoDecPhimp");
-	auto hist_rhoDecPhimm   = gDirectory->Get<TH1>("rhoDecPhimm");
+	auto hist_rhoDecPhipp   = gDirectory->Get<TH1>("Custom_p2pi_hists/rhoDecPhipp");
+	auto hist_rhoDecPhipm   = gDirectory->Get<TH1>("Custom_p2pi_hists/rhoDecPhipm");
+	auto hist_rhoDecPhimp   = gDirectory->Get<TH1>("Custom_p2pi_hists/rhoDecPhimp");
+	auto hist_rhoDecPhimm   = gDirectory->Get<TH1>("Custom_p2pi_hists/rhoDecPhimm");
 
 
 	//Get/Make Canvas
