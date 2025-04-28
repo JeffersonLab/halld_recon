@@ -73,6 +73,7 @@ DEventSourceREST::DEventSourceREST(std::string source_name, JApplication* app)
    		
    app->SetDefaultParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
    calib_generator = new JCalibrationGeneratorCCDB;  // keep this around in case we need to use it
+   calib_generator->SetApplication(app);
 }
 
 //----------------
