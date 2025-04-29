@@ -39,7 +39,8 @@ class DFCALShower:public JObject{
   double getE9E25() const;
   double getE1E9() const;
   int getNumBlocks() const;
-
+  bool getIsNearBorder() const {return isNearBorder;}
+  
   // set shower information
   void setPosition( const DVector3& aPosition );
   void setPosition_log( const DVector3& aPosition_log );
@@ -52,7 +53,8 @@ class DFCALShower:public JObject{
   void setE9E25( const double e9e25 );
   void setE1E9( const double e1e9 );
   void setNumBlocks( const int numBlocks );
-
+  void setIsNearBorder(bool myIsNearBorder){isNearBorder=myIsNearBorder;}
+  
   TMatrixFSym ExyztCovariance;
 
   float EErr() const { return sqrt(ExyztCovariance(0,0)); }
@@ -146,6 +148,7 @@ class DFCALShower:public JObject{
   double fE9E25;
   double fE1E9;
   int iNumBlocks;
+  bool isNearBorder;
 };
 
 
