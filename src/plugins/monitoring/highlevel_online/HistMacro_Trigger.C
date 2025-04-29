@@ -48,7 +48,9 @@
 		return;
 	locDirectory->cd();
 
+	TH2* locHist_BCALVsFCAL2_TrigBit1 = (TH2*)gDirectory->Get("BCALVsFCAL2_TrigBit1");
 	TH2* locHist_BCALVsFCAL_TrigBit1 = (TH2*)gDirectory->Get("BCALVsFCAL_TrigBit1");
+	TH2* locHist_ECALVsFCAL_TrigBit1 = (TH2*)gDirectory->Get("ECALVsFCAL_TrigBit1");
 	TH1* locHist_L1bits_gtp          = (TH1*)gDirectory->Get("L1bits_gtp");
 	TH1* locHist_L1bits_fp           = (TH1*)gDirectory->Get("L1bits_fp");
 	TH2* locHist_NumTriggers         = (TH2*)gDirectory->Get("NumTriggers");
@@ -68,7 +70,7 @@
 		locCanvas = new TCanvas("Kinematics", "Kinematics", 1200, 900); //for testing
 	else
 		locCanvas = gPad->GetCanvas();
-	locCanvas->Divide(3, 1);
+	locCanvas->Divide(3, 2);
 	
 	TLatex latex;
 	latex.SetTextSize(0.04);
@@ -91,6 +93,58 @@
 		latex.DrawLatex(1.0, 101.0, str);
 	}
 
+	// ECAL vs. FCAL for Trig bit 1
+	locCanvas->cd(0);
+	if(locHist_ECALVsFCAL_TrigBit1 != NULL)
+	{
+		TPad *pad = (TPad*)gDirectory->FindObjectAny("trigpad0");
+		if(!pad) pad = new TPad("trigpad0", "", 0.0, 0.0, 0.33, 0.5);
+		pad->Draw();
+		pad->cd();
+
+		gPad->SetTicks();
+		gPad->SetGrid();
+		gPad->SetLeftMargin(0.2);
+
+		locHist_ECALVsFCAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
+		locHist_ECALVsFCAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
+		locHist_ECALVsFCAL_TrigBit1->SetStats(0);
+		locHist_ECALVsFCAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
+		locHist_ECALVsFCAL_TrigBit1->Draw("colz");
+
+		sprintf(str, "%d entries", (uint32_t)locHist_ECALVsFCAL_TrigBit1->GetEntries());
+		latex.DrawLatex(500.0, 50000.0*1.01, str);
+
+		gPad->SetLogz();
+		gPad->Update();
+	}
+
+	// BCAL vs. FCAL for Trig bit 1
+	locCanvas->cd(0);
+	if(locHist_BCALVsFCAL_TrigBit1 != NULL)
+	{
+		TPad *pad = (TPad*)gDirectory->FindObjectAny("trigpad10");
+		if(!pad) pad = new TPad("trigpad10", "", 0.66, 0.0, 1.0, 0.5);
+		pad->Draw();
+		pad->cd();
+
+		gPad->SetTicks();
+		gPad->SetGrid();
+		gPad->SetLeftMargin(0.2);
+
+		locHist_BCALVsFCAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
+		locHist_BCALVsFCAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
+		locHist_BCALVsFCAL_TrigBit1->SetStats(0);
+		locHist_BCALVsFCAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
+		locHist_BCALVsFCAL_TrigBit1->Draw("colz");
+
+		sprintf(str, "%d entries", (uint32_t)locHist_BCALVsFCAL_TrigBit1->GetEntries());
+		latex.DrawLatex(500.0, 50000.0*1.01, str);
+
+		gPad->SetLogz();
+		gPad->Update();
+	}
+	
 	// -------------- Middle --------------
 	
 	// Hadronic trigger rate stats
@@ -217,13 +271,13 @@
 		gPad->SetGrid();
 		gPad->SetLeftMargin(0.2);
 
-		locHist_BCALVsFCAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
-		locHist_BCALVsFCAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_BCALVsFCAL_TrigBit1->SetStats(0);
-		locHist_BCALVsFCAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
-		locHist_BCALVsFCAL_TrigBit1->Draw("colz");
+		locHist_BCALVsFCAL2_TrigBit1->GetXaxis()->SetTitleSize(0.05);
+		locHist_BCALVsFCAL2_TrigBit1->GetYaxis()->SetTitleSize(0.04);
+		locHist_BCALVsFCAL2_TrigBit1->SetStats(0);
+		locHist_BCALVsFCAL2_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
+		locHist_BCALVsFCAL2_TrigBit1->Draw("colz");
 
-		sprintf(str, "%d entries", (uint32_t)locHist_BCALVsFCAL_TrigBit1->GetEntries());
+		sprintf(str, "%d entries", (uint32_t)locHist_BCALVsFCAL2_TrigBit1->GetEntries());
 		latex.DrawLatex(500.0, 50000.0*1.01, str);
 
 		gPad->SetLogz();
