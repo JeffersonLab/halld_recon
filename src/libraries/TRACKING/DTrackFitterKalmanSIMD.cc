@@ -8835,7 +8835,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
 	AddExtrapolation(SYS_FCAL,z,S,t,s);
 	if (got_fmwpc==false) return NOERROR;
 	
-	hit_ecal_exit=true;
+	hit_fcal_exit=true;
       }
     }
       
