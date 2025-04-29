@@ -370,6 +370,7 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	event->Get(tof_hits);
 
 	//sort(tof_hits.begin(),tof_hits.end(),tof_cmp);
+	bool got_tof_trigger=false;
 	map<int,pair<bitset<10>,bitset<10>>>time_slices;
 	for (unsigned int i=0;i<tof_hits.size();i++){
 	  const DTOFHit *hit1=tof_hits[i];
@@ -394,13 +395,15 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	      const DTOFHit *hit2=tof_hits[j];
 	      if (hit1->bar==hit2->bar && hit1->plane==hit2->plane
 		  && hit1->end!=hit2->end){
-		cout << "p: " << hit1->plane << " b: " << hit1->bar
-		     << " e1: " << hit1->end << " e2: " << hit2->end << " t1: " << hit1->t_fADC
-		     << " t2: " << hit2->t_fADC << endl;	    
+		/*
+		  cout << "p: " << hit1->plane << " b: " << hit1->bar
+		  << " e1: " << hit1->end << " e2: " << hit2->end << " t1: " << hit1->t_fADC
+		  << " t2: " << hit2->t_fADC << endl;
+		*/
 		int t2=int(hit2->t/4.0);
 		if (abs(t1-t2)<=64){
 		  int tslice=(t1>t2)?t1:t2;
-		  cout << " tslice " << tslice << endl;
+		  //cout << " tslice " << tslice << endl;
 		  bitset<10>w=0;
 		  if (hit1->bar<20) w|=1;
 		  else if (hit1->bar==20) w|=2;
@@ -408,7 +411,7 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 		  else if (hit1->bar==26) w|=1<<7;
 		  else if (hit1->bar==27) w|=1<<8;
 		  else if (hit1->bar>27&&hit1->bar<45) w=1<<9;
-		  cout << "w "<<w<< endl;;
+		  //cout << "w "<<w<< endl;;
 		  if (time_slices.find(tslice)==time_slices.end()){
 		    if (hit1->plane) time_slices[tslice].second=w;
 		    else time_slices[tslice].first=w;
@@ -428,7 +431,7 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	  cout << ts.first<<":"<<ts.second.first<<" "<<ts.second.first.count()
 	       <<" " <<ts.second.second << " " << ts.second.second.count() <<endl;
 	  if (tof1_count>0 && tof1_count+tof2_count>3){
-	    cout <<" Got tof trigger " << endl;
+	    got_tof_trigger=true;
 	  }
 	  
 	}
@@ -472,6 +475,7 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	       
 
 	DL1MCTrigger *trigger = new DL1MCTrigger;
+	trigger->trig_mask=0;
 
 	//  FCAL energy sum	
 	double fcal_hit_en = 0;
@@ -707,8 +711,12 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 
 	// Search for triggers
 
-	l1_found = FindTriggers(trigger,sc_hits);       
-
+	l1_found = FindTriggers(trigger,sc_hits);
+	if (got_tof_trigger){
+	  l1_found = 1;
+	  trigger->trig_mask |= 0x20; 
+	}
+	
 	if(l1_found){
 	  
 	  int fcal_gtp_max = 0;
@@ -1420,7 +1428,7 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
   // Main production trigger  
   for(unsigned int ii = 0; ii < triggers_enabled.size(); ii++){
     
-    if(debug1)
+    //    if(debug1)
       cout << "Trigger Type = " << triggers_enabled[ii].type << endl;
 
     if(triggers_enabled[ii].type == 3){    // FCAL & BCAL trigger
