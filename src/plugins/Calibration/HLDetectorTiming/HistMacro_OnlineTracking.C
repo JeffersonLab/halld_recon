@@ -38,9 +38,9 @@
 	locDirectory->cd();
 
 	//Setpoints
-	double nominalCDCTime = 12.;
-	double nominalFDCCathodeTime = 20.;
-	double nominalFDCWireTime = 20.;
+	double nominalCDCTime = 10.;
+	double nominalFDCCathodeTime = 24.;
+	double nominalFDCWireTime = 24.;
 
 	//Get Histograms
  	TH1I* CDCHit_Timing    = (TH1I*) gDirectory->Get("Physics Triggers/CDC/CDCHit time");

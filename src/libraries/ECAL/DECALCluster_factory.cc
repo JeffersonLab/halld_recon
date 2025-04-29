@@ -77,7 +77,7 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
   for (unsigned int i=0;i<nhits;i++){
     const DECALHit *myhit=ecal_hits[i];
     DVector2 pos=dECALGeom->positionOnFace(myhit->row,myhit->column);
-    hits.push_back(HitInfo(myhit->row,myhit->column,myhit->E,pos.X(),pos.Y(),myhit->t));
+    hits.push_back(HitInfo(i,myhit->row,myhit->column,myhit->E,pos.X(),pos.Y(),myhit->t));
   }
 
   // Sort the hits according to energy.
@@ -87,11 +87,20 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
   // Associate groups of adjacent hits into cluster candidates
   vector<vector<HitInfo>>clusterCandidates;
   FindClusterCandidates(hits,clusterCandidates);
-  
+
   for (unsigned int i=0;i<clusterCandidates.size();i++){
     // The list of hits in the cluster
     vector<HitInfo>clusterHits=clusterCandidates[i];
     unsigned int num_hits=clusterHits.size();
+    
+    // Find the minimum and maximum row and column numbers
+    int min_row=1000,min_col=1000,max_row=0,max_col=0;
+    for (unsigned int j=0;j<num_hits;j++){
+      if (clusterHits[j].row<min_row) min_row=clusterHits[j].row;
+      if (clusterHits[j].column<min_col) min_col=clusterHits[j].column;
+      if (clusterHits[j].row>max_row) max_row=clusterHits[j].row;
+      if (clusterHits[j].column>max_col) max_col=clusterHits[j].column;
+    }
     
     // Do not attempt a fit if the cluster size is too small
     if (num_hits<4){
@@ -99,12 +108,22 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       DECALCluster *myCluster= new DECALCluster;
    
       double Etot=0.,t=0,x=0,y=0;
+      double Emax=0;
+      int ch_Emax=0;
       for (unsigned int k=0;k<num_hits;k++){
 	double E=clusterHits[k].E;
  	Etot+=E;
 	t+=E*clusterHits[k].t;
 	x+=E*clusterHits[k].x;
 	y+=E*clusterHits[k].y;
+
+	if (E>Emax){
+	  Emax=E;
+	  ch_Emax=dECALGeom->channel(clusterHits[k].row,clusterHits[k].column);
+	}
+	
+	// Add hit as associated object
+	myCluster->AddAssociatedObject(ecal_hits[clusterHits[k].id]);
       }
       x/=Etot;
       y/=Etot;
@@ -115,8 +134,20 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       myCluster->t=t;
       myCluster->x=x;
       myCluster->y=y;
+      myCluster->channel_Emax=ch_Emax;
+      myCluster->nBlocks=num_hits;
+      myCluster->chisq=0.;
+      myCluster->ndf=0;
       myCluster->status=DECALCluster::SHOWER_FOUND;
 
+      // flag if the cluster is near the border with the FCAL
+      if (min_row>0&&max_row<39&&min_col>0&&max_col<39){
+	myCluster->isNearBorder=false;
+      }
+      else{
+	myCluster->isNearBorder=true;
+      }
+      
       Insert(myCluster);
       
       continue;
@@ -125,15 +156,6 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
     //------------------------------------------------------------------------
     // Handle cluster candidates containing more than 3 hits
     //------------------------------------------------------------------------
-
-    // Find the minimum and maximum row and column numbers
-    int min_row=1000,min_col=1000,max_row=0,max_col=0;
-    for (unsigned int j=0;j<num_hits;j++){
-      if (clusterHits[j].row<min_row) min_row=clusterHits[j].row;
-      if (clusterHits[j].column<min_col) min_col=clusterHits[j].column;
-      if (clusterHits[j].row>max_row) max_row=clusterHits[j].row;
-      if (clusterHits[j].column>max_col) max_col=clusterHits[j].column;
-    }
 
     // Create arrays to represent the cluster of hits to aid in peak search
     int num_rows=max_row-min_row+3;
@@ -148,7 +170,7 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       int ic=clusterHits[j].column-min_col+1;
       int ir=clusterHits[j].row-min_row+1;
       Emap[ic][ir]=clusterHits[j].E;
-      imap[ic][ir]=j;
+      imap[ic][ir]=j+1;
       if (clusterHits[j].E>Emax){
 	Emax=clusterHits[j].E;
 	ir_max=ir;
@@ -189,7 +211,7 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	    GetRowColRanges(idiff,num_rows,num_cols,ir,ic,lo_row,hi_row,lo_col,
 			    hi_col);
 	      for (int j=lo_col;j<=hi_col;j++){
-		for (int k=lo_row;k<=hi_row;k++){
+		for (int k=lo_row;k<=hi_row;k++){	 
 		  if (j==ic && k==ir) continue;
 		  
 		  double Ejk=Emap[j][k];
@@ -268,16 +290,19 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	  double E=Emap[j][k];
 	  if (E>0.){
 	    int index=imap[j][k];
-	    // Subtract background due to the set of peaks already in the 
-	    // list from the current peak
-	    for (unsigned int m=0;m<peaks.size();m++){
-	      double dE=peaks[m].E*CalcClusterEDeriv(b,clusterHits[index],
-						     peaks[m]);
-	      E-=dE;
-	      myPeak.E-=dE;
+	    if (index>0){
+	      // Subtract background due to the set of peaks already in the 
+	      // list from the current peak
+	      index--;
+	      for (unsigned int m=0;m<peaks.size();m++){
+		double dE=peaks[m].E*CalcClusterEDeriv(b,clusterHits[index],
+						       peaks[m]);
+		E-=dE;
+		myPeak.E-=dE;
+	      }
+	      x+=E*clusterHits[index].x;
+	      y+=E*clusterHits[index].y;
 	    }
-	    x+=E*clusterHits[index].x;
-	    y+=E*clusterHits[index].y;
 	  }
 	}
       }
@@ -355,8 +380,11 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	for (int j=lo_col;j<=hi_col;j++){
 	  for (int k=lo_row;k<=hi_row;k++){
 	    int index=imap[j][k];
-	    if (Elist[index]>0){
-	      excessE+=Elist[index];
+	    if (index>0){
+	      index--;
+	      if (Elist[index]>0){
+		excessE+=Elist[index];
+	      }
 	    }
 	  }
 	}
@@ -398,22 +426,55 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
     // Add the clusters to the output of the factory
     for (unsigned int k=0;k<npeaks;k++){
       DECALCluster *myCluster= new DECALCluster;
-      
+
+      myCluster->nBlocks=clusterHits.size();
       myCluster->status=peaks[k].status;
+      myCluster->chisq=chisq;
+      myCluster->ndf=ndf;
       myCluster->x=peaks[k].x;
       myCluster->y=peaks[k].y;
       myCluster->Efit=peaks[k].E;
       // using the measured energy gives better energy resolution
       myCluster->E=peak_fractions[k]*Esum;
 
+      // Save channel with the hit containing the highest energy
+      myCluster->channel_Emax=dECALGeom->channel(min_row-1+ir_max,
+						 min_col-1+ic_max);
+      
       // Compute energy-weighted time
-      double fsum=0.,t=0.;
+      double fsum=0.,t=0.,fmax=0.;
+      int ic_peak_max=0,ir_peak_max=0;
       for (unsigned int j=0;j<clusterHits.size();j++){
 	double f=CalcClusterEDeriv(b,clusterHits[j],peaks[k]);
 	t+=f*clusterHits[j].t;
 	fsum+=f;
+	if (f>fmax){
+	  fmax=f;
+	  ic_peak_max=clusterHits[j].column-min_col+1;
+	  ir_peak_max=clusterHits[j].row-min_row+1;
+	}
       }
       myCluster->t=t/fsum;
+
+      // Add hits in 5x5 array centered on the crystal with the maximum
+      // energy as associated objects to the cluster
+      GetRowColRanges(2,num_rows,num_cols,ir_peak_max,ic_peak_max,lo_row,hi_row,lo_col,
+		      hi_col);
+      for (int my_ir=lo_row;my_ir<=hi_row;my_ir++){
+	for (int my_ic=lo_col;my_ic<=hi_col;my_ic++){
+	  int index=imap[my_ic][my_ir];
+	  if (index>0){
+	    myCluster->AddAssociatedObject(ecal_hits[clusterHits[index-1].id]);
+	  }
+	}
+      }
+      // flag if the cluster is near the border with the FCAL
+      if (min_row>0&&max_row<39&&min_col>0&&max_col<39){
+	myCluster->isNearBorder=false;
+      }
+      else{
+	myCluster->isNearBorder=true;
+      }
 
       Insert(myCluster);
     } // loop over peaks

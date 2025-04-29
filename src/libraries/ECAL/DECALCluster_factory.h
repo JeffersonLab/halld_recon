@@ -23,8 +23,9 @@ public:
 
   class HitInfo{
   public:
-    HitInfo(int row,int column,double E,double x,double y,double t)
-      :row(row),column(column),E(E),x(x),y(y),t(t){}
+    HitInfo(unsigned int id,int row,int column,double E,double x,double y,double t)
+      :id(id),row(row),column(column),E(E),x(x),y(y),t(t){}
+    unsigned int id;
     int row;
     int column;
     double E;

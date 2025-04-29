@@ -74,8 +74,10 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 		TH1I *dptrans;
 		TH1I *dme_rho;
 		TH1I *dme_omega;
-		
-		TH2D *dF1TDC_fADC_tdiff;
+
+                TH2I *dHist_heli_asym_gtp;
+
+                TH2D *dF1TDC_fADC_tdiff;
 		map<pair<int,int>, double> f1tdc_bin_map; // key=<rocid,slot> val=bin
 		
 		template<typename T> void FillF1Hist(vector<const T*> hits);

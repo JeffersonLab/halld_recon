@@ -73,6 +73,7 @@ DEventSourceREST::DEventSourceREST(std::string source_name, JApplication* app)
    		
    app->SetDefaultParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
    calib_generator = new JCalibrationGeneratorCCDB;  // keep this around in case we need to use it
+   calib_generator->SetApplication(app);
 }
 
 //----------------
@@ -1388,19 +1389,31 @@ bool DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       if (iter->getJtag() != tag) {
          continue;
       }
+
+      //check for momentum nans
+      const hddm_r::TrackFit &fit = iter->getTrackFit();
+      float Px = fit.getPx();
+      float Py = fit.getPy();
+      float Pz = fit.getPz();
+      
+      if (isnan(Px) || isnan(Py) || isnan(Px)) {
+	jout << "Ignored a track hypothesis containing nans" << endl;
+	continue;
+      }
+    
       DTrackTimeBased *tra = new DTrackTimeBased();
       tra->trackid = 0;
       tra->candidateid = iter->getCandidateId();
       Particle_t ptype = iter->getPtype();
       tra->setPID(ptype);
 
-      const hddm_r::TrackFit &fit = iter->getTrackFit();
       tra->Ndof = fit.getNdof();
       tra->chisq = fit.getChisq();
       tra->FOM = TMath::Prob(tra->chisq, tra->Ndof);
       tra->setTime(fit.getT0());
       DVector3 track_pos(fit.getX0(),fit.getY0(),fit.getZ0());
-      DVector3 track_mom(fit.getPx(),fit.getPy(),fit.getPz());
+      DVector3 track_mom(Px, Py, Pz);
+
       tra->setPosition(track_pos);
       tra->setMomentum(track_mom);
 

@@ -47,7 +47,9 @@ DNeutralShower_factory::DNeutralShower_factory()
 
   SC_Energy_CUT = 0.2;
   japp->SetDefaultParameter("NeutralShower:SC_Energy_CUT", SC_Energy_CUT);
-  
+
+  ECAL_FCAL_CUT = 80.;
+  japp->SetDefaultParameter("NeutralShower:ECAL_FCAL_CUT", ECAL_FCAL_CUT);
 }
 
 
@@ -74,6 +76,9 @@ void DNeutralShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event
   // Get start counter geometry;
   locGeometry->GetStartCounterGeom(sc_pos,sc_norm);
 
+  // Get FCAL geometry
+  event->GetSingle(dFCALGeometry);
+  
   std::map<string, float> beam_spot;
   jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   m_beamSpotX = beam_spot.at("x");
@@ -116,78 +121,9 @@ void DNeutralShower_factory::Process(const std::shared_ptr<const JEvent>& event)
   vector<const DSCHit*> locSCHits;
   event->Get(locSCHits);
   
-  // Loop over all DBCALShowers, create DNeutralShower if didn't match to any tracks
-  // The chance of an actual neutral shower matching to a bogus track is very small
-  oid_t locShowerID = 0;
-  for(size_t loc_i = 0; loc_i < locBCALShowers.size(); ++loc_i)
-    {
-      if(locDetectorMatches->Get_IsMatchedToTrack(locBCALShowers[loc_i]))
-	continue;
-
-      // create DNeutralShower
-      DNeutralShower* locNeutralShower = new DNeutralShower();
-      locNeutralShower->dBCALFCALShower = static_cast<const JObject*>(locBCALShowers[loc_i]);
-      locNeutralShower->dDetectorSystem = SYS_BCAL;
-      locNeutralShower->dShowerID = locShowerID;
-      ++locShowerID;
-      
-      // in the BCAL set the quality variable 1 to avoid eliminating
-      // NeutralShowers in future splitoff rejection algorithms
-      locNeutralShower->dQuality = 1;
-      
-      // Check if indeed shower is not related to a non-reconstructed track in SC
-      double x = locBCALShowers[loc_i]->x - vertex.X();
-      double y = locBCALShowers[loc_i]->y - vertex.Y();
-      double z = locBCALShowers[loc_i]->z - vertex.Z();
-      DVector3 position(x, y, z);
-      double phi_bcal = position.Phi();
-      double delta_phi_min = 1000.;
-      int sc_match = check_SC_match(phi_bcal, rfTime, locSCHits, delta_phi_min);
-      locNeutralShower->dSC_BCAL_match = sc_match;
-      locNeutralShower->dSC_BCAL_phi_min = (float) delta_phi_min;
-      
-      locNeutralShower->dEnergy = locBCALShowers[loc_i]->E;
-      locNeutralShower->dSpacetimeVertex.SetXYZT(locBCALShowers[loc_i]->x, locBCALShowers[loc_i]->y, locBCALShowers[loc_i]->z, locBCALShowers[loc_i]->t);
-      auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
-      locCovMatrix->ResizeTo(5, 5);
-      *locCovMatrix = locBCALShowers[loc_i]->ExyztCovariance;
-      locNeutralShower->dCovarianceMatrix = locCovMatrix;
-      
-      locNeutralShower->AddAssociatedObject(locBCALShowers[loc_i]);
-
-      Insert(locNeutralShower);
-    }
-
-  // Loop over all DECALShowers, create DNeutralShower if didn't match to any tracks
-  // The chance of an actual neutral shower matching to a bogus track is very small
-  for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i){
-    if(locDetectorMatches->Get_IsMatchedToTrack(locECALShowers[loc_i]))
-      continue;
-
-    // create DNeutralShower
-    DNeutralShower* locNeutralShower = new DNeutralShower();
-    locNeutralShower->dBCALFCALShower = static_cast<const JObject*>(locECALShowers[loc_i]);
-    locNeutralShower->dDetectorSystem = SYS_ECAL;
-    locNeutralShower->dShowerID = locShowerID;
-    ++locShowerID;
-
-    locNeutralShower->dEnergy = locECALShowers[loc_i]->E;
-    locNeutralShower->dSpacetimeVertex.SetVect(locECALShowers[loc_i]->pos);
-    locNeutralShower->dSpacetimeVertex.SetT(locECALShowers[loc_i]->t);
-    locNeutralShower->AddAssociatedObject(locECALShowers[loc_i]);
-
-    locNeutralShower->dQuality = 1;
-
-    auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
-    locCovMatrix->ResizeTo(5, 5);
-    *locCovMatrix = locECALShowers[loc_i]->ExyztCovariance;
-    locNeutralShower->dCovarianceMatrix = locCovMatrix;
-
-    Insert(locNeutralShower);
-  }
-
   // Loop over all DFCALShowers, create DNeutralShower if didn't match to any tracks
   // The chance of an actual neutral shower matching to a bogus track is very small
+  oid_t locShowerID = 0;
   for(size_t loc_i = 0; loc_i < locFCALShowers.size(); ++loc_i)
     {
       if(locDetectorMatches->Get_IsMatchedToTrack(locFCALShowers[loc_i]))
@@ -226,6 +162,127 @@ void DNeutralShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       locNeutralShower->dCovarianceMatrix = locCovMatrix;
 
       locNeutralShower->AddAssociatedObject(locFCALShowers[loc_i]);
+
+      Insert(locNeutralShower);
+    }
+
+  // Loop over all DECALShowers, create DNeutralShower if didn't match to any
+  // tracks and the cluster did not share energy with an FCAL shower. 
+  size_t numShowers=mData.size();
+  for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i){
+    if(locDetectorMatches->Get_IsMatchedToTrack(locECALShowers[loc_i]))
+      continue;
+
+    // Look for showers near boundary between ECAL and FCAL
+    bool gotMatch=false;
+    // If there were no FCAL showers, skip to creation of DNeutralShower
+    if (numShowers>0){
+      // Check if the ECAL shower has hits near the FCAL-ECAL border
+      if (locECALShowers[loc_i]->isNearBorder){
+	// Compare positions between ECAL and FCAL showers
+	DVector3 locEcalPos=locECALShowers[loc_i]->pos;
+	for (size_t loc_j=0;loc_j<numShowers;loc_j++){
+	  const DFCALShower *locFCALShower=static_cast<const DFCALShower*>(mData[loc_j]->dBCALFCALShower);
+	  if (locFCALShower->getIsNearBorder()){
+	    DVector3 locFcalPos=mData[loc_j]->dSpacetimeVertex.Vect();
+	    double locDx=locEcalPos.X()-locFcalPos.X();
+	    double locDy=locEcalPos.Y()-locFcalPos.Y();
+	    double locR2=locDx*locDx+locDy*locDy;
+	    if (locR2<ECAL_FCAL_CUT){
+	      gotMatch=true;
+	      
+	      // Flag that this shower is a combination of ECAL and FCAL showers
+	      mData[loc_j]->dDetectorSystem=SYS_ECAL_FCAL;
+	      
+	      // Get the combined energy
+	      double locE_ECAL=locECALShowers[loc_i]->E;
+	      double locE_FCAL=mData[loc_j]->dEnergy;
+	      double locEtot=locE_ECAL+locE_FCAL;
+	      double ecal_frac=locE_ECAL/locEtot;
+	      double fcal_frac=1.-ecal_frac;
+	      mData[loc_j]->dEnergy=locEtot;
+	    
+	      // Energy-weighted time
+	      double locTime=ecal_frac*locECALShowers[loc_i]->t
+		+fcal_frac*mData[loc_j]->dSpacetimeVertex.T();
+	      mData[loc_j]->dSpacetimeVertex.SetT(locTime);
+	      
+	      // Energy-weighted position
+	      DVector3 locPos=ecal_frac*locEcalPos+fcal_frac*locFcalPos;
+	      mData[loc_j]->dSpacetimeVertex.SetVect(locPos);
+	      
+	      // Add the ECAL shower as an associated object
+	      mData[loc_j]->AddAssociatedObject(locECALShowers[loc_i]);
+	      
+	      break;
+	    }
+	  }
+	}
+      }
+    }
+    
+    // If we did not find a match between the ECAL and the FCAL, create
+    // a DNeutralShower from the ECAL shower
+    if (gotMatch==false){
+      DNeutralShower* locNeutralShower = new DNeutralShower();
+      locNeutralShower->dBCALFCALShower = static_cast<const JObject*>(locECALShowers[loc_i]);
+      locNeutralShower->dDetectorSystem = SYS_ECAL;
+      locNeutralShower->dShowerID = locShowerID;
+      ++locShowerID;
+      
+      locNeutralShower->dEnergy = locECALShowers[loc_i]->E;
+      locNeutralShower->dSpacetimeVertex.SetVect(locECALShowers[loc_i]->pos);
+      locNeutralShower->dSpacetimeVertex.SetT(locECALShowers[loc_i]->t);
+      locNeutralShower->AddAssociatedObject(locECALShowers[loc_i]);
+      
+      locNeutralShower->dQuality = 1;
+      
+      auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
+      locCovMatrix->ResizeTo(5, 5);
+      *locCovMatrix = locECALShowers[loc_i]->ExyztCovariance;
+      locNeutralShower->dCovarianceMatrix = locCovMatrix;
+      
+      Insert(locNeutralShower);
+    }
+  }
+  
+  // Loop over all DBCALShowers, create DNeutralShower if didn't match to any tracks
+  // The chance of an actual neutral shower matching to a bogus track is very small
+  for(size_t loc_i = 0; loc_i < locBCALShowers.size(); ++loc_i)
+    {
+      if(locDetectorMatches->Get_IsMatchedToTrack(locBCALShowers[loc_i]))
+	continue;
+
+      // create DNeutralShower
+      DNeutralShower* locNeutralShower = new DNeutralShower();
+      locNeutralShower->dBCALFCALShower = static_cast<const JObject*>(locBCALShowers[loc_i]);
+      locNeutralShower->dDetectorSystem = SYS_BCAL;
+      locNeutralShower->dShowerID = locShowerID;
+      ++locShowerID;
+      
+      // in the BCAL set the quality variable 1 to avoid eliminating
+      // NeutralShowers in future splitoff rejection algorithms
+      locNeutralShower->dQuality = 1;
+      
+      // Check if indeed shower is not related to a non-reconstructed track in SC
+      double x = locBCALShowers[loc_i]->x - vertex.X();
+      double y = locBCALShowers[loc_i]->y - vertex.Y();
+      double z = locBCALShowers[loc_i]->z - vertex.Z();
+      DVector3 position(x, y, z);
+      double phi_bcal = position.Phi();
+      double delta_phi_min = 1000.;
+      int sc_match = check_SC_match(phi_bcal, rfTime, locSCHits, delta_phi_min);
+      locNeutralShower->dSC_BCAL_match = sc_match;
+      locNeutralShower->dSC_BCAL_phi_min = (float) delta_phi_min;
+      
+      locNeutralShower->dEnergy = locBCALShowers[loc_i]->E;
+      locNeutralShower->dSpacetimeVertex.SetXYZT(locBCALShowers[loc_i]->x, locBCALShowers[loc_i]->y, locBCALShowers[loc_i]->z, locBCALShowers[loc_i]->t);
+      auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
+      locCovMatrix->ResizeTo(5, 5);
+      *locCovMatrix = locBCALShowers[loc_i]->ExyztCovariance;
+      locNeutralShower->dCovarianceMatrix = locCovMatrix;
+      
+      locNeutralShower->AddAssociatedObject(locBCALShowers[loc_i]);
 
       Insert(locNeutralShower);
     }

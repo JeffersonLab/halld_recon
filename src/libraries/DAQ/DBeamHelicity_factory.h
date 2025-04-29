@@ -32,6 +32,8 @@ class DBeamHelicity_factory:public JFactoryT<DBeamHelicity>{
 		DBeamHelicity *Make_DBeamHelicity(vector<const DHELIDigiHit*> &locHELIDigiHits);
 		DBeamHelicity *Make_DBeamHelicity(const DHelicityData *locHelicityData);
 
+		bool PREFER_PROMPT_HELICITY_DATA;
+
 };
 
 #endif // _DBeamHelicity_factory_

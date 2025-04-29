@@ -30,8 +30,6 @@ public:
 
   static double blockSize()  { return  2.09 * k_cm; }
   static double blockLength(){ return  20.0 * k_cm; }
-  
-  int numActiveBlocks() const { return m_numActiveBlocks; }
   bool isBlockActive( int row, int column ) const;
   
   DVector2 positionOnFace(int row,int column) const {return m_positionOnFace[row][column];}
@@ -66,8 +64,6 @@ private:
   int    m_row[kECALMaxChannels];
   int    m_column[kECALMaxChannels];
   
-  int    m_numActiveBlocks;
-
   DECALGeometry(){};// force use of constructor with arguments.
 };
 

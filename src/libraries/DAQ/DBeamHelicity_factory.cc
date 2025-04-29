@@ -27,6 +27,10 @@ int DBeamHelicity_factory::dBeamOn = 1;
 //------------------
 void DBeamHelicity_factory::Init()
 {
+	PREFER_PROMPT_HELICITY_DATA = true;
+	
+	auto app = GetApplication();
+	app->SetDefaultParameter("PREFER_PROMPT_HELICITY_DATA", PREFER_PROMPT_HELICITY_DATA, "If both prompt and delayed helicity data are in the data stream, prefer the prompt. (default: true)");
 
 	return; //NOERROR;
 }
@@ -78,7 +82,7 @@ void DBeamHelicity_factory::Process(const std::shared_ptr<const JEvent>& event){
   
   DBeamHelicity *locBeamHelicity = nullptr;
   
-  // get helicity bits from fADC (only for 2023 data)
+  // get helicity bits from fADC for delayed helicity signal
   vector<const DHELIDigiHit*> locHELIDigiHits;
   event->Get(locHELIDigiHits);
 
@@ -89,17 +93,14 @@ void DBeamHelicity_factory::Process(const std::shared_ptr<const JEvent>& event){
   if(locHELIDigiHits.empty() && locHelicityDatas.empty())
     return;
 
-  if(!locHELIDigiHits.empty() && !locHelicityDatas.empty()) {
-  	jerr << "both DHELIDigiHit and DHelicityData objects are in the data stream???" << endl;
-  	jerr << "  not sure what to do, not creating DBeamHelicity objects ... " << endl;
-  } 
 
   // make the object depending on which data type we have
-  if(!locHELIDigiHits.empty())
-  	locBeamHelicity = Make_DBeamHelicity(locHELIDigiHits);
-  
-  if(!locHelicityDatas.empty())
+  if(!locHelicityDatas.empty() && PREFER_PROMPT_HELICITY_DATA) {
   	locBeamHelicity = Make_DBeamHelicity(locHelicityDatas[0]);
+  } else {
+    if(!locHELIDigiHits.empty())
+  	  locBeamHelicity = Make_DBeamHelicity(locHELIDigiHits);
+  }
   
 
   if(locBeamHelicity == nullptr)  return;

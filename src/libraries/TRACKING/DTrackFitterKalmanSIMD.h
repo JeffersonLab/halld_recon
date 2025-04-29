@@ -381,9 +381,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   jerror_t PropagateCentral(int length, int &index,DVector2 &my_xy,
 			    double &var_t_factor,
 			    DMatrix5x1 &Sc,bool &stepped_to_boundary);
-  void PropagateThroughFCAL(const DetectorSystem_t detector,const double dEdx,
-			    const double dz,double &z,DMatrix5x1 &S,double &t,
-			    double &s);
 
   shared_ptr<TMatrixFSym> Get7x7ErrorMatrix(DMatrixDSym C);
   shared_ptr<TMatrixFSym> Get7x7ErrorMatrixForward(DMatrixDSym C);
