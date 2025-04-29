@@ -7,13 +7,13 @@ using namespace std;
 
 #include <JANA/JEvent.h>
 #include <DANA/DEvent.h>
+
+#include <bitset>
 #include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DL1Info.h>
 #include <DANA/DStatusBits.h>
 
 #include <HDDM/DEventSourceHDDM.h>
-
-
 
 #include "DL1MCTrigger_factory.h"
 
@@ -252,9 +252,8 @@ void DL1MCTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
   
   if(print_messages) jout << "In DL1MCTrigger_factory, loading constants..." << jendl;
-
   auto calibration = DEvent::GetJCalibration(event);
-  
+
   vector< double > fcal_gains_ch;
   vector< double > fcal_pedestals_ch;
   
@@ -336,7 +335,6 @@ void DL1MCTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 // Process
 //------------------
 void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
-
 	if(BYPASS) {
                 DL1MCTrigger *trigger = new DL1MCTrigger;
                 trigger->trig_mask = 1;
@@ -364,17 +362,84 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
         vector<const DFCALHit*>  fcal_hits;
 	vector<const DBCALHit*>  bcal_hits;
 	vector<const DSCHit*>    sc_hits;
+	vector<const DTOFHit*>   tof_hits;
 
 	event->Get(fcal_hits);
 	event->Get(bcal_hits);
 	event->Get(sc_hits);
+	event->Get(tof_hits);
+
+	//sort(tof_hits.begin(),tof_hits.end(),tof_cmp);
+	map<int,pair<bitset<10>,bitset<10>>>time_slices;
+	for (unsigned int i=0;i<tof_hits.size();i++){
+	  const DTOFHit *hit1=tof_hits[i];
+	  int t1=int(hit1->t/4.0);
+	  if ((hit1->bar>21 && hit1->bar<26) || hit1->bar>44){
+	    bitset<10>w=0;
+	    if (hit1->bar==22 || hit1->bar==23) w|=1<<3;
+	    else if (hit1->bar==24 || hit1->bar==25) w|=1<<4;
+	    else if (hit1->bar==45 || hit1->bar==46) w|=1<<5;
+	    else w|=1<<6;
+	    if (time_slices.find(t1)==time_slices.end()){
+	      if (hit1->plane) time_slices[t1].second=w;
+	      else time_slices[t1].first=w;
+	    }
+	    else{
+	      if (hit1->plane) time_slices[t1].second |= w;
+	      else time_slices[t1].first |= w;
+	    }
+	  }
+	  else {
+	    for (unsigned int j=i+1;j<tof_hits.size();j++){
+	      const DTOFHit *hit2=tof_hits[j];
+	      if (hit1->bar==hit2->bar && hit1->plane==hit2->plane
+		  && hit1->end!=hit2->end){
+		cout << "p: " << hit1->plane << " b: " << hit1->bar
+		     << " e1: " << hit1->end << " e2: " << hit2->end << " t1: " << hit1->t_fADC
+		     << " t2: " << hit2->t_fADC << endl;	    
+		int t2=int(hit2->t/4.0);
+		if (abs(t1-t2)<=64){
+		  int tslice=(t1>t2)?t1:t2;
+		  cout << " tslice " << tslice << endl;
+		  bitset<10>w=0;
+		  if (hit1->bar<20) w|=1;
+		  else if (hit1->bar==20) w|=2;
+		  else if (hit1->bar==21) w|=4;
+		  else if (hit1->bar==26) w|=1<<7;
+		  else if (hit1->bar==27) w|=1<<8;
+		  else if (hit1->bar>27&&hit1->bar<45) w=1<<9;
+		  cout << "w "<<w<< endl;;
+		  if (time_slices.find(tslice)==time_slices.end()){
+		    if (hit1->plane) time_slices[tslice].second=w;
+		    else time_slices[tslice].first=w;
+		  }
+		  else{
+		    if (hit1->plane) time_slices[tslice].second |= w;
+		    else time_slices[tslice].first |= w;
+		  }
+		}	    
+	      }
+	    }
+	  } // Check for single ended bars 
+	}
+	for (auto const& ts: time_slices){
+	  int tof1_count=ts.second.first.count();
+	  int tof2_count=ts.second.second.count();
+	  cout << ts.first<<":"<<ts.second.first<<" "<<ts.second.first.count()
+	       <<" " <<ts.second.second << " " << ts.second.second.count() <<endl;
+	  if (tof1_count>0 && tof1_count+tof2_count>3){
+	    cout <<" Got tof trigger " << endl;
+	  }
+	  
+	}
+	
 
 	DRandom2 gDRandom(0); // declared extern in DRandom2.h
-
 
 	// This is temporary, to allow this simulation to be run on data
 	// to help out with trigger efficiency studies - sdobbs (Aug. 26, 2020)
 	if( event->GetSingleStrict<DStatusBits>()->GetStatusBit(kSTATUS_EVIO) ){
+
 		if(print_data_message) {
 			jout << "WARNING: Running L1 trigger simulation on EVIO data" << endl; 
 			print_data_message = false;
@@ -666,7 +731,7 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	  trigger->bcal_gtp     =  bcal_gtp_max;
 	  trigger->bcal_gtp_en  =  bcal_gtp_max/BCAL_ADC_PER_MEV_CORRECT/2./1000.;	  	  
 	  
-	  Insert(trigger);	 
+	  Insert(trigger);
 	  
 	} else{
 	  delete trigger;
@@ -680,7 +745,7 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 //------------------
 void DL1MCTrigger_factory::EndRun()
 {
-	return;
+
 }
 
 //------------------
@@ -688,7 +753,7 @@ void DL1MCTrigger_factory::EndRun()
 //------------------
 void DL1MCTrigger_factory::Finish()
 {
-	return;
+
 }
 
 //*********************
@@ -1525,7 +1590,7 @@ void DL1MCTrigger_factory::AddBaseline(double adc_amp[sample], double pedestal, 
 
 
 void DL1MCTrigger_factory::GetSeeds(const std::shared_ptr<const JEvent>& event, uint64_t eventnumber, UInt_t &seed1, UInt_t &seed2, UInt_t &seed3){
-
+  
   // Use seeds similar to mcsmear
 
   JEventSource *source = event->GetJEventSource();
@@ -1540,10 +1605,10 @@ void DL1MCTrigger_factory::GetSeeds(const std::shared_ptr<const JEvent>& event, 
     seed2 = 442249570 + eventnumber;
     seed3 = 709975946 + eventnumber;
   } else {
-  
+
     hddm_s::HDDM *record = const_cast<hddm_s::HDDM*>(event->GetSingleStrict<hddm_s::HDDM>());
     // TODO: NWB: Don't like this const cast
-
+    
     if (!record){
       seed1 = 259921049 + eventnumber;
       seed2 = 442249570 + eventnumber;
