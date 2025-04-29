@@ -27,7 +27,9 @@
 //
 // hnamepath: /occupancy/L1GTPRate
 // hnamepath: /occupancy/L1livetime
+// hnamepath: /highlevel/BCALVsFCAL2_TrigBit1
 // hnamepath: /highlevel/BCALVsFCAL_TrigBit1
+// hnamepath: /highlevel/ECALVsFCAL_TrigBit1
 // hnamepath: /highlevel/L1bits_gtp
 // hnamepath: /highlevel/L1bits_fp
 // hnamepath: /highlevel/NumTriggers
