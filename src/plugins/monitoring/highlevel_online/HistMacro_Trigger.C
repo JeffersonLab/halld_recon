@@ -27,9 +27,6 @@
 //
 // hnamepath: /occupancy/L1GTPRate
 // hnamepath: /occupancy/L1livetime
-// hnamepath: /highlevel/BCALVsFCAL2_TrigBit1
-// hnamepath: /highlevel/BCALVsFCAL_TrigBit1
-// hnamepath: /highlevel/ECALVsFCAL_TrigBit1
 // hnamepath: /highlevel/L1bits_gtp
 // hnamepath: /highlevel/L1bits_fp
 // hnamepath: /highlevel/NumTriggers
@@ -50,9 +47,6 @@
 		return;
 	locDirectory->cd();
 
-	TH2* locHist_BCALVsFCAL2_TrigBit1 = (TH2*)gDirectory->Get("BCALVsFCAL2_TrigBit1");
-	TH2* locHist_BCALVsFCAL_TrigBit1 = (TH2*)gDirectory->Get("BCALVsFCAL_TrigBit1");
-	TH2* locHist_ECALVsFCAL_TrigBit1 = (TH2*)gDirectory->Get("ECALVsFCAL_TrigBit1");
 	TH1* locHist_L1bits_gtp          = (TH1*)gDirectory->Get("L1bits_gtp");
 	TH1* locHist_L1bits_fp           = (TH1*)gDirectory->Get("L1bits_fp");
 	TH2* locHist_NumTriggers         = (TH2*)gDirectory->Get("NumTriggers");
@@ -69,94 +63,78 @@
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
 	if(TVirtualPad::Pad() == NULL)
-		locCanvas = new TCanvas("Kinematics", "Kinematics", 1200, 900); //for testing
+		locCanvas = new TCanvas("Trigger", "Trigger", 1200, 900); //for testing
 	else
 		locCanvas = gPad->GetCanvas();
-	locCanvas->Divide(3, 2);
+	locCanvas->Divide(2, 2);
 	
 	TLatex latex;
 	latex.SetTextSize(0.04);
 	char str[256];
 
-	// -------------- Left --------------
 	locCanvas->cd(1);
-	gPad->SetTicks();
-	gPad->SetGrid();
-	if(locHist_L1GTPRate != NULL)
+	if(locHist_L1bits_gtp!=NULL && locHist_L1bits_fp!=NULL)
 	{
-		locHist_L1GTPRate->GetXaxis()->SetTitleSize(0.05);
-		locHist_L1GTPRate->GetYaxis()->SetTitleSize(0.04);
-		locHist_L1GTPRate->GetXaxis()->SetLabelSize(0.05);
-		locHist_L1GTPRate->GetYaxis()->SetLabelSize(0.05);
-		locHist_L1GTPRate->SetStats(0);
-		locHist_L1GTPRate->Draw("colz");
-		
-		sprintf(str, "from %d sync events", (uint32_t)locHist_L1GTPRate->GetEntries()/8);
-		latex.DrawLatex(1.0, 101.0, str);
-	}
-
-	// ECAL vs. FCAL for Trig bit 1
-	locCanvas->cd(0);
-	if(locHist_ECALVsFCAL_TrigBit1 != NULL)
-	{
-		TPad *pad = (TPad*)gDirectory->FindObjectAny("trigpad0");
-		if(!pad) pad = new TPad("trigpad0", "", 0.0, 0.0, 0.33, 0.5);
-		pad->Draw();
-		pad->cd();
-
 		gPad->SetTicks();
 		gPad->SetGrid();
-		gPad->SetLeftMargin(0.2);
+		gPad->SetLogy();
 
-		locHist_ECALVsFCAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
-		locHist_ECALVsFCAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_ECALVsFCAL_TrigBit1->SetStats(0);
-		locHist_ECALVsFCAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
-		locHist_ECALVsFCAL_TrigBit1->Draw("colz");
+		double max_gtp = locHist_L1bits_gtp->GetMaximum();
+		double max_fp  = locHist_L1bits_fp->GetMaximum();
+		double max = (max_gtp>max_fp) ? max_gtp:max_fp;
 
-		sprintf(str, "%d entries", (uint32_t)locHist_ECALVsFCAL_TrigBit1->GetEntries());
-		latex.DrawLatex(500.0, 50000.0*1.01, str);
+		const int bin_number = 8;
+		const char *bin_label[bin_number] = {"Main (1)", "BCal (3)", "PS (4)", "FCal LED (3)", "ECal LED (5)", "ECal #alpha (6)", "Random (12)", "DIRC LED (15)"};
+		TH1I *locHist_Trigger_GTP = new TH1I("locHist_Trigger_GTP", "L1 Trigger Bits", bin_number, 0, bin_number);
+		TH1I *locHist_Trigger_FP = new TH1I("locHist_Trigger_FP", "", bin_number, 0, bin_number);
+		for (int i=1; i <= bin_number; i++)
+		  locHist_Trigger_GTP->GetXaxis()->SetBinLabel(i,bin_label[i-1]);
 
-		gPad->SetLogz();
-		gPad->Update();
+		// Main Trigger BCAL+FCAL: GTP Bit 1
+		locHist_Trigger_GTP->Fill(0., locHist_L1bits_gtp->GetBinContent(1));
+		// BCAL Trigger: GTP Bit 3
+		locHist_Trigger_GTP->Fill(1., locHist_L1bits_gtp->GetBinContent(3));
+		// PS Trigger: GTP Bit 4
+		locHist_Trigger_GTP->Fill(2., locHist_L1bits_gtp->GetBinContent(4));
+
+		// FCAL LED: FP Bit 3
+		locHist_Trigger_FP->Fill(3., locHist_L1bits_fp->GetBinContent(3));
+
+		// ECAL LED: FP Bit 5
+		locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(5));
+		// ECAL alpha: FP Bit 6
+		locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(6));
+
+		// Random Trigger: FP Bit 12
+		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(12));
+		// DIRC LED: FP Bit 15
+		locHist_Trigger_FP->Fill(7., locHist_L1bits_fp->GetBinContent(15));
+
+		locHist_Trigger_GTP->SetFillColor(kOrange);
+		locHist_Trigger_GTP->SetStats(0);
+		locHist_Trigger_GTP->GetXaxis()->LabelsOption("v");
+		locHist_Trigger_GTP->GetXaxis()->SetLabelSize(0.06);
+		locHist_Trigger_GTP->GetYaxis()->SetRangeUser(1.0, max*2.0);
+		locHist_Trigger_GTP->Draw("hist");
+
+		locHist_Trigger_FP->SetFillColor(kRed-4);
+		locHist_Trigger_FP->Draw("hist same");
+
+		gPad->SetBottomMargin(0.26);
+		gPad->RedrawAxis();
+
+		TLegend *legend_gtp = new TLegend(0.5,0.85,0.7,0.9);
+		TLegend *legend_fp  = new TLegend(0.7,0.85,0.9,0.9);
+		legend_gtp->AddEntry(locHist_Trigger_GTP,"GTP","f");
+		legend_fp->AddEntry(locHist_Trigger_FP,"FP","f");
+		legend_gtp->Draw();
+		legend_fp->Draw();
+
 	}
 
-	// BCAL vs. FCAL for Trig bit 1
-	locCanvas->cd(0);
-	if(locHist_BCALVsFCAL_TrigBit1 != NULL)
-	{
-		TPad *pad = (TPad*)gDirectory->FindObjectAny("trigpad10");
-		if(!pad) pad = new TPad("trigpad10", "", 0.66, 0.0, 1.0, 0.5);
-		pad->Draw();
-		pad->cd();
-
-		gPad->SetTicks();
-		gPad->SetGrid();
-		gPad->SetLeftMargin(0.2);
-
-		locHist_BCALVsFCAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
-		locHist_BCALVsFCAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_BCALVsFCAL_TrigBit1->SetStats(0);
-		locHist_BCALVsFCAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
-		locHist_BCALVsFCAL_TrigBit1->Draw("colz");
-
-		sprintf(str, "%d entries", (uint32_t)locHist_BCALVsFCAL_TrigBit1->GetEntries());
-		latex.DrawLatex(500.0, 50000.0*1.01, str);
-
-		gPad->SetLogz();
-		gPad->Update();
-	}
-	
-	// -------------- Middle --------------
-	
 	// Hadronic trigger rate stats
-	locCanvas->cd(0);
+	locCanvas->cd(2);
 	if(locHist_NumTriggers){
-		TPad *pad = (TPad*)gDirectory->FindObjectAny("trigpad1");
-		if(!pad) pad = new TPad("trigpad1", "", 0.33, 0.45, 0.66, 0.95);
-		pad->Draw();
-		pad->cd();
-		
 		TLatex latex;
 		latex.SetTextSize(0.05);
 		latex.SetTextAlign(31);
@@ -260,117 +238,26 @@
 		
 	}
 	
-	// BCAL vs. FCAL for Trig bit 1
-	locCanvas->cd(0);
-	if(locHist_BCALVsFCAL_TrigBit1 != NULL)
+
+	locCanvas->cd(3);
+	gPad->SetTicks();
+	gPad->SetGrid();
+	if(locHist_L1GTPRate != NULL)
 	{
-		TPad *pad = (TPad*)gDirectory->FindObjectAny("trigpad2");
-		if(!pad) pad = new TPad("trigpad2", "", 0.33, 0.0, 0.66, 0.5);
-		pad->Draw();
-		pad->cd();
-
-		gPad->SetTicks();
-		gPad->SetGrid();
-		gPad->SetLeftMargin(0.2);
-
-		locHist_BCALVsFCAL2_TrigBit1->GetXaxis()->SetTitleSize(0.05);
-		locHist_BCALVsFCAL2_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_BCALVsFCAL2_TrigBit1->SetStats(0);
-		locHist_BCALVsFCAL2_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
-		locHist_BCALVsFCAL2_TrigBit1->Draw("colz");
-
-		sprintf(str, "%d entries", (uint32_t)locHist_BCALVsFCAL2_TrigBit1->GetEntries());
-		latex.DrawLatex(500.0, 50000.0*1.01, str);
-
-		gPad->SetLogz();
-		gPad->Update();
-	}
-
-	// -------------- Right --------------
-	locCanvas->cd(0);
-	if(locHist_L1bits_gtp!=NULL && locHist_L1bits_fp!=NULL)
-	{
-		TPad *pad = (TPad*)gDirectory->FindObjectAny("trigpad3");
-		if(!pad) pad = new TPad("trigpad1", "", 0.66, 0.5, 1.0, 1.0);
-		pad->Draw();
-		pad->cd();
-
-		gPad->SetTicks();
-		gPad->SetGrid();
-		gPad->SetLogy();
-
-		double max_gtp = locHist_L1bits_gtp->GetMaximum();
-		double max_fp  = locHist_L1bits_fp->GetMaximum();
-		double max = (max_gtp>max_fp) ? max_gtp:max_fp;
+		locHist_L1GTPRate->GetXaxis()->SetTitleSize(0.05);
+		locHist_L1GTPRate->GetYaxis()->SetTitleSize(0.04);
+		locHist_L1GTPRate->GetXaxis()->SetLabelSize(0.05);
+		locHist_L1GTPRate->GetYaxis()->SetLabelSize(0.05);
+		locHist_L1GTPRate->SetStats(0);
+		locHist_L1GTPRate->Draw("colz");
 		
-		const int bin_number = 8;
-		const char *bin_label[bin_number] = {"Main (1)", "BCal (3)", "PS (4)", "FCal LED (3)", "BCal LED (9)", "BCal LED (10)", "Random (12)", "DIRC LED (15)"};
-		TH1I *locHist_Trigger_GTP = new TH1I("locHist_Trigger_GTP", "L1 Trigger Bits", bin_number, 0, bin_number);
-		TH1I *locHist_Trigger_FP = new TH1I("locHist_Trigger_FP", "", bin_number, 0, bin_number);
-		// helper histograms for the individual columns
-		TH1I *locHist_Trigger_alt1 = new TH1I("locHist_Trigger_alt1", "", bin_number, 0, bin_number);
-		// TH1I *locHist_Trigger_alt2 = new TH1I("locHist_Trigger_alt2", "", bin_number, 0, bin_number);
-		TH1I *locHist_Trigger_alt3 = new TH1I("locHist_Trigger_alt3", "", bin_number, 0, bin_number);
-		for (int i=1; i <= bin_number; i++)
-		  locHist_Trigger_GTP->GetXaxis()->SetBinLabel(i,bin_label[i-1]);
-
-		// Main Trigger BCAL+FCAL: GTP Bit 1
-		locHist_Trigger_GTP->Fill(0., locHist_L1bits_gtp->GetBinContent(1));
-		// BCAL Trigger: GTP Bit 3
-		locHist_Trigger_GTP->Fill(1., locHist_L1bits_gtp->GetBinContent(3));
-		locHist_Trigger_alt1->Fill(1., locHist_L1bits_gtp->GetBinContent(3));
-		// PS Trigger: GTP Bit 4
-		locHist_Trigger_GTP->Fill(2., locHist_L1bits_gtp->GetBinContent(4));
-
-		// FCAL LED: FP Bit 3
-		locHist_Trigger_FP->Fill(3., locHist_L1bits_fp->GetBinContent(3));
-
-                // Don't fill these bits.
-		// BCAL LED: FP Bit 9
-                // locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(9));
-		// locHist_Trigger_alt2->Fill(4., locHist_L1bits_fp->GetBinContent(9));
-		// BCAL LED: FP Bit 10
-                // locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(10));
-
-		// Random Trigger: FP Bit 12
-		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(12));
-		locHist_Trigger_alt3->Fill(6., locHist_L1bits_fp->GetBinContent(12));
-		// DIRC LED: FP Bit 15
-		locHist_Trigger_FP->Fill(7., locHist_L1bits_fp->GetBinContent(15));
-
-		locHist_Trigger_GTP->SetFillColor(kOrange);
-		locHist_Trigger_GTP->SetStats(0);
-		locHist_Trigger_GTP->GetXaxis()->LabelsOption("v");
-		locHist_Trigger_GTP->GetXaxis()->SetLabelSize(0.06);
-		locHist_Trigger_GTP->GetYaxis()->SetRangeUser(1.0, max*2.0);
-		locHist_Trigger_GTP->Draw("hist");
-		locHist_Trigger_alt1->Draw("hist same");
-
-		locHist_Trigger_FP->SetFillColor(kRed-4);
-		locHist_Trigger_FP->Draw("hist same");
-		// locHist_Trigger_alt2->Draw("hist same");
-		locHist_Trigger_alt3->Draw("hist same");
-
-		gPad->SetBottomMargin(0.25);
-		gPad->RedrawAxis();
-
-		TLegend *legend_gtp = new TLegend(0.5,0.85,0.7,0.9);
-		TLegend *legend_fp  = new TLegend(0.7,0.85,0.9,0.9);
-		legend_gtp->AddEntry(locHist_Trigger_GTP,"GTP","f");
-		legend_fp->AddEntry(locHist_Trigger_FP,"FP","f");
-		legend_gtp->Draw();
-		legend_fp->Draw();
-
+		sprintf(str, "from %d sync events", (uint32_t)locHist_L1GTPRate->GetEntries()/8);
+		latex.DrawLatex(1.0, 101.0, str);
 	}
 
-	locCanvas->cd(0);
+	locCanvas->cd(4);
 	if(locHist_L1livetime!=NULL)
 	{
-		TPad *pad = (TPad*)gDirectory->FindObjectAny("trigpad4");
-		if(!pad) pad = new TPad("trigpad4", "", 0.66, 0.0, 1.0, 0.5);
-		pad->Draw();
-		pad->cd();
-
 		gPad->SetTicks();
 		gPad->SetGrid();
 

@@ -236,6 +236,7 @@ void JEventProcessor_highlevel_online::Init()
 
 	dHist_BCALVsFCAL2_TrigBit1 = new TH2I("BCALVsFCAL2_TrigBit1","TRIG BIT 1;E (FCAL2) (count);E (BCAL) (count)", 200, 0., 10000, 200, 0., 50000);
 	dHist_BCALVsFCAL_TrigBit1 = new TH2I("BCALVsFCAL_TrigBit1","TRIG BIT 1;E (FCAL) (count);E (BCAL) (count)", 200, 0., 10000, 200, 0., 50000);
+	dHist_BCALVsECAL_TrigBit1 = new TH2I("BCALVsECAL_TrigBit1","TRIG BIT 1;E (ECAL) (count);E (BCAL) (count)", 200, 0., 10000, 200, 0., 50000);
 	dHist_ECALVsFCAL_TrigBit1 = new TH2I("ECALVsFCAL_TrigBit1","TRIG BIT 1;E (FCAL) (count);E (ECAL) (count)", 200, 0., 20000, 200, 0., 20000);
 
 	dHist_L1bits_gtp = new TH1I("L1bits_gtp", "L1 trig bits from GTP;Trig. bit (1-32)", 34, 0.5, 34.5);
@@ -793,6 +794,7 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
                   {
 		    dHist_BCALVsFCAL2_TrigBit1->Fill(Float_t(fcal_tot_en)+Float_t(ecal_tot_en), Float_t(bcal_tot_en));
 		    dHist_BCALVsFCAL_TrigBit1->Fill(Float_t(fcal_tot_en), Float_t(bcal_tot_en));
+		    dHist_BCALVsECAL_TrigBit1->Fill(Float_t(ecal_tot_en), Float_t(bcal_tot_en));
                     dHist_ECALVsFCAL_TrigBit1->Fill(Float_t(fcal_tot_en), Float_t(ecal_tot_en));
                   }
 
