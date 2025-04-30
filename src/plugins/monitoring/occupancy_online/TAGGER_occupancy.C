@@ -198,8 +198,7 @@
 		if( min_events < 1 ) min_events = 1E4;
 		if( Nevents >= min_events ) {
 			cout << "TAGGER Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
-			rs_SavePad("TAGGER_occupancy", 1);
-			rs_SavePad("TAGGER_occupancy", 2);
+			rs_SavePad("TAGGER_occupancy", 0);
 			rs_ResetAllMacroHistos("//TAGGER_occupancy");
 		}
 	}
