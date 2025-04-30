@@ -387,12 +387,12 @@ void JEventProcessor_highlevel_online::BeginRun(const std::shared_ptr<const JEve
 	bcal_cell_thr  =  20;
 	ecal_cell_thr  =  35;
 
-	ecal_row_mask_min = 17;
-	ecal_row_mask_max = 22;
-	ecal_col_mask_min = 17;
-	ecal_col_mask_max = 22;
+	ecal_row_mask_min = 15;
+	ecal_row_mask_max = 24;
+	ecal_col_mask_min = 15;
+	ecal_col_mask_max = 24;
 	
-	if( event->GetRunNumber() < 1300000 )
+	if( event->GetRunNumber() < 130000 )
 	{
 		fcal_row_mask_min = 26;
 		fcal_row_mask_max = 32;
@@ -618,7 +618,7 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 		}
 	}
 
-	//Get total FCAL energy (10 - 25
+	//Get total FCAL energy
 	int fcal_tot_en = 0;
 	for( auto fcal_hit : locFCALDigiHits){
 
@@ -648,7 +648,7 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 		bcal_tot_en += pulse_int;
 	}
 
-	//Get total ECAL energy 15 - 40
+	//Get total ECAL energy
 	int ecal_tot_en = 0;
 	for(auto ecal_hit : locECALDigiHits){
 		int row = ecal_hit->row;
@@ -792,10 +792,10 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 	  
 		if(locgtpTrigBits[0] == 1) //bit 1
                   {
-		    dHist_BCALVsFCAL2_TrigBit1->Fill(Float_t(fcal_tot_en)+Float_t(ecal_tot_en), Float_t(bcal_tot_en));
-		    dHist_BCALVsFCAL_TrigBit1->Fill(Float_t(fcal_tot_en), Float_t(bcal_tot_en));
+		    dHist_BCALVsFCAL2_TrigBit1->Fill(0.4957*Float_t(fcal_tot_en)+Float_t(ecal_tot_en), Float_t(bcal_tot_en));
+		    dHist_BCALVsFCAL_TrigBit1->Fill(0.4957*Float_t(fcal_tot_en), Float_t(bcal_tot_en));
 		    dHist_BCALVsECAL_TrigBit1->Fill(Float_t(ecal_tot_en), Float_t(bcal_tot_en));
-                    dHist_ECALVsFCAL_TrigBit1->Fill(Float_t(fcal_tot_en), Float_t(ecal_tot_en));
+                    dHist_ECALVsFCAL_TrigBit1->Fill(0.4957*Float_t(fcal_tot_en), Float_t(ecal_tot_en));
                   }
 
 		// trigger bits
