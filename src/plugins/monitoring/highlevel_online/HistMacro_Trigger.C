@@ -73,15 +73,17 @@
 	char str[256];
 
 	locCanvas->cd(1);
+	double max = 0;
 	if(locHist_L1bits_gtp!=NULL && locHist_L1bits_fp!=NULL)
 	{
 		gPad->SetTicks();
 		gPad->SetGrid();
 		gPad->SetLogy();
+		gPad->SetName("Bits"); // used by RSAI in filenaming
 
 		double max_gtp = locHist_L1bits_gtp->GetMaximum();
 		double max_fp  = locHist_L1bits_fp->GetMaximum();
-		double max = (max_gtp>max_fp) ? max_gtp:max_fp;
+		max = (max_gtp>max_fp) ? max_gtp:max_fp;
 
 		const int bin_number = 8;
 		const char *bin_label[bin_number] = {"Main (1)", "BCal (3)", "PS (4)", "FCal LED (3)", "ECal LED (5)", "ECal #alpha (6)", "Random (12)", "DIRC LED (15)"};
@@ -278,4 +280,16 @@
 			ps->Draw();
 		}
 	}
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E4;
+		if( max >= min_events ) {
+			cout << "Trigger Flagging AI check after " << max << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("Trigger", 1);
+			rs_ResetAllMacroHistos("//HistMacro_Trigger");
+		}
+	}
+#endif
 }
