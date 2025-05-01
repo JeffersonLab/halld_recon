@@ -701,7 +701,7 @@ void DHistogramAction_PID::Fill_ChargedHists(const DChargedTrackHypothesis* locC
 		}
 		
 		//ECAL E/p
-		if(locFCALShowerMatchParams != NULL)
+		if(locECALShowerMatchParams != NULL)
 		{
 			const DECALShower* locECALShower = locECALShowerMatchParams->dECALShower;
 			double locEOverP = locECALShower->E/locP;
