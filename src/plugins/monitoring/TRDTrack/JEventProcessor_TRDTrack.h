@@ -31,7 +31,7 @@ private:
   
   //-Sim
   TH2D *hTRDExtrapXY, *hExtrapXYHitDiff, *hTRDXCorr, *hTRDYCorr, *hFCALExtrapThetavsP, *hFCALExtrapThetavsP_Selected, *hExtrapXHitDiffvsTime, *hExtrapYHitDiffvsTime;
-  TH1D *hTRDExtrapPx, *hTRDExtrapPy, *hTRDExtrapPz, *hExtrapXHitDiff, *hExtrapYHitDiff, *hFCALExtrapTheta;
+  TH1D *hExtrapPx, *hExtrapPy, *hExtrapPz, *hExtrapXHitDiff, *hExtrapYHitDiff, *hFCALExtrapTheta;
   //-Projection
   TH2D *hExtrapXYHitDiff_el, *hExtrapXYHitDiff_pi;
   TH1D *hExtrapXHitDiff_el, *hExtrapYHitDiff_el, *hExtrapXHitDiff_pi, *hExtrapYHitDiff_pi;
@@ -39,13 +39,13 @@ private:
   TH2D *hFCALMatchXYDisplay_el, *hFCALMatchXYDisplay_pi;
   TH1D *hFCALExtrapE_TRD, *hFCALEP_TRD_el, *hFCALEP_TRD_pi, *hFCALEP_cut_el, *hFCALEP_cut_pi, *hFCALExtrapEP_TRD;
  
-  TH2D *hFCALExtrapXY, *hFCALExtrapEPvsP, *hFCALShowerXY;
-  TH1D *hFCALExtrapPx, *hFCALExtrapPy, *hFCALExtrapPz, *hFCALExtrapE, *hFCALExtrapEP;
+  TH2D *hFCALExtrapXY, *hFCALExtrapEPvsP, *hFCALShowerXY, *hFCALXCorr, *hFCALYCorr, *hFCALTimeCorr;
+  TH1D *hFCALExtrapPx, *hFCALExtrapPy, *hFCALExtrapPz, *hFCALExtrapE, *hFCALExtrapEP, *hFCALXDiff, *hFCALYDiff, *hFCALShowerTime, *hFCALExtrapTime, *hFCALFlightTime;
   
-  TH1D *hHypEnergy_el, *hHypMomentum_el, *hHypTheta_el, *hHypEnergyDiff_el, *hHypEnergy_pi, *hHypMomentum_pi, *hHypTheta_pi, *hHypEnergyDiff_pi, *hTrackMult, *hCount, *hHypMomentumDiff;
+  TH1D *hHypEnergy_el, *hHypMomentum_el, *hHypTheta_el, *hHypEnergyDiff_el, *hHypEnergy_pi, *hHypMomentum_pi, *hHypTheta_pi, *hHypEnergyDiff_pi, *hTrackMult, *hCount, *hHypMomentumDiff, *hTrackingFOMChisq, *hTrackingFOMNdof;
   
-  TH2D *hFCALExtrapXY_TRD, *hFCALShowerXY_TRD, *hFCALExtrapEPvsP_ext, *hFCALExtrapThetavsP_TRD, *hFCALExtrapThetavsP_Selected_ext, *hSeenPointsXY, *hExtrapsXY, *hFCALExtrapXY_p1_TRD, *hSeenPointsSingleXY;
-  TH1D *hFCALExtrapTheta_TRD, *hFCALExtrapE_ext, *hFCALExtrapEP_ext, *hnumPointsSeen, *hnumExtrap, *hExtrapsX, *hExtrapsY, *hSeenPointsSingleX, *hSeenPointsSingleY;
+  TH2D *hFCALExtrapXY_TRD, *hFCALShowerXY_TRD, *hFCALExtrapEPvsP_ext, *hFCALExtrapThetavsP_TRD, *hFCALExtrapThetavsP_Selected_ext, *hSeenPointsXY, *hExtrapsXY, *hFCALExtrapXY_p1_TRD, *hSeenPointsSingleXY, *hSeenHitsSingleXY;
+  TH1D *hFCALExtrapTheta_TRD, *hFCALExtrapE_ext, *hFCALExtrapEP_ext, *hnumPointsSeen, *hnumExtrap, *hExtrapsX, *hExtrapsY, *hSeenPointsSingleX, *hSeenPointsSingleY, *hSeenHitsSingleX, *hSeenHitsSingleY;
   
   TH1D *hnumSeenExtrapFCAL_el, *hnumSeenExtrap_el, *hExtrapsX_el, *hExtrapsY_el, *hSeenPointsX_el, *hSeenPointsY_el, *hSeenPointsSingleX_el, *hSeenPointsSingleY_el, *hnumSeenExtrapFCAL_pi, *hnumSeenExtrap_pi, *hExtrapsX_pi, *hExtrapsY_pi, *hSeenPointsX_pi, *hSeenPointsY_pi, *hSeenPointsSingleX_pi, *hSeenPointsSingleY_pi, *hnumPointsSeen_el, *hnumPointsSeenFCAL_el, *hnumPointsSeen_pi, *hnumPointsSeenFCAL_pi;
   

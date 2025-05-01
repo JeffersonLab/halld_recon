@@ -59,6 +59,7 @@ static TH2I *hDigiHit_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
 static TH3I *hPoint_XYT;
 static TH1I *hPoint_NHits;
 static TH1I *hPoint_Time;
+static TH1I *hPoint_TimeDiff;
 static TH1I *hPoint_dE;
 static TH1I *hPoint_dEDiff;
 static TH1I *hPoint_dERatio;
@@ -76,6 +77,7 @@ static TH2I *hPoint_TimeVsdEY;
 static TH3I *hPointH_XYT;
 static TH1I *hPointH_NHits;
 static TH1I *hPointH_Time;
+static TH1I *hPointH_TimeDiff;
 static TH1I *hPointH_dE;
 static TH1I *hPointH_dEDiff;
 static TH1I *hPointH_dERatio;
@@ -190,15 +192,16 @@ void JEventProcessor_TRD_online::Init() {
 	gDirectory->mkdir("Point_Hit")->cd();
     hPointH_NHits = new TH1I("PointH_NHits","TRD Calibrated Point Multiplicity;Calibrated Points;Events",100,0.5,0.5+100);
     hPointH_XYT = new TH3I("PointH_XYT","TRD 3D Points;X [cm];Y [cm];8*(Peak Time) [ns]",750,-85,-10,400,-70,-30,225,0.,1800.);
-    hPointH_Time = new TH1I("PointH_Time","TRD Point Time;8*(Peak Time) [ns]; ",225,0.,1800.);
-    hPointH_dE = new TH1I("PointH_dE","TRD Point Charge;Average dE [q]; ",350,0.,3500.);
-    hPointH_dEDiff = new TH1I("PointH_dEDiff","TRD Point Charge X,Y Weighted Diff.;(dE_x - dE_y)/(dE_x + dE_y); ",100,-1.,1.);
-    hPointH_dERatio = new TH1I("PointH_dERatio","TRD Point dE_x / dE_y;(dE_x / dE_y); ",100,-0.,6.);
+    hPointH_Time = new TH1I("PointH_Time","TRD Point Time;8*(Peak Time) [ns]",225,0.,1800.);
+	hPointH_TimeDiff = new TH1I("PointH_TimeDiff","TRD Point xTime - yTime; xTime - yTime [ns]",55,-22.,22.);
+    hPointH_dE = new TH1I("PointH_dE","TRD Point Charge;Average dE [q]",350,0.,3500.);
+    hPointH_dEDiff = new TH1I("PointH_dEDiff","TRD Point Charge X,Y Weighted Diff.;(dE_x - dE_y)/(dE_x + dE_y)",100,-1.,1.);
+    hPointH_dERatio = new TH1I("PointH_dERatio","TRD Point dE_x / dE_y;(dE_x / dE_y)",100,-0.,6.);
     hPointH_dE_XY = new TH2I("PointH_dE_XY","TRD Point Charge Corr. in X,Y;X Strip dE [q]; Y Strip dE [q]",350,0.,3500.,350,0.,3500.);
     hPointH_TimeVsdEX= new TH2I("PointH_TimeVsdEX","TRD Point Charge of X in Time;X Strip dE [q];8*(Peak Time) [ns]",350,0.,3500.,225,0.,1800.);
     hPointH_TimeVsdEY= new TH2I("PointH_TimeVsdEY","TRD Point Charge of Y in Time;Y Strip dE [q];8*(Peak Time) [ns]",350,0.,3500.,225,0.,1800.);
-    hPointH_OccupancyX = new TH1I("PointH_OccupancyX","TRD Point X;X [cm]; ",750,-85,-10);
-    hPointH_OccupancyY = new TH1I("PointH_OccupancyY","TRD Point Y;Y [cm]; ",400,-70,-30);
+    hPointH_OccupancyX = new TH1I("PointH_OccupancyX","TRD Point X;X [cm]",750,-85,-10);
+    hPointH_OccupancyY = new TH1I("PointH_OccupancyY","TRD Point Y;Y [cm]",400,-70,-30);
     hPointH_XYDisplay = new TH2I("PointH_XYDisplay","TRD XY 2D Point Display ;X [cm];Y [cm]",750,-85,-10,400,-70,-30);
     hPointH_ZXDisplay = new TH2I("PointH_ZXDisplay","TRD XZ 2D Point Display;X [cm];Z [cm]",750,-85,-10,480,527.5,533.5);
     hPointH_ZYDisplay = new TH2I("PointH_ZYDisplay","TRD YZ 2D Point Display;Y [cm];Z [cm]",400,-70,-30,480,527.5,533.5);
@@ -212,7 +215,8 @@ void JEventProcessor_TRD_online::Init() {
     hPoint_NHits = new TH1I("Point_NHits","TRD Calibrated Point Multiplicity;Calibrated Points;Events",100,0.5,0.5+100);
     hPoint_XYT = new TH3I("Point_XYT","TRD 3D Points;X [cm];Y [cm];8*(Peak Time) [ns]",750,-85,-10,400,-70,-30,225,0.,1800.);
     hPoint_Time = new TH1I("Point_Time","TRD Point Time;8*(Peak Time) [ns]; ",225,0.,1800.);
-    hPoint_dE = new TH1I("Point_dE","TRD Point Charge;Average dE [q]; ",350,0.,3500.);
+    hPoint_TimeDiff = new TH1I("Point_TimeDiff","TRD Point xTime - yTime; xTime - yTime [ns]",55,-22.,22.);
+	hPoint_dE = new TH1I("Point_dE","TRD Point Charge;Average dE [q]; ",350,0.,3500.);
     hPoint_dEDiff = new TH1I("Point_dEDiff","TRD Point Charge X,Y Weighted Diff.;(dE_x - dE_y)/(dE_x + dE_y); ",100,-1.,1.);
     hPoint_dERatio = new TH1I("Point_dERatio","TRD Point dE_x / dE_y;(dE_x / dE_y); ",100,-0.,6.);
     hPoint_dE_XY = new TH2I("Point_dE_XY","TRD Point Charge Corr. in X,Y;X Strip dE [q]; Y Strip dE [q]",350,0.,3500.,350,0.,3500.);
@@ -421,6 +425,7 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     for (const auto& point : points) {
         hPoint_XYT->Fill(point->x,point->y,point->time);
 	    hPoint_Time->Fill(point->time);
+		hPoint_TimeDiff->Fill(point->t_x - point->t_y);
         hPoint_OccupancyX->Fill(point->x);
 	    hPoint_OccupancyY->Fill(point->y);
     	hPoint_dE->Fill(point->dE);
@@ -440,6 +445,7 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     for (const auto& point : pointHits) {
         hPointH_XYT->Fill(point->x,point->y,point->time);
         hPointH_Time->Fill(point->time);
+		hPointH_TimeDiff->Fill(point->t_x - point->t_y);
         hPointH_OccupancyX->Fill(point->x);
         hPointH_OccupancyY->Fill(point->y);
         hPointH_dE->Fill(point->dE);

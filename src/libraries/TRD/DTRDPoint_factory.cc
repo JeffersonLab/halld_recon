@@ -30,7 +30,7 @@ void DTRDPoint_factory::Init()
 	
   dE_DIFF_MAX = 10000.;
   app->SetDefaultParameter("TRDPOINT:dE_DIFF_MAX",dE_DIFF_MAX,
-			   "Difference between Point_Hit charge in X and Y planes to be considered a coincidence (default: 10000.)");
+			   "Difference between Point charge in X and Y planes to be considered a coincidence (default: 10000.)");
   
 }
 
@@ -70,11 +70,12 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 	// Get strip clusters
 	vector<const DTRDStripCluster*> stripClus;
 	event->Get(stripClus);
+	if (stripClus.size()==0) return;
 
 //     cout << "DTRDPoint_factory::Process() ..." << endl;
 //     cout << "  num input clusters = " << stripClus.size() << endl;
 
-	// Sift through clusters and select out X and Y plane wires
+	// Sift through clusters and select out X and Y plane strips
 	vector<const DTRDStripCluster*> stripClusX,stripClusY;
 	for (unsigned int i=0; i < stripClus.size(); i++) {
 		// TODO: make some enums so it's more clear what plane 1 and 2 are...

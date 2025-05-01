@@ -76,7 +76,8 @@ void DTRDPoint_factory_Hit::Process(const std::shared_ptr<const JEvent>& event)
 	// Get strip hits
 	vector<const DTRDHit*> hit;
 	event->Get(hit);
-
+	if (hit.size()==0) return;
+	
 	// Sift through hits and select out X and Y plane strips
 	vector<const DTRDHit*> hitX,hitY;
 	for(uint i=0; i<hit.size(); i++){
@@ -95,7 +96,6 @@ void DTRDPoint_factory_Hit::Process(const std::shared_ptr<const JEvent>& event)
 			
 			// some requirements for a good point
 			if(fabs(t_diff) < TIME_DIFF_MAX) {	
-				
 				// save new point
 				DTRDPoint* point = new DTRDPoint;
 				point->x = dTRDx+StripToPosition(0, hitX[i]);
