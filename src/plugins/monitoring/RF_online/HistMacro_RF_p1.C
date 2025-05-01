@@ -119,10 +119,10 @@
 	  if( min_events < 1 ) min_events = 1E5;
 	  if( Nevents >= min_events ) {
 	    cout << "RF Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
-	    rs_SavePad("RF_FDC_selftiming", 0);
+	    // rs_SavePad("RF_FDC_selftiming", 0);
 	    rs_SavePad("RF_TOF_selftiming", 0);
-	    rs_SavePad("RF_TAGH_selftiming", 0);
-	    rs_SavePad("RF_PSC_selftiming", 0);
+	    // rs_SavePad("RF_TAGH_selftiming", 0);
+	    // rs_SavePad("RF_PSC_selftiming", 0);
 
 	    rs_ResetAllMacroHistos("//HistMacro_RF_p1");
 	  }
