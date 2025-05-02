@@ -48,6 +48,16 @@ void DHistogramAction_PID::Initialize(const std::shared_ptr<const JEvent>& locEv
 				dHistMap_CalE[locPID][SYS_FCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, 200, 0, 1.);
 				gDirectory->cd("..");
 
+				//ECAL
+				CreateAndChangeTo_Directory("ECAL", "ECAL");
+				locHistName = "Beta";
+				locHistTitle =  string("ECAL ") + locParticleROOTName + string(" Candidates;#beta");
+				dHistMap_Beta[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumBetaBins, dMinBeta, dMaxBeta);
+				locHistName = "Shower_Energy";
+				locHistTitle =  string("ECAL ") + locParticleROOTName + string(" Candidates;Shower Energy (GeV)");
+				dHistMap_CalE[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, 200, 0, 1.);
+				gDirectory->cd("..");
+
 				//CCAL
 				CreateAndChangeTo_Directory("CCAL", "CCAL");
 				locHistName = "Beta";
@@ -102,6 +112,27 @@ void DHistogramAction_PID::Initialize(const std::shared_ptr<const JEvent>& locEv
 				locHistName = "TimeFOMVsShowerE_Photon";
 				locHistTitle = string("FCAL ") + locParticleROOTName + string(";Shower Energy (GeV);Timing PID Confidence Level");
 				dHistMap_TimeFOMVsP[Gamma][SYS_FCAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DFOMBins, 0.0, 1.0);
+
+				gDirectory->cd("..");
+
+				//ECAL
+				CreateAndChangeTo_Directory("ECAL", "ECAL");
+
+				locHistName = "BetaVsP";
+				locHistTitle =  string("ECAL ") + locParticleROOTName + string(" Candidates;Shower Energy (GeV);#beta");
+				dHistMap_BetaVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DBetaBins, dMinBeta, dMaxBeta);
+
+				locHistName = "DeltaTVsShowerE_Photon";
+				locHistTitle = string("ECAL ") + locParticleROOTName + string(";p (GeV/c);#Deltat_{FCAL - RF}");
+				dHistMap_DeltaTVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
+
+				locHistName = "TimePullVsShowerE_Photon";
+				locHistTitle = string("ECAL ") + locParticleROOTName + string(";Shower Energy (GeV);#Deltat/#sigma_{#Deltat}");
+				dHistMap_TimePullVsP[Gamma][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DPullBins, dMinPull, dMaxPull);
+
+				locHistName = "TimeFOMVsShowerE_Photon";
+				locHistTitle = string("ECAL ") + locParticleROOTName + string(";Shower Energy (GeV);Timing PID Confidence Level");
+				dHistMap_TimeFOMVsP[Gamma][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DFOMBins, 0.0, 1.0);
 
 				gDirectory->cd("..");
 
@@ -257,6 +288,39 @@ void DHistogramAction_PID::Initialize(const std::shared_ptr<const JEvent>& locEv
 				locHistName = "EOverPVsTheta";
 				locHistTitle = locParticleROOTName + string(" Candidates;#theta#circ;FCAL E_{Shower}/p_{Track} (c);");
 				dHistMap_EOverPVsTheta[locPID][SYS_FCAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DFCALThetaBins, dMinFCALTheta, dMaxFCALTheta, dNum2DEOverPBins, dMinEOverP, dMaxEOverP);
+
+				gDirectory->cd("..");
+
+				//ECAL
+				CreateAndChangeTo_Directory("ECAL", "ECAL");
+
+				locHistName = "BetaVsP";
+				locHistTitle = locParticleROOTName + string(" Candidates;p (GeV/c);ECAL #beta");
+				dHistMap_BetaVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DBetaBins, dMinBeta, dMaxBeta);
+
+				locHistName = "DeltaBetaVsP";
+				locHistTitle = locParticleROOTName + string(" Candidates;p (GeV/c);FCAL #Delta#beta");
+				dHistMap_DeltaBetaVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaBetaBins, dMinDeltaBeta, dMaxDeltaBeta);
+
+				locHistName = "DeltaTVsP";
+				locHistTitle = locParticleROOTName + string(" Candidates;p (GeV/c);#Deltat_{ECAL - RF}");
+				dHistMap_DeltaTVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
+
+				locHistName = string("TimePullVsP_") + locParticleName;
+				locHistTitle = string("FCAL ") + locParticleROOTName + string(";p (GeV/c);#Deltat/#sigma_{#Deltat}");
+				dHistMap_TimePullVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DPullBins, dMinPull, dMaxPull);
+
+				locHistName = string("TimeFOMVsP_") + locParticleName;
+				locHistTitle = string("FCAL ") + locParticleROOTName + string(";p (GeV/c);Timing PID Confidence Level");
+				dHistMap_TimeFOMVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DFOMBins, 0.0, 1.0);
+
+				locHistName = "EOverPVsP";
+				locHistTitle = locParticleROOTName + string(" Candidates;p (GeV/c);ECAL E_{Shower}/p_{Track} (c);");
+				dHistMap_EOverPVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DEOverPBins, dMinEOverP, dMaxEOverP);
+
+				locHistName = "EOverPVsTheta";
+				locHistTitle = locParticleROOTName + string(" Candidates;#theta#circ;ECAL E_{Shower}/p_{Track} (c);");
+				dHistMap_EOverPVsTheta[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DFCALThetaBins, dMinFCALTheta, dMaxFCALTheta, dNum2DEOverPBins, dMinEOverP, dMaxEOverP);
 
 				gDirectory->cd("..");
 
@@ -579,6 +643,7 @@ void DHistogramAction_PID::Fill_ChargedHists(const DChargedTrackHypothesis* locC
 
 	auto locBCALShowerMatchParams = locChargedTrackHypothesis->Get_BCALShowerMatchParams();
 	auto locFCALShowerMatchParams = locChargedTrackHypothesis->Get_FCALShowerMatchParams();
+	auto locECALShowerMatchParams = locChargedTrackHypothesis->Get_ECALShowerMatchParams();
 	auto locTOFHitMatchParams = locChargedTrackHypothesis->Get_TOFHitMatchParams();
 	auto locSCHitMatchParams = locChargedTrackHypothesis->Get_SCHitMatchParams();
 	auto locDIRCMatchParams = locChargedTrackHypothesis->Get_DIRCMatchParams();
@@ -634,6 +699,16 @@ void DHistogramAction_PID::Fill_ChargedHists(const DChargedTrackHypothesis* locC
 			dHistMap_EOverPVsP[locPID][SYS_FCAL]->Fill(locP, locEOverP);
 			dHistMap_EOverPVsTheta[locPID][SYS_FCAL]->Fill(locTheta, locEOverP);
 		}
+		
+		//ECAL E/p
+		if(locECALShowerMatchParams != NULL)
+		{
+			const DECALShower* locECALShower = locECALShowerMatchParams->dECALShower;
+			double locEOverP = locECALShower->E/locP;
+			dHistMap_EOverPVsP[locPID][SYS_ECAL]->Fill(locP, locEOverP);
+			dHistMap_EOverPVsTheta[locPID][SYS_ECAL]->Fill(locTheta, locEOverP);
+		}
+		
 		/*
 		//CCAL E/p
 		if(locCCALShowerMatchParams != NULL)
