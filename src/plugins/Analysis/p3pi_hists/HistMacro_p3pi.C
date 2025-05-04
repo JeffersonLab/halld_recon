@@ -111,7 +111,7 @@
 
 		TLegend *locLegend = new TLegend(0.14, 0.70, 0.39, 0.86); //botleft x/y, topright x/y
 		locLegend->SetHeader("Legend");
-		locLegend->AddEntry(locHist_Pi0_2FCAL, "2#gamma in FCAL", "F");
+		locLegend->AddEntry(locHist_Pi0_2FCAL, "2#gamma in FCAL(2)", "F");
 		locLegend->AddEntry(locHist_Pi0_2BCAL, "2#gamma in BCAL", "F");
 		locLegend->AddEntry(locHist_Pi0_Both, "1 #gamma in Each", "F");
 		locLegend->Draw();
@@ -294,7 +294,7 @@
 
 		TLegend *locLegend = new TLegend(0.14, 0.70, 0.39, 0.86); //botleft x/y, topright x/y
 		locLegend->SetHeader("Legend");
-		locLegend->AddEntry(locHist_Omega_2FCAL, "2#gamma in FCAL", "F");
+		locLegend->AddEntry(locHist_Omega_2FCAL, "2#gamma in FCAL(2)", "F");
 		locLegend->AddEntry(locHist_Omega_2BCAL, "2#gamma in BCAL", "F");
 		locLegend->AddEntry(locHist_Omega_Both, "1 #gamma in Each", "F");
 		locLegend->Draw();
