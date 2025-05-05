@@ -3788,7 +3788,16 @@ double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHy
     locChiSq_sum+=(dt_fcal*dt_fcal)/vart_fcal;
     locNDF++;
   }
-
+  
+  shared_ptr<const DECALShowerMatchParams>locEcalParms=locChargedHypo->Get_ECALShowerMatchParams();
+  if (locEcalParms!=NULL){
+    double dt_ecal=locEcalParms->dECALShower->t-locEcalParms->dFlightTime-locT0;
+    dt_ecal-=GetTimeMean(SYS_ECAL,locPID,locP);
+    double vart_ecal=GetTimeVariance(SYS_ECAL,locPID,locP);
+    locChiSq_sum+=(dt_ecal*dt_ecal)/vart_ecal;
+    locNDF++;
+  }
+  
   locPull=sqrt(locChiSq_sum);
   return locChiSq_sum;
 }

@@ -648,6 +648,9 @@ double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t pa
 	+ dTimeSigmaParams_FCAL_Proton[2]
 	+ dTimeSigmaParams_FCAL_Proton[3]*p;
       break;
+    case SYS_ECAL:
+      locSigma=0.25; // calibrate!
+      break;
     default:
       break;    
     }
@@ -671,6 +674,9 @@ double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t pa
 	+ dTimeSigmaParams_FCAL_KPlus[1]/p
 	+ dTimeSigmaParams_FCAL_KPlus[2]
 	+ dTimeSigmaParams_FCAL_KPlus[3]*p;
+      break;
+    case SYS_ECAL:
+      locSigma=0.25; // calibrate!
       break;
     default:
       break;    
@@ -696,6 +702,9 @@ double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t pa
 	+ dTimeSigmaParams_FCAL_PiPlus[2]
 	+ dTimeSigmaParams_FCAL_PiPlus[3]*p;
       break;
+    case SYS_ECAL:
+      locSigma=0.25; // calibrate!
+      break;
     default:
       break;    
     }
@@ -719,6 +728,9 @@ double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t pa
 	+ dTimeSigmaParams_FCAL_Positron[1]/p
 	+ dTimeSigmaParams_FCAL_Positron[2]
 	+ dTimeSigmaParams_FCAL_Positron[3]*p;
+      break;
+    case SYS_ECAL:
+      locSigma=0.25; // calibrate!
       break;
     default:
       break;    
@@ -745,6 +757,9 @@ double DParticleID_PID1::GetTimeMean(DetectorSystem_t detector,Particle_t partic
 	+ dTimeMeanParams_FCAL_Positron[2]
 	+ dTimeMeanParams_FCAL_Positron[3]*p;
       break;
+    case SYS_ECAL:
+      locMean=0.; // calibrate!
+      break;
     default:
       break;    
     }
@@ -762,6 +777,9 @@ double DParticleID_PID1::GetTimeMean(DetectorSystem_t detector,Particle_t partic
 	+ dTimeMeanParams_FCAL_PiPlus[1]/p
 	+ dTimeMeanParams_FCAL_PiPlus[2]
 	+ dTimeMeanParams_FCAL_PiPlus[3]*p;
+      break;
+    case SYS_ECAL:
+      locMean=0.; // calibrate!
       break;
     default:
       break;    
@@ -781,6 +799,9 @@ double DParticleID_PID1::GetTimeMean(DetectorSystem_t detector,Particle_t partic
 	+ dTimeMeanParams_FCAL_KPlus[2]
 	+ dTimeMeanParams_FCAL_KPlus[3]*p;
       break;
+    case SYS_ECAL:
+      locMean=0.; // calibrate!
+      break;
     default:
       break;    
     }
@@ -799,12 +820,14 @@ double DParticleID_PID1::GetTimeMean(DetectorSystem_t detector,Particle_t partic
 	+ dTimeMeanParams_FCAL_Proton[2]
 	+ dTimeMeanParams_FCAL_Proton[3]*p;
       break;
+    case SYS_ECAL:
+      locMean=0.; // calibrate!
+      break;
     default:
       break;    
     }
   }
-
-
+  
   return locMean;
 }
   
