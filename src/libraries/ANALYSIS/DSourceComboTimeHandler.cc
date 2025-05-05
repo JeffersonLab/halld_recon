@@ -33,7 +33,7 @@
 *
 * From here, assume track is straight over the distance z_error/2:
 *
-* FCAL:
+* FCAL/ECAL:
 * path_track_guess = path_z_guess/cos(theta)
 * path_track_actual = path_z_actual/cos(theta), path_z_actual = path_z_guess - z_error
 * path_track_guess - path_track_actual = path_z_guess/cos(theta) - (path_z_guess - z_error)/cos(theta) = z_error/cos(theta)
@@ -71,9 +71,9 @@
 * The error on the delta-t (delta_delta_t) is derived in a separate section below. The result is:
 * All: delta_delta_t = dr*[1/sin(theta) - sqrt(1 + (1/tan(theta) - z_error/dr)^2)]/c - z_error/c
 * BCAL: delta_delta_t = 65*[1/sin(theta) - sqrt(1 + (1/tan(theta) - z_error/65)^2)]/c - z_error/c
-* FCAL: delta_delta_t = (~650 - z_error)*[1/cos(theta) - sqrt(tan^2(theta) + (1 - z_error/(~650 - z_error))^2)]/c - z_error/c
+* FCAL/ECAL: delta_delta_t = (~650 - z_error)*[1/cos(theta) - sqrt(tan^2(theta) + (1 - z_error/(~650 - z_error))^2)]/c - z_error/c
 *
-* For the FCAL, at a z_error of 30cm (center of target + detached-z), the maximum error in delta_delta_t is 22ps
+* For the FCAL/ECAL, at a z_error of 30cm (center of target + detached-z), the maximum error in delta_delta_t is 22ps
 * At a z_error of 5cm, delta_delta_t is 3.5ps
 *
 * For the BCAL (dr = 65cm), at a z_error of 30cm (center of target + detached-z), the maximum error in delta_delta_t is 1.8ns (at 140 degrees)
@@ -126,10 +126,10 @@
 *
 * So: delta_delta_t = dr*[1/sin(theta) - sqrt(1 + (1/tan(theta) - z_error/dr)^2)]/c - z_error/c
 *
-* For the FCAL, dr = dz*tan(theta), dz = 650 - z_error (approx 650)
+* For the FCAL/ECAL dr = dz*tan(theta), dz = 650 - z_error (approx 650)
 * So: delta_delta_t = (650 - z_error)*[1/cos(theta) - sqrt(tan^2(theta) + (1 - z_error/(650 - z_error))^2)]/c - z_error/c
 *
-* For the FCAL, the delta_delta_t is at most 23ps when the z_error is 30cm (center of target + detached vertex) (12 degrees)
+* For the FCAL/ECAL, the delta_delta_t is at most 23ps when the z_error is 30cm (center of target + detached vertex) (12 degrees)
 * Therefore, the z_error is irrelevant: Just choose the center of the target and increase the width of the delta_t cut as needed.
 *
 * However, for the BCAL the time error is rather large (largest at large angles (e.g. 140 degrees))
@@ -173,6 +173,7 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	//Photon
 	dPIDTimingCuts_TF1Params[Gamma][SYS_BCAL] = {1.5};
 	dPIDTimingCuts_TF1Params[Gamma][SYS_FCAL] = {2.5};
+	dPIDTimingCuts_TF1Params[Gamma][SYS_ECAL] = {2.5};
 	dPIDTimingCuts_TF1Params[Gamma][SYS_CCAL] = {10.0};
 
 	//UnknownParticle: initial RF selection for photons (at beginning of event, prior to vertex) //can be separate cut function
@@ -182,6 +183,7 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	dPIDTimingCuts_TF1Params[Electron][SYS_BCAL] = {1.0};
 	dPIDTimingCuts_TF1Params[Electron][SYS_TOF] = {0.5};
 	dPIDTimingCuts_TF1Params[Electron][SYS_FCAL] = {2.0};
+	dPIDTimingCuts_TF1Params[Electron][SYS_ECAL] = {2.0};
 	dPIDTimingCuts_TF1Params[Electron][SYS_CCAL] = {10.0};
 
 	//Other Leptons
@@ -193,6 +195,7 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	dPIDTimingCuts_TF1Params[PiPlus][SYS_BCAL] = {1.0};
 	dPIDTimingCuts_TF1Params[PiPlus][SYS_TOF] = {0.5};
 	dPIDTimingCuts_TF1Params[PiPlus][SYS_FCAL] = {2.0};
+	dPIDTimingCuts_TF1Params[PiPlus][SYS_ECAL] = {2.0};
 	dPIDTimingCuts_TF1Params[PiPlus][SYS_CCAL] = {10.0};
 	dPIDTimingCuts_TF1Params.emplace(PiMinus, dPIDTimingCuts_TF1Params[PiPlus]);
 
@@ -200,6 +203,7 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	dPIDTimingCuts_TF1Params[KPlus][SYS_BCAL] = {0.75};
 	dPIDTimingCuts_TF1Params[KPlus][SYS_TOF] = {0.3};
 	dPIDTimingCuts_TF1Params[KPlus][SYS_FCAL] = {2.5};
+	dPIDTimingCuts_TF1Params[KPlus][SYS_ECAL] = {2.5};
 	dPIDTimingCuts_TF1Params[KPlus][SYS_CCAL] = {10.0};
 	dPIDTimingCuts_TF1Params.emplace(KMinus, dPIDTimingCuts_TF1Params[KPlus]);
 
@@ -207,6 +211,7 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	dPIDTimingCuts_TF1Params[Proton][SYS_BCAL] = {1.0};
 	dPIDTimingCuts_TF1Params[Proton][SYS_TOF] = {0.6};
 	dPIDTimingCuts_TF1Params[Proton][SYS_FCAL] = {2.0};
+	dPIDTimingCuts_TF1Params[Proton][SYS_ECAL] = {2.0};
 	dPIDTimingCuts_TF1Params[Proton][SYS_CCAL] = {10.0};
 	dPIDTimingCuts_TF1Params.emplace(AntiProton, dPIDTimingCuts_TF1Params[Proton]);
 	
@@ -419,8 +424,8 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(const std::shared_ptr<const JEv
 		}
 	}
 
-	vector<DetectorSystem_t> locTimingSystems_Charged {SYS_TOF, SYS_BCAL, SYS_FCAL, SYS_START};
-	vector<DetectorSystem_t> locTimingSystems_Neutral {SYS_BCAL, SYS_FCAL, SYS_CCAL};
+	vector<DetectorSystem_t> locTimingSystems_Charged {SYS_TOF, SYS_BCAL, SYS_FCAL, SYS_ECAL, SYS_START};
+	vector<DetectorSystem_t> locTimingSystems_Neutral {SYS_BCAL, SYS_FCAL, SYS_ECAL, SYS_CCAL};
 	vector<Particle_t> locPIDs {UnknownParticle, Gamma, Electron, Positron, MuonPlus, MuonMinus, PiPlus, PiMinus, KPlus, KMinus, Proton, AntiProton};
 
 	//CREATE HISTOGRAMS
@@ -540,12 +545,13 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 
 	//ARRANGE NEUTRAL SHOWERS
 	//also, save to unknown-z, unknown-rf (all showers)
-	vector<const DNeutralShower*> locBCALShowers, locFCALShowers, locCCALShowers;
+	vector<const DNeutralShower*> locBCALShowers, locFCALShowers, locECALShowers, locCCALShowers;
 	auto locUnknownZBin = DSourceComboInfo::Get_VertexZIndex_Unknown();
 	for(const auto& locShower : locNeutralShowers)
 	{
 	  if (locShower->dDetectorSystem == SYS_BCAL) locBCALShowers.push_back(locShower);
 	  else if (locShower->dDetectorSystem == SYS_FCAL) locFCALShowers.push_back(locShower);
+	  else if (locShower->dDetectorSystem == SYS_ECAL) locECALShowers.push_back(locShower);
 	  else if (locShower->dDetectorSystem == SYS_CCAL) locCCALShowers.push_back(locShower);
 	}
 
@@ -554,6 +560,10 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 	auto locFCALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();
 	for(const auto& locShower : locFCALShowers)
 		dPhotonKinematics[locFCALZBin].emplace(locShower, Create_KinematicData_Photon(locShower, dTargetCenter));
+
+	auto locECALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();
+	for(const auto& locShower : locECALShowers)
+		dPhotonKinematics[locECALZBin].emplace(locShower, Create_KinematicData_Photon(locShower, dTargetCenter));
 
 	auto locCCALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent(); // the same as locFCALZBin !!
 	for(const auto& locShower : locCCALShowers)
@@ -571,6 +581,9 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 	//FCAL: at target center
 	for(const auto& locShower : locFCALShowers)
 		Calc_PhotonBeamBunchShifts(locShower, dPhotonKinematics[locFCALZBin][locShower], dInitialEventRFBunch->dTime, locFCALZBin);
+	
+	for(const auto& locShower : locECALShowers)
+		Calc_PhotonBeamBunchShifts(locShower, dPhotonKinematics[locECALZBin][locShower], dInitialEventRFBunch->dTime, locECALZBin);
 	
 	for(const auto& locShower : locCCALShowers)
 		Calc_PhotonBeamBunchShifts(locShower, dPhotonKinematics[locCCALZBin][locShower], dInitialEventRFBunch->dTime, locCCALZBin);
@@ -663,6 +676,16 @@ void DSourceComboTimeHandler::Calc_PhotonBeamBunchShifts(const DNeutralShower* l
 		dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].push_back(locJObject); //will dupe over z's
 		dShowersByBeamBunchByZBin[locZBin][{}].push_back(locJObject);
 	}
+	else if(locSystem == SYS_ECAL) //ECAL: Save to this z-bin & unknown
+	{
+	        for(auto& locZBinPair : dShowerRFBunches) //loop over z-bins
+		{
+			locZBinPair.second.emplace(locJObject, locRFShifts); //save bunches for each shower
+			for(const auto& locNumShifts : locRFShifts) //save showers by bunch
+				dShowersByBeamBunchByZBin[locZBinPair.first][{locNumShifts}].push_back(locJObject);
+			dShowersByBeamBunchByZBin[locZBinPair.first][{}].push_back(locJObject); //save showers by bunch: any bunch (empty vector)
+		}
+	}
 	else if(locSystem == SYS_CCAL) //CCAL: Save to this z-bin & unknown
 	{
 	        for(auto& locZBinPair : dShowerRFBunches) //loop over z-bins
@@ -746,7 +769,7 @@ double DSourceComboTimeHandler::Calc_MaxDeltaTError(const DNeutralShower* locNeu
 		return fabs(locPathError)/SPEED_OF_LIGHT;
 	}
 
-	//FCAL
+	//FCAL/ECAL
 	double locDeltaZ = locNeutralShower->dSpacetimeVertex.Z() - dTargetCenter.Z();
 	double locMaxZError = dTargetLength/2.0 + 15.0; //center of target + detached vertex
 	//delta_delta_t = (650 - z_error)*[1/cos(theta) - sqrt(tan^2(theta) + (1 - z_error/(650 - z_error))^2)]/c - z_error/c
@@ -882,7 +905,7 @@ bool DSourceComboTimeHandler::Select_RFBunches_PhotonVertices(const DReactionVer
 		auto locPropagatedRFTime = Calc_PropagatedRFTime(locPrimaryVertexZ, 0, locTimeOffset);
 //		auto locPropagatedRFTime = Calc_PropagatedRFTime(locVertex.Z(), 0, 0.0); //COMPARE:
 
-		//loop over particles at this vertex: BCAL photons & charged tracks get to vote (FCAL photons already voted, but faster)
+		//loop over particles at this vertex: BCAL photons & charged tracks get to vote (FCAL/ECAL photons already voted, but faster)
 		auto locSourceParticles = DAnalysis::Get_SourceParticles_ThisVertex(locVertexPrimaryFullCombo);
 		for(const auto& locParticlePair : locSourceParticles)
 		{
@@ -1203,7 +1226,7 @@ void DSourceComboTimeHandler::Vote_OldMethod(const DSourceCombo* locReactionFull
 			if(locHypothesis->t1_detector() == SYS_NULL)
 				continue;
 
-			//OLD SYSTEM PREFERENCE ORDER FOR SELECTING BUNCHES: TOF/SC/BCAL/FCAL
+			//OLD SYSTEM PREFERENCE ORDER FOR SELECTING BUNCHES: TOF/SC/BCAL/FCAL/ECAL(?)
 			locVertexTime = locHypothesis->time();
 			locPropagatedRFTime = dInitialEventRFBunch->dTime + (locHypothesis->position().Z() - dTargetCenter.Z())/SPEED_OF_LIGHT;
 			if((locHypothesis->t1_detector() != SYS_TOF) && (locHypothesis->Get_SCHitMatchParams() != nullptr))

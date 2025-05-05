@@ -59,6 +59,11 @@ class DCustomAction_p2pi_hists : public DAnalysisAction
 		TH2I *dPiPlusPsi_t;
 		TH2I *dPiPlusPsi_Egamma, *dProtonPhi_Egamma;
 		TH2I *dBaryonM_CosTheta_Egamma1, *dBaryonM_CosTheta_Egamma2, *dBaryonM_CosTheta_Egamma3; 
+		TH1F *dHist_rhoDecPhi_pp=nullptr;
+		TH1F *dHist_rhoDecPhi_mp=nullptr;
+		TH1F *dHist_rhoDecPhi_pm=nullptr;
+		TH1F *dHist_rhoDecPhi_mm=nullptr;
+
 };
 
 #endif // _DCustomAction_p2pi_hists_

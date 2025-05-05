@@ -91,7 +91,7 @@ void JEventProcessor_fa125_itrig::Init()
 
   hevents = new TH1I("num_events","Number of events", 1, 0.0, 1.0);
 
-  for (int i=0; i<70; i++) rocmap[i] = 0;  // rocmap[rocid] = bin number for roc rocid in histogram
+  for (int i=0; i<77; i++) rocmap[i] = 0;  // rocmap[rocid] = bin number for roc rocid in histogram
 
   int xlabels[70] = {0};
   int nbins;

@@ -73,6 +73,8 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
     double E=GetCorrectedEnergy(cluster->E);
     if (E>SHOWER_ENERGY_THRESHOLD){
       DECALShower *shower=new DECALShower;
+      shower->nBlocks=cluster->nBlocks;
+      shower->isNearBorder=cluster->isNearBorder;
       shower->E=E;
       shower->t=cluster->t;
 

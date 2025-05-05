@@ -165,7 +165,8 @@ void DFCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   if (geom) {
     geom->GetTargetZ(m_zTarget);
     event->GetSingle(fcalGeom);
-    m_FCALfront=fcalGeom->fcalFrontZ(); 
+    m_FCALfront=fcalGeom->fcalFrontZ();
+    haveInsert=geom->HaveInsert();
   }
   else{
       
@@ -482,6 +483,24 @@ void DFCALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       shower->setSumV( sumV );
       
       shower->AddAssociatedObject( cluster );
+
+      // If the FCAL-2 insert is installed, flag if any of the hits in the
+      // cluster are near the FCAL-ECAL interface.
+      shower->setIsNearBorder(false);
+      if (haveInsert){
+	int min_row=1000,min_col=1000,max_row=0,max_col=0;
+	for (size_t j=0;j<hits.size();j++){
+	  int row=fcalGeom->row(hits[j].ch);
+	  int col=fcalGeom->column(hits[j].ch);
+	  if (row<min_row) min_row=row;
+	  if (col<min_col) min_col=col;
+	  if (row>max_row) max_row=row;
+	  if (col>max_col) max_col=col;
+	}
+	if (max_row>=18 && min_row<=40 && max_col>=18 && min_col<=40){
+	  shower->setIsNearBorder(true);
+	}
+      }
 
       Insert(shower);
     }

@@ -97,12 +97,12 @@
 * delta_m = m_g - m_g/(sin(theta_g)*sqrt(1 + (1/tan(theta_g) + z_error/dx)^2))
 *
 * For BCAL, dx = 65.
-* For the FCAL, dx = dz*tan(theta), dz = 650 - z_error (approx 650):
+* For the FCAL/ECAL, dx = dz*tan(theta), dz = 650 - z_error (approx 650):
 * delta_m = m_g - m_g/(sin(theta_g)*sqrt(1 + (1 + z_error/(650 - z_error))^2/tan^2(theta_g)))
 * delta_m = m_g - m_g/(cos(theta_g)*sqrt(tan^2(theta_g) + (1 + z_error/(650 - z_error))^2))
 *
-* delta_m Is larger at higher m_g, max at 45 degrees (and is thus small for FCAL)
-* In fact, for the FCAL, delta_m is ~25 MeV for the eta mass when the z_error is 30cm (max: center of target + detached vertex)
+* delta_m Is larger at higher m_g, max at 45 degrees (and is thus small for FCAL/ECAL)
+* In fact, for the FCAL/ECAL, delta_m is ~25 MeV for the eta mass when the z_error is 30cm (max: center of target + detached vertex)
 * Therefore, if the center of the target is used, the error is negligible compared to the width of the mass cut.
 *
 * For the BCAL:
@@ -566,13 +566,19 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 			locHist = gDirectory->Get(locHistName.c_str());
 			dHistMap_2GammaMass[SYS_FCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";FCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
 			
+			locHistName = "InvariantMass_2Gamma_ECAL";
+			locHist = gDirectory->Get(locHistName.c_str());
+			dHistMap_2GammaMass[SYS_ECAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";ECAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			
 			locHistName = "InvariantMass_2Gamma_CCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
 			dHistMap_2GammaMass[SYS_CCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
 
-			locHistName = "InvariantMass_2Gamma_BCALFCALCCAL";
+			//locHistName = "InvariantMass_2Gamma_BCALFCALCCAL";
+			locHistName = "InvariantMass_2Gamma_BCALFCALECAL";
 			locHist = gDirectory->Get(locHistName.c_str());
-			dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL/FCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			//dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL/FCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL/FCAL/ECAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
 			/*
 			locHistName = "InvariantMass_2Gamma_BCALCCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
