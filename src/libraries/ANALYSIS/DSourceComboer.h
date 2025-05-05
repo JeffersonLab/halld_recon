@@ -495,7 +495,7 @@ inline bool DSourceComboer::Get_IsComboingZIndependent(const JObject* locObject,
 		return true;
 
 	auto locNeutralShower = static_cast<const DNeutralShower*>(locObject);
-	return (locNeutralShower->dDetectorSystem == SYS_FCAL || locNeutralShower->dDetectorSystem == SYS_CCAL);
+	return (locNeutralShower->dDetectorSystem == SYS_FCAL || locNeutralShower->dDetectorSystem == SYS_ECAL || locNeutralShower->dDetectorSystem == SYS_CCAL);
 }
 
 inline DSourceCombosByUse_Large& DSourceComboer::Get_CombosSoFar(ComboingStage_t locComboingStage, Charge_t locChargeContent_SearchForUse, const DSourceCombo* locChargedCombo)

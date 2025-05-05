@@ -1,12 +1,12 @@
 // $Id$
 //
-//    File: DCustomAction_p3pi_Pi0Cuts.h
+//    File: DCustomAction_p3pi_Pi0Cuts_FCAL2.h
 // Created: Thu Jan 22 11:19:46 EST 2015
 // Creator: jrsteven (on Linux ifarm1401 2.6.32-431.el6.x86_64 x86_64)
 //
 
-#ifndef _DCustomAction_p3pi_Pi0Cuts_
-#define _DCustomAction_p3pi_Pi0Cuts_
+#ifndef _DCustomAction_p3pi_Pi0Cuts_FCAL2_
+#define _DCustomAction_p3pi_Pi0Cuts_FCAL2_
 
 #include <string>
 #include <iostream>
@@ -21,14 +21,14 @@
 
 using namespace std;
 
-class DCustomAction_p3pi_Pi0Cuts : public DAnalysisAction
+class DCustomAction_p3pi_Pi0Cuts_FCAL2 : public DAnalysisAction
 {
 	public:
 
-        DCustomAction_p3pi_Pi0Cuts(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFCAL, double locMinECAL, 
+        DCustomAction_p3pi_Pi0Cuts_FCAL2(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFECAL, 
         			string locActionUniqueString = "") : 
 	        DAnalysisAction(locReaction, "Custom_p3pi_Pi0Cuts", locUseKinFitResultsFlag, locActionUniqueString), 
-	        dMinFCAL(locMinFCAL), dMinECAL(locMinECAL) {}
+	        dMinFECAL(locMinFECAL) {}
 
 		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
 		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) {}
@@ -38,10 +38,9 @@ class DCustomAction_p3pi_Pi0Cuts : public DAnalysisAction
 		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		//Store any histograms as member variables here
-		double dMinFCAL;
-		double dMinECAL;
+		double dMinFECAL;   // FCAL2 = FCAL+ECAL
 		
 };
 
-#endif // _DCustomAction_p3pi_Pi0Cuts_
+#endif // _DCustomAction_p3pi_Pi0Cuts_FCAL2_
 
