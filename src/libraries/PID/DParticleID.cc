@@ -794,6 +794,17 @@ double DParticleID::Distance_ToTrack(const DECALShower *locECALShower,
   return sqrt(dx*dx+dy*dy);
 }
 
+// routine to find the distance to a single hit in the ECAL that is 
+// closest to a projected track position
+double DParticleID::Distance_ToTrack(const DECALHit *locECALHit,
+				     const DVector3 &locProjPos) const{
+  DVector2 ecalpos=dECALGeometry->positionOnFace(locECALHit->row,
+						 locECALHit->column);
+  double dx=ecalpos.X()-locProjPos.x();
+  double dy=ecalpos.Y()-locProjPos.y();
+  return sqrt(dx*dx+dy*dy);
+}
+
 // NOTE: For these functions, an initial guess for start time is expected as input so that out-of-time tracks can be skipped
 
 bool DParticleID::Distance_ToTrack(const DReferenceTrajectory* rt, const DFCALShower* locFCALShower, double locInputStartTime, shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos, DVector3* locOutputProjMom) const
@@ -1312,6 +1323,28 @@ bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &
 
   return true;
 }
+
+// The routines below use the extrapolations vector from the track
+bool DParticleID::Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DECALHit *locECALHit,double &locDOCA,double &locHitTime) const{
+  if (fabs(locECALHit->t-extrapolation.t-locStartTime)>OUT_OF_TIME_CUT)
+    return false;
+  
+  DVector2 ecalpos=dECALGeometry->positionOnFace(locECALHit->row,
+						 locECALHit->column);
+  double dx=ecalpos.X()-extrapolation.position.x();
+  double dy=ecalpos.Y()-extrapolation.position.y();
+  locDOCA=sqrt(dx*dx+dy*dy);
+
+  cout << " ECAL Hit d " << locDOCA << endl;
+  double p=extrapolation.momentum.Mag();
+
+  if (locDOCA<ECAL_CUT_PAR1+ECAL_CUT_PAR2/p){
+    locHitTime=locECALHit->t;
+    return true;
+  }
+  return false;
+}
+
 
 // The routines below use the extrapolations vector from the track
 bool DParticleID::Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DFCALHit *locFCALHit,double &locDOCA,double &locHitTime) const{
@@ -3507,6 +3540,34 @@ bool DParticleID::Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &ext
   return false;
 }
 
+bool DParticleID::Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
+				const vector<const DECALHit*>& ECALHits,
+				double& StartTime) const{
+  if (ECALHits.size()==0) return false;
+  if (extrapolations.size()==0) return false;
+  double StartTimeGuess=StartTime;
+  DVector3 trackpos=extrapolations[0].position;
+  double d_min=1e6;
+  unsigned int best_ecal_match=0;
+  for (unsigned int i=0;i<ECALHits.size();i++){
+    const DECALHit *ecal_hit=ECALHits[i];
+    double d=Distance_ToTrack(ecal_hit,trackpos);
+    if (d<d_min){
+      d_min=d;
+      best_ecal_match=i;
+    }
+  }
+  StartTime=ECALHits[best_ecal_match]->t-extrapolations[0].t;
+  if (fabs(StartTime-StartTimeGuess)>OUT_OF_TIME_CUT) return false;
+
+  double p=extrapolations[0].momentum.Mag();
+  double cut=ECAL_CUT_PAR1+ECAL_CUT_PAR2/p;
+  if (d_min<cut){
+    return true;
+  }
+
+  return false;
+}
 
 bool DParticleID::Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
 				const vector<const DFCALShower*>& FCALShowers,
