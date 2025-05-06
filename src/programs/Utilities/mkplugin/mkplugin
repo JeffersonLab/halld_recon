@@ -149,6 +149,8 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_${pluginname}::JEventProcessor_${pluginname}()
 {
+	SetTypeName(NAME_OF_THIS); // Provide JANA with this class's name
+
     // Parameters and Services should be accessed from Init() instead of here!
 }
 
@@ -157,7 +159,6 @@ JEventProcessor_${pluginname}::JEventProcessor_${pluginname}()
 //------------------
 JEventProcessor_${pluginname}::~JEventProcessor_${pluginname}()
 {
-	SetTypeName(NAME_OF_THIS); // Provide JANA with this class's name
 }
 
 //------------------
