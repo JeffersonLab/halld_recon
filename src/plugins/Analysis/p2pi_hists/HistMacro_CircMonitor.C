@@ -71,6 +71,14 @@
 	hist_rhoDecPhipp->Add(hist_rhoDecPhimm);
 	hist_rhoDecPhimp->Add(hist_rhoDecPhipm);
 
+	cout<<" entries "<<hist_rhoDecPhipp->GetEntries()<<" "<<hist_rhoDecPhimp->GetEntries()<<endl;
+	int nRebinIf=40000;
+	int nSimpleFit=10000;
+	auto sumEntries = hist_rhoDecPhipp->GetEntries() + hist_rhoDecPhimp->GetEntries();
+	if( sumEntries < nRebinIf ){
+	  hist_rhoDecPhipp->Rebin(2);
+	  hist_rhoDecPhimp->Rebin(2);
+	}
 	//draw summed contributions
 	locCanvas->cd(3);
 	hist_rhoDecPhipp->SetTitle("Combined #phi distributions, used for asymmetry");
@@ -85,14 +93,24 @@
 	hist_A->SetTitle("#rho helicity asymmetry");
 	hist_A->Draw("pe");
 
-	TF1 hfit2phi("x2phi","[0]+ ([1]*cos(2*x[0]+[2])+[3]*cos(x[0]+[4]))/(1 + [5]*cos(2*x[0]+[6])+[7]*cos(x[0]+[8]))",-TMath::Pi(),TMath::Pi());
-	hfit2phi.SetParameters(0,0,1,0,0.1,0);
-	hist_A->Fit("x2phi","Q");
-	//h1a->Draw("same");
-	cout<<hist_A->GetYaxis()->GetXmax()<<endl;
+	//Define fit function dependeing on number of events
+	TString funcForm;
+	funcForm = sumEntries<nSimpleFit ? "[0] + [1]*sin(2*x[0])" : "[0]+ ([1]*sin(2*x[0]))/(1 + 0.5*[2]*cos(2*x[0])+[3]*cos(x[0]))";
+	TF1 hfit2phi("x2phi",funcForm,-TMath::Pi(),TMath::Pi());
+	hfit2phi.SetParameters(0,0.1,0,0,-0.3,0);
+
+	hist_A->Fit("x2phi","");
+
 	float amp = hfit2phi.GetParameter(1);
 	float amp_err = hfit2phi.GetParError(1);
-	sprintf(str, "Fit Amplitude = %f #pm %f", amp,amp_err);
+
+	if(sumEntries<nSimpleFit){
+	  sprintf(str, "SIMPLE Fit Amplitude = %f #pm %f", amp,amp_err);
+	}
+	else{
+	  sprintf(str, "FULL Fit Amplitude = %f #pm %f", amp,amp_err);
+	}
+
 	latex.DrawLatex(-2, hist_A->GetMaximum(), str);
 
 }
