@@ -1486,9 +1486,8 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 					iptr++;
 					
 					// Word 1 - Helicity seed
-					uint32_t expected_helicity_state    = (*iptr>>31) & 0x01;
-					uint32_t recovered_helicity_seed    = (*iptr>>0) & 0x3FFFFFFF;
-					if(VERBOSE>7) cout << "      Helicity Decoder Data word 1(0x"<<hex<<*iptr<<dec<<")  expected_helicity_state="<<expected_helicity_state<<"  recovered_helicity_seed=0x"<<hex<<*iptr<<dec<<recovered_helicity_seed<<endl;
+					uint32_t helicity_seed    = *iptr;
+					if(VERBOSE>7) cout << "      Helicity Decoder Data word 1(0x"<<hex<<*iptr<<dec<<")  helicity_seed="<<helicity_seed<<endl;
 					iptr++;
 					
 					// Word 2 - Count of falling edge T_STABLE
@@ -1564,8 +1563,7 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 					if( pe ) {
 						uint32_t channel=0;  // set this by hand for now?
 						pe->NEW_DHelicityData(rocid, slot, channel, itrigger
-						, expected_helicity_state
-						, recovered_helicity_seed
+						, helicity_seed
 						, falling_edge_tstable_count
 						, rising_edge_tstable_count
 						, pattern_sync_count
