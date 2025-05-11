@@ -15,6 +15,9 @@
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALHit.h"
+#include "ECAL/DECALShower.h"
+#include "ECAL/DECALCluster.h"
+#include "ECAL/DECALHit.h"
 #include "ANALYSIS/DAnalysisUtilities.h"
 #include "PID/DVertex.h"
 #include "PID/DEventRFBunch.h"
@@ -139,7 +142,8 @@ void JEventProcessor_pi0fcaltofskim::BeginRun(const std::shared_ptr<const JEvent
 //------------------
 void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>& event)
 {
- 
+
+  vector< const DECALShower* > locECALShowers;
   vector< const DFCALShower* > locFCALShowers;
   vector< const DVertex* > kinfitVertex;
   vector<const DTOFPoint*> locTofPoints;
@@ -147,6 +151,7 @@ void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>
   vector<const DL1Trigger *> locL1Triggers;
   vector<const DEventRFBunch*> locEventRFBunches;
 
+  event->Get(locECALShowers);
   event->Get(locFCALShowers);
   event->Get(kinfitVertex);
   event->Get(locEventRFBunches);
@@ -160,7 +165,8 @@ void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>
   vector< const DTrackTimeBased* > locTrackTimeBased;
   event->Get(locTrackTimeBased);
 
-  vector < const DFCALShower * > matchedShowers;
+  vector < const DECALShower * > matchedecalShowers;
+  vector < const DFCALShower * > matchedfcalShowers;
 
   const DEventWriterEVIO* locEventWriterEVIO = NULL;
   event->GetSingle(locEventWriterEVIO);
@@ -181,7 +187,8 @@ void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>
     
   vector< const JObject* > locObjectsToSave;  
 
-  bool Candidate = false;
+  bool Candidatefcal = false;
+  bool Candidateecal = false;
   
   DVector3 vertex;
   vertex.SetXYZ(m_beamSpotX, m_beamSpotY, m_targetZ);
@@ -264,7 +271,7 @@ void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>
 	// std::cout<<"i: "<< i<< " j: "<< j << " dRho " <<dRho << endl;
 	//if(dX < 20 && dY < 20 && trkmass < 0.15 && dRho < 50 && FOM > 0.01) {  
 	if(trkmass < 0.15 && dRho < 5 && FOM > 0.01 ) {  
-	  matchedShowers.push_back(locFCALShowers[j]);
+	  matchedfcalShowers.push_back(locFCALShowers[j]);
 	  // matchedTracks.push_back(locTrackTimeBased[i]);
 	  //  printf ("Matched event=%d, i=%d, j=%d, p=%f, Ztrk=%f Zshr=%f, Xtrk=%f, Xshr=%f, Ytrk=%f, Yshr=%f\n",locEventNumber,i,j,p,
 	  //  pos.Z(),z,pos.X(),x,pos.Y(),y);
@@ -274,12 +281,58 @@ void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>
 	
       }
     }
+  for (unsigned int i=0; i < locTrackTimeBased.size() ; ++i){
+    vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased[i]->extrapolations.at(SYS_ECAL);
+      if (extrapolations.size()==0) continue;
+      for (unsigned int j=0; j< locECALShowers.size(); ++j){
+	
+	Double_t x = locECALShowers[j]->pos.X();
+	Double_t y = locECALShowers[j]->pos.Y();
+	//    Double_t z = locFCALShowers[j]->getPosition().Z() ;
+	//cout << "Z: " << z << endl;
+	//DVector3 pos_FCAL(x,y,625.406);
+	//for LH2 target
+	//DVector3 pos_FCAL(0,0,625.406);
+	
+	DVector3 pos_ECAL(0,0,648);
+	//at the end of the start counter; use this fall for fall '15 data
+	// DVector3 pos_FCAL(0,0,692);
+	//DVector3 pos_FCAL(0.0,0.0,650);
+	//std::cout<<"i: "<< i<< " j: "<< j << " z: "<<z<< endl;
+	// if (locTrackTimeBased[i]->rt->GetIntersectionWithPlane(pos_FCAL,norm,pos,mom)==NOERROR)
+	pos=extrapolations[0].position;
+	
+	// Double_t dX= TMath::Abs(pos.X() - x);
+	// Double_t dY= TMath::Abs(pos.Y() - y);
+	// Double_t dZ= TMath::Abs(pos.Z() - z);
+	Double_t trkmass = locTrackTimeBased[i]->mass();
+	Double_t FOM = TMath::Prob(locTrackTimeBased[i]->chisq, locTrackTimeBased[i]->Ndof);
+	// radius = sqrt(pos.X()*pos.X() + pos.Y()*pos.Y());
+	//  Double_t Eshwr = locFCALShowers[j]->getEnergy();
+	//  p = locTrackTimeBased[i]->momentum().Mag();
+	// cout<<"p: "<<p<<endl;
+	// Double_t dZ = TMath::Abs(pos.Z() - z);
+	Double_t dRho = sqrt(((pos.X() - x)*(pos.X() - x)) + ((pos.Y() - y)* (pos.Y() - y)));
+	// std::cout<<"i: "<< i<< " j: "<< j << " dRho " <<dRho << endl;
+	//if(dX < 20 && dY < 20 && trkmass < 0.15 && dRho < 50 && FOM > 0.01) {  
+	if(trkmass < 0.15 && dRho < 5 && FOM > 0.01 ) {  
+	  matchedecalShowers.push_back(locECALShowers[j]);
+	  // matchedTracks.push_back(locTrackTimeBased[i]);
+	  //  printf ("Matched event=%d, i=%d, j=%d, p=%f, Ztrk=%f Zshr=%f, Xtrk=%f, Xshr=%f, Ytrk=%f, Yshr=%f\n",locEventNumber,i,j,p,
+	  //  pos.Z(),z,pos.X(),x,pos.Y(),y);
+	  //  break;
+	  
+	}
+	
+      }
+    }
+
   
   for(unsigned int i=0; i<locFCALShowers.size(); i++)
     {
-      if (TURN_OFF_TRACK_MATCH == 0)
-	if (find(matchedShowers.begin(), matchedShowers.end(),locFCALShowers[i]) != matchedShowers.end()) continue;
-     
+      if (TURN_OFF_TRACK_MATCH == 0) 
+	if (find(matchedfcalShowers.begin(), matchedfcalShowers.end(),locFCALShowers[i]) != matchedfcalShowers.end()) continue;
+      
       const DFCALShower *s1 = locFCALShowers[i];
      
       vector<const DFCALCluster*> associated_clusters1;
@@ -297,7 +350,7 @@ void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>
       {
 	const DFCALShower *s2 = locFCALShowers[j];
 	if (TURN_OFF_TRACK_MATCH == 0)
-	  if (find(matchedShowers.begin(), matchedShowers.end(),s2) != matchedShowers.end()) continue;
+	  if (find(matchedfcalShowers.begin(), matchedfcalShowers.end(),s2) != matchedfcalShowers.end()) continue;
 	
 	vector<const DFCALCluster*> associated_clusters2;
 	s2->Get(associated_clusters2);
@@ -313,7 +366,7 @@ void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>
 	Double_t inv_mass = ptot.M();
 
 	//Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
-        Candidate |= (E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) ;
+        Candidatefcal |= (E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) ;
 
         //if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
         if(E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) {
@@ -324,10 +377,66 @@ void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>
         }
       }
     }		
+
   
-  if( Candidate ){
+  for(unsigned int i=0; i<locECALShowers.size(); i++)
+    {
+      if (TURN_OFF_TRACK_MATCH == 0) 
+	if (find(matchedecalShowers.begin(), matchedecalShowers.end(),locECALShowers[i]) != matchedecalShowers.end()) continue;
+     
+      const DECALShower *s1 = locECALShowers[i];
+     
+      vector<const DECALCluster*> associated_clusters1;
+     
+      s1->Get(associated_clusters1);
+      Double_t dx1 = s1->pos.X() - kinfitVertexX;
+      Double_t dy1 = s1->pos.Y() - kinfitVertexY;
+      Double_t dz1 = s1->pos.Z() - kinfitVertexZ;
+      Double_t R1 = sqrt(dx1*dx1 + dy1*dy1 + dz1*dz1);
+      Double_t  E1 = s1->E;
+      Double_t  t1 = s1->t;
+      TLorentzVector sh1_p(E1*dx1/R1, E1*dy1/R1, E1*dz1/R1, E1);
+			
+      for(unsigned int j=i+1; j<locECALShowers.size(); j++)
+      {
+	const DECALShower *s2 = locECALShowers[j];
+	if (TURN_OFF_TRACK_MATCH == 0)
+	  if (find(matchedecalShowers.begin(), matchedecalShowers.end(),s2) != matchedecalShowers.end()) continue;
+	
+	vector<const DECALCluster*> associated_clusters2;
+	s2->Get(associated_clusters2);
+	Double_t dx2 = s2->pos.X() - kinfitVertexX;
+	Double_t dy2 = s2->pos.Y() - kinfitVertexY;
+	Double_t dz2 = s2->pos.Z() - kinfitVertexZ; 
+	Double_t R2 = sqrt(dx2*dx2 + dy2*dy2 + dz2*dz2);
+	Double_t E2 = s2->E;
+	Double_t  t2 = s2->t;
+	
+	TLorentzVector sh2_p(E2*dx2/R2, E2*dy2/R2, E2*dz2/R2, E2);
+	TLorentzVector ptot = sh1_p+sh2_p;
+	Double_t inv_mass = ptot.M();
+
+	//Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
+        Candidateecal |= (E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) ;
+
+        //if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
+        if(E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) {
+	  if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locECALShowers[i]) == locObjectsToSave.end())
+	    locObjectsToSave.push_back(static_cast<const JObject *>(locECALShowers[i]));
+	  if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locECALShowers[j]) == locObjectsToSave.end())
+	    locObjectsToSave.push_back(static_cast<const JObject *>(locECALShowers[j]));
+        }
+      }
+    }		
+    
+  
+  if( Candidateecal || Candidatefcal ){
+
     
     if( WRITE_EVIO ){
+
+      //if (Candidatefcal) cout <<"YES" << endl;
+      
       locEventWriterEVIO->Write_EVIOEvent( event, "pi0fcaltofskim", locObjectsToSave );
     }
     if( WRITE_HDDM ) {
