@@ -69,7 +69,7 @@ void JEventProcessor_cal_cal::Init()
     h_ecal_cr_ring[i] = new TH2F(Form("ecal_cr_ring_%d", i), ";#font[42]{Column #};#font[42]{Row #};#font[42]{Events #}", 40, -20, 20, 40, -20, 20);
     h_fcal_cr_ring[i] = new TH2F(Form("fcal_cr_ring_%d", i), ";#font[42]{Column #};#font[42]{Row #};#font[42]{Events #}", 59, -30, 30, 59, -30, 30); 
   }
-  for (int i = 0; i < 13; i ++) {
+  for (int i = 0; i < 14; i ++) {
     h_ecal_xy[i] = new TH2F(Form("ecal_xy_%d", i), ";#font[42]{x [cm]};#font[42]{y [cm]};#font[42]{Events #}", 500, -50., 50., 500, -50., 50.);
     h_ecal_cr[i] = new TH2F(Form("ecal_cr_%d", i), ";#font[42]{Column #};#font[42]{Row #};#font[42]{Events #}", 40, -20, 20, 40, -20, 20);
 
@@ -91,7 +91,7 @@ void JEventProcessor_cal_cal::Init()
     h_fecal_mgg_v_blk[i] = new TH2F(Form("fecal_mgg_v_blk_%d", i), ";#font[42]{Block #};#font[42]{m_{#gamma#gamma} [GeV/c^{2}]};#font[42]{Events #}", 2800, -0.5, 2799.5, 1200, 0., 1.2);
     h_fcal_mgg_v_blk[i] = new TH2F(Form("fcal_mgg_v_blk_%d", i), ";#font[42]{Block #};#font[42]{m_{#gamma#gamma} [GeV/c^{2}]};#font[42]{Events #}", 2800, -0.5, 2799.5, 1200, 0., 1.2);
   }
-  for (int i = 0; i < 12; i ++) {
+  for (int i = 0; i < 14; i ++) {
     h_fcal_fdc_mgg_v_blk[i] = new TH2F(Form("fcal_fdc_mgg_v_blk_%d", i), ";#font[42]{Block #};#font[42]{m_{#gamma#gamma} [GeV/c^{2}]};#font[42]{Events #}", 2800, -0.5, 2799.5, 1200, 0., 1.2);
   }
   h_ecal_mgg_v_layer = new TH2F("ecal_mgg_v_layer", ";#font[42]{Layer #};#font[42]{m_{#gamma#gamma} [GeV/c^{2}]};#font[42]{Events #}", 21, -0.5, 20.5, 1200, 0., 1.2);
@@ -1164,9 +1164,17 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
 		h_fcal_fdc_mgg_v_blk[10]->Fill(ch1, pi0P4_fdc.M(), m_weight);
 		h_fcal_fdc_mgg_v_blk[10]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	      }
-	      if (e1 > 0.5 && e2 > 0.5) {
+	      if (e1 > 0.3 && e2 > 0.3) {
 		h_fcal_fdc_mgg_v_blk[11]->Fill(ch1, pi0P4_fdc.M(), m_weight);
 		h_fcal_fdc_mgg_v_blk[11]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	      }
+	      if (e1 > 0.4 && e2 > 0.4) {
+		h_fcal_fdc_mgg_v_blk[12]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+		h_fcal_fdc_mgg_v_blk[12]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	      }
+	      if (e1 > 0.2 && e2 > 0.2 && (frac1 > thres_frac1 && frac2 > thres_frac2)) {
+		h_fcal_fdc_mgg_v_blk[13]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+		h_fcal_fdc_mgg_v_blk[13]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	      }
 	    }
 	  }
