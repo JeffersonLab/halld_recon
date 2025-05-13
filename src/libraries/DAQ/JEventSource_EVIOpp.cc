@@ -53,24 +53,16 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 }
 
 //----------------
-// Open
+// Init
 //----------------
-void JEventSource_EVIOpp::Open() {
-	DONE = false;
-	DISPATCHER_END = false;
-	NEVENTS_PROCESSED = 0;
-	NDISPATCHER_STALLED  = 0;
-	NEVENTBUFF_STALLED   = 0;
-	NPARSER_STALLED      = 0;
+void JEventSource_EVIOpp::Init() {
+	// This is where we register parameters and services that our JEventSource needs
+	auto app = GetApplication();
 
-	auto source_name = GetResourceName();
 	// Initialize dedicated logger
 	evioout.SetGroup("EVIO");
 	evioout.ShowTimestamp(true);
 	evioout.ShowThreadstamp(true);
-	
-	// Define base set of status bits
-	DStatusBits::SetStatusBitDescriptions();
 
 	// Get configuration parameters
 	VERBOSE = 0;
@@ -104,7 +96,7 @@ void JEventSource_EVIOpp::Open() {
 	SKIP_SSP_FORMAT_ERROR = false;
 	PARSE_GEMSRS = false;
 	PARSE_HELICITY = true;
-        NSAMPLES_GEMSRS = 9;
+	NSAMPLES_GEMSRS = 9;
 	APPLY_TRANSLATION_TABLE = true;
 	IGNORE_EMPTY_BOR = false;
 	F250_EMULATION_MODE = kEmulationAuto;
@@ -115,65 +107,83 @@ void JEventSource_EVIOpp::Open() {
 	SYSTEMS_TO_PARSE = "";
 	SYSTEMS_TO_PARSE_FORCE = 0;
 	BLOCKS_TO_SKIP = 0;
-    PHYSICS_BLOCKS_TO_SKIP = 0;
-    PHYSICS_BLOCKS_SKIPPED = 0;
-    PHYSICS_BLOCKS_TO_KEEP = 0;
-    PHYSICS_BLOCKS_KEPT = 0;
+	PHYSICS_BLOCKS_TO_SKIP = 0;
+	PHYSICS_BLOCKS_SKIPPED = 0;
+	PHYSICS_BLOCKS_TO_KEEP = 0;
+	PHYSICS_BLOCKS_KEPT = 0;
 
-	japp->SetDefaultParameter("EVIO:VERBOSE", VERBOSE, "Set verbosity level for processing and debugging statements while parsing. 0=no debugging messages. 10=all messages");
-	japp->SetDefaultParameter("ET:VERBOSE", VERBOSE_ET, "Set verbosity level for processing and debugging statements while reading from ET. 0=no debugging messages. 10=all messages");
-	japp->SetDefaultParameter("EVIO:NTHREADS", NTHREADS, "Set the number of worker threads to use for parsing the EVIO data");
-	japp->SetDefaultParameter("EVIO:MAX_PARSED_EVENTS", MAX_PARSED_EVENTS, "Set maximum number of events to allow in EVIO parsed events queue");
-	japp->SetDefaultParameter("EVIO:MAX_EVENT_RECYCLES", MAX_EVENT_RECYCLES, "Set maximum number of EVIO (i.e. block of) events  a worker thread should process before pruning excess DParsedEvent objects from its pool");
-	japp->SetDefaultParameter("EVIO:MAX_OBJECT_RECYCLES", MAX_OBJECT_RECYCLES, "Set maximum number of events a DParsedEvent should be used for before pruning excess hit objects from its pools");
-	japp->SetDefaultParameter("EVIO:LOOP_FOREVER", LOOP_FOREVER, "If reading from EVIO file, keep re-opening file and re-reading events forever (only useful for debugging) If reading from ET, this is ignored.");
-	japp->SetDefaultParameter("EVIO:RUN_NUMBER", USER_RUN_NUMBER, "User-supplied run number. Override run number from other sources with this.(will be ignored if set to zero)");
-	japp->SetDefaultParameter("EVIO:ET_STATION_NEVENTS", ET_STATION_NEVENTS, "Number of events to use if we have to create the ET station. Ignored if station already exists.");
-	japp->SetDefaultParameter("EVIO:ET_STATION_CREATE_BLOCKING", ET_STATION_CREATE_BLOCKING, "Set this to 0 to create station in non-blocking mode (default is to create it in blocking mode). Ignored if station already exists.");
-	japp->SetDefaultParameter("EVIO:PRINT_STATS", PRINT_STATS, "Print some additional stats from event source when it's finished processing events");
+	app->SetDefaultParameter("EVIO:VERBOSE", VERBOSE, "Set verbosity level for processing and debugging statements while parsing. 0=no debugging messages. 10=all messages");
+	app->SetDefaultParameter("ET:VERBOSE", VERBOSE_ET, "Set verbosity level for processing and debugging statements while reading from ET. 0=no debugging messages. 10=all messages");
+	app->SetDefaultParameter("EVIO:NTHREADS", NTHREADS, "Set the number of worker threads to use for parsing the EVIO data");
+	app->SetDefaultParameter("EVIO:MAX_PARSED_EVENTS", MAX_PARSED_EVENTS, "Set maximum number of events to allow in EVIO parsed events queue");
+	app->SetDefaultParameter("EVIO:MAX_EVENT_RECYCLES", MAX_EVENT_RECYCLES, "Set maximum number of EVIO (i.e. block of) events  a worker thread should process before pruning excess DParsedEvent objects from its pool");
+	app->SetDefaultParameter("EVIO:MAX_OBJECT_RECYCLES", MAX_OBJECT_RECYCLES, "Set maximum number of events a DParsedEvent should be used for before pruning excess hit objects from its pools");
+	app->SetDefaultParameter("EVIO:LOOP_FOREVER", LOOP_FOREVER, "If reading from EVIO file, keep re-opening file and re-reading events forever (only useful for debugging) If reading from ET, this is ignored.");
+	app->SetDefaultParameter("EVIO:RUN_NUMBER", USER_RUN_NUMBER, "User-supplied run number. Override run number from other sources with this.(will be ignored if set to zero)");
+	app->SetDefaultParameter("EVIO:ET_STATION_NEVENTS", ET_STATION_NEVENTS, "Number of events to use if we have to create the ET station. Ignored if station already exists.");
+	app->SetDefaultParameter("EVIO:ET_STATION_CREATE_BLOCKING", ET_STATION_CREATE_BLOCKING, "Set this to 0 to create station in non-blocking mode (default is to create it in blocking mode). Ignored if station already exists.");
+	app->SetDefaultParameter("EVIO:PRINT_STATS", PRINT_STATS, "Print some additional stats from event source when it's finished processing events");
 
-	japp->SetDefaultParameter("EVIO:SWAP", SWAP, "Allow swapping automatic swapping. Turning this off should only be used for debugging.");
-	japp->SetDefaultParameter("EVIO:LINK", LINK, "Link associated objects. Turning this off should only be used for debugging.");
-	japp->SetDefaultParameter("EVIO:LINK_TRIGGERTIME", LINK_TRIGGERTIME, "Link D*TriggerTime associated objects. This is on by default and may be OK to turn off (but please check output if you do!)");
-	japp->SetDefaultParameter("EVIO:LINK_BORCONFIG", LINK_BORCONFIG, "Link BORConfig associated objects. This is on by default. If turned off, it will break emulation (and possibly other things in the future).");
-	japp->SetDefaultParameter("EVIO:LINK_CONFIG", LINK_CONFIG, "Link Config associated objects. This is on by default.");
+	app->SetDefaultParameter("EVIO:SWAP", SWAP, "Allow swapping automatic swapping. Turning this off should only be used for debugging.");
+	app->SetDefaultParameter("EVIO:LINK", LINK, "Link associated objects. Turning this off should only be used for debugging.");
+	app->SetDefaultParameter("EVIO:LINK_TRIGGERTIME", LINK_TRIGGERTIME, "Link D*TriggerTime associated objects. This is on by default and may be OK to turn off (but please check output if you do!)");
+	app->SetDefaultParameter("EVIO:LINK_BORCONFIG", LINK_BORCONFIG, "Link BORConfig associated objects. This is on by default. If turned off, it will break emulation (and possibly other things in the future).");
+	app->SetDefaultParameter("EVIO:LINK_CONFIG", LINK_CONFIG, "Link Config associated objects. This is on by default.");
 
-	japp->SetDefaultParameter("EVIO:PARSE", PARSE, "Set this to 0 to disable parsing of event buffers and generation of any objects (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_F250", PARSE_F250, "Set this to 0 to disable parsing of data from F250 ADC modules (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:SKIP_F250_FORMAT_ERROR", SKIP_F250_FORMAT_ERROR, "Set this to 1 to skip F250 format errors (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_F125", PARSE_F125, "Set this to 0 to disable parsing of data from F125 ADC modules (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_F1TDC", PARSE_F1TDC, "Set this to 0 to disable parsing of data from F1TDC modules (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_CAEN1290TDC", PARSE_CAEN1290TDC, "Set this to 0 to disable parsing of data from CAEN 1290 TDC modules (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_CONFIG", PARSE_CONFIG, "Set this to 0 to disable parsing of ROC configuration data in the data stream (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_BOR", PARSE_BOR, "Set this to 0 to disable parsing of BOR events from the data stream (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_EPICS", PARSE_EPICS, "Set this to 0 to disable parsing of EPICS events from the data stream (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_EVENTTAG", PARSE_EVENTTAG, "Set this to 0 to disable parsing of event tag data in the data stream (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_TRIGGER", PARSE_TRIGGER, "Set this to 0 to disable parsing of the built trigger bank from CODA (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_SSP", PARSE_SSP, "Set this to 0 to disable parsing of the SSP (DIRC data) bank from CODA (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:SKIP_SSP_FORMAT_ERROR", SKIP_SSP_FORMAT_ERROR, "Set this to 1 to skip SSP format errors (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_GEMSRS", PARSE_GEMSRS, "Set this to 0 to disable parsing of the SRS (GEM data) bank from CODA (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:PARSE_HELICITY", PARSE_HELICITY, "Set this to 0 to disable parsing of the helicity decoder bank from CODA (for benchmarking/debugging)");
-  japp->SetDefaultParameter("EVIO:NSAMPLES_GEMSRS", NSAMPLES_GEMSRS, "Set this to number of readout samples for SRS (GEM data) bank from CODA (for benchmarking/debugging)");
-	japp->SetDefaultParameter("EVIO:APPLY_TRANSLATION_TABLE", APPLY_TRANSLATION_TABLE, "Apply the translation table to create DigiHits (you almost always want this on)");
-	japp->SetDefaultParameter("EVIO:IGNORE_EMPTY_BOR", IGNORE_EMPTY_BOR, "Set to non-zero to continue processing data even if an empty BOR event is encountered.");
-	japp->SetDefaultParameter("EVIO:TREAT_TRUNCATED_AS_ERROR", TREAT_TRUNCATED_AS_ERROR, "Set to non-zero to have a truncated EVIO file the JANA return code to non-zero indicating the program errored.");
+	app->SetDefaultParameter("EVIO:PARSE", PARSE, "Set this to 0 to disable parsing of event buffers and generation of any objects (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_F250", PARSE_F250, "Set this to 0 to disable parsing of data from F250 ADC modules (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:SKIP_F250_FORMAT_ERROR", SKIP_F250_FORMAT_ERROR, "Set this to 1 to skip F250 format errors (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_F125", PARSE_F125, "Set this to 0 to disable parsing of data from F125 ADC modules (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_F1TDC", PARSE_F1TDC, "Set this to 0 to disable parsing of data from F1TDC modules (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_CAEN1290TDC", PARSE_CAEN1290TDC, "Set this to 0 to disable parsing of data from CAEN 1290 TDC modules (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_CONFIG", PARSE_CONFIG, "Set this to 0 to disable parsing of ROC configuration data in the data stream (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_BOR", PARSE_BOR, "Set this to 0 to disable parsing of BOR events from the data stream (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_EPICS", PARSE_EPICS, "Set this to 0 to disable parsing of EPICS events from the data stream (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_EVENTTAG", PARSE_EVENTTAG, "Set this to 0 to disable parsing of event tag data in the data stream (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_TRIGGER", PARSE_TRIGGER, "Set this to 0 to disable parsing of the built trigger bank from CODA (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_SSP", PARSE_SSP, "Set this to 0 to disable parsing of the SSP (DIRC data) bank from CODA (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:SKIP_SSP_FORMAT_ERROR", SKIP_SSP_FORMAT_ERROR, "Set this to 1 to skip SSP format errors (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_GEMSRS", PARSE_GEMSRS, "Set this to 0 to disable parsing of the SRS (GEM data) bank from CODA (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_HELICITY", PARSE_HELICITY, "Set this to 0 to disable parsing of the helicity decoder bank from CODA (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:NSAMPLES_GEMSRS", NSAMPLES_GEMSRS, "Set this to number of readout samples for SRS (GEM data) bank from CODA (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:APPLY_TRANSLATION_TABLE", APPLY_TRANSLATION_TABLE, "Apply the translation table to create DigiHits (you almost always want this on)");
+	app->SetDefaultParameter("EVIO:IGNORE_EMPTY_BOR", IGNORE_EMPTY_BOR, "Set to non-zero to continue processing data even if an empty BOR event is encountered.");
+	app->SetDefaultParameter("EVIO:TREAT_TRUNCATED_AS_ERROR", TREAT_TRUNCATED_AS_ERROR, "Set to non-zero to have a truncated EVIO file the JANA return code to non-zero indicating the program errored.");
 
-	japp->SetDefaultParameter("EVIO:F250_EMULATION_MODE", F250_EMULATION_MODE, "Set f250 emulation mode. 0=no emulation, 1=always, 2=auto. Default is 2 (auto).");
-	japp->SetDefaultParameter("EVIO:F125_EMULATION_MODE", F125_EMULATION_MODE, "Set f125 emulation mode. 0=no emulation, 1=always, 2=auto. Default is 2 (auto).");
+	app->SetDefaultParameter("EVIO:F250_EMULATION_MODE", F250_EMULATION_MODE, "Set f250 emulation mode. 0=no emulation, 1=always, 2=auto. Default is 2 (auto).");
+	app->SetDefaultParameter("EVIO:F125_EMULATION_MODE", F125_EMULATION_MODE, "Set f125 emulation mode. 0=no emulation, 1=always, 2=auto. Default is 2 (auto).");
 
-	japp->SetDefaultParameter("EVIO:SYSTEMS_TO_PARSE", SYSTEMS_TO_PARSE,
+	app->SetDefaultParameter("EVIO:SYSTEMS_TO_PARSE", SYSTEMS_TO_PARSE,
 			"Comma separated list of systems to parse EVIO data for. "
 			"Default is empty string which means to parse all. System "
 			"names should be what is returned by DTranslationTable::DetectorName() .");
-    japp->SetDefaultParameter("EVIO:SYSTEMS_TO_PARSE_FORCE", SYSTEMS_TO_PARSE_FORCE,
-	        "How to handle mismatches between hard coded map and one read from CCDB "
-         "when EVIO:SYSTEMS_TO_PARSE is set. 0=Treat as error, 1=Use CCDB, 2=Use hardcoded");
+	app->SetDefaultParameter("EVIO:SYSTEMS_TO_PARSE_FORCE", SYSTEMS_TO_PARSE_FORCE,
+			"How to handle mismatches between hard coded map and one read from CCDB "
+			"when EVIO:SYSTEMS_TO_PARSE is set. 0=Treat as error, 1=Use CCDB, 2=Use hardcoded");
 
-	japp->SetDefaultParameter("EVIO:BLOCKS_TO_SKIP", BLOCKS_TO_SKIP, "Number of EVIO blocks to skip parsing at start of file (typically 1 block=40 events)");
-    japp->SetDefaultParameter("EVIO:PHYSICS_BLOCKS_TO_SKIP", PHYSICS_BLOCKS_TO_SKIP, "Number of Physics EVIO blocks to skip parsing at start of file (typically 1 block=40 events). n.b. BOR, EPICS, and Control events will still be processed.");
-    japp->SetDefaultParameter("EVIO:PHYSICS_BLOCKS_TO_KEEP", PHYSICS_BLOCKS_TO_KEEP, "Number of Physics EVIO blocks to process, after any skipped if EVIO:PHYSICS_BLOCKS_TO_SKIP is > 0. (typically 1 block=40 events). n.b. BOR, EPICS, and Control events will still be processed.");
+	app->SetDefaultParameter("EVIO:BLOCKS_TO_SKIP", BLOCKS_TO_SKIP, "Number of EVIO blocks to skip parsing at start of file (typically 1 block=40 events)");
+	app->SetDefaultParameter("EVIO:PHYSICS_BLOCKS_TO_SKIP", PHYSICS_BLOCKS_TO_SKIP, "Number of Physics EVIO blocks to skip parsing at start of file (typically 1 block=40 events). n.b. BOR, EPICS, and Control events will still be processed.");
+	app->SetDefaultParameter("EVIO:PHYSICS_BLOCKS_TO_KEEP", PHYSICS_BLOCKS_TO_KEEP, "Number of Physics EVIO blocks to process, after any skipped if EVIO:PHYSICS_BLOCKS_TO_SKIP is > 0. (typically 1 block=40 events). n.b. BOR, EPICS, and Control events will still be processed.");
 
-	if(japp->GetJParameterManager()->Exists("RECORD_CALL_STACK")) japp->GetParameter("RECORD_CALL_STACK", RECORD_CALL_STACK);
+	if(app->GetJParameterManager()->Exists("RECORD_CALL_STACK")) japp->GetParameter("RECORD_CALL_STACK", RECORD_CALL_STACK);
+}
+
+//----------------
+// Open
+//----------------
+void JEventSource_EVIOpp::Open() {
+	DONE = false;
+	DISPATCHER_END = false;
+	NEVENTS_PROCESSED = 0;
+	NDISPATCHER_STALLED  = 0;
+	NEVENTBUFF_STALLED   = 0;
+	NPARSER_STALLED      = 0;
+
+	auto source_name = GetResourceName();
+	
+	// Define base set of status bits
+	DStatusBits::SetStatusBitDescriptions();
+
 
 	// Set rocids of all systems to parse (if specified)
 	ROCIDS_TO_PARSE = DTranslationTable::GetSystemsToParse(SYSTEMS_TO_PARSE, SYSTEMS_TO_PARSE_FORCE);
