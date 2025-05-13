@@ -147,39 +147,39 @@ class JEventSource_EVIOpp: public JEventSource{
 		std::chrono::high_resolution_clock::time_point tstart;
 		std::chrono::high_resolution_clock::time_point tend;
 
-		uint32_t BLOCKS_TO_SKIP;
-		uint32_t PHYSICS_BLOCKS_TO_SKIP;
-		uint32_t PHYSICS_BLOCKS_SKIPPED;
-        uint32_t PHYSICS_BLOCKS_TO_KEEP;
-        uint32_t PHYSICS_BLOCKS_KEPT;
-		uint32_t MAX_PARSED_EVENTS;
+		uint32_t BLOCKS_TO_SKIP = 0;
+		uint32_t PHYSICS_BLOCKS_TO_SKIP = 0;
+		uint32_t PHYSICS_BLOCKS_SKIPPED = 0;
+        uint32_t PHYSICS_BLOCKS_TO_KEEP = 0;
+        uint32_t PHYSICS_BLOCKS_KEPT = 0;
+		uint32_t MAX_PARSED_EVENTS = 0;
 		mutex PARSED_EVENTS_MUTEX;
 		condition_variable PARSED_EVENTS_CV;
 		list<DParsedEvent*> parsed_events;
 
-		std::atomic<uint_fast64_t> NEVENTS_PROCESSED;
-		std::atomic<uint_fast64_t> NDISPATCHER_STALLED;
-		std::atomic<uint_fast64_t> NPARSER_STALLED;
-		std::atomic<uint_fast64_t> NEVENTBUFF_STALLED;
+		std::atomic<uint_fast64_t> NEVENTS_PROCESSED {0};
+		std::atomic<uint_fast64_t> NDISPATCHER_STALLED {0};
+		std::atomic<uint_fast64_t> NPARSER_STALLED {0};
+		std::atomic<uint_fast64_t> NEVENTBUFF_STALLED {0};
 		
 		uint64_t MAX_EVENT_RECYCLES;
 		uint64_t MAX_OBJECT_RECYCLES;
 
 		EVIOSourceType source_type;
-		HDEVIO *hdevio;
-		HDET   *hdet;
+		HDEVIO *hdevio = nullptr;
+		HDET   *hdet = nullptr;
 		bool et_quit_next_timeout;
 
 		vector<DEVIOWorkerThread*> worker_threads;
-		thread *dispatcher_thread;
+		thread *dispatcher_thread = nullptr;
 
 		JLogger evioout;
 		
 		uint32_t F250_EMULATION_MODE; // (EmulationModeType)
 		uint32_t F125_EMULATION_MODE; // (EmulationModeType)
 		uint32_t F250_EMULATION_VERSION;
-		Df250EmulatorAlgorithm *f250Emulator;
-		Df125EmulatorAlgorithm *f125Emulator;
+		Df250EmulatorAlgorithm *f250Emulator = nullptr;
+		Df125EmulatorAlgorithm *f125Emulator = nullptr;
 		
 		bool RECORD_CALL_STACK;
 		set<uint32_t> ROCIDS_TO_PARSE;
