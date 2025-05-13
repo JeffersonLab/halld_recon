@@ -125,6 +125,7 @@ class JEventSource_EVIOpp: public JEventSource{
 		               void Dispatcher(void);
 		           jerror_t SkipEVIOBlocks(uint32_t N);
 		
+				   void Init(); // called in order to register parameters and services
 		           void Open(); // called when JANA is ready to accept events from this event source
 				   void GetEvent(std::shared_ptr<JEvent> event) override;
 		               void FinishEvent(JEvent &event) override;
