@@ -127,8 +127,8 @@ class JEventSource_EVIOpp: public JEventSource{
 		
 				   void Init(); // called in order to register parameters and services
 		           void Open(); // called when JANA is ready to accept events from this event source
-				   void GetEvent(std::shared_ptr<JEvent> event) override;
-		               void FinishEvent(JEvent &event) override;
+				   Result Emit(JEvent &event) override;
+				   void FinishEvent(JEvent &event) override;
 		           bool GetObjects(const std::shared_ptr<const JEvent> &event, JFactory* factory) override;
 
 		               void LinkBORassociations(DParsedEvent *pe);

@@ -48,6 +48,7 @@ bool sortf250pulsenumbers(const Df250PulseData *a, const Df250PulseData *b) {
 JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(source_name)
 {
     SetTypeName(NAME_OF_THIS);
+	SetCallbackStyle(CallbackStyle::ExpertMode); // 
 	EnableGetObjects(true);  // Check the source first for existing objects; only invoke the factory to create them if they aren't found in the source.
 	EnableFinishEvent(true); // Ensure ::FinishEvent gets called. By default, it is disabled (false).
 }
@@ -288,7 +289,7 @@ void JEventSource_EVIOpp::Open() {
 //----------------
 JEventSource_EVIOpp::~JEventSource_EVIOpp()
 {
-		// Set DONE flag to tell dispatcher thread to quit
+	// Set DONE flag to tell dispatcher thread to quit
 	// as well as anyone in a wait state
 	DONE = true;
 	PARSED_EVENTS_CV.notify_all();
@@ -588,30 +589,15 @@ jerror_t JEventSource_EVIOpp::SkipEVIOBlocks(uint32_t N)
 }
 
 //----------------
-// GetEvent
+// Emit
 //----------------
-void JEventSource_EVIOpp::GetEvent(std::shared_ptr<JEvent> event)
+JEventSource::Result JEventSource_EVIOpp::Emit(JEvent& event)
 {
 	// Get next event from list, waiting if necessary
 	unique_lock<std::mutex> lck(PARSED_EVENTS_MUTEX);
 	while(parsed_events.empty()){
 		if(DONE){
-
-			// There is a bug in JANA where an event id is inserted into
-			// the in_progress member before checking that this call
-			// succeeded. Normally, ids are removed via JEventSource::FreeEvent
-			// but this last one doesn't actually exist so we must remove
-			// it here.
-			// n.b. we check for an entry equal to Ncalls_to_GetEvent
-			// since that is what JEventSource::GetEvent stores there.
-			// In principle, if this ever gets fixed in JANA then it
-			// will not break this code.
-			// done_reading = true;
-			// pthread_mutex_lock(&in_progress_mutex);
-			// auto it = in_progess_events.find(Ncalls_to_GetEvent);
-			// if( it != in_progess_events.end() )in_progess_events.erase(it);
-			// pthread_mutex_unlock(&in_progress_mutex);
-			throw RETURN_STATUS::kNO_MORE_EVENTS;
+			return Result::FailureFinished;
 		}
 		NEVENTBUFF_STALLED++;
 		PARSED_EVENTS_CV.wait_for(lck,std::chrono::milliseconds(1));
@@ -630,9 +616,9 @@ void JEventSource_EVIOpp::GetEvent(std::shared_ptr<JEvent> event)
 	if(pe->borptrs) borptrs_list.push_front(pe->borptrs);
 
 	// Copy info for this parsed event into the JEvent
-	event->SetEventNumber(pe->event_number);
-	event->SetRunNumber(USER_RUN_NUMBER>0 ? USER_RUN_NUMBER:pe->run_number);
-	event->Insert(pe)->SetFactoryFlag(JFactory::NOT_OBJECT_OWNER);   // Returned to pool in FinishEvent
+	event.SetEventNumber(pe->event_number);
+	event.SetRunNumber(USER_RUN_NUMBER>0 ? USER_RUN_NUMBER:pe->run_number);
+	event.Insert(pe)->SetFactoryFlag(JFactory::NOT_OBJECT_OWNER);   // Returned to pool in FinishEvent
 
 	// Set event status bits
 	DStatusBits* statusBits = new DStatusBits;
@@ -642,15 +628,17 @@ void JEventSource_EVIOpp::GetEvent(std::shared_ptr<JEvent> event)
 	if( source_type == kFileSource ) statusBits->SetStatusBit(kSTATUS_FROM_FILE);
 	if( source_type == kETSource   ) statusBits->SetStatusBit(kSTATUS_FROM_ET);
 
-	event->Insert(statusBits);
+	event.Insert(statusBits);
 
 	// EPICS and BOR events are barrier events
-	if(statusBits->GetStatusBit(kSTATUS_EPICS_EVENT)) event->SetSequential(true);
-	if(statusBits->GetStatusBit(kSTATUS_BOR_EVENT  )) event->SetSequential(true);
+	if(statusBits->GetStatusBit(kSTATUS_EPICS_EVENT)) event.SetSequential(true);
+	if(statusBits->GetStatusBit(kSTATUS_BOR_EVENT  )) event.SetSequential(true);
 	
 	// Only add BOR events to physics events
 	if(pe->borptrs==NULL)
 		if(!borptrs_list.empty()) pe->borptrs = borptrs_list.front();
+    
+	return Result::Success;
 }
 
 //----------------
