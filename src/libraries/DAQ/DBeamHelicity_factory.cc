@@ -49,13 +49,19 @@ void DBeamHelicity_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 
     if (DEvent::GetCalib(event, "/ELECTRON_BEAM/helicity_board_shift", shift_factors))
         jout << "Error loading /ELECTRON_BEAM/helicity_board_shift !" << jendl;
-    if (shift_factors.find("shift") != shift_factors.end())
+    if (shift_factors.find("shift") != shift_factors.end()) {
         dHDBoardDelay = shift_factors["shift"];
-    else
+    } else {
         jerr << "Unable to get correction from /ELECTRON_BEAM/helicity_board_shift !" << endl;
-
+	}
 	// Constants for determined helicity pattern? (from Ken) 
 
+
+	// override parameters on command line
+	auto app = GetApplication();
+	app->SetDefaultParameter("HELICITY:HB_SHIFT", dHDBoardDelay, "Helicity board bits to shift to get prompt helicity. (default: 8)");
+	
+	
 	return; //NOERROR;
 }
 
