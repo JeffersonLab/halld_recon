@@ -119,7 +119,7 @@ class JEventSource_EVIOpp: public JEventSource{
 		};
 
 
-		                    JEventSource_EVIOpp(std::string source_name);
+		                    JEventSource_EVIOpp();
 		           virtual ~JEventSource_EVIOpp();
 				  
 		               void Dispatcher(void);
