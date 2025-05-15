@@ -833,11 +833,11 @@ int  DL1MCTrigger_factory_DATA::Read_RCDB(const std::shared_ptr<const JEvent>& e
 
 auto runnumber = event->GetRunNumber();
 #if HAVE_RCDB
-
+  {
   // RCDB queries are heavy, so we load the data once for all threads
   std::lock_guard<std::mutex> lock(rcdb_mutex);
-  
   if(RCDB_LOADED) return 0;
+  
   RCDB_LOADED = true;
 
   vector<const DTranslationTable*> ttab;  
@@ -1199,6 +1199,8 @@ auto runnumber = event->GetRunNumber();
       
     }  // Loop over slots
   }    // Loop over crates       
+  
+  }
   
   return 0;
 

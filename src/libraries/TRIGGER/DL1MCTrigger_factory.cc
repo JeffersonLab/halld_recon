@@ -117,8 +117,9 @@ void DL1MCTrigger_factory::Init()
   app->SetDefaultParameter("TRIG:BCAL_EN_SC", BCAL_EN_SC,
 			      "BCAL energy threshold");
 
-  std::lock_guard<std::mutex> lock(params_mutex);
+
   if(!PARAMS_LOADED) {
+  	  std::lock_guard<std::mutex> lock(params_mutex);
 	  PARAMS_LOADED = true;
 
 	  app->SetDefaultParameter("TRIG:FCAL_CELL_THR", FCAL_CELL_THR,
@@ -729,7 +730,7 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
 {
 
 #if HAVE_RCDB
-
+  {
   // RCDB queries are heavy, so we load the data once for all threads
   std::lock_guard<std::mutex> lock(rcdb_mutex);
   
@@ -1098,7 +1099,8 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
       }	
       
     }  // Loop over slots
-  }    // Loop over crates       
+  }    // Loop over crates 
+  }      
   
   return 0;
 
@@ -1152,7 +1154,6 @@ int  DL1MCTrigger_factory::SignalPulse(double en, double time, double amp_array[
     amp_array[i] += amp*time_stamp*en;
     
   }
-  
   return 0;  
 }
 
