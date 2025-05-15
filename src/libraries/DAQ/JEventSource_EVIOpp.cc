@@ -45,7 +45,7 @@ bool sortf250pulsenumbers(const Df250PulseData *a, const Df250PulseData *b) {
 //----------------
 // Constructor
 //----------------
-JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(source_name)
+JEventSource_EVIOpp::JEventSource_EVIOpp()
 {
     SetTypeName(NAME_OF_THIS);
 	SetCallbackStyle(CallbackStyle::ExpertMode); // 
