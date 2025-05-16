@@ -25,7 +25,7 @@
 #include <TAGGER/DTAGHHit.h>
 #include <BCAL/DBCALDigiHit.h>
 #include <FCAL/DFCALDigiHit.h>
-#include <CCAL/DCCALDigiHit.h>
+#include <ECAL/DECALDigiHit.h>
 #include <DAQ/Df250PulsePedestal.h>
 #include <PAIR_SPECTROMETER/DPSPair.h>
 #include <PAIR_SPECTROMETER/DPSCPair.h>
@@ -46,8 +46,10 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 		TH1F* dHist_BeamBunchPeriod_DFT;
 
 		TH2I* dHist_NumTriggers;
-		TH2I* dHist_BCALVsFCAL_TrigBit1;
-		TH2I* dHist_CCALVsFCAL_TrigBit1;
+		TH2I* dHist_BCALVsFCAL2_TrigBit1;
+	        TH2I* dHist_BCALVsFCAL_TrigBit1;
+	        TH2I* dHist_BCALVsECAL_TrigBit1;
+		TH2I* dHist_ECALVsFCAL_TrigBit1;
 		TH1I* dHist_L1bits_gtp;
 		TH1I* dHist_L1bits_fp;
                 TH1I* dHist_L1bits_fp_twelvehundhits; // BCAL LED Pseudo Trigger(1200 hits in BCAL)
@@ -93,8 +95,9 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 
 		int fcal_cell_thr;
 		int bcal_cell_thr;
-		int ccal_cell_thr;
+		int ecal_cell_thr;
 		int fcal_row_mask_min, fcal_row_mask_max, fcal_col_mask_min, fcal_col_mask_max;
+	        int ecal_row_mask_min, ecal_row_mask_max, ecal_col_mask_min, ecal_col_mask_max;
 
 		vector<double> dNumHadronicTriggers_CoherentPeak_RFSignal;
 		vector<double> dNumHadronicTriggers_CoherentPeak_RFSideband;

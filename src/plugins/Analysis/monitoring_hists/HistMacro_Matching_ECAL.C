@@ -57,14 +57,15 @@
 	gPad->SetGrid();
 	if(locHist_ECAL_TrackDistanceVsP != NULL)
 	{
-		locHist_ECAL_TrackDistanceVsP->Rebin2D(2, 2);
+		//locHist_ECAL_TrackDistanceVsP->Rebin2D(2, 2);
 		locHist_ECAL_TrackDistanceVsP->GetYaxis()->SetTitleOffset(1.3);
 		locHist_ECAL_TrackDistanceVsP->GetXaxis()->SetTitleSize(0.05);
 		locHist_ECAL_TrackDistanceVsP->GetYaxis()->SetTitleSize(0.05);
 		locHist_ECAL_TrackDistanceVsP->GetXaxis()->SetLabelSize(0.05);
 		locHist_ECAL_TrackDistanceVsP->GetYaxis()->SetLabelSize(0.05);
+		locHist_ECAL_TrackDistanceVsP->GetYaxis()->SetRangeUser(0,10.);
 		locHist_ECAL_TrackDistanceVsP->Draw("COLZ");
-		TF1* locFunc = new TF1("ECAL_LCut_VsP", "2.75", 0.0, 10.0);
+		TF1* locFunc = new TF1("ECAL_LCut_VsP", "0.26+1.8/x", 0.0, 10.0);
 		locFunc->Draw("SAME");
 	}
 
@@ -73,15 +74,17 @@
 	gPad->SetGrid();
 	if(locHist_ECAL_TrackDistanceVsTheta != NULL)
 	{
-		locHist_ECAL_TrackDistanceVsTheta->Rebin2D(2, 2);
+		//locHist_ECAL_TrackDistanceVsTheta->Rebin2D(2, 2);
 		locHist_ECAL_TrackDistanceVsTheta->GetYaxis()->SetTitleOffset(1.3);
 		locHist_ECAL_TrackDistanceVsTheta->GetXaxis()->SetTitleSize(0.05);
 		locHist_ECAL_TrackDistanceVsTheta->GetYaxis()->SetTitleSize(0.05);
 		locHist_ECAL_TrackDistanceVsTheta->GetXaxis()->SetLabelSize(0.05);
 		locHist_ECAL_TrackDistanceVsTheta->GetYaxis()->SetLabelSize(0.05);
+		locHist_ECAL_TrackDistanceVsTheta->GetXaxis()->SetRangeUser(0,10.);
+		locHist_ECAL_TrackDistanceVsTheta->GetYaxis()->SetRangeUser(0,10.);
 		locHist_ECAL_TrackDistanceVsTheta->Draw("COLZ");
-		TF1* locFunc = new TF1("ECAL_LCut_VsTheta", "2.75*(1.+0.002*x*x)", 0.0, 20.0);
-		locFunc->Draw("SAME");
+		//		TF1* locFunc = new TF1("ECAL_LCut_VsTheta", "2.75*(1.+0.002*x*x)", 0.0, 20.0);
+		//locFunc->Draw("SAME");
 	}
 
 	locCanvas->cd(3);

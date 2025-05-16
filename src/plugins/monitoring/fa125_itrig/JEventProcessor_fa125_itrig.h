@@ -33,7 +33,7 @@ class JEventProcessor_fa125_itrig:public JEventProcessor{
 
                 bool MAKE_TREE;
 
-                int rocmap[70];   // which bin to use for each roc in the histogram, to make the histogram compact, not gappy
+                int rocmap[77];   // which bin to use for each roc in the histogram, to make the histogram compact, not gappy
 };
 
 #endif // _JEventProcessor_fa125_itrig_

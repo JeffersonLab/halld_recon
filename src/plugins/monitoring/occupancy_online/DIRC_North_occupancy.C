@@ -71,16 +71,16 @@
 	gStyle->SetOptStat(0);
 	if(dirc_tdc_pixel_N_occ) dirc_tdc_pixel_N_occ->DrawCopy("colz");
 
-#ifdef ROOTSPY_MACROS
-	// ------ The following is used by RSAI --------
-	if( rs_GetFlag("Is_RSAI")==1 ){
-		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
-		if( min_events < 1 ) min_events = 1E4;
-		if( Nevents >= min_events ) {
-			cout << "DIRC Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
-			rs_SavePad("DIRC_North_occupancy", 0);
-			rs_ResetAllMacroHistos("//DIRC_North_occupancy");
-		}
-	}
-#endif
+// #ifdef ROOTSPY_MACROS
+// 	// ------ The following is used by RSAI --------
+// 	if( rs_GetFlag("Is_RSAI")==1 ){
+// 		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+// 		if( min_events < 1 ) min_events = 1E4;
+// 		if( Nevents >= min_events ) {
+// 			cout << "DIRC Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+// 			rs_SavePad("DIRC_North_occupancy", 0);
+// 			rs_ResetAllMacroHistos("//DIRC_North_occupancy");
+// 		}
+// 	}
+// #endif
 }

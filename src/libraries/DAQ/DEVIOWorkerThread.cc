@@ -1727,7 +1727,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						exit(-1);
 					}
 
-					// Event headers may be supressed so determine event from hit data
+					// Event headers may be suppressed so determine event from hit data
 					if( (event_number_within_block > current_parsed_events.size()) ) { jerr << "Bad f250 event number for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl; throw JException("Bad f250 event number", __FILE__, __LINE__);}
 					pe_iter = current_parsed_events.begin();
 					advance( pe_iter, event_number_within_block-1 );
@@ -1988,7 +1988,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					++iptr;
 					if(iptr>=iend){
 					  PrintLimitCDC++;
-					  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings supressed"  << endl;	
+					  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
 					  if (PrintLimitCDC<10) {
 					    jerr << " Truncated f125 CDC hit (block ends before continuation word!)" << endl;
 						continue;
@@ -1996,7 +1996,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					}
 					if( ((*iptr>>31) & 0x1) != 0 ){
 					  PrintLimitCDC++;
-					  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings supressed"  << endl;	
+					  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
 					  if (PrintLimitCDC<10)
 					    jerr << " Truncated f125 CDC hit (missing continuation word!)" << endl;
 						--iptr;
@@ -2054,14 +2054,14 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					      ++iptr;
 					      if(iptr>=iend){
 						PrintLimitFDC++;
-						if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings supressed"  << endl;	
+						if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 						if (PrintLimitFDC<10)
 						  jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
 						    break;
 					      }
 					      if( ((*iptr>>31) & 0x1) != 0 ){
 						PrintLimitFDC++;
-						if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings supressed"  << endl;	
+						if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 						if (PrintLimitFDC<10)
 						  jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
 						    --iptr; 
@@ -2149,14 +2149,14 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					      ++iptr;
 					      if(iptr>=iend){
 						PrintLimitFDC++;
-						if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings supressed"  << endl;	
+						if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 						if (PrintLimitFDC<10)
 						  jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
 						    break;
 					      }
 					      if( ((*iptr>>31) & 0x1) != 0 ){
 						PrintLimitFDC++;
-						  if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings supressed"  << endl;	
+						  if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 						if (PrintLimitFDC<10)
 						  jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
 						    --iptr;

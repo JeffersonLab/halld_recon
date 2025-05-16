@@ -59,13 +59,17 @@ class DDetectorMatches_factory : public JFactoryT<DDetectorMatches>
 				 const DTrackTimeBased *locTrackTimeBased,
 				 vector<const DFCALHit *>&locSingleHits,
 				 DDetectorMatches* locDetectorMatches) const;
+  void MatchToECAL(const DParticleID* locParticleID,
+		   const DTrackTimeBased *locTrackTimeBased,
+		   vector<const DECALHit *>&locSingleHits,
+		   DDetectorMatches* locDetectorMatches) const;
 
 		//matching showers to tracks routines
 		void MatchToTrack(const DParticleID* locParticleID, const DBCALShower* locBCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const;
 		void MatchToTrack(const DParticleID* locParticleID, const DFCALShower* locFCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const;
   void MatchToTrack(const DParticleID* locParticleID, const DECALShower* locECALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const;
 
-		bool ENABLE_FCAL_SINGLE_HITS;
+  bool ENABLE_FCAL_SINGLE_HITS,ENABLE_ECAL_SINGLE_HITS;
 };
 
 #endif // _DDetectorMatches_factory_

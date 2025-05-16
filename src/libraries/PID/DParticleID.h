@@ -24,6 +24,8 @@
 #include <BCAL/DBCALShower.h>
 #include <BCAL/DBCALCluster.h>
 #include <ECAL/DECALShower.h>
+#include <ECAL/DECALCluster.h>
+#include <ECAL/DECALHit.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALCluster.h>
 #include <FCAL/DFCALHit.h>
@@ -130,6 +132,8 @@ class DParticleID: public JObject
 			  const DVector3 &locProjPos) const;
 		double Distance_ToTrack(const DFCALHit *locFCALHit,
 					const DVector3 &locProjPos) const;
+  double Distance_ToTrack(const DECALHit *locECALHit,
+			  const DVector3 &locProjPos) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DFCALShower* locFCALShower, double locInputStartTime, shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DTOFPoint* locTOFPoint, double locInputStartTime,shared_ptr<DTOFHitMatchParams>& locTOFHitMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DCTOFPoint* locCTOFPoint, double locInputStartTime,shared_ptr<DCTOFHitMatchParams>& locCTOFHitMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
@@ -138,6 +142,7 @@ class DParticleID: public JObject
 		bool Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DFCALHit *locFCALHit,double &locDOCA,double &locHitTime) const;
   		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DTRDSegment* locTRDSegment,shared_ptr<DTRDMatchParams>& locTRDMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
   		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DECALShower* locECALShower, double locInputStartTime, shared_ptr<DECALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
+  bool Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DECALHit *locECALHit,double &locDOCA,double &locHitTime) const;
 
 		/********************************************************** CUT MATCH DISTANCE **********************************************************/
 
@@ -232,6 +237,9 @@ class DParticleID: public JObject
   bool Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
 		     const vector<const DECALShower*>& ECALShowers,
 		     double& StartTime) const;
+  bool Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
+				   const vector<const DECALHit*>& ECALHits,
+				   double& StartTime) const;
 		  
 		/********************************************************** MISCELLANEOUS **********************************************************/
 
@@ -266,7 +274,7 @@ class DParticleID: public JObject
 		
 		const DDIRCLut *Get_DIRCLut() const;
 		void GetSingleFCALHits(vector<const DFCALShower*>&locFCALShowers,vector<const DFCALHit*>&locFCALHits,vector<const DFCALHit*>&singleHits) const;
-	
+  void GetSingleECALHits(vector<const DECALShower*>&locECALShowers,vector<const DECALHit*>&locECALHits,vector<const DECALHit*>&singleHits) const;
 
 	protected:
 		// gas material properties

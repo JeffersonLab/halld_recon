@@ -110,7 +110,7 @@ void DFCALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 
 	// fill user's hit list
         int nhits = 0;
-	oid_t id=1;
+	//oid_t id=1;
         DFCALCluster::userhits_t* hits = 
 	  (DFCALCluster::userhits_t*) malloc(sizeof(DFCALCluster::userhits_t)*FCAL_USER_HITS_MAX);
 
@@ -123,7 +123,8 @@ void DFCALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	       bad_blocks_list.size() > 0 &&
 	       0 <= fcalGeom->channel( (**hit).row, (**hit).column ) && fcalGeom->channel( (**hit).row, (**hit).column ) <= 2799 &&
 	       bad_blocks_list[fcalGeom->channel( (**hit).row, (**hit).column )] == 1) continue;
-           hits->hit[nhits].id = id++;
+           //hits->hit[nhits].id = id++;
+           hits->hit[nhits].id = (**hit).id;
 	   hits->hit[nhits].ch = fcalGeom->channel( (**hit).row, (**hit).column );
            hits->hit[nhits].x = (**hit).x;
            hits->hit[nhits].y = (**hit).y;
@@ -263,8 +264,9 @@ void DFCALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
               const vector<DFCALCluster::DFCALClusterHit_t> &clusterHits = clusterList[c]->GetHits();
               for(size_t loc_i = 0; loc_i < clusterHits.size(); loc_i++) {
                   const DFCALHit *clusterHit = GetDFCALHitFromClusterHit(clusterHits[loc_i], fcalhits);
-                  if( clusterHit != NULL )
+                  if( clusterHit != NULL ) {
                       clusterList[c]->AddAssociatedObject( clusterHit );
+                    }
               }
 
               Insert( clusterList[c] );
