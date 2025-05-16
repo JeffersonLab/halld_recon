@@ -12,9 +12,6 @@ using namespace std;
 #include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DL1Info.h>
 #include <DANA/DStatusBits.h>
-
-#include <HDDM/DEventSourceHDDM.h>
-
 #include "DL1MCTrigger_factory.h"
 
 #if HAVE_RCDB
@@ -369,74 +366,6 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	event->Get(sc_hits);
 	event->Get(tof_hits);
 
-	//sort(tof_hits.begin(),tof_hits.end(),tof_cmp);
-	bool got_tof_trigger=false;
-	map<int,pair<bitset<10>,bitset<10>>>time_slices;
-	for (unsigned int i=0;i<tof_hits.size();i++){
-	  const DTOFHit *hit1=tof_hits[i];
-	  int t1=int(hit1->t/4.0);
-	  if ((hit1->bar>21 && hit1->bar<26) || hit1->bar>44){
-	    bitset<10>w=0;
-	    if (hit1->bar==22 || hit1->bar==23) w|=1<<3;
-	    else if (hit1->bar==24 || hit1->bar==25) w|=1<<4;
-	    else if (hit1->bar==45 || hit1->bar==46) w|=1<<5;
-	    else w|=1<<6;
-	    if (time_slices.find(t1)==time_slices.end()){
-	      if (hit1->plane) time_slices[t1].second=w;
-	      else time_slices[t1].first=w;
-	    }
-	    else{
-	      if (hit1->plane) time_slices[t1].second |= w;
-	      else time_slices[t1].first |= w;
-	    }
-	  }
-	  else {
-	    for (unsigned int j=i+1;j<tof_hits.size();j++){
-	      const DTOFHit *hit2=tof_hits[j];
-	      if (hit1->bar==hit2->bar && hit1->plane==hit2->plane
-		  && hit1->end!=hit2->end){
-		/*
-		  cout << "p: " << hit1->plane << " b: " << hit1->bar
-		  << " e1: " << hit1->end << " e2: " << hit2->end << " t1: " << hit1->t_fADC
-		  << " t2: " << hit2->t_fADC << endl;
-		*/
-		int t2=int(hit2->t/4.0);
-		if (abs(t1-t2)<=64){
-		  int tslice=(t1>t2)?t1:t2;
-		  //cout << " tslice " << tslice << endl;
-		  bitset<10>w=0;
-		  if (hit1->bar<20) w|=1;
-		  else if (hit1->bar==20) w|=2;
-		  else if (hit1->bar==21) w|=4;
-		  else if (hit1->bar==26) w|=1<<7;
-		  else if (hit1->bar==27) w|=1<<8;
-		  else if (hit1->bar>27&&hit1->bar<45) w=1<<9;
-		  //cout << "w "<<w<< endl;;
-		  if (time_slices.find(tslice)==time_slices.end()){
-		    if (hit1->plane) time_slices[tslice].second=w;
-		    else time_slices[tslice].first=w;
-		  }
-		  else{
-		    if (hit1->plane) time_slices[tslice].second |= w;
-		    else time_slices[tslice].first |= w;
-		  }
-		}	    
-	      }
-	    }
-	  } // Check for single ended bars 
-	}
-	for (auto const& ts: time_slices){
-	  int tof1_count=ts.second.first.count();
-	  int tof2_count=ts.second.second.count();
-	  cout << ts.first<<":"<<ts.second.first<<" "<<ts.second.first.count()
-	       <<" " <<ts.second.second << " " << ts.second.second.count() <<endl;
-	  if (tof1_count>0 && tof1_count+tof2_count>3){
-	    got_tof_trigger=true;
-	  }
-	  
-	}
-	
-
 	DRandom2 gDRandom(0); // declared extern in DRandom2.h
 
 	// This is temporary, to allow this simulation to be run on data
@@ -712,11 +641,8 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	// Search for triggers
 
 	l1_found = FindTriggers(trigger,sc_hits);
-	if (got_tof_trigger){
-	  l1_found = 1;
-	  trigger->trig_mask |= 0x20; 
-	}
-	
+	l1_found|=GetTOFTriggerBits(tof_hits,trigger->trig_mask);
+
 	if(l1_found){
 	  
 	  int fcal_gtp_max = 0;
@@ -1428,7 +1354,7 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
   // Main production trigger  
   for(unsigned int ii = 0; ii < triggers_enabled.size(); ii++){
     
-    //    if(debug1)
+    if(debug1)
       cout << "Trigger Type = " << triggers_enabled[ii].type << endl;
 
     if(triggers_enabled[ii].type == 3){    // FCAL & BCAL trigger
@@ -1645,4 +1571,90 @@ void DL1MCTrigger_factory::GetSeeds(const std::shared_ptr<const JEvent>& event, 
       
     }  // Record doesn't exist
   }    // Not an HDDM file
+}
+
+// Emulate the tof trigger
+bool DL1MCTrigger_factory::GetTOFTriggerBits(vector<const DTOFHit*>&tof_hits,
+					     uint32_t &trig_mask) const{
+  
+  //sort(tof_hits.begin(),tof_hits.end(),tof_cmp);
+  map<int,pair<bitset<10>,bitset<10>>>time_slices;
+  for (unsigned int i=0;i<tof_hits.size();i++){
+    const DTOFHit *hit1=tof_hits[i];
+    int t1=int(hit1->t_fADC/4.0);
+    if (VERBOSE){
+      cout << "Bar " << hit1->bar << endl;
+    }
+    if ((hit1->bar>21 && hit1->bar<26) || hit1->bar>44){
+      bitset<10>w=0;
+      if (hit1->bar==22 || hit1->bar==23) w|=1<<3;
+      else if (hit1->bar==24 || hit1->bar==25) w|=1<<4;
+      else if (hit1->bar==45 || hit1->bar==46) w|=1<<5;
+      else w|=1<<6;
+      if (VERBOSE){
+	cout << w << endl;
+      }
+      if (time_slices.find(t1)==time_slices.end()){
+	if (hit1->plane) time_slices[t1].second=w;
+	else time_slices[t1].first=w;
+      }
+      else{
+	if (hit1->plane) time_slices[t1].second |= w;
+	else time_slices[t1].first |= w;
+      }
+    }
+    else {
+      for (unsigned int j=i+1;j<tof_hits.size();j++){
+	const DTOFHit *hit2=tof_hits[j];
+	if (hit1->bar==hit2->bar && hit1->plane==hit2->plane
+	    && hit1->end!=hit2->end){
+	  if (VERBOSE){
+	    cout << "p: " << hit1->plane << " b: " << hit1->bar
+		 << " e1: " << hit1->end << " e2: " << hit2->end << " t1: " << hit1->t_fADC
+		 << " t2: " << hit2->t_fADC << endl;
+	  }
+	  int t2=int(hit2->t_fADC/4.0);
+	  if (abs(t1-t2)<=64){
+	    int tslice=(t1>t2)?t1:t2;
+	    //cout << " tslice " << tslice << endl;
+	    bitset<10>w=0;
+	    if (hit1->bar<20) w|=1;
+	    else if (hit1->bar==20) w|=2;
+	    else if (hit1->bar==21) w|=4;
+	    else if (hit1->bar==26) w|=1<<7;
+	    else if (hit1->bar==27) w|=1<<8;
+	    else if (hit1->bar>27&&hit1->bar<45) w=1<<9;
+	    if (VERBOSE){
+	      cout << "w "<<w<< endl;
+	    }
+	    if (time_slices.find(tslice)==time_slices.end()){
+	      if (hit1->plane) time_slices[tslice].second=w;
+	      else time_slices[tslice].first=w;
+	    }
+	    else{
+	      if (hit1->plane) time_slices[tslice].second |= w;
+	      else time_slices[tslice].first |= w;
+	    }
+	  }	    
+	}
+      }
+    } // Check for single ended bars 
+  }
+  for (auto const& ts: time_slices){
+    int tof1_count=ts.second.first.count();
+    int tof2_count=ts.second.second.count();
+    if (VERBOSE>0){
+      cout << ts.first<<":"<<ts.second.first<<" "<<ts.second.first.count()
+	   <<" " <<ts.second.second << " " << ts.second.second.count() <<endl;
+    }
+    if (tof1_count>0 && tof2_count>0 && tof1_count+tof2_count==4){
+      trig_mask|=0x2;
+      return true;
+    }
+    if (tof1_count>0 && tof2_count>0 && tof1_count+tof2_count==3){
+      trig_mask|=0x20;
+      return true;
+    }
+  }
+  return false;
 }

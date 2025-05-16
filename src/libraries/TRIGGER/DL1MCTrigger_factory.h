@@ -9,11 +9,8 @@
 #include "TTAB/DTranslationTable.h"
 
 #include "FCAL/DFCALGeometry.h"
-#include <FCAL/DFCALHit.h>
-
 #include <BCAL/DBCALHit.h>
-
-#include "START_COUNTER/DSCHit.h"
+#include <HDDM/DEventSourceHDDM.h>
 
 #include <DRandom2.h>
 
@@ -226,6 +223,10 @@ class DL1MCTrigger_factory:public JFactoryT<DL1MCTrigger>{
 
 
 		void GetSeeds(const std::shared_ptr<const JEvent>& loop,  uint64_t eventnumber, UInt_t &seed1, UInt_t &seed2, UInt_t &seed3);
+
+  bool GetTOFTriggerBits(vector<const DTOFHit*>&tof_hits,
+			 uint32_t &trig_mask) const;
+  
 
 		TH1F *hfcal_gains;
 		TH2F *hfcal_gains2;
