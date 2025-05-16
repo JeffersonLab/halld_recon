@@ -1335,7 +1335,6 @@ bool DParticleID::Distance_ToTrack(double locStartTime,const DTrackFitter::Extra
   double dy=ecalpos.Y()-extrapolation.position.y();
   locDOCA=sqrt(dx*dx+dy*dy);
 
-  cout << " ECAL Hit d " << locDOCA << endl;
   double p=extrapolation.momentum.Mag();
 
   if (locDOCA<ECAL_CUT_PAR1+ECAL_CUT_PAR2/p){
@@ -4264,11 +4263,9 @@ void DParticleID::GetSingleFCALHits(vector<const DFCALShower*>&locFCALShowers,
 				    vector<const DFCALHit*>&locSingleHits) const {
   vector<oid_t>used_fcal_ids;
   for (size_t loc_j=0;loc_j<locFCALShowers.size();loc_j++){
-    vector<const DFCALCluster*>clusters;
-    locFCALShowers[loc_j]->Get(clusters);
+    vector<const DFCALCluster*>clusters=locFCALShowers[loc_j]->Get<DFCALCluster>();
     if (clusters.size()>0){
-      vector<const DFCALHit*>fcal_hits_in_cluster;
-      clusters[0]->Get(fcal_hits_in_cluster);
+      vector<const DFCALHit*>fcal_hits_in_cluster=clusters[0]->Get<DFCALHit>();
       for (size_t loc_i=0;loc_i<fcal_hits_in_cluster.size();loc_i++){
 	used_fcal_ids.push_back(fcal_hits_in_cluster[loc_i]->id);
       }
@@ -4280,5 +4277,28 @@ void DParticleID::GetSingleFCALHits(vector<const DFCALShower*>&locFCALShowers,
       continue;
     }
     locSingleHits.push_back(locFCALHits[loc_i]);
+  }
+}
+
+// Look for single hits in the ECAL not associated with clusters
+void DParticleID::GetSingleECALHits(vector<const DECALShower*>&locECALShowers,
+				    vector<const DECALHit *>&locECALHits,
+				    vector<const DECALHit*>&locSingleHits) const {
+  vector<oid_t>used_fcal_ids;
+  for (size_t loc_j=0;loc_j<locECALShowers.size();loc_j++){
+    vector<const DECALCluster*>clusters=locECALShowers[loc_j]->Get<DECALCluster>();
+    if (clusters.size()>0){
+      vector<const DECALHit*>fcal_hits_in_cluster=clusters[0]->Get<DECALHit>();
+      for (size_t loc_i=0;loc_i<fcal_hits_in_cluster.size();loc_i++){
+	used_fcal_ids.push_back(fcal_hits_in_cluster[loc_i]->id);
+      }
+    }
+  }
+  for (size_t loc_i=0;loc_i<locECALHits.size();loc_i++){
+    if (find(used_fcal_ids.begin(),used_fcal_ids.end(),
+	     locECALHits[loc_i]->id)!=used_fcal_ids.end()){
+      continue;
+    }
+    locSingleHits.push_back(locECALHits[loc_i]);
   }
 }

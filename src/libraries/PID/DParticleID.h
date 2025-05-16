@@ -24,6 +24,7 @@
 #include <BCAL/DBCALShower.h>
 #include <BCAL/DBCALCluster.h>
 #include <ECAL/DECALShower.h>
+#include <ECAL/DECALCluster.h>
 #include <ECAL/DECALHit.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALCluster.h>
@@ -273,7 +274,7 @@ class DParticleID: public JObject
 		
 		const DDIRCLut *Get_DIRCLut() const;
 		void GetSingleFCALHits(vector<const DFCALShower*>&locFCALShowers,vector<const DFCALHit*>&locFCALHits,vector<const DFCALHit*>&singleHits) const;
-	
+  void GetSingleECALHits(vector<const DECALShower*>&locECALShowers,vector<const DECALHit*>&locECALHits,vector<const DECALHit*>&singleHits) const;
 
 	protected:
 		// gas material properties
