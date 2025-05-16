@@ -65,7 +65,7 @@
 		locHist_ECAL_TrackDistanceVsP->GetYaxis()->SetLabelSize(0.05);
 		locHist_ECAL_TrackDistanceVsP->GetYaxis()->SetRangeUser(0,10.);
 		locHist_ECAL_TrackDistanceVsP->Draw("COLZ");
-		TF1* locFunc = new TF1("ECAL_LCut_VsP", "2.75", 0.0, 10.0);
+		TF1* locFunc = new TF1("ECAL_LCut_VsP", "0.26+1.8/x", 0.0, 10.0);
 		locFunc->Draw("SAME");
 	}
 
@@ -83,8 +83,8 @@
 		locHist_ECAL_TrackDistanceVsTheta->GetXaxis()->SetRangeUser(0,10.);
 		locHist_ECAL_TrackDistanceVsTheta->GetYaxis()->SetRangeUser(0,10.);
 		locHist_ECAL_TrackDistanceVsTheta->Draw("COLZ");
-		TF1* locFunc = new TF1("ECAL_LCut_VsTheta", "2.75*(1.+0.002*x*x)", 0.0, 20.0);
-		locFunc->Draw("SAME");
+		//		TF1* locFunc = new TF1("ECAL_LCut_VsTheta", "2.75*(1.+0.002*x*x)", 0.0, 20.0);
+		//locFunc->Draw("SAME");
 	}
 
 	locCanvas->cd(3);
