@@ -1,7 +1,7 @@
 // Author: David Lawrence  June 25, 2004
 //
 //
-// MyProcessor.cc
+// EventViewer.cc
 //
 
 #include <iostream>
@@ -28,7 +28,7 @@ using namespace std;
 #include "hdview2.h"
 #include "hdv_mainframe.h"
 #include "hdv_debugerframe.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 #include "TRACKING/DTrackHit.h"
 #include "TRACKING/DQuickFit.h"
 #include "TRACKING/DMagneticFieldStepper.h"
@@ -94,29 +94,29 @@ bool DMCTrajectoryPoint_track_cmp(const DMCTrajectoryPoint *a,const DMCTrajector
 }
 
 
-MyProcessor *gMYPROC=NULL;
+EventViewer *gMYPROC=NULL;
 
 //------------------------------------------------------------------
-// MyProcessor 
+// EventViewer 
 //------------------------------------------------------------------
-MyProcessor::MyProcessor()
+EventViewer::EventViewer()
 {
 }
 
 //------------------------------------------------------------------
-// ~MyProcessor 
+// ~EventViewer 
 //------------------------------------------------------------------
-MyProcessor::~MyProcessor()
+EventViewer::~EventViewer()
 {
 
 }
 
-const JEvent& MyProcessor::GetCurrentEvent() {
+const JEvent& EventViewer::GetCurrentEvent() {
     std::unique_lock<std::mutex> lock(m_mutex);
     return *m_current_event;
 }
 
-void MyProcessor::NextEvent() {
+void EventViewer::NextEvent() {
     std::unique_lock<std::mutex> lock(m_mutex);
     m_current_event = nullptr;
 }
@@ -124,7 +124,7 @@ void MyProcessor::NextEvent() {
 //------------------------------------------------------------------
 // Init 
 //------------------------------------------------------------------
-void MyProcessor::Init(void)
+void EventViewer::Init(void)
 {
     // Tell factory to keep around a few density histos
     //gPARMS->SetParameter("TRKFIND:MAX_DEBUG_BUFFERS",	16);
@@ -152,7 +152,7 @@ void MyProcessor::Init(void)
 //------------------------------------------------------------------
 // BeginRun
 //------------------------------------------------------------------
-void MyProcessor::BeginRun(const std::shared_ptr<const JEvent>& event)
+void EventViewer::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // Read in Magnetic field map
 	auto app = GetApplication();
@@ -171,7 +171,7 @@ void MyProcessor::BeginRun(const std::shared_ptr<const JEvent>& event)
 //------------------------------------------------------------------
 // Process 
 //------------------------------------------------------------------
-void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
+void EventViewer::Process(const std::shared_ptr<const JEvent>& event)
 {
     LOG_INFO(GetLogger()) << "Entering EventViewer::Process with event #" << event->GetEventNumber() << LOG_END;
 
@@ -267,7 +267,7 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 					num_required_classes_present++;
 				}
 			}catch(...){
-				cout<<"hdview2 MyProcessor::Process threw an exception on fac->Create or fac->GetNumObjects"<<endl;
+				cout<<"hdview2 EventViewer::Process threw an exception on fac->Create or fac->GetNumObjects"<<endl;
 			}
 		}
 	}
@@ -351,7 +351,7 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 //------------------------------------------------------------------
 // FillGraphics 
 //------------------------------------------------------------------
-void MyProcessor::FillGraphics(void)
+void EventViewer::FillGraphics(void)
 {
 	/// Create "graphics" objects for this event given the current GUI settings.
 	///
@@ -1799,7 +1799,7 @@ void MyProcessor::FillGraphics(void)
 	}
 }
 
-void MyProcessor::UpdateBcalDisp(void)
+void EventViewer::UpdateBcalDisp(void)
 {
 
   const auto& event = GetCurrentEvent();
@@ -1962,7 +1962,7 @@ void MyProcessor::UpdateBcalDisp(void)
 //------------------------------------------------------------------
 // UpdateTrackLabels 
 //------------------------------------------------------------------
-void MyProcessor::UpdateTrackLabels(void)
+void EventViewer::UpdateTrackLabels(void)
 {
     const auto& event = GetCurrentEvent();
 
@@ -2158,7 +2158,7 @@ void MyProcessor::UpdateTrackLabels(void)
 //------------------------------------------------------------------
 // AddKinematicDataTrack 
 //------------------------------------------------------------------
-void MyProcessor::AddKinematicDataTrack(const DKinematicData* kd, int color, double size)
+void EventViewer::AddKinematicDataTrack(const DKinematicData* kd, int color, double size)
 {
 	// Create a reference trajectory with the given kinematic data and swim
 	// it through the detector.
@@ -2195,7 +2195,7 @@ void MyProcessor::AddKinematicDataTrack(const DKinematicData* kd, int color, dou
 //------------------------------------------------------------------
 // GetIntersectionWithCalorimeter 
 //------------------------------------------------------------------
-void MyProcessor::GetIntersectionWithCalorimeter(const DKinematicData* kd, DVector3 &pos, DetectorSystem_t &who)
+void EventViewer::GetIntersectionWithCalorimeter(const DKinematicData* kd, DVector3 &pos, DetectorSystem_t &who)
 {
 	// Create a reference trajectory with the given kinematic data and swim
 	// it through the detector.
@@ -2251,7 +2251,7 @@ void MyProcessor::GetIntersectionWithCalorimeter(const DKinematicData* kd, DVect
 //------------------------------------------------------------------
 // GetFactoryNames 
 //------------------------------------------------------------------
-void MyProcessor::GetFactoryNames(vector<string> &facnames)
+void EventViewer::GetFactoryNames(vector<string> &facnames)
 {
     auto factory_summaries = GetApplication()->GetComponentSummary().factories;
     for (const auto& factory_summary : factory_summaries) {
@@ -2266,7 +2266,7 @@ void MyProcessor::GetFactoryNames(vector<string> &facnames)
 //------------------------------------------------------------------
 // GetFactories 
 //------------------------------------------------------------------
-void MyProcessor::GetFactories(vector<JFactory*> &factories)
+void EventViewer::GetFactories(vector<JFactory*> &factories)
 {
     const auto& event = this->GetCurrentEvent();
     factories = event.GetFactorySet()->GetAllFactories();
@@ -2275,7 +2275,7 @@ void MyProcessor::GetFactories(vector<JFactory*> &factories)
 //------------------------------------------------------------------
 // GetNrows 
 //------------------------------------------------------------------
-unsigned int MyProcessor::GetNrows(const string &factory, string tag)
+unsigned int EventViewer::GetNrows(const string &factory, string tag)
 {
     const auto& event = this->GetCurrentEvent();
 	JFactory *fac = event.GetFactory(factory, tag);
@@ -2286,7 +2286,7 @@ unsigned int MyProcessor::GetNrows(const string &factory, string tag)
 			fac->Create(event.shared_from_this());
 			return fac->GetNumObjects();
 		}catch(...){
-			cout<<"hdview2 MyProcessor::GetNrows threw an exception on fac->Create or fac->GetNumObjects"<<endl;
+			cout<<"hdview2 EventViewer::GetNrows threw an exception on fac->Create or fac->GetNumObjects"<<endl;
 		}
 	}
 	return 0;
@@ -2295,7 +2295,7 @@ unsigned int MyProcessor::GetNrows(const string &factory, string tag)
 //------------------------------------------------------------------
 // GetDReferenceTrajectory 
 //------------------------------------------------------------------
-void MyProcessor::GetDReferenceTrajectory(string dataname, string tag, unsigned int index, DReferenceTrajectoryHDV* &rt, vector<const DCDCTrackHit*> &cdchits)
+void EventViewer::GetDReferenceTrajectory(string dataname, string tag, unsigned int index, DReferenceTrajectoryHDV* &rt, vector<const DCDCTrackHit*> &cdchits)
 {
 _DBG__;
 
@@ -2398,7 +2398,7 @@ _DBG_<<"mass="<<mass<<endl;
 //------------------------------------------------------------------
 // GetAllWireHits
 //------------------------------------------------------------------
-void MyProcessor::GetAllWireHits(vector<pair<const DCoordinateSystem*,double> > &allhits)
+void EventViewer::GetAllWireHits(vector<pair<const DCoordinateSystem*,double> > &allhits)
 {
 	/// Argument is vector of pairs that contain a pointer to the
 	/// DCoordinateSystem representing a wire and a double that
@@ -2435,7 +2435,7 @@ void MyProcessor::GetAllWireHits(vector<pair<const DCoordinateSystem*,double> > 
 //------------------------------------------------------------------
 // FormatHistogram
 //------------------------------------------------------------------
-void MyProcessor::FormatHistogram(TH2* histo, int color=1)
+void EventViewer::FormatHistogram(TH2* histo, int color=1)
 {
 	histo->SetStats(0);
 	histo->SetLineColor(color);

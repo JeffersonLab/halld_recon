@@ -1,13 +1,13 @@
 // Author: David Lawrence  June 25, 2004
 //
 //
-// MyProcessor.h
+// EventViewer.h
 //
 /// Example program for a Hall-D analyzer which uses DANA
 ///
 
-#ifndef _MYPROCESSOR_H_
-#define _MYPROCESSOR_H_
+#ifndef _EVENTVIEWER_H_
+#define _EVENTVIEWER_H_
 
 #include <JANA/JEventProcessor.h>
 #include <JANA/JEvent.h>
@@ -50,11 +50,11 @@ class hdv_debugerframe;
 #define MAX_CIRCLES 100
 
 
-class MyProcessor:public JEventProcessor
+class EventViewer:public JEventProcessor
 {
  public:
-  MyProcessor();
-  ~MyProcessor();
+  EventViewer();
+  ~EventViewer();
 
   void Init() override; ///< Called once at program start
 	void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;	///< Called everytime a new run number is detected.
@@ -147,6 +147,6 @@ class MyProcessor:public JEventProcessor
   //void DrawTrackXY(const DKinematicData *, int color, float size);
 };
 
-extern MyProcessor* gMYPROC;
+extern EventViewer* gMYPROC;
 
-#endif // _MYPROCESSOR_H_
+#endif // _EVENTVIEWER_H_

@@ -12,7 +12,7 @@ using namespace std;
 #include "fmwpc_mainframe.h"
 #include "hdv_mainframe.h"
 #include "hdview2.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 #include "DReferenceTrajectoryHDV.h"
 
 #include <CDC/DCDCWire.h>
@@ -37,7 +37,7 @@ using namespace std;
 #include <TSpline.h>
 
 // Declared in hdview2.cc
-extern MyProcessor *myproc;
+extern EventViewer *myproc;
 
 // Defined in hdv_mainframe.cc
 extern float FCAL_Zlen;

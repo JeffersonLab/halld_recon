@@ -11,7 +11,7 @@ using namespace std;
 #include "trk_mainframe.h"
 #include "hdv_mainframe.h"
 #include "hdview2.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 #include "DReferenceTrajectoryHDV.h"
 
 #include <CDC/DCDCWire.h>

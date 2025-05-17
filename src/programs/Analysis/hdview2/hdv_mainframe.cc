@@ -13,7 +13,7 @@ using namespace std;
 #include <TRACKING/DMCThrown.h>
 #include "hdv_mainframe.h"
 #include "hdview2.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 #include "FDC/DFDCGeometry.h"
 #include "FCAL/DFCALGeometry.h"
 #include "ECAL/DECALGeometry.h"
@@ -1247,10 +1247,10 @@ void hdv_mainframe::DoMyRedraw(void)
 	AddGraphicsEndB(gMYPROC->graphics_tof_hits); 
 
 	// Draw detector hits and tracks for the correct coordinates in all views
-	vector<MyProcessor::DGraphicSet>::iterator iter = gMYPROC->graphics.begin();
+	vector<EventViewer::DGraphicSet>::iterator iter = gMYPROC->graphics.begin();
 	for(; iter!=gMYPROC->graphics.end(); iter++){
 	
-		if(iter->type==MyProcessor::kMarker){
+		if(iter->type==EventViewer::kMarker){
 			// Markers
 			TPolyMarker *sA = new TPolyMarker();
 			TPolyMarker *sB = new TPolyMarker();

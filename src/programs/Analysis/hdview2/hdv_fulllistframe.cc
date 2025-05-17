@@ -11,7 +11,7 @@ using namespace std;
 #include <TRACKING/DMCThrown.h>
 #include "hdv_fulllistframe.h"
 #include "hdview2.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 #include "FDC/DFDCGeometry.h"
 #include "FCAL/DFCALGeometry.h"
 #include "DVector2.h"

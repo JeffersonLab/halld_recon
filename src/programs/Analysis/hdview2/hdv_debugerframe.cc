@@ -12,7 +12,7 @@ using namespace std;
 #include <TRACKING/DTrackCandidate.h>
 #include <TRACKING/DTrackTimeBased_factory.h>
 #include "hdview2.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 #include "hdv_debugerframe.h"
 #include "FDC/DFDCGeometry.h"
 #include "FCAL/DFCALGeometry.h"

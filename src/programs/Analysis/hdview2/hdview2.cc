@@ -5,7 +5,7 @@
 #include <TGApplication.h>
 
 #include "hdview2.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 
 int GO = 0; // 1=continuously display events 0=wait for user
 bool PRINT_FACTORY_LIST = false;
@@ -44,7 +44,7 @@ int main(int narg, char *argv[])
 	// This is done AFTER creating the TApplication object so when the
 	// init routine is called, the window will be mapped and it can
 	// draw the detectors.
-	gMYPROC = new MyProcessor(); // Owned by japp
+	gMYPROC = new EventViewer(); // Owned by japp
 	japp->Add(gMYPROC);
 
 	// If the PRINT_FACTORY_LIST flag was set, then print the factory list

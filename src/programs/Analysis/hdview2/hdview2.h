@@ -15,7 +15,7 @@ using namespace std;
 #include <JANA/JEvent.h>
 #include <DANA/jerror.h>
 #include "DANA/DApplication.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 
 
 extern int32_t RUNNUMBER;
