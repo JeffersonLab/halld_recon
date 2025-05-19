@@ -149,11 +149,11 @@ private:
   TProfile *h_ecal_to;
   TProfile *h_ecal_gains;
   TProfile *h_ecal_qualities;
-  TH2F * h_ecal_xy[13];
-  TH2F * h_ecal_cr[13];
+  TH2F * h_ecal_xy[14];
+  TH2F * h_ecal_cr[14];
   TH2F * h_ecal_time[5];
-  TH2F * h_ecal_v_ecal_time[4];
-  TH2F * h_fcal_v_fcal_time[4];
+  TH2F * h_ecal_v_ecal_time[5];
+  TH2F * h_fcal_v_fcal_time[5];
   TH2F * h_ecal_mgg_v_blk[40];
   TH2F * h_efcal_mgg_v_blk[40];
 };
