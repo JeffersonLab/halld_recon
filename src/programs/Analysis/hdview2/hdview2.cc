@@ -1,22 +1,15 @@
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <TGApplication.h>
 
-#include "hdview2.h"
+#include <DANA/DApplication.h>
+#include <TApplication.h>
 #include "EventViewer.h"
 
-int GO = 0; // 1=continuously display events 0=wait for user
-bool PRINT_FACTORY_LIST = false;
-bool SKIP_EPICS_EVENTS = true;
-std::vector< std::string> REQUIRED_CLASSES_FOR_DRAWING;
-REQUIRED_CLASSES_LOGIC_t REQUIRED_CLASSES_LOGIC=REQUIRED_CLASSES_LOGIC_OR;
 
+bool PRINT_FACTORY_LIST = false;
+std::vector<std::string> REQUIRED_CLASSES_FOR_DRAWING;
+EventViewer::RequiredClassesLogic REQUIRED_CLASSES_LOGIC = EventViewer::RequiredClassesLogic::REQUIRED_CLASSES_LOGIC_OR;
 
 extern JApplication *japp;
-
-int32_t RUNNUMBER = 9999; // set with RUNNUMBER config paramter
 
 void PrintFactoryList(JApplication *app);
 void ParseCommandLineArguments(int &narg, char *argv[]);
@@ -35,9 +28,6 @@ int main(int narg, char *argv[])
 	DApplication dapp(narg, argv);
 	japp = dapp.GetJApp();
 	
-	// Check if user specified a run number via config. parameter
-    RUNNUMBER = japp->RegisterParameter("RUNNUMBER", 0);
-	
 	// Create a ROOT TApplication object
 	TApplication app("HDView", &narg, argv);
 	
@@ -47,14 +37,16 @@ int main(int narg, char *argv[])
 	gMYPROC = new EventViewer(); // Owned by japp
 	japp->Add(gMYPROC);
 
-	// If the PRINT_FACTORY_LIST flag was set, then print the factory list
-	if(PRINT_FACTORY_LIST) {
+    japp->SetTicker(false);
+    japp->SetTimeoutEnabled(false);
+    japp->Initialize(); // Load any additional plugins before printing factory list
+
+
+    japp->SetDefaultParameter<bool>("print_factory_list", PRINT_FACTORY_LIST, "Print factory list");
+	if (PRINT_FACTORY_LIST) {
         PrintFactoryList(japp);
     }
 
-    // Start JANA2 run in nonblocking (unsupervised) mode
-    japp->SetTicker(false);
-    japp->SetTimeoutEnabled(false);
 	japp->Run();
     int exitcode = japp->GetExitCode();
 	delete japp;
@@ -117,7 +109,6 @@ void ParseCommandLineArguments(int &narg, char *argv[])
 				break;
 			case 'L':
 				PRINT_FACTORY_LIST = true;
-				//PrintFactoryList(japp);
 				break;
 			case 'D':
 			{
@@ -126,11 +117,11 @@ void ParseCommandLineArguments(int &narg, char *argv[])
 					string substr;
 					getline(s_stream, substr, ','); //get first string delimited by comma
 					REQUIRED_CLASSES_FOR_DRAWING.push_back(substr);
-				}				
+				}
 				break;
 			}
 			case 'A':
-				REQUIRED_CLASSES_LOGIC=REQUIRED_CLASSES_LOGIC_AND;
+				REQUIRED_CLASSES_LOGIC=EventViewer::RequiredClassesLogic::REQUIRED_CLASSES_LOGIC_AND;
 				break;
 		}
 	}

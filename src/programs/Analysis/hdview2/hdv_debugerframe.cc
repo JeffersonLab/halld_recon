@@ -6,12 +6,9 @@
 #include <fstream>
 using namespace std;
 
-#include <pthread.h>
-
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DTrackCandidate.h>
 #include <TRACKING/DTrackTimeBased_factory.h>
-#include "hdview2.h"
 #include "EventViewer.h"
 #include "hdv_debugerframe.h"
 #include "FDC/DFDCGeometry.h"
@@ -39,11 +36,6 @@ using namespace std;
 #include <TG3DLine.h>
 #include <TMath.h>
 
-extern JApplication *japp;
-//TGeoVolume *MOTHER = NULL;
-//TGeoCombiTrans *MotherRotTrans = NULL;
-
-extern int GO;
 
 //-------------------
 // Constructor

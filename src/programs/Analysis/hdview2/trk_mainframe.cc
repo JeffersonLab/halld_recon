@@ -10,7 +10,6 @@ using namespace std;
 
 #include "trk_mainframe.h"
 #include "hdv_mainframe.h"
-#include "hdview2.h"
 #include "EventViewer.h"
 #include "DReferenceTrajectoryHDV.h"
 
@@ -424,8 +423,7 @@ void trk_mainframe::FillFactoryTagComboBox(TGComboBox* cb, TGComboBox* datanamec
 	string dataname = datanamecb->GetTextEntry()->GetText();
 
 	// Get list of all factories
-	vector<JFactory*> factories;
-	gMYPROC->GetFactories(factories);
+	vector<JFactory*> factories = gMYPROC->GetCurrentEvent().GetFactorySet()->GetAllFactories();
 	
 	// Loop over all factories, looking for ones with the desired
 	// data name. Add thier tags to the list

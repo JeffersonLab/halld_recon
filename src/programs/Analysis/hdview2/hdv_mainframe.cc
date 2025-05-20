@@ -7,12 +7,10 @@
 using namespace std;
 
 #include <unistd.h>
-#include <pthread.h>
 #include <sys/time.h>
 
 #include <TRACKING/DMCThrown.h>
 #include "hdv_mainframe.h"
-#include "hdview2.h"
 #include "EventViewer.h"
 #include "FDC/DFDCGeometry.h"
 #include "FCAL/DFCALGeometry.h"
@@ -41,13 +39,6 @@ using namespace std;
 #include <TColor.h>
 #include <TMath.h>
 #include <TArc.h>
-
-extern JApplication *japp;
-//TGeoVolume *MOTHER = NULL;
-//TGeoCombiTrans *MotherRotTrans = NULL;
-
-extern int GO;
-extern bool SKIP_EPICS_EVENTS;
 
 // These values are just used to draw the detectors for visualization.
 // These should be replaced by a database lookup or something similar
@@ -887,7 +878,7 @@ void hdv_mainframe::DoPrev(void)
 //-------------------
 void hdv_mainframe::DoStop(void)
 {
-	GO = 0;
+    gMYPROC->SetRunContinuously(0);
 }
 
 //-------------------
@@ -895,7 +886,7 @@ void hdv_mainframe::DoStop(void)
 //-------------------
 void hdv_mainframe::DoCont(void)
 {
-	GO = 1;
+    gMYPROC->SetRunContinuously(1);
 }
 
 //-------------------

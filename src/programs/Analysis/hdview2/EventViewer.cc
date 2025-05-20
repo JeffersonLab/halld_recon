@@ -25,7 +25,6 @@ using namespace std;
 #include <JANA/JEventSource.h>
 
 #include <particleType.h>
-#include "hdview2.h"
 #include "hdv_mainframe.h"
 #include "hdv_debugerframe.h"
 #include "EventViewer.h"
@@ -70,8 +69,8 @@ using namespace std;
 #include "DAQ/DEPICSvalue.h"
 
 extern hdv_mainframe *hdvmf;
-extern int GO; // defined in hdview2.cc
-extern bool SKIP_EPICS_EVENTS;
+extern std::vector<std::string> REQUIRED_CLASSES_FOR_DRAWING;
+extern EventViewer::RequiredClassesLogic REQUIRED_CLASSES_LOGIC;
 
 // These are declared in hdv_mainframe.cc, but as static so we need to do it here as well (yechh!)
 static float FCAL_Zmin = 622.8;
@@ -96,20 +95,6 @@ bool DMCTrajectoryPoint_track_cmp(const DMCTrajectoryPoint *a,const DMCTrajector
 
 EventViewer *gMYPROC=NULL;
 
-//------------------------------------------------------------------
-// EventViewer 
-//------------------------------------------------------------------
-EventViewer::EventViewer()
-{
-}
-
-//------------------------------------------------------------------
-// ~EventViewer 
-//------------------------------------------------------------------
-EventViewer::~EventViewer()
-{
-
-}
 
 const JEvent& EventViewer::GetCurrentEvent() {
     std::unique_lock<std::mutex> lock(m_mutex);
@@ -119,6 +104,16 @@ const JEvent& EventViewer::GetCurrentEvent() {
 void EventViewer::NextEvent() {
     std::unique_lock<std::mutex> lock(m_mutex);
     m_current_event = nullptr;
+}
+
+void EventViewer::SetRunContinuously(bool go) {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    m_go = go;
+}
+
+bool EventViewer::GetRunContinuously() {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    return m_go;
 }
 
 //------------------------------------------------------------------
@@ -177,7 +172,7 @@ void EventViewer::Process(const std::shared_ptr<const JEvent>& event)
 
     m_current_event = event.get();
 
-    if(SKIP_EPICS_EVENTS){
+    if(m_skip_epics_events){
         std::vector<const DEPICSvalue*> epicsvalues;
         event->Get(epicsvalues);
         if(!epicsvalues.empty()) {
@@ -231,7 +226,7 @@ void EventViewer::Process(const std::shared_ptr<const JEvent>& event)
 
 	auto eventnumber = event->GetEventNumber();
 	static uint64_t Nevents_since_last_draw = 0;
-	static bool save_continuous = (GO == 1);
+	static bool save_continuous = (GetRunContinuously() == 1);
 	static long save_sleep_time = hdvmf->GetSleepTime();
 	
 	// The user may specify to only draw events that have at least
@@ -2261,15 +2256,6 @@ void EventViewer::GetFactoryNames(vector<string> &facnames)
         }
         facnames.push_back(combined_name);
     }
-}
-
-//------------------------------------------------------------------
-// GetFactories 
-//------------------------------------------------------------------
-void EventViewer::GetFactories(vector<JFactory*> &factories)
-{
-    const auto& event = this->GetCurrentEvent();
-    factories = event.GetFactorySet()->GetAllFactories();
 }
 
 //------------------------------------------------------------------

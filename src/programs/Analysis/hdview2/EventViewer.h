@@ -52,99 +52,99 @@ class hdv_debugerframe;
 
 class EventViewer:public JEventProcessor
 {
- public:
-  EventViewer();
-  ~EventViewer();
 
-  void Init() override; ///< Called once at program start
+public:
+
+    enum RequiredClassesLogic {
+        REQUIRED_CLASSES_LOGIC_OR,
+        REQUIRED_CLASSES_LOGIC_AND
+    };
+    enum poly_type {
+        kMarker =0,
+        kLine   =1
+    };
+    struct DGraphicSet {
+        vector<TVector3> points;
+        Color_t color;
+        poly_type type; // 0=markers, 1=lines
+        double size;
+        int marker_style;
+
+        DGraphicSet(Color_t c, poly_type t, double s):color(c),type(t),size(s),marker_style(8){}
+    };
+
+
+    void Init() override; ///< Called once at program start
 	void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;	///< Called everytime a new run number is detected.
 	void Process(const std::shared_ptr<const JEvent>& locEvent) override;///< Called every event.
 
     const JEvent& GetCurrentEvent();
     void NextEvent();
-  
-  //void DrawXY(void);
-  //void DrawRPhi(void);
-  
-  //jerror_t DrawHelicalTrack(DQuickFit *qf, int color);
-  //jerror_t DrawStraightTrack(TVector3 p, TVector3 vertex, int color, int style);
-  //jerror_t DrawTrack(double q, TVector3 pos, TVector3 mom, int color);
-  //jerror_t DrawDetectors(void);
-  
-  const DMagneticFieldMap *Bfield = nullptr;
-  uint64_t eventNo;
-  
-  enum poly_type{
-    kMarker =0,
-    kLine   =1
-  };
-  
-  class DGraphicSet{
-  public:
-  DGraphicSet(Color_t c, poly_type t, double s):color(c),type(t),size(s),marker_style(8){}
-    vector<TVector3> points;
-    Color_t color;
-    poly_type type; // 0=markers, 1=lines
-    double size;
-    int marker_style;
-  };
-  vector<DGraphicSet> graphics;
-  void FillGraphics(void);
-  void UpdateTrackLabels(void);
-  void UpdateBcalDisp(void);
- 
-  // Additional graphics that may be appropriate for only certain views
-  vector<TObject*> graphics_xyA;
-  vector<TObject*> graphics_xyB;
-  vector<TObject*> graphics_xz;
-  vector<TObject*> graphics_yz;
-  vector<TObject*> graphics_tof_hits;
-  
-  void GetFactoryNames(vector<string> &facnames);
-  void GetFactories(vector<JFactory*> &factories);
-  unsigned int GetNrows(const string &factory, string tag);
-  void GetDReferenceTrajectory(string dataname, string tag, 
-			       unsigned int index, DReferenceTrajectoryHDV* &rt, vector<const DCDCTrackHit*> &cdchits);
-  void GetAllWireHits(vector<pair<const DCoordinateSystem*,double> > &allhits);
-  void FormatHistogram(TH2*, int);
+    void SetRunContinuously(bool go);
+    bool GetRunContinuously();
 
 
- private:	
+    const DMagneticFieldMap *Bfield = nullptr;
 
-  const JEvent *m_current_event = nullptr;
-  std::mutex m_mutex;
+    vector<DGraphicSet> graphics;
+    void FillGraphics(void);
+    void UpdateTrackLabels(void);
+    void UpdateBcalDisp(void);
 
-  hdv_mainframe *hdvmf = nullptr;
-  hdv_fulllistframe *fulllistmf=NULL;
-  hdv_debugerframe *debugermf;
-  DRootGeom *RootGeom;
-  DGeometry *geom;
-  string MATERIAL_MAP_MODEL;
-  double RMAX_INTERIOR; // Used to allow user to extend drawing range of charged tracks
-  double RMAX_EXTERIOR; // Used to allow user to extend drawing range of charged tracks
-  double ZMAX;         // Used to allow user to extend drawing range of charged tracks
+    // Additional graphics that may be appropriate for only certain views
+    vector<TObject*> graphics_xyA;
+    vector<TObject*> graphics_xyB;
+    vector<TObject*> graphics_xz;
+    vector<TObject*> graphics_yz;
+    vector<TObject*> graphics_tof_hits;
 
-  uint32_t BCALVERBOSE;
-  TCanvas *BCALHitCanvas;  
-  TH2F *BCALHitMatrixU;
-  TH2F *BCALHitMatrixD;
-  TH2F *BCALParticles;
-  vector <TText*> BCALPLables;
-  TH2F *BCALPointZphiLayer[4];
-  TH2F *BCALPointPhiTLayer[4];
-  std::vector<TH2F*> BCALClusterZphiHistos;
-  TLegend *LayerLegend;
-  TLegend *ClusterLegend;
-  
-  
-  map<string, double> photon_track_matching;
-  double DELTA_R_FCAL;
-  
-  void AddKinematicDataTrack(const DKinematicData* kd, int color, double size);
-  void GetIntersectionWithCalorimeter(const DKinematicData* kd, DVector3 &pos, DetectorSystem_t &who);
-  
-  //DTrackCandidate_factory* factory;
-  //void DrawTrackXY(const DKinematicData *, int color, float size);
+    void GetFactoryNames(vector<string> &facnames);
+    unsigned int GetNrows(const string &factory, string tag);
+    void GetDReferenceTrajectory(string dataname, string tag, unsigned int index, DReferenceTrajectoryHDV* &rt, vector<const DCDCTrackHit*> &cdchits);
+    void GetAllWireHits(vector<pair<const DCoordinateSystem*,double> > &allhits);
+    void FormatHistogram(TH2*, int);
+
+
+ private:
+
+    // Parameters
+
+    int m_go = 0; // 1=continuously display events 0=wait for user
+    bool m_skip_epics_events = true;
+
+    // Members
+
+    const JEvent *m_current_event = nullptr;
+    std::mutex m_mutex;
+
+    hdv_mainframe *hdvmf = nullptr;
+    hdv_fulllistframe *fulllistmf=NULL;
+    hdv_debugerframe *debugermf;
+    DRootGeom *RootGeom;
+    DGeometry *geom;
+    string MATERIAL_MAP_MODEL;
+    double RMAX_INTERIOR; // Used to allow user to extend drawing range of charged tracks
+    double RMAX_EXTERIOR; // Used to allow user to extend drawing range of charged tracks
+    double ZMAX;         // Used to allow user to extend drawing range of charged tracks
+
+    uint32_t BCALVERBOSE;
+    TCanvas *BCALHitCanvas;  
+    TH2F *BCALHitMatrixU;
+    TH2F *BCALHitMatrixD;
+    TH2F *BCALParticles;
+    vector <TText*> BCALPLables;
+    TH2F *BCALPointZphiLayer[4];
+    TH2F *BCALPointPhiTLayer[4];
+    std::vector<TH2F*> BCALClusterZphiHistos;
+    TLegend *LayerLegend;
+    TLegend *ClusterLegend;
+
+    map<string, double> photon_track_matching;
+    double DELTA_R_FCAL;
+
+    void AddKinematicDataTrack(const DKinematicData* kd, int color, double size);
+    void GetIntersectionWithCalorimeter(const DKinematicData* kd, DVector3 &pos, DetectorSystem_t &who);
+
 };
 
 extern EventViewer* gMYPROC;
