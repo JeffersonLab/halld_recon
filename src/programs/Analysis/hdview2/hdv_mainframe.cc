@@ -16,6 +16,7 @@ using namespace std;
 #include "MyProcessor.h"
 #include "FDC/DFDCGeometry.h"
 #include "FCAL/DFCALGeometry.h"
+#include "ECAL/DECALGeometry.h"
 #include "TOF/DTOFGeometry.h"
 #include "DVector2.h"
 #include "HDGEOMETRY/DGeometry.h"
@@ -112,11 +113,19 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
 {
   //Get pointer to DGeometry object
   const auto& event = gMYPROC->GetCurrentEvent();
-  const DGeometry *dgeom  = DEvent::GetDGeometry(event.shared_from_this());
+  const DGeometry *dgeom = DEvent::GetDGeometry(event.shared_from_this());
   
   tofgeom = new DTOFGeometry(dgeom);
   fcalgeom= new DFCALGeometry(dgeom);
-  
+
+  // Figure out ECAL details
+  if (dgeom->HaveInsert()) {
+    m_insert_size = dgeom->GetFCALInsertSize();
+    auto ecal = new DECALGeometry(dgeom);
+    m_insert_block_size = ecal->blockSize();
+    delete ecal;
+  }
+
   dgeom->GetFDCWires(fdcwires);
   
   // Get Target parameters from XML
@@ -1729,11 +1738,8 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		shift[2].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
 		shift[3].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space
 
-        //double insertSize=fcalgeom->insertSize();
-        double insertSize=0; // TODO: FCAL datamodel change in bbe8e81d: Make sure we are handling this correctly
-		if (insertSize>0){
-		  // blocksize=fcalgeom->insertBlockSize(); // TODO: Fix me
-          blocksize = 0;
+		if (m_insert_size>0){
+		  blocksize=m_insert_block_size;
 		  shift[4].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
 		  shift[5].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		  shift[6].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
@@ -1749,9 +1755,9 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		    double x[5], y[5];
 		    for(int i=0; i<4; i++){
 		      DVector2 pos = fcalBlockPos;
-		      if (insertSize>0 
-			  && fabs(pos.X())<insertSize
-			  && fabs(pos.Y())<insertSize){
+		      if (m_insert_size>0 
+			  && fabs(pos.X())<m_insert_size
+			  && fabs(pos.Y())<m_insert_size){
 			pos+=shift[i+4];
 		      }
 		      else{
@@ -2106,18 +2112,15 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		// Set up 4 2-D vectors that point from the center of a block to its
 		// corners. This makes it easier to represent each corner as a vector
 		// in lab corrdinate whch we can extract r, phi from.
-		double blocksize = fcalgeom->blockSize();
+		double blocksize = m_insert_block_size;
 		DVector2 shift[8];
 		shift[0].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
 		shift[1].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		shift[2].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
 		shift[3].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space
 	
-		//double insertSize=fcalgeom->insertSize();
-        double insertSize=0; // TODO: Fix me
-		if (insertSize>0){
-		  //blocksize=fcalgeom->insertBlockSize(); // TODO: Fix me
-          blocksize = 0;
+		if (m_insert_size>0){
+		  blocksize=m_insert_block_size;
 		  shift[4].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
 		  shift[5].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		  shift[6].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
@@ -2131,9 +2134,9 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		  double r[4], phi[4];
 		  for(int i=0; i<4; i++){
 		    DVector2 pos = fcalBlockPos; 
-		    if (insertSize>0 
-			  && fabs(pos.X())<insertSize
-			  && fabs(pos.Y())<insertSize){
+		    if (m_insert_size>0 
+			  && fabs(pos.X())<m_insert_size
+			  && fabs(pos.Y())<m_insert_size){
 		      pos+=shift[i+4];
 		    }
 		    else{

@@ -222,6 +222,9 @@ class hdv_mainframe:public TGMainFrame {
 		long sleep_time; // in milliseconds
 		
 		template<typename T> void FillPoly(T *sA, T *sB, T *eA, std::vector<TVector3> &v);
+
+        double m_insert_size = 0;
+        double m_insert_block_size = 0;
 		
 	ClassDef(hdv_mainframe,1)
 };
