@@ -6,5 +6,8 @@ import sbms
 Import('*')
 env = env.Clone()
 
-sbms.script(env, 'hddm_cull_events')
+sbms.AddDANA(env)
+sbms.AddROOT(env)
+sbms.plugin(env)
+
 

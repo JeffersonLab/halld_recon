@@ -21,8 +21,7 @@ class DHelicityData:public DDAQAddress{
 		JOBJECT_PUBLIC(DHelicityData);
 
 		DHelicityData(uint32_t rocid=0, uint32_t slot=0, uint32_t channel=0, uint32_t itrigger=0 
-			, uint32_t expected_helicity_state=0
-			, uint32_t recovered_helicity_seed=0
+			, uint32_t helicity_seed=0
 			, uint32_t falling_edge_tstable_count=0
 			, uint32_t rising_edge_tstable_count=0
 			, uint32_t pattern_sync_count=0
@@ -43,8 +42,7 @@ class DHelicityData:public DDAQAddress{
 			, uint32_t last_helicity_state=0
 			, uint32_t last_helicity_state_pattern_sync=0)
 			:DDAQAddress(rocid, slot, channel, itrigger)
-			, expected_helicity_state(expected_helicity_state)
-			, recovered_helicity_seed(recovered_helicity_seed)
+			, helicity_seed(helicity_seed)
 			, falling_edge_tstable_count(falling_edge_tstable_count)
 			, rising_edge_tstable_count(rising_edge_tstable_count)
 			, pattern_sync_count(pattern_sync_count)
@@ -66,8 +64,7 @@ class DHelicityData:public DDAQAddress{
 			, last_helicity_state_pattern_sync(last_helicity_state_pattern_sync) {}
 
 		// data
-		uint32_t expected_helicity_state;
-		uint32_t recovered_helicity_seed;
+		uint32_t helicity_seed;
 		uint32_t falling_edge_tstable_count;
 		uint32_t rising_edge_tstable_count;
 		uint32_t pattern_sync_count;
