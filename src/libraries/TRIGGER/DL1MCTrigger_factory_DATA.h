@@ -23,7 +23,7 @@ typedef  vector< vector<double> >  fcal_constants_t;
 
 class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 	public:
-		DL1MCTrigger_factory_DATA(){
+		DL1MCTrigger_factory_DATA() {
 			SetTag("DATA");
 		};
 		~DL1MCTrigger_factory_DATA(){};
@@ -143,10 +143,10 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		  int end;
 		} bcal_mod;
 
-		vector<trigger_conf> triggers_enabled;
+		static vector<trigger_conf> triggers_enabled;
 
-		vector<fcal_mod> fcal_trig_mask;
-		vector<bcal_mod> bcal_trig_mask;
+		static vector<fcal_mod> fcal_trig_mask;
+		static vector<bcal_mod> bcal_trig_mask;
 
 		vector<fcal_signal> fcal_signal_hits;
 		vector<bcal_signal> bcal_signal_hits;
@@ -154,20 +154,25 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		vector<fcal_signal> fcal_merged_hits;
 		vector<bcal_signal> bcal_merged_hits;
 
+		static std::mutex params_mutex;
+		static std::mutex rcdb_mutex;
+  		static bool RCDB_LOADED;
+  		static bool PARAMS_LOADED;
+
 		int    BYPASS;
 		float  FCAL_ADC_PER_MEV;
-		int    FCAL_CELL_THR;
+		static int    FCAL_CELL_THR;
 		int    FCAL_EN_SC;
-		int    FCAL_NSA;
-		int    FCAL_NSB;
-		int    FCAL_WINDOW;
+		static int    FCAL_NSA;
+		static int    FCAL_NSB;
+		static int    FCAL_WINDOW;
 
 		float  BCAL_ADC_PER_MEV;
-		int    BCAL_CELL_THR;
+		static int    BCAL_CELL_THR;
 		int    BCAL_EN_SC;
-		int    BCAL_NSA;
-		int    BCAL_NSB;
-		int    BCAL_WINDOW;
+		static int    BCAL_NSA;
+		static int    BCAL_NSB;
+		static int    BCAL_WINDOW;
 
 		int    FCAL_BCAL_EN;
 		
