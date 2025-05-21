@@ -173,6 +173,7 @@ class DParticleID: public JObject
 		bool Get_DIRCMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DDIRCMatchParams>& locBestMatchParams) const;
   		bool Get_BestTRDMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DTRDMatchParams>& locBestMatchParams) const;
   		bool Get_BestECALMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DECALShowerMatchParams>& locBestMatchParams) const;
+  bool Get_BestECALSingleHitMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DECALSingleHitMatchParams>& locBestMatchParams) const;
 
 		// Actual
 		shared_ptr<const DBCALShowerMatchParams> Get_BestBCALMatchParams(DVector3 locMomentum, vector<shared_ptr<const DBCALShowerMatchParams> >& locShowerMatchParams) const;
@@ -183,7 +184,8 @@ class DParticleID: public JObject
 		shared_ptr<const DFCALSingleHitMatchParams> Get_BestFCALSingleHitMatchParams(vector<shared_ptr<const DFCALSingleHitMatchParams> >& locMatchParams) const;
   		shared_ptr<const DTRDMatchParams> Get_BestTRDMatchParams(vector<shared_ptr<const DTRDMatchParams> >& locTRDMatchParams) const;
   		shared_ptr<const DECALShowerMatchParams> Get_BestECALMatchParams(vector<shared_ptr<const DECALShowerMatchParams> >& locShowerMatchParams) const;
-
+  shared_ptr<const DECALSingleHitMatchParams> Get_BestECALSingleHitMatchParams(vector<shared_ptr<const DECALSingleHitMatchParams> >& locMatchParams) const;
+  
 		/********************************************************** GET CLOSEST TO TRACK **********************************************************/
 
 		// NOTE: an initial guess for start time is expected as input so that out-of-time hits can be skipped
