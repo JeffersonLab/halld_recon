@@ -18,10 +18,9 @@
 // hnamepath: /occupancy/fcal_occ
 // hnamepath: /occupancy/fcal_num_events
 //
-// e-mail: davidl@jlab.org
-// e-mail: gleasonc@jlab.org
+// e-mail: dalton@jlab.org
+// e-mail: malte@jlab.org
 // e-mail: shepherd@jlab.org
-// e-mail: tbritton@jlab.org
 //
 
 {
@@ -38,9 +37,6 @@
 	double Nevents = 1.0;
 	if(fcal_num_events) Nevents = (double)fcal_num_events->GetBinContent(1);
 
-	TLegend *legend_sa = new TLegend(0.1,0.85,0.3,0.9);
-	if(fcal_occ)legend_sa->AddEntry(fcal_occ, "fADC","f");
-
 	// Just for testing
 	if(gPad == NULL){
 		TCanvas *c1 = new TCanvas("c1");
@@ -56,23 +52,28 @@
 
 	gPad->SetTicks();
 	gPad->SetGrid();
-	gPad->SetRightMargin(2.0);
-	gPad->SetLeftMargin(2.0);
+	gPad->SetRightMargin(0.28);
+	gPad->SetLeftMargin(0.24);
+	gPad->SetBottomMargin(0.11);
+	gPad->SetTopMargin(0.11);
 	if(fcal_occ){
 		fcal_occ->SetStats(0);
 		TH1* h = fcal_occ->DrawCopy("colz");
 		h->Scale(1./Nevents);
-		h->GetZaxis()->SetRangeUser(0.0001, 0.25);
-		
+
+		float max = h->GetMaximum();
+		float setmax = h->Integral()/2360.*4; // set maximum to 4 times the average bin content
+		printf("%f %f %f\n",setmax, max, setmax/max);
+		if (setmax<0.01) setmax=0.01;
+		h->GetZaxis()->SetRangeUser(0.00001, setmax);
+
 		char str[256];
 		sprintf(str,"%0.0f events", Nevents);
-		TLatex lat(30.0, 61.75, str);
+		TLatex lat;
 		lat.SetTextAlign(22);
 		lat.SetTextSize(0.035);
-		lat.Draw();
+		lat.DrawLatexNDC(0.7,0.92,str);
 	}
-
-	legend_sa->Draw();
 
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------
