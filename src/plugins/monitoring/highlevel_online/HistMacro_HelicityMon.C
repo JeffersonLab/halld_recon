@@ -23,9 +23,11 @@
 	latex.SetTextSize(0.04);
 	char str[256];
 
-	//locCanvas->cd(1);
-	//double max = 0;
-	if(locHist_Heli_asym_gtp!=NULL ) {
+	if(locHist_Heli_asym_gtp==NULL ) {
+	    TPaveText *text = new TPaveText(0.1, 0.4, 0.9, 0.6);
+	    text->AddText("Missing histogram");
+	    text->Draw();
+	} else {
 	    Long64_t nentries = locHist_Heli_asym_gtp->GetEntries();
 	    if (nentries<100) {
 		TPaveText *text = new TPaveText(0.1, 0.4, 0.9, 0.6);
@@ -91,7 +93,7 @@
 		float max = locHist_Trigger_asym->GetMaximum();
 		float ymax = gPad->GetUymax();
 		float ymin = gPad->GetUymin();
-		printf("%f %f %f %f\n",max,min,ymax,ymin);
+		//printf("%f %f %f %f\n",max,min,ymax,ymin);
 		if (abs(max)<2e-3 && abs(min)<2e-3) {
 		    locHist_Trigger_asym->Scale(1e6);
 		    locHist_Trigger_asym->GetYaxis()->SetTitle("Asymmetry  (ppm)");
@@ -106,7 +108,7 @@
 		max = locHist_Trigger_asym->GetMaximum();
 		ymax = gPad->GetUymax();
 		ymin = gPad->GetUymin();
-		printf("%f %f %f %f\n",max,min,ymax,ymin);
+		//printf("%f %f %f %f\n",max,min,ymax,ymin);
 		sprintf(str, "%.1e    %.1f#sigma", den1,sig1);
 		latex.DrawLatex(0.1, ymax*1.02, str);
 		sprintf(str, "%.1e    %.1f#sigma", den2,sig2);
