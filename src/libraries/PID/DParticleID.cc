@@ -119,7 +119,7 @@ DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
 	//IF YOU CHANGE THESE, PLEASE (!!) UPDATE THE CUT LINES DRAWN FOR THE MONITORING IN:
 	// src/plugins/Analysis/monitoring_hists/HistMacro_Matching_*.C
 
-	ECAL_CUT_PAR1=0.26;
+	ECAL_CUT_PAR1=1.5;
 	app->SetDefaultParameter("ECAL:CUT_PAR1",ECAL_CUT_PAR1);
 	ECAL_CUT_PAR2=1.8;
 	app->SetDefaultParameter("ECAL:CUT_PAR2",ECAL_CUT_PAR2);
@@ -1335,9 +1335,8 @@ bool DParticleID::Distance_ToTrack(double locStartTime,const DTrackFitter::Extra
   double dy=ecalpos.Y()-extrapolation.position.y();
   locDOCA=sqrt(dx*dx+dy*dy);
 
-  double p=extrapolation.momentum.Mag();
-
-  if (locDOCA<ECAL_CUT_PAR1+ECAL_CUT_PAR2/p){
+  // Cut is 1*sqrt(2.) + small amount to account for track position resolution
+  if (locDOCA<1.5){
     locHitTime=locECALHit->t;
     return true;
   }
@@ -1354,10 +1353,8 @@ bool DParticleID::Distance_ToTrack(double locStartTime,const DTrackFitter::Extra
   double dy=locFCALHit->y-extrapolation.position.y();
   locDOCA=sqrt(dx*dx+dy*dy);
 
-  double p=extrapolation.momentum.Mag();
-  double theta=extrapolation.momentum.Theta()*180./M_PI;
-
-  if (locDOCA<(FCAL_CUT_PAR1+FCAL_CUT_PAR2/p)*(1.+FCAL_CUT_PAR3*theta*theta)){
+  // Cut is 2*sqrt(2.) + small amount to account for track position resolution
+  if (locDOCA<2.9){
     locHitTime=locFCALHit->t-dFCALTimewalkPar1*exp(-dFCALTimewalkPar2*locFCALHit->E);
     return true;
   }
