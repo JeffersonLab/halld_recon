@@ -65,7 +65,7 @@
 		locHist_ECAL_TrackDistanceVsP->GetYaxis()->SetLabelSize(0.05);
 		locHist_ECAL_TrackDistanceVsP->GetYaxis()->SetRangeUser(0,10.);
 		locHist_ECAL_TrackDistanceVsP->Draw("COLZ");
-		TF1* locFunc = new TF1("ECAL_LCut_VsP", "0.26+1.8/x", 0.0, 10.0);
+		TF1* locFunc = new TF1("ECAL_LCut_VsP", "1.5+1.8/x", 0.0, 10.0);
 		locFunc->Draw("SAME");
 	}
 
