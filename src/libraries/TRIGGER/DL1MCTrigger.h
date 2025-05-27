@@ -8,7 +8,8 @@ class DL1MCTrigger: public JObject{
   JOBJECT_PUBLIC(DL1MCTrigger);
   
  DL1MCTrigger():trig_mask(0),fcal_en(0),fcal_adc(0),fcal_adc_en(0),fcal_gtp(0),fcal_gtp_en(0),
-    bcal_en(0),bcal_adc(0),bcal_adc_en(0),bcal_gtp(0),bcal_gtp_en(0) {}
+    bcal_en(0),bcal_adc(0),bcal_adc_en(0),bcal_gtp(0),bcal_gtp_en(0),
+    ecal_en(0),ecal_adc(0),ecal_adc_en(0),ecal_gtp(0),ecal_gtp_en(0) {}
  
   
   uint32_t trig_mask;
@@ -25,6 +26,12 @@ class DL1MCTrigger: public JObject{
   int     bcal_gtp;
   float   bcal_gtp_en;
 
+  float   ecal_en;
+  int     ecal_adc;
+  float   ecal_adc_en;
+  int     ecal_gtp;
+  float   ecal_gtp_en;
+	
   int trig_time[32];
 
 
@@ -43,6 +50,12 @@ class DL1MCTrigger: public JObject{
     summary.add(bcal_adc_en, "BCAL ADC E(GeV)", "%6.3f");
     summary.add(bcal_gtp, "BCAL GTP E(cnt)", "%d");
     summary.add(bcal_gtp_en, "BCAL GTP E(GeV)", "%6.3f");
+
+    summary.add(ecal_en, "ECAL E(GeV)", "%6.3f");
+    summary.add(ecal_adc, "ECAL ADC E(cnt)", "%d");
+    summary.add(ecal_adc_en, "ECAL ADC E(GeV)", "%6.3f");
+    summary.add(ecal_gtp, "ECAL GTP E(cnt)", "%d");
+    summary.add(ecal_gtp_en, "ECAL GTP E(GeV)", "%6.3f");
 
     summary.add(trig_time[0], "Trig Time (samp)", "%d");
   }
