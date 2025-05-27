@@ -1961,7 +1961,7 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SumV_FCAL"), locSumVFCAL, locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "NumBlocks_FCAL"), locNumBlocksFCAL, locArrayIndex);
 
-	double locNumBlocksECAL = (locFCALShower != NULL) ? locECALShower->nBlocks : 0.0;
+	double locNumBlocksECAL = (locECALShower != NULL) ? locECALShower->nBlocks : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "NumBlocks_ECAL"), locNumBlocksECAL, locArrayIndex);
 
 	//TIMING INFO
