@@ -33,11 +33,14 @@ class JEventProcessor_pi0fcaltofskim:public JEventProcessor{
 
   void writeClustersToRoot( const vector< const DFCALCluster* > clusVec );
 
-  double MIN_MASS;
+  double MIN_MASS_ecal;
+  double MIN_MASS_fcal;
   double MAX_MASS;
-  double MIN_E;
+  double MIN_E_ecal;
+  double MIN_E_fcal;
   double MIN_R;
-  double MAX_DT;
+  double MAX_DT_ecal;
+  double MAX_DT_fcal;
   double MAX_ETOT;
   int    MIN_BLOCKS;
 
