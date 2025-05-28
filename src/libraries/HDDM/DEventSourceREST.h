@@ -23,6 +23,7 @@
 #include <PID/DDetectorMatches.h>
 #include "TRACKING/DMCThrown.h"
 #include <TRACKING/DTrackTimeBased.h>
+#include <ECAL/DECALShower.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALShower_factory.h>
 #include <FCAL/DFCALHit.h>
@@ -79,6 +80,8 @@ class DEventSourceREST:public JEventSource
                     JFactoryT<DCTOFPoint>* factory);
    bool Extract_DFCALShower(hddm_r::HDDM *record,
                     JFactoryT<DFCALShower>* factory);
+   bool Extract_DECALShower(hddm_r::HDDM *record,
+			    JFactoryT<DECALShower>* factory);
    bool Extract_DBCALShower(hddm_r::HDDM *record,
                     JFactoryT<DBCALShower>* factory);
    bool Extract_DCCALShower(hddm_r::HDDM *record,
