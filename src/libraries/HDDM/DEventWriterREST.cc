@@ -97,6 +97,9 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	    locEventLoop->Get(fcalhits);
 	}
 
+	std::vector<const DECALShower*> ecalshowers;
+	locEventLoop->Get(ecalshowers);
+	
 	std::vector<const DBCALShower*> bcalshowers;
 	locEventLoop->Get(bcalshowers);
 
@@ -141,7 +144,7 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	bool locOutputDataPresentFlag = false;
 	if((!reactions.empty()) || (!locBeamPhotons.empty()) || (!tracks.empty()))
 		locOutputDataPresentFlag = true;
-	else if((!fcalshowers.empty()) || (!bcalshowers.empty()) || (!tofpoints.empty()) || (!starthits.empty()))
+	else if((!ecalshowers.empty()) || (!fcalshowers.empty()) || (!bcalshowers.empty()) || (!tofpoints.empty()) || (!starthits.empty()))
 		locOutputDataPresentFlag = true;
 	//don't need to check detector matches: no matches if none of the above objects
 	if(!locOutputDataPresentFlag)
@@ -253,7 +256,29 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 			locTaghChannelList().setCounter(locBeamPhotons_TAGGEDMCGEN[loc_i]->dCounter);
 		}
 	}
-
+	// push any DECALShower objects to the output record
+	for (size_t i=0; i < ecalshowers.size(); i++)
+	{
+	  hddm_r::EcalShowerList ecal = res().addEcalShowers(1);
+	  DVector3 pos = ecalshowers[i]->pos;
+	  ecal().setX(pos(0));
+	  ecal().setY(pos(1));
+	  ecal().setZ(pos(2));
+	  ecal().setT(ecalshowers[i]->t);
+	  ecal().setE(ecalshowers[i]->E);
+	  ecal().setXerr(ecalshowers[i]->xErr());
+	  ecal().setYerr(ecalshowers[i]->yErr());
+	  ecal().setZerr(ecalshowers[i]->zErr());
+	  ecal().setTerr(ecalshowers[i]->tErr());
+	  ecal().setEerr(ecalshowers[i]->EErr());
+	  ecal().setXycorr(ecalshowers[i]->XYcorr());
+	  ecal().setXzcorr(ecalshowers[i]->XZcorr());
+	  ecal().setYzcorr(ecalshowers[i]->YZcorr());
+	  ecal().setEzcorr(ecalshowers[i]->EZcorr());
+	  ecal().setTzcorr(ecalshowers[i]->ZTcorr());
+	  ecal().setNumBlocks(ecalshowers[i]->nBlocks);
+	  ecal().setIsNearBorder(ecalshowers[i]->isNearBorder);
+	}
 	// push any DFCALShower objects to the output record
 	for (size_t i=0; i < fcalshowers.size(); i++)
 	{
@@ -298,7 +323,8 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
         locFcalShowerPropertiesList().setE9E25(fcalshowers[i]->getE9E25());
         hddm_r::FcalShowerNBlocksList locFcalShowerNBlocksList = fcal().addFcalShowerNBlockses(1);
 	locFcalShowerNBlocksList().setNumBlocks(fcalshowers[i]->getNumBlocks());
-
+	hddm_r::FcalShowerIsNearBorderList locFcalShowerIsNearBorderList = fcal().addFcalShowerIsNearBorders(1);
+	locFcalShowerIsNearBorderList().setIsNearBorder(fcalshowers[i]->getIsNearBorder());
     }
             
 
