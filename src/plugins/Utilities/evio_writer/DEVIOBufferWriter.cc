@@ -5,6 +5,46 @@
 #include "DEVIOBufferWriter.h"
 #include "DANA/DEvent.h"
 
+#include "BCAL/DBCALShower.h"
+#include "BCAL/DBCALCluster.h"
+#include "BCAL/DBCALPoint.h"
+#include "BCAL/DBCALUnifiedHit.h"
+#include "BCAL/DBCALHit.h"
+#include "BCAL/DBCALTDCHit.h"
+#include "BCAL/DBCALDigiHit.h"
+#include "BCAL/DBCALTDCDigiHit.h"
+#include "CDC/DCDCTrackHit.h"
+#include "CDC/DCDCHit.h"
+#include "CDC/DCDCDigiHit.h"
+#include "ECAL/DECALShower.h"
+#include "ECAL/DECALCluster.h"
+#include "ECAL/DECALHit.h"
+#include "ECAL/DECALDigiHit.h"
+#include "FCAL/DFCALShower.h"
+#include "FCAL/DFCALCluster.h"
+#include "FCAL/DFCALHit.h"
+#include "FCAL/DFCALDigiHit.h"
+#include "FDC/DFDCPseudo.h"
+#include "FDC/DFDCHit.h"
+#include "FDC/DFDCWireDigiHit.h"
+#include "FDC/DFDCCathodeDigiHit.h"
+#include "TRACKING/DTrackTimeBased.h"
+#include "START_COUNTER/DSCHit.h"
+#include "START_COUNTER/DSCDigiHit.h"
+#include "START_COUNTER/DSCTDCDigiHit.h"
+#include "PID/DBeamPhoton.h"
+#include "TAGGER/DTAGHHit.h"
+#include "TAGGER/DTAGHDigiHit.h"
+#include "TAGGER/DTAGHTDCDigiHit.h"
+#include "TAGGER/DTAGMHit.h"
+#include "TAGGER/DTAGMDigiHit.h"
+#include "TAGGER/DTAGMTDCDigiHit.h"
+#include "TOF/DTOFPoint.h"
+#include "TOF/DTOFPaddleHit.h"
+#include "TOF/DTOFHit.h"
+#include "TOF/DTOFDigiHit.h"
+#include "TOF/DTOFTDCDigiHit.h"
+
 
 //------------------
 // WriteEventToBuffer
@@ -68,8 +108,8 @@ void DEVIOBufferWriter::WriteEventToBuffer(const std::shared_ptr<const JEvent>& 
         event->Get(f125fdcpulses);
         event->Get(f125wrds);
         event->Get(f125configs);
-	event->Get(dirctdchits);
-	event->Get(dirctts);
+		event->Get(dirctdchits);
+		event->Get(dirctts);
         event->Get(caen1290hits);
         event->Get(caen1290configs);
         event->Get(F1hits);
@@ -79,12 +119,12 @@ void DEVIOBufferWriter::WriteEventToBuffer(const std::shared_ptr<const JEvent>& 
         event->Get(coda_events);
         event->Get(coda_rocinfos);
         event->Get(l1_info);
-	event->Get(f250scalers);
+		event->Get(f250scalers);
     } else {
         // only save hits that correspond to certain reconstructed objects
         event->Get(epicsValues);   // always read EPICS data
         event->Get(l1_info);       // always read extra trigger data
-	event->Get(f250scalers);
+		event->Get(f250scalers);
         event->Get(coda_events);
         event->Get(coda_rocinfos);
         event->Get(f125configs);
@@ -133,6 +173,48 @@ void DEVIOBufferWriter::WriteEventToBuffer(const std::shared_ptr<const JEvent>& 
                 F1tts.push_back(llobj_ptr);
             } else {
                 // if not, assume this is a reconstructed object, and just get all of the possible hits
+                // For JANA, getting the associated objects would automatically go through the
+                // inheritance chain.  JANA2 only directly gets the objects directly associated 
+                // with the parent object, so we have to jump through more hoops
+                // note that will need to extend this every time we have a new
+                // reconstructed object type
+                // TODO: add DIRC, TRD, TPOL, PS/PSC, RF?
+                                
+                // higher level object types
+                vector<const DBCALCluster*>        obj_bcalclusters;
+                vector<const DBCALPoint*>          obj_bcalpoints;
+                vector<const DBCALUnifiedHit*>     obj_bcalunihits;
+                vector<const DBCALHit*>            obj_bcalhits;
+                vector<const DBCALTDCHit*>         obj_bcaltdchits;
+                vector<const DBCALDigiHit*>        obj_bcaldigihits;
+                vector<const DBCALTDCDigiHit*>     obj_bcaltdcdigihits;
+                vector<const DCDCTrackHit*>        obj_cdctrackhits;
+                vector<const DCDCHit*>             obj_cdchits;
+                vector<const DCDCDigiHit*>         obj_cdcdigihits;
+                vector<const DECALCluster*>        obj_ecalclusters;
+                vector<const DECALHit*>            obj_ecalhits;
+                vector<const DECALDigiHit*>        obj_ecaldigihits;
+                vector<const DFCALCluster*>        obj_fcalclusters;
+                vector<const DFCALHit*>            obj_fcalhits;
+                vector<const DFCALDigiHit*>        obj_fcaldigihits;
+                vector<const DFDCPseudo*>          obj_fdcpseudohits;
+                vector<const DFDCHit*>             obj_fdchits;
+                vector<const DFDCCathodeDigiHit*>  obj_fdcdigihits;
+                vector<const DFDCWireDigiHit*>     obj_fdctdcdigihits;
+                vector<const DSCHit*>              obj_schits;
+                vector<const DTOFPaddleHit*>       obj_tofpaddlehits;
+                vector<const DTOFHit*>             obj_tofhits;
+                vector<const DTOFDigiHit*>         obj_tofdigihits;
+                vector<const DTOFTDCDigiHit*>      obj_toftdcdigihits;
+                vector<const DTAGHHit*>            obj_taghhits;
+                vector<const DTAGHDigiHit*>        obj_taghdigihits;
+                vector<const DTAGHTDCDigiHit*>     obj_taghtdcdigihits;
+                vector<const DTAGMHit*>            obj_tagmhits;
+                vector<const DTAGMDigiHit*>        obj_tagmdigihits;
+                vector<const DTAGMTDCDigiHit*>     obj_tagmtdcdigihits;
+
+
+                 // low level object types
                 vector<const Df250TriggerTime*>   obj_f250tts;
                 vector<const Df250PulseData*>     obj_f250pulses;
                 vector<const Df250PulseIntegral*> obj_f250pis;
@@ -148,21 +230,421 @@ void DEVIOBufferWriter::WriteEventToBuffer(const std::shared_ptr<const JEvent>& 
                 vector<const DF1TDCHit*>          obj_F1hits;
                 vector<const DF1TDCTriggerTime*>  obj_F1tts;
                 
-                obj_ptr->Get(obj_f250tts);
-                obj_ptr->Get(obj_f250pulses);
-                obj_ptr->Get(obj_f250pis);
-                obj_ptr->Get(obj_f250wrds);
-                obj_ptr->Get(obj_f125tts);
-                obj_ptr->Get(obj_f125pis);
-                obj_ptr->Get(obj_f125cdcpulses);
-                obj_ptr->Get(obj_f125fdcpulses);
-                obj_ptr->Get(obj_f125wrds);
-                obj_ptr->Get(obj_dirctdchits);
-                obj_ptr->Get(obj_dirctts);
-                obj_ptr->Get(obj_caen1290hits);
-                obj_ptr->Get(obj_F1hits);
-                obj_ptr->Get(obj_F1tts);
+                // TODO: make sure that we extract all of the data types from these
+                //   objects, like the raw window data
                 
+                
+                // some track object
+                if(auto *derived_obj_ptr = dynamic_cast<const DTrackTimeBased *>(obj_ptr)) {
+                	vector<const DCDCTrackHit*> the_cdc_hits;
+                	derived_obj_ptr->Get(the_cdc_hits);
+                	obj_cdctrackhits.insert(obj_cdctrackhits.end(), the_cdc_hits.begin(), the_cdc_hits.end());
+                	vector<const DFDCPseudo*>   the_fdc_hits;
+                	derived_obj_ptr->Get(the_fdc_hits);
+                	obj_fdcpseudohits.insert(obj_fdcpseudohits.end(), the_fdc_hits.begin(), the_fdc_hits.end());
+                }
+                
+                // CDC track hit
+                if(auto *derived_obj_ptr = dynamic_cast<const DCDCTrackHit *>(obj_ptr))
+                	obj_cdctrackhits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_cdctrackhits) {
+                	vector<const DCDCHit*>   the_hits;
+                	hitPtr->Get(the_hits);
+                	obj_cdchits.insert(obj_cdchits.end(), the_hits.begin(), the_hits.end());
+                }
+                
+                // CDC hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DCDCHit *>(obj_ptr))
+                	obj_cdchits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_cdchits) {
+                	const DCDCDigiHit* the_digihit = nullptr;
+                	hitPtr->GetSingle(the_digihit);
+                	if(the_digihit != nullptr)
+                		obj_cdcdigihits.push_back(the_digihit);
+                }
+                
+                // CDC digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DCDCDigiHit *>(obj_ptr))
+                	obj_cdcdigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_cdcdigihits) {
+                	const Df125CDCPulse* the_f125pulse = nullptr;
+                	digihitPtr->GetSingle(the_f125pulse);
+                	if(the_f125pulse != nullptr)
+                		obj_f125cdcpulses.push_back(the_f125pulse);
+                }
+
+                // FDC pseudo hit
+                // TODO: follow up on this
+                if(auto *derived_obj_ptr = dynamic_cast<const DFDCPseudo *>(obj_ptr))
+                	obj_fdcpseudohits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_fdcpseudohits) {
+                	vector<const DFDCHit*>   the_hits;
+                	hitPtr->Get(the_hits);
+                	obj_fdchits.insert(obj_fdchits.end(), the_hits.begin(), the_hits.end());
+                }
+                
+                // FDC hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DFDCHit *>(obj_ptr))
+                	obj_fdchits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_fdchits) {
+                	const DFDCCathodeDigiHit* the_digihit = nullptr;
+                	hitPtr->GetSingle(the_digihit);
+                	if(the_digihit != nullptr)
+                		obj_fdcdigihits.push_back(the_digihit);
+                	const DFDCWireDigiHit* the_tdcdigihit = nullptr;
+                	hitPtr->GetSingle(the_tdcdigihit);
+                	if(the_tdcdigihit != nullptr)
+                		obj_fdctdcdigihits.push_back(the_tdcdigihit);
+                }
+                
+                // FDC cathode digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DFDCCathodeDigiHit *>(obj_ptr))
+                	obj_fdcdigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_fdcdigihits) {
+                	const Df125FDCPulse* the_f125pulse = nullptr;
+                	digihitPtr->GetSingle(the_f125pulse);
+                	if(the_f125pulse != nullptr)
+                		obj_f125fdcpulses.push_back(the_f125pulse);
+                }
+
+                // FDC wire digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DFDCWireDigiHit *>(obj_ptr))
+                	obj_fdctdcdigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_fdctdcdigihits) {
+                	const DF1TDCHit* the_f1tdchit = nullptr;
+                	digihitPtr->GetSingle(the_f1tdchit);
+                	if(the_f1tdchit != nullptr)
+                		obj_F1hits.push_back(the_f1tdchit);
+                }
+
+                
+                // BCAL shower
+                if(auto *derived_obj_ptr = dynamic_cast<const DBCALShower *>(obj_ptr)) {
+                	const DBCALCluster* the_cluster = nullptr;
+                	derived_obj_ptr->GetSingle(the_cluster);
+                	if(the_cluster != nullptr)
+                		obj_bcalclusters.push_back(the_cluster);
+                }
+                
+                // BCAL cluster
+                if(auto *derived_obj_ptr = dynamic_cast<const DBCALCluster *>(obj_ptr))
+                	obj_bcalclusters.push_back(derived_obj_ptr);
+                for(auto clusterPtr : obj_ecalclusters) {
+                	vector<const DBCALPoint*>   the_points;
+                	clusterPtr->Get(the_points);
+                	obj_bcalpoints.insert(obj_bcalpoints.end(), the_points.begin(), the_points.end());
+                }
+                
+                // BCAL points
+                if(auto *derived_obj_ptr = dynamic_cast<const DBCALPoint *>(obj_ptr))
+                	obj_bcalpoints.push_back(derived_obj_ptr);
+                for(auto pointPtr : obj_bcalpoints) {
+                	vector<const DBCALUnifiedHit*>   the_unihits;
+                	pointPtr->Get(the_unihits);
+                	obj_bcalunihits.insert(obj_bcalunihits.end(), the_unihits.begin(), the_unihits.end());
+                }
+                
+                // BCAL unified hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DBCALUnifiedHit *>(obj_ptr))
+                	obj_bcalunihits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_bcalunihits) {
+                	const DBCALHit* the_hit = nullptr;
+                	hitPtr->GetSingle(the_hit);
+                	const DBCALTDCHit* the_tdchit = nullptr;
+                	hitPtr->GetSingle(the_tdchit);
+                	if(the_hit != nullptr)
+                		obj_bcalhits.push_back(the_hit);
+                	if(the_tdchit != nullptr)
+                		obj_bcaltdchits.push_back(the_tdchit);
+                }
+                
+                // BCAL hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DBCALHit *>(obj_ptr))
+                	obj_bcalhits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_bcalhits) {
+                	const DBCALDigiHit* the_digihit = nullptr;
+                	hitPtr->GetSingle(the_digihit);
+                	if(the_digihit != nullptr)
+                		obj_bcaldigihits.push_back(the_digihit);
+                }
+                
+                // BCAL digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DBCALDigiHit *>(obj_ptr))
+                	obj_bcaldigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_bcaldigihits) {
+                	const Df250PulseData* the_f250pulse = nullptr;
+                	digihitPtr->GetSingle(the_f250pulse);
+                	if(the_f250pulse != nullptr)
+                		obj_f250pulses.push_back(the_f250pulse);
+                }
+                
+                // BCAL TDC hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DBCALTDCHit *>(obj_ptr))
+                	obj_bcaltdchits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_bcaltdchits) {
+                	const DBCALTDCDigiHit* the_digihit = nullptr;
+                	hitPtr->GetSingle(the_digihit);
+                	if(the_digihit != nullptr)
+                		obj_bcaltdcdigihits.push_back(the_digihit);
+                }
+                
+                // BCAL TDC digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DBCALTDCDigiHit *>(obj_ptr))
+                	obj_bcaltdcdigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_bcaltdcdigihits) {
+                	const DF1TDCHit* the_f1tdchit = nullptr;
+                	digihitPtr->GetSingle(the_f1tdchit);
+                	if(the_f1tdchit != nullptr)
+                		obj_F1hits.push_back(the_f1tdchit);
+                }
+                
+                // ECAL shower
+                if(auto *derived_obj_ptr = dynamic_cast<const DECALShower *>(obj_ptr)) {
+                	const DECALCluster* the_cluster = nullptr;
+                	derived_obj_ptr->GetSingle(the_cluster);
+                	if(the_cluster != nullptr)
+                		obj_ecalclusters.push_back(the_cluster);
+                }
+                
+                // ECAL cluster
+                if(auto *derived_obj_ptr = dynamic_cast<const DECALCluster *>(obj_ptr))
+                	obj_ecalclusters.push_back(derived_obj_ptr);
+                for(auto clusterPtr : obj_ecalclusters) {
+                	vector<const DECALHit*>   the_hits;
+                	clusterPtr->Get(the_hits);
+                	obj_ecalhits.insert(obj_ecalhits.end(), the_hits.begin(), the_hits.end());
+                }
+                
+                // ECAL hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DECALHit *>(obj_ptr))
+                	obj_ecalhits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_ecalhits) {
+                	const DECALDigiHit* the_digihit = nullptr;
+                	hitPtr->GetSingle(the_digihit);
+                	if(the_digihit != nullptr)
+                		obj_ecaldigihits.push_back(the_digihit);
+                }
+                
+                // ECAL digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DECALDigiHit *>(obj_ptr))
+                	obj_ecaldigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_ecaldigihits) {
+                	const Df250PulseData* the_f250pulse = nullptr;
+                	digihitPtr->GetSingle(the_f250pulse);
+                	if(the_f250pulse != nullptr)
+                		obj_f250pulses.push_back(the_f250pulse);
+                }
+
+                // FCAL shower
+                if(auto *derived_obj_ptr = dynamic_cast<const DFCALShower *>(obj_ptr)) {
+                	const DFCALCluster* the_cluster = nullptr;
+                	derived_obj_ptr->GetSingle(the_cluster);
+                	if(the_cluster != nullptr)
+                		obj_fcalclusters.push_back(the_cluster);
+                }
+                
+                // FCAL cluster
+                if(auto *derived_obj_ptr = dynamic_cast<const DFCALCluster *>(obj_ptr))
+                	obj_fcalclusters.push_back(derived_obj_ptr);
+                for(auto clusterPtr : obj_fcalclusters) {
+                	vector<const DFCALHit*>   the_hits;
+                	clusterPtr->Get(the_hits);
+                	obj_fcalhits.insert(obj_fcalhits.end(), the_hits.begin(), the_hits.end());
+                }
+                
+                // FCAL hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DFCALHit *>(obj_ptr))
+                	obj_fcalhits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_fcalhits) {
+                	const DFCALDigiHit* the_digihit = nullptr;
+                	hitPtr->GetSingle(the_digihit);
+                	if(the_digihit != nullptr)
+                		obj_fcaldigihits.push_back(the_digihit);
+                }
+                
+                // FCAL digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DFCALDigiHit *>(obj_ptr))
+                	obj_fcaldigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_fcaldigihits) {
+                	const Df250PulseData* the_f250pulse = nullptr;
+                	digihitPtr->GetSingle(the_f250pulse);
+                	if(the_f250pulse != nullptr)
+                		obj_f250pulses.push_back(the_f250pulse);
+                }
+
+                // SC hit
+                if(auto *derived_obj_ptr = dynamic_cast<const DSCHit *>(obj_ptr)) {
+                	const DSCHit* the_schit = nullptr;
+                	derived_obj_ptr->GetSingle(the_schit);
+                	if(the_schit != nullptr) {
+						const DSCDigiHit* the_hit = nullptr;
+						the_schit->GetSingle(the_hit);
+						const DSCTDCDigiHit* the_tdchit = nullptr;
+						the_schit->GetSingle(the_tdchit);
+						if(the_hit != nullptr) {
+							const Df250PulseData* the_f250pulse = nullptr;
+							the_hit->GetSingle(the_f250pulse);
+							if(the_f250pulse != nullptr)
+								obj_f250pulses.push_back(the_f250pulse);
+						}
+						if(the_tdchit != nullptr) {
+							const DF1TDCHit* the_f1hit = nullptr;
+							the_tdchit->GetSingle(the_f1hit);
+							if(the_f1hit != nullptr)
+								obj_F1hits.push_back(the_f1hit);
+						}
+
+                	}
+                }
+
+                // beam photon
+                if(auto *derived_obj_ptr = dynamic_cast<const DBeamPhoton *>(obj_ptr)) {
+                	const DTAGHHit* the_taghhit = nullptr;
+                	derived_obj_ptr->GetSingle(the_taghhit);
+                	if(the_taghhit != nullptr)
+                		obj_taghhits.push_back(the_taghhit);
+                	const DTAGMHit* the_tagmhit = nullptr;
+                	derived_obj_ptr->GetSingle(the_tagmhit);
+                	if(the_tagmhit != nullptr)
+                		obj_tagmhits.push_back(the_tagmhit);
+                }
+                
+                // TAGH hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DTAGHHit *>(obj_ptr))
+                	obj_taghhits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_taghhits) {
+                	const DTAGHDigiHit* the_digihit = nullptr;
+                	hitPtr->GetSingle(the_digihit);
+                	if(the_digihit != nullptr)
+                		obj_taghdigihits.push_back(the_digihit);
+                	const DTAGHTDCDigiHit* the_tdcdigihit = nullptr;
+                	hitPtr->GetSingle(the_tdcdigihit);
+                	if(the_tdcdigihit != nullptr)
+                		obj_taghtdcdigihits.push_back(the_tdcdigihit);
+                }
+                
+                // TAGH digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DTAGHDigiHit *>(obj_ptr))
+                	obj_taghdigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_taghdigihits) {
+                	const Df250PulseData* the_f250pulse = nullptr;
+                	digihitPtr->GetSingle(the_f250pulse);
+                	if(the_f250pulse != nullptr)
+                		obj_f250pulses.push_back(the_f250pulse);
+                }
+
+                // TAGH TDC digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DTAGHTDCDigiHit *>(obj_ptr))
+                	obj_taghtdcdigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_taghtdcdigihits) {
+                	const DF1TDCHit* the_f1hit = nullptr;
+                	digihitPtr->GetSingle(the_f1hit);
+                	if(the_f1hit != nullptr)
+                		obj_F1hits.push_back(the_f1hit);
+                }
+                
+                // TAGM hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DTAGMHit *>(obj_ptr))
+                	obj_tagmhits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_tagmhits) {
+                	const DTAGMDigiHit* the_digihit = nullptr;
+                	hitPtr->GetSingle(the_digihit);
+                	if(the_digihit != nullptr)
+                		obj_tagmdigihits.push_back(the_digihit);
+                	const DTAGMTDCDigiHit* the_tdcdigihit = nullptr;
+                	hitPtr->GetSingle(the_tdcdigihit);
+                	if(the_tdcdigihit != nullptr)
+                		obj_tagmtdcdigihits.push_back(the_tdcdigihit);
+                }
+                
+                // TAGM digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DTAGMDigiHit *>(obj_ptr))
+                	obj_tagmdigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_tagmdigihits) {
+                	const Df250PulseData* the_f250pulse = nullptr;
+                	digihitPtr->GetSingle(the_f250pulse);
+                	if(the_f250pulse != nullptr)
+                		obj_f250pulses.push_back(the_f250pulse);
+                }
+
+                // TAGM TDC digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DTAGMTDCDigiHit *>(obj_ptr))
+                	obj_tagmtdcdigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_tagmtdcdigihits) {
+                	const DF1TDCHit* the_f1hit = nullptr;
+                	digihitPtr->GetSingle(the_f1hit);
+                	if(the_f1hit != nullptr)
+                		obj_F1hits.push_back(the_f1hit);
+                }
+
+                // TOF point
+                if(auto *derived_obj_ptr = dynamic_cast<const DTOFPoint *>(obj_ptr)) {
+                	vector<const DTOFPaddleHit*>   the_hits;
+                	derived_obj_ptr->Get(the_hits);
+                	obj_tofpaddlehits.insert(obj_tofpaddlehits.end(), the_hits.begin(), the_hits.end());
+                }
+                
+                // TOF paddle hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DTOFPaddleHit *>(obj_ptr))
+                	obj_tofpaddlehits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_tofpaddlehits) {
+                	vector<const DTOFHit*>   the_hits;
+                	hitPtr->Get(the_hits);
+                	obj_tofhits.insert(obj_tofhits.end(), the_hits.begin(), the_hits.end());
+                }
+                
+                // TOF hits
+                if(auto *derived_obj_ptr = dynamic_cast<const DTOFHit *>(obj_ptr))
+                	obj_tofhits.push_back(derived_obj_ptr);
+                for(auto hitPtr : obj_tofhits) {
+                	const DTOFDigiHit* the_digihit = nullptr;
+                	hitPtr->GetSingle(the_digihit);
+                	if(the_digihit != nullptr) 
+                		obj_tofdigihits.push_back(the_digihit);
+                	const DTOFTDCDigiHit* the_tdcdigihit = nullptr;
+                	hitPtr->GetSingle(the_tdcdigihit);
+                	if(the_tdcdigihit != nullptr) 
+                		obj_toftdcdigihits.push_back(the_tdcdigihit);
+                }
+                
+                // TOF digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DTOFDigiHit *>(obj_ptr))
+                	obj_tofdigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_tofdigihits) {
+                	const Df250PulseData* the_f250pulse = nullptr;
+                	digihitPtr->GetSingle(the_f250pulse);
+                	if(the_f250pulse != nullptr)
+                		obj_f250pulses.push_back(the_f250pulse);
+                }
+
+                // TOF TDC digithits
+                if(auto *derived_obj_ptr = dynamic_cast<const DTOFTDCDigiHit *>(obj_ptr))
+                	obj_toftdcdigihits.push_back(derived_obj_ptr);
+                for(auto digihitPtr : obj_toftdcdigihits) {
+                	const DCAEN1290TDCHit* the_tdchit = nullptr;
+                	digihitPtr->GetSingle(the_tdchit);
+                	if(the_tdchit != nullptr)
+                		caen1290hits.push_back(the_tdchit);
+                }
+
+
+// JANA solution                
+//                 obj_ptr->Get(obj_f250tts);
+//                 obj_ptr->Get(obj_f250pulses);
+//                 obj_ptr->Get(obj_f250pis);
+//                 obj_ptr->Get(obj_f250wrds);
+//                 obj_ptr->Get(obj_f125tts);
+//                 obj_ptr->Get(obj_f125pis);
+//                 obj_ptr->Get(obj_f125cdcpulses);
+//                 obj_ptr->Get(obj_f125fdcpulses);
+//                 obj_ptr->Get(obj_f125wrds);
+//                 obj_ptr->Get(obj_dirctdchits);
+//                 obj_ptr->Get(obj_dirctts);
+//                 obj_ptr->Get(obj_caen1290hits);
+//                 obj_ptr->Get(obj_F1hits);
+//                 obj_ptr->Get(obj_F1tts);
+                
+                // TODO: use sets instead??
                 f250tts.insert(f250tts.end(), obj_f250tts.begin(), obj_f250tts.end());
                 f250pulses.insert(f250pulses.end(), obj_f250pulses.begin(), obj_f250pulses.end());
                 f250pis.insert(f250pis.end(), obj_f250pis.begin(), obj_f250pis.end());

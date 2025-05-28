@@ -98,7 +98,8 @@ class DFCALShower_factory:public JFactoryT<DFCALShower>{
   double FCAL_C_EFFECTIVE;
 
   const DFCALGeometry *fcalGeom=NULL;
-
+  bool haveInsert;
+  
   int VERBOSE;
   string COVARIANCEFILENAME;
   TH2F *CovarianceLookupTable[5][5];

@@ -23,7 +23,11 @@ class DECALCluster:public JObject{
 
   double E,Efit,t,x,y;
   int status,channel_Emax;
-  
+  int ndf;
+  double chisq;
+  bool isNearBorder;
+  int nBlocks;
+
   void Summarize(JObjectSummary& summary) const override {
     summary.add(x, "x [cm]", "%f");
     summary.add(y, "y [cm]", "%f");
@@ -31,6 +35,8 @@ class DECALCluster:public JObject{
     summary.add(Efit, "E(fit) [GeV]", "%f");
     summary.add(t, "t [ns]", "%f");
     summary.add(status,"status","%d");
+    summary.add(chisq,"chi^2","%f");
+    summary.add(ndf,"ndf","%d");
   }
 };
 

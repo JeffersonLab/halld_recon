@@ -22,6 +22,7 @@ bool DCustomAction_p3pi_Pi0Cuts::Perform_Action(const std::shared_ptr<const JEve
    	auto locParticles = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_FinalParticles() : locParticleComboStep->Get_FinalParticles_Measured();
 
 	int nFCAL = 0;
+	int nECAL = 0;
 	
         // loop final state particles
         for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i) {
@@ -36,10 +37,16 @@ bool DCustomAction_p3pi_Pi0Cuts::Perform_Action(const std::shared_ptr<const JEve
 		if(locNeutralShower->dDetectorSystem == SYS_FCAL) {
 			nFCAL++;
 		}
+		if(locNeutralShower->dDetectorSystem == SYS_ECAL) {
+			nECAL++;
+		}
 	}
 
 	// require 1 or 2 photons in FCAL (specify parameter in DReaction setup)
 	if(nFCAL != dMinFCAL) 
+		return false;
+	// same with ECAL
+	if(nECAL != dMinECAL) 
 		return false;
 
 	// passed all cuts

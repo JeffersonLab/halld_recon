@@ -51,6 +51,8 @@
 #include "BCAL/DBCALHit.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALHit.h"
+#include "ECAL/DECALShower.h"
+#include "ECAL/DECALHit.h"
 #include "CCAL/DCCALShower.h"
 #include "CCAL/DCCALHit.h"
 
@@ -80,10 +82,10 @@ class DHistogramAction_PID : public DAnalysisAction
 
 		DHistogramAction_PID(const DReaction* locReaction, bool locUseKinFitResultsFlag = false, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Hist_PID", locUseKinFitResultsFlag, locActionUniqueString),
-		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DCCALThetaBins(120), dNum2DThetaBins(280), dNumBetaBins(700),
+		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DECALThetaBins(120), dNum2DCCALThetaBins(120), dNum2DThetaBins(280), dNumBetaBins(700),
 		dNum2DEOverPBins(300), dNum2DDeltaBetaBins(400), dNum2DDeltadEdxBins(300), dNum2DDeltaTBins(400), dNum2DPullBins(200), dNumFOMBins(400), 
 		dNum2DFOMBins(200), dMinP(0.0), dMaxP(10.0), dMaxBCALP(3.0), dMindEdX(0.0), dMaxdEdX(25.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinBCALTheta(10.0), 
-		dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), dMinCCALTheta(0.0), dMaxCCALTheta(2.0), dMinTheta(0.0), dMaxTheta(140.0), dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), 
+		dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), dMinECALTheta(0.0), dMaxECALTheta(6.0), dMinCCALTheta(0.0), dMaxCCALTheta(2.0), dMinTheta(0.0), dMaxTheta(140.0), dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), 
 		dMaxDeltaBeta(1.0), dMinDeltadEdx(-30.0), dMaxDeltadEdx(30.0), dMinDeltaT(-10.0), dMaxDeltaT(10.0), dMinPull(-10.0), dMaxPull(10.0),
 	    dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
 		dDIRCMinNumPhotons(0), dDIRCMaxNumPhotons(100),
@@ -109,9 +111,9 @@ class DHistogramAction_PID : public DAnalysisAction
 			dPreviouslyHistogrammedParticles.clear();
 		}
 
-		unsigned int dNum2DPBins, dNum2DdEdxBins, dNum2DBetaBins, dNum2DBCALThetaBins, dNum2DFCALThetaBins, dNum2DCCALThetaBins, dNum2DThetaBins, dNumBetaBins;
+		unsigned int dNum2DPBins, dNum2DdEdxBins, dNum2DBetaBins, dNum2DBCALThetaBins, dNum2DFCALThetaBins, dNum2DECALThetaBins, dNum2DCCALThetaBins, dNum2DThetaBins, dNumBetaBins;
 		unsigned int dNum2DEOverPBins, dNum2DDeltaBetaBins, dNum2DDeltadEdxBins, dNum2DDeltaTBins, dNum2DPullBins, dNumFOMBins, dNum2DFOMBins;
-		double dMinP, dMaxP, dMaxBCALP, dMindEdX, dMaxdEdX, dMinBeta, dMaxBeta, dMinBCALTheta, dMaxBCALTheta, dMinFCALTheta, dMaxFCALTheta, dMinCCALTheta, dMaxCCALTheta, dMinTheta, dMaxTheta;
+		double dMinP, dMaxP, dMaxBCALP, dMindEdX, dMaxdEdX, dMinBeta, dMaxBeta, dMinBCALTheta, dMaxBCALTheta, dMinFCALTheta, dMaxFCALTheta, dMinECALTheta, dMaxECALTheta, dMinCCALTheta, dMaxCCALTheta, dMinTheta, dMaxTheta;
 		double dMinEOverP, dMaxEOverP, dMinDeltaBeta, dMaxDeltaBeta, dMinDeltadEdx, dMaxDeltadEdx, dMinDeltaT, dMaxDeltaT, dMinPull, dMaxPull;
 		unsigned int dDIRCNumPhotonsBins, dDIRCThetaCBins, dDIRCLikelihoodBins, dDIRCMinNumPhotons, dDIRCMaxNumPhotons;
                 double dDIRCMinThetaC, dDIRCMaxThetaC;
@@ -149,8 +151,8 @@ class DHistogramAction_PID : public DAnalysisAction
 		map<Particle_t, map<DetectorSystem_t, TH2I*> > dHistMap_TimePullVsP;
 		map<Particle_t, map<DetectorSystem_t, TH2I*> > dHistMap_TimeFOMVsP;
 
-		map<Particle_t, map<DetectorSystem_t, TH1I*> > dHistMap_Beta; //for BCAL/FCAL/CCAL neutrals only
-		map<Particle_t, map<DetectorSystem_t, TH1I*> > dHistMap_CalE; //for BCAL/FCAL/CCAL neutrals only
+		map<Particle_t, map<DetectorSystem_t, TH1I*> > dHistMap_Beta; //for BCAL/ECAL/FCAL/CCAL neutrals only
+		map<Particle_t, map<DetectorSystem_t, TH1I*> > dHistMap_CalE; //for BCAL/ECAL/FCAL/CCAL neutrals only
 
 		map<Particle_t, TH1I*> dHistMap_PIDFOM; //overall
 
