@@ -73,20 +73,26 @@ void JEventProcessor_pi0fcaltofskim::Init() {
 	japp->SetDefaultParameter("PI0FCALTOFSKIM:SAVE_TOF", SAVE_TOF_POINT);
 	japp->SetDefaultParameter("PI0FCALTOFSKIM:GET_IP", GET_IP);
 	japp->SetDefaultParameter("PI0FCALTOFSKIM:SAVE_L1_TRIGGER", SAVE_L1_TRIGGER);
-
-	MIN_MASS = 0.02; // GeV
+	
+	MIN_MASS_fcal = 0.03; // GeV
+	MIN_MASS_ecal = 0.05; // GeV
 	MAX_MASS = 1.2; // GeV
-	MIN_E = 0.1; // GeV (photon energy cut)
+	MIN_E_fcal = 0.5; // GeV (photon energy cut)
+	MIN_E_ecal = 0.5; // GeV (photon energy cut)
 	//MIN_R      =   20; // cm  (cluster distance to beam line)
-	MAX_DT = 25; // ns  (cluster time diff. cut)
+	MAX_DT_fcal = 5; // ns  (cluster time diff. cut)
+	MAX_DT_ecal = 25; // ns  (cluster time diff. cut)
 	//MAX_ETOT   =   12; // GeV (max total FCAL energy)
 	//MIN_BLOCKS =    2; // minumum blocks per cluster
 
-	japp->SetDefaultParameter("PI0FCALTOFSKIM:MIN_MASS", MIN_MASS);
+	japp->SetDefaultParameter("PI0FCALTOFSKIM:MIN_MASS_fcal", MIN_MASS_fcal);
+	japp->SetDefaultParameter("PI0FCALTOFSKIM:MIN_MASS_ecal", MIN_MASS_ecal);
 	japp->SetDefaultParameter("PI0FCALTOFSKIM:MAX_MASS", MAX_MASS);
-	japp->SetDefaultParameter("PI0FCALTOFSKIM:MIN_E", MIN_E);
+	japp->SetDefaultParameter("PI0FCALTOFSKIM:MIN_E_ecal", MIN_E_ecal);
+	japp->SetDefaultParameter("PI0FCALTOFSKIM:MIN_E_fcal", MIN_E_fcal);
 	//japp->SetDefaultParameter( "PI0FCALTOFSKIM:MIN_R", MIN_R );
-	japp->SetDefaultParameter("PI0FCALTOFSKIM:MAX_DT", MAX_DT);
+	japp->SetDefaultParameter("PI0FCALTOFSKIM:MAX_DT_ecal", MAX_DT_ecal);
+	japp->SetDefaultParameter("PI0FCALTOFSKIM:MAX_DT_fcal", MAX_DT_fcal);
 	//japp->SetDefaultParameter( "PI0FCALTOFSKIM:MAX_ETOT", MAX_ETOT );
 	//japp->SetDefaultParameter( "PI0FCALTOFSKIM:MIN_BLOCKS", MIN_BLOCKS );
 	//japp->SetDefaultParameter( "PI0FCALTOFSKIM:WRITE_ROOT", WRITE_ROOT );
@@ -366,10 +372,10 @@ void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>
 	Double_t inv_mass = ptot.M();
 
 	//Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
-        Candidatefcal |= (E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) ;
+        Candidatefcal |= (E1 > MIN_E_ecal && E2 > MIN_E_ecal && (fabs (t1-t2) < MAX_DT_ecal) && (inv_mass>MIN_MASS_ecal) && (inv_mass<MAX_MASS) ) ;
 
         //if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
-        if(E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) {
+        if(E1 > MIN_E_ecal && E2 > MIN_E_ecal && (fabs (t1-t2) < MAX_DT_ecal) && (inv_mass>MIN_MASS_ecal) && (inv_mass<MAX_MASS) ) {
 	  if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[i]) == locObjectsToSave.end())
 	    locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[i]));
 	  if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[j]) == locObjectsToSave.end())
@@ -417,10 +423,10 @@ void JEventProcessor_pi0fcaltofskim::Process(const std::shared_ptr<const JEvent>
 	Double_t inv_mass = ptot.M();
 
 	//Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
-        Candidateecal |= (E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) ;
+        Candidateecal |= (E1 > MIN_E_fcal && E2 > MIN_E_fcal && (fabs (t1-t2) < MAX_DT_fcal) && (inv_mass>MIN_MASS_fcal) && (inv_mass<MAX_MASS) ) ;
 
         //if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
-        if(E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) {
+        if(E1 > MIN_E_fcal && E2 > MIN_E_fcal && (fabs (t1-t2) < MAX_DT_fcal) && (inv_mass>MIN_MASS_fcal) && (inv_mass<MAX_MASS) ) {
 	  if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locECALShowers[i]) == locObjectsToSave.end())
 	    locObjectsToSave.push_back(static_cast<const JObject *>(locECALShowers[i]));
 	  if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locECALShowers[j]) == locObjectsToSave.end())
