@@ -13,6 +13,7 @@ subdirs = [
 'CDC_online',
 'DAQ_online',
 'fa125_itrig',
+'fa125_temp',
 'FCAL_online',
 'FCAL_invmass',
 'FCAL_cpp',

@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+#
+# hddm_cull_events - python implementation of the old C++ utility
+#                    of the same name and options.
+#
+# author: richard.t.jones at uconn.edu
+# versoin: april 22, 2025
+
+import os
+import sys
+import hddm_r
+import hddm_s
+
+def usage():
+   print("Usage:")
+   print("  hddm_cull_events [-oOutputfile] [-sNeventsToSkip]",
+         "[-kNeventsToKeep] file1.hddm file2.hddm ...")
+   print()
+   print(" options:")
+   print(" -o<Outputfile>    Set output filename [culled.hddm]")
+   print(" -s<NeventsToSkip> Set number of events to skip [0]")
+   print(" -k<NeventsToKeep> Set number of events to keep [1]")
+   print(" -e<EventPosition> Keep only the single, specified file position")
+   print(" -E<EventNumber>   Keep only the single, specified event number")
+   print(" -r                Input file is in REST format [sim format]")
+   print(" -I                Enable data integrity checks on output HDDM stream")
+   print(" -C                Enable compression on output HDDM stream")
+   print("""
+ This will copy a continguous set of events from the combined event streams
+ into a seperate output file. The primary use for this would be to copy
+ a single, problematic event into a seperate file for easier debugging.
+
+ If the -eNNN option is used then only a single event is extracted
+ (file position NNN) and written to a file with the name evtNNN.hddm.
+ 
+ If the -ENNN option is used then only a single event is extracted
+ (the specified event number) and written to a file with the name evtNNN.hddm.
+ Note that the event is counted from the begining of the file, starting
+ with "1". This does NOT look at the event number stored in the event itself.
+   """)
+ 
+if len(sys.argv) < 2 or sys.argv[1][:2] == "-h" or sys.argv[1][:2] == "-?" or sys.argv[1][:2] == "--":
+   usage()
+   sys.exit(1)
+
+outfile = "culled.hddm"
+skipevents = 0
+keepevents = -1
+startpos = 0
+startevno = 0
+hddm_ = hddm_s
+integrity = 0
+compression = 0
+
+argc = 1
+while argc < len(sys.argv):
+   arg = sys.argv[argc]
+   argc += 1
+   try:
+      if len(arg) > 1:
+         if arg[:2] == "-o":
+            if len(arg) > 2:
+               outfile = arg[2:]
+            elif len(sys.argv) > argc + 1:
+               outfile = sys.argv[argc]
+               argc += 1
+         elif arg[:2] == '-s':
+            if len(arg) > 2:
+               skipevents = int(arg[2:])
+            elif len(sys.argv) > argc + 1:
+               skipevents = int(sys.argv[argc])
+               argc += 1
+         elif arg[:2] == '-k':
+            if len(arg) > 2:
+               keepevents = int(arg[2:])
+            elif len(sys.argv) > argc + 1:
+               keepevents = int(sys.argv[argc])
+               argc += 1
+         elif arg[:2] == '-e':
+            if len(arg) > 2:
+               startpos = [int(a) for a in arg[2:].split(',')]
+            elif len(sys.argv) > argc + 1:
+               startpos = [int(a) for a in sys.argv[argc].split(',')]
+               argc += 1
+         elif arg[:2] == '-E':
+            if len(arg) > 2:
+               startevno = int(arg[2:])
+            elif len(sys.argv) > argc + 1:
+               startevno = int(sys.argv[argc])
+               argc += 1
+         elif arg[:2] == '-r':
+            hddm_ = hddm_r
+         elif arg[:2] == '-I':
+            integrity = hddm_.k_crc32_integrity
+         elif arg[:2] == '-C':
+            integrity = hddm_.k_bz2_compression
+         elif os.path.isfile(arg):
+            argc -= 1
+            break
+         else:
+            print("hddm_cull_events error: invalid argument", arg)
+            usage()
+            sys.exit(2)
+   except:
+         print("hddm_cull_events error: invalid argument", arg)
+         usage()
+         sys.exit(3)
+
+hddmout = hddm_.ostream(outfile)
+hddmout.integrityChecks = integrity
+hddmout.compression = compression
+
+while argc < len(sys.argv):
+   hddmin = hddm_.istream(sys.argv[argc])
+   argc += 1
+   if skipevents:
+      hddmin.skip(skipevents)
+      skipevents = 0
+   if startpos:
+      hddmin.position = hddm_.streamposition(*startpos)
+      startpos = 0
+   for rec in hddmin:
+      if keepevents == 0:
+         break
+      evno = 9e9
+      for pev in rec.getPhysicsEvents():
+         evno = pev.eventNo
+      if evno < startevno:
+         continue
+      startevno = 0
+      hddmout.write(rec)
+      keepevents -= 1
+      print("wrote event", evno, " with file position", hddmin.position)

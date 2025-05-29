@@ -588,10 +588,9 @@ void DEVIOBufferWriter::WriteEventToBuffer(const std::shared_ptr<const JEvent>& 
                 if(auto *derived_obj_ptr = dynamic_cast<const DTOFPaddleHit *>(obj_ptr))
                 	obj_tofpaddlehits.push_back(derived_obj_ptr);
                 for(auto hitPtr : obj_tofpaddlehits) {
-                	const DTOFHit* the_hit = nullptr;
-                	hitPtr->GetSingle(the_hit);
-                	if(the_hit != nullptr)
-                		obj_tofhits.push_back(the_hit);
+                	vector<const DTOFHit*>   the_hits;
+                	hitPtr->Get(the_hits);
+                	obj_tofhits.insert(obj_tofhits.end(), the_hits.begin(), the_hits.end());
                 }
                 
                 // TOF hits
@@ -600,11 +599,11 @@ void DEVIOBufferWriter::WriteEventToBuffer(const std::shared_ptr<const JEvent>& 
                 for(auto hitPtr : obj_tofhits) {
                 	const DTOFDigiHit* the_digihit = nullptr;
                 	hitPtr->GetSingle(the_digihit);
-                	if(the_digihit != nullptr)
+                	if(the_digihit != nullptr) 
                 		obj_tofdigihits.push_back(the_digihit);
                 	const DTOFTDCDigiHit* the_tdcdigihit = nullptr;
                 	hitPtr->GetSingle(the_tdcdigihit);
-                	if(the_tdcdigihit != nullptr)
+                	if(the_tdcdigihit != nullptr) 
                 		obj_toftdcdigihits.push_back(the_tdcdigihit);
                 }
                 
@@ -622,10 +621,10 @@ void DEVIOBufferWriter::WriteEventToBuffer(const std::shared_ptr<const JEvent>& 
                 if(auto *derived_obj_ptr = dynamic_cast<const DTOFTDCDigiHit *>(obj_ptr))
                 	obj_toftdcdigihits.push_back(derived_obj_ptr);
                 for(auto digihitPtr : obj_toftdcdigihits) {
-                	const DF1TDCHit* the_f1hit = nullptr;
-                	digihitPtr->GetSingle(the_f1hit);
-                	if(the_f1hit != nullptr)
-                		obj_F1hits.push_back(the_f1hit);
+                	const DCAEN1290TDCHit* the_tdchit = nullptr;
+                	digihitPtr->GetSingle(the_tdchit);
+                	if(the_tdchit != nullptr)
+                		caen1290hits.push_back(the_tdchit);
                 }
 
 

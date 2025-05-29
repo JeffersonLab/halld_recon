@@ -16,6 +16,7 @@ using namespace std;
 #include <DAQ/DHELIDigiHit.h>
 #include <DAQ/DHelicityData.h>
 #include <DAQ/DEPICSvalue.h>
+#include "DANA/DEvent.h"
 #include "DBeamHelicity_factory.h"
 
 //init static class variable
@@ -42,9 +43,25 @@ void DBeamHelicity_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 
 	// Grab information from CCDB tables here
+	dHDBoardDelay = 8;
 
-	// Constants for determined helicity pattern (from Ken) 
+    map<string,double> shift_factors;
 
+    if (DEvent::GetCalib(event, "/ELECTRON_BEAM/helicity_board_shift", shift_factors))
+        jout << "Error loading /ELECTRON_BEAM/helicity_board_shift !" << jendl;
+    if (shift_factors.find("shift") != shift_factors.end()) {
+        dHDBoardDelay = shift_factors["shift"];
+    } else {
+        jerr << "Unable to get correction from /ELECTRON_BEAM/helicity_board_shift !" << endl;
+	}
+	// Constants for determined helicity pattern? (from Ken) 
+
+
+	// override parameters on command line
+	auto app = GetApplication();
+	app->SetDefaultParameter("HELICITY:HB_SHIFT", dHDBoardDelay, "Helicity board bits to shift to get prompt helicity. (default: 8)");
+	
+	
 	return; //NOERROR;
 }
 
@@ -146,13 +163,37 @@ DBeamHelicity *DBeamHelicity_factory::Make_DBeamHelicity(const DHelicityData *lo
 	DBeamHelicity *locBeamHelicity = new DBeamHelicity;
 	locBeamHelicity->pattern_sync  = locHelicityData->trigger_pattern_sync;
 	locBeamHelicity->t_settle      = locHelicityData->trigger_tstable;
-	locBeamHelicity->helicity      = locHelicityData->trigger_helicity_state;
+	locBeamHelicity->helicity      = helicityDecoderCalcPolarity(locHelicityData->trigger_event_polarity, locHelicityData->helicity_seed, dHDBoardDelay);
 	locBeamHelicity->pair_sync     = locHelicityData->trigger_pair_sync;
 	locBeamHelicity->ihwp          = dIHWP;
 	locBeamHelicity->beam_on       = dBeamOn;
 	locBeamHelicity->valid         = true;  //?
 	
 	return locBeamHelicity;
+}
+
+//------------------
+// advanceSeed
+//------------------
+uint32_t DBeamHelicity_factory::advanceSeed(uint32_t seed) const
+{
+    const uint32_t bit7  = (seed & 0x00000040) != 0;
+    const uint32_t bit28 = (seed & 0x08000000) != 0;
+    const uint32_t bit29 = (seed & 0x10000000) != 0;
+    const uint32_t bit30 = (seed & 0x20000000) != 0;
+    const uint32_t newbit = (bit30 ^ bit29 ^ bit28 ^ bit7) & 0x1;
+    return (newbit | (seed << 1)) & 0x3FFFFFFF;
+}
+
+//------------------
+// helicityDecoderCalcPolarity
+//------------------
+ uint32_t DBeamHelicity_factory::helicityDecoderCalcPolarity(uint32_t event_polarity, uint32_t seed, uint32_t delay)
+{
+    for (uint32_t i = 0; i < delay; ++i)
+        seed = advanceSeed(seed);
+    return (seed ^ event_polarity) & 0x01;
+
 }
 
 
