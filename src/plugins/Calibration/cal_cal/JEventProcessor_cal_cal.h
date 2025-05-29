@@ -124,6 +124,7 @@ private:
   TH1F * h_ecal_ring, * h_fcal_ring;
   TH1F * h_trg_bit;
   TH2F * h_tag_time_rf_v_e;
+  TH2F * h_tag_time_rf_v_e_fdc;
   TH2F * h_tag_time_fcal_v_e;
   TH2F * h_tag_time_ecal_v_e;
   TH1F * h_tof_time;
