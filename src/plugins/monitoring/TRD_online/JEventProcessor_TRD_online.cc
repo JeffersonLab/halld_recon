@@ -49,8 +49,10 @@ static TH2I *hHit_TimeVsStrip[NTRDplanes];
 static TH2I *hHit_TimeVsdE[NTRDplanes];
 static TH2I *hHit_StripVsdE[NTRDplanes];
 
-const int NEventsMonitor = 10;
+const int NEventsMonitor = 100;
 static TH1I *hCluster_NClusters;
+static TH1D *hCluster_pos_width;
+static TH1D *hCluster_time_width;
 
 const int NMaxExtrapolations = 5;
 const int NMaxSegments = 5;
@@ -221,6 +223,8 @@ void JEventProcessor_TRD_online::Init() {
 
     gDirectory->mkdir("Cluster")->cd();
     hCluster_NClusters = new TH1I("Cluster_NClusters","TRD number of cluster per event;clusters;events",100,0.5,0.5+100);
+    hCluster_pos_width = new TH1D("Cluster_pos_width","TRD Cluster Position Width;Position Width [cm];Events",100,0.,50.);
+    hCluster_time_width = new TH1D("Cluster_time_width","TRD Cluster Time Width;Time Width [ns];Events",100,0.,50.0);
 
     // histograms for each plane
     for(int i=0; i<NTRDplanes; i++) {
@@ -421,8 +425,38 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     const int NUM_X_STRIPS = 720;
     const int NUM_Y_STRIPS = 528;
     const double STRIP_PITCH=0.1;
+
+    int NCluster_X = 0;
+    int NCluster_Y = 0;
+
+    if (clusters.size() > 0) hCluster_NClusters->Fill(clusters.size());
+    for (const auto& cluster : clusters) {
+        int plane = cluster->plane-1;
+        double pos = 0.;
+        if (plane == 0) {
+            pos = cluster->pos.x();
+            NCluster_X++;
+        }
+        else {
+            pos = cluster->pos.y();
+            NCluster_Y++;
+        }
+
+        hCluster_TimeVsPos[plane]->Fill(cluster->t_avg, pos);
+        hCluster_pos_width->Fill(cluster->pos_width);
+        hCluster_time_width->Fill(cluster->time_width);
+    }
+    for (const auto& hit : hits) {
+
+        int plane = hit->plane-1;
+        double pos = 0;
+        if (plane == 0) pos = STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
+        else pos = STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
+        hClusterHits_TimeVsPos[plane]->Fill(hit->t, pos);
+    }
 	
-    if (clusters.size() > 10 && segments.size() > 0 && tracks.size() > 0 && eventPointCount < NEventsMonitor) {
+    // if (clusters.size() > 2 && segments.size() > 0 && tracks.size() > 0 && eventPointCount < NEventsMonitor) {
+    if (NCluster_X > 3 && NCluster_Y > 3 && eventClusterCount < NEventsMonitor) {
     	cout << "Event " << eventnumber << " has " << clusters.size() << " clusters, eventClusterCount = " << eventClusterCount << endl;
     	for (const auto& cluster : clusters) {
     		int plane = cluster->plane-1;
@@ -456,23 +490,6 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     
 
     if (segments.size() > 1) cout << "TRD_online:Process() ... num input segments = " << segments.size() << endl;
-	if (clusters.size() > 0) hCluster_NClusters->Fill(clusters.size());
-    for (const auto& cluster : clusters) {
-        int plane = cluster->plane-1;
-        double pos = 0.;
-        if (plane == 0) pos = cluster->pos.x();
-        else pos = cluster->pos.y();
-
-        hCluster_TimeVsPos[plane]->Fill(cluster->t_avg, pos);
-    }
-    for (const auto& hit : hits) {
-
-        int plane = hit->plane-1;
-        double pos = 0;
-        if (plane == 0) pos = STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
-        else pos = STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
-        hClusterHits_TimeVsPos[plane]->Fill(hit->t, pos);
-    }
 
 		
 	///////////////////////////
