@@ -912,11 +912,6 @@ void hdv_mainframe::DoOpenTrackInspector(void)
 {
 	if(trkmf==NULL){
 		trkmf = new trk_mainframe(this, NULL, 100, 100);
-		if(trkmf){
-            // TODO: NWB: Delete this when I'm sure the new version works
-			//next->Connect("Clicked()","trk_mainframe", trkmf, "DoNewEvent()");
-			//prev->Connect("Clicked()","trk_mainframe", trkmf, "DoNewEvent()");
-		}
 	}else{
 		trkmf->RaiseWindow();
 		trkmf->RequestFocus();
@@ -930,10 +925,6 @@ void hdv_mainframe::DoOpenFMWPCInspector(void)
 {
     if(fmwpcmf==NULL){
         fmwpcmf = new fmwpc_mainframe(this, NULL, 100, 100);
-        if(fmwpcmf){
-            //next->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
-            //prev->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
-        }
     }else{
         fmwpcmf->RaiseWindow();
         fmwpcmf->RequestFocus();

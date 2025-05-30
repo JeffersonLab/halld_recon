@@ -170,9 +170,7 @@ trk_mainframe::trk_mainframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt_t w, 
 				
 					next->Connect("Clicked()","hdv_mainframe", hdvmf, "DoNext()");
 					prev->Connect("Clicked()","hdv_mainframe", hdvmf, "DoPrev()");
-                    // TODO: NWB: Delete this when I'm confident my new setup works
-					//next->Connect("Clicked()","trk_mainframe", this, "DoNewEvent()");
-					//prev->Connect("Clicked()","trk_mainframe", this, "DoNewEvent()");
+
 					
 			//-------- Info
 				TGGroupFrame *infoframe = new TGGroupFrame(eventinfoframe, "Info", kVerticalFrame);
