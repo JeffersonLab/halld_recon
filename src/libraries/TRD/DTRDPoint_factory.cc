@@ -26,11 +26,15 @@ void DTRDPoint_factory::Init()
   DRIFT_VELOCITY=0.0033; // cm/ns //Estimate - Will need changed later
 
   TIME_DIFF_MAX = 25.;
-  app->SetDefaultParameter("TRD:XY_TIME_DIFF",TIME_DIFF_MAX);
+  app->SetDefaultParameter("TRDPOINT:XY_TIME_DIFF",TIME_DIFF_MAX);
 	
   dE_DIFF_MAX = 10000.;
   app->SetDefaultParameter("TRDPOINT:dE_DIFF_MAX",dE_DIFF_MAX,
 			   "Difference between Point_Hit charge in X and Y planes to be considered a coincidence (default: 10000.)");
+
+  MIN_NClusters = 3;
+  app->SetDefaultParameter("TRDPOINT:MIN_NClusters", MIN_NClusters,
+			   "Minimum number of clusters in a plane (default: 3)");
   
 }
 
@@ -82,42 +86,78 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 		else if (stripClus[i]->plane == 2)
 			stripClusY.push_back(stripClus[i]);
 	}
-	
-	// match clusters in X and Y planes
-	for(uint i=0; i<stripClusX.size(); i++){
-		for(uint j=0; j<stripClusY.size(); j++){
-	
-			// calculate strip cluster time and position
-			double t_diff = stripClusX[i]->t_avg - stripClusY[j]->t_avg;
-			double dE = stripClusX[i]->q_tot + stripClusY[j]->q_tot;
 
-            // some requirements for a good point
-			if(fabs(t_diff) < TIME_DIFF_MAX) {
-            // if(fabs(t_diff) < TIME_DIFF_MAX && (stripClusY[j]->q_tot < dE_high) && (stripClusY[j]->q_tot > dE_low )) {
-			
-				// save new point
-				DTRDPoint* newPoint = new DTRDPoint;     
-				newPoint->x = dTRDx+stripClusX[i]->pos.x();
-				newPoint->y = dTRDy+stripClusY[j]->pos.y();
-				newPoint->t_x = stripClusX[i]->t_avg;
-				newPoint->t_y = stripClusY[j]->t_avg;
-				newPoint->time = (stripClusX[i]->t_avg*stripClusX[i]->q_tot + stripClusY[j]->t_avg*stripClusY[j]->q_tot) / dE;
+	if (stripClusX.size() < MIN_NClusters || stripClusY.size() < MIN_NClusters) {
+		// cout << "DTRDPoint_factory::Process() ... not enough clusters in one of the planes, skipping event" << endl;
+		return; // skip this event if not enough clusters
+	}
+	
+	PointCandidates pointCandidates;
+	for (const auto &clusX : stripClusX) pointCandidates.AddClusterX(clusX, false, -1);
+	for (const auto &clusY : stripClusY) pointCandidates.AddClusterY(clusY, false, -1);
+	
+	MatchClusters(pointCandidates);
+	// cout << GetNUnmatchedClusters(pointCandidates) << " unmatched clusters found in this event." << endl;
+	// cout << dTRDx << " " << dTRDy << " " << dTRDz << endl;
+
+	for (const auto &clusX : pointCandidates.clustersX) {
+		for (const auto &clusY : pointCandidates.clustersY) {
+			if (clusX.matched && clusY.matched && clusX.pointID == clusY.pointID) {
+				// Create a new point from matched clusters
+				DTRDPoint* newPoint = new DTRDPoint;
+				newPoint->x = dTRDx + clusX.clus->pos.x();
+				newPoint->y = dTRDy + clusY.clus->pos.y();
+				newPoint->t_x = clusX.clus->t_avg;
+				newPoint->t_y = clusY.clus->t_avg;
+				double dE = clusX.clus->q_tot + clusY.clus->q_tot;
+				newPoint->time = (clusX.clus->t_avg * clusX.clus->q_tot + clusY.clus->t_avg * clusY.clus->q_tot) / dE;
 				newPoint->dE = dE;
-				newPoint->dE_x = stripClusX[i]->q_tot;
-				newPoint->dE_y = stripClusY[j]->q_tot;
+				newPoint->dE_x = clusX.clus->q_tot;
+				newPoint->dE_y = clusY.clus->q_tot;
 				newPoint->status = 1;
-				//newPoint->itrack = 0;
-				//newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE + dTRDz[0];
-				//newPoint->z = dTRDz+(stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE;  // FOR TESTING
-				newPoint->z=dTRDz-DRIFT_VELOCITY*newPoint->time;
+				newPoint->z = dTRDz - DRIFT_VELOCITY * newPoint->time;
 
-				newPoint->AddAssociatedObject(stripClusX[i]);
-				newPoint->AddAssociatedObject(stripClusY[j]);
+				newPoint->AddAssociatedObject(clusX.clus);
+				newPoint->AddAssociatedObject(clusY.clus);
 
 				Insert(newPoint);
 			}
 		}
 	}
+	// for(uint i=0; i<stripClusX.size(); i++){
+	// 	for(uint j=0; j<stripClusY.size(); j++){
+	
+	// 		// calculate strip cluster time and position
+	// 		// double t_diff = stripClusX[i]->t_avg - stripClusY[j]->t_avg;
+	// 		// double dE = stripClusX[i]->q_tot + stripClusY[j]->q_tot;
+
+    //         // some requirements for a good point
+	// 		// if(fabs(t_diff) < TIME_DIFF_MAX) {
+    //         // if(fabs(t_diff) < TIME_DIFF_MAX && (stripClusY[j]->q_tot < dE_high) && (stripClusY[j]->q_tot > dE_low )) {
+			
+	// 			// save new point
+	// 			DTRDPoint* newPoint = new DTRDPoint;     
+	// 			newPoint->x = dTRDx+stripClusX[i]->pos.x();
+	// 			newPoint->y = dTRDy+stripClusY[j]->pos.y();
+	// 			newPoint->t_x = stripClusX[i]->t_avg;
+	// 			newPoint->t_y = stripClusY[j]->t_avg;
+	// 			newPoint->time = (stripClusX[i]->t_avg*stripClusX[i]->q_tot + stripClusY[j]->t_avg*stripClusY[j]->q_tot) / dE;
+	// 			newPoint->dE = dE;
+	// 			newPoint->dE_x = stripClusX[i]->q_tot;
+	// 			newPoint->dE_y = stripClusY[j]->q_tot;
+	// 			newPoint->status = 1;
+	// 			//newPoint->itrack = 0;
+	// 			//newPoint->z = (stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE + dTRDz[0];
+	// 			//newPoint->z = dTRDz+(stripClusX[i]->pos.z()*stripClusX[i]->q_tot + stripClusY[j]->pos.z()*stripClusY[j]->q_tot) / dE;  // FOR TESTING
+	// 			newPoint->z=dTRDz-DRIFT_VELOCITY*newPoint->time;
+
+	// 			newPoint->AddAssociatedObject(stripClusX[i]);
+	// 			newPoint->AddAssociatedObject(stripClusY[j]);
+
+	// 			Insert(newPoint);
+	// 		}
+	// 	}
+	// }
 
 	// Make sure the data are both time- and z-ordered
 	std::sort(mData.begin(),mData.end(),DTRDPoint_cmp);
