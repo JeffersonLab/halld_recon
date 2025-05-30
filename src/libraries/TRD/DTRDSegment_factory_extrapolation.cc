@@ -47,7 +47,7 @@ void DTRDSegment_factory_extrapolation::Process(const std::shared_ptr<const JEve
   vector<const DChargedTrack*> tracks; 
   event->Get(tracks);
 
-  if (tracks.size()==0) {
+  if (points.size()==0) {
     return;
   }
 
@@ -90,8 +90,10 @@ void DTRDSegment_factory_extrapolation::Process(const std::shared_ptr<const JEve
     segments_TRDPoints.push_back(segmentPoints);
   }
 
-  for (unsigned int i=0;i<trackExtrapolations.size();i++){
-    if (segments_TRDPoints[i].size()==0) continue;
+  // If no segments were found, create a default segment with all points
+  if (segments_TRDPoints.size()==0) segments_TRDPoints.push_back(points);
+
+  for (unsigned int i=0;i<segments_TRDPoints.size();i++){
     DTRDSegment *myTRDSegment = new DTRDSegment;
     double x=0,y=0,tx=0,ty=0;
     double var_x=0.,var_y=0.,var_tx=0.,var_ty=0.;
