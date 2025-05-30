@@ -56,8 +56,10 @@ void DTRDSegment_factory_extrapolation::Process(const std::shared_ptr<const JEve
   vector<TrackPoint> trackPoints;
   vector<DTrackFitter::Extrapolation_t> trackExtrapolations;
   for (auto &track: tracks) {
-    const DChargedTrackHypothesis *hyp=track->Get_Hypothesis(Electron);
-    if (hyp==nullptr) continue;
+    const DChargedTrackHypothesis *hypElectron=track->Get_Hypothesis(Electron);
+    const DChargedTrackHypothesis *hypPositron=track->Get_Hypothesis(Positron);   
+    const DChargedTrackHypothesis *hyp = (hypElectron != nullptr) ? hypElectron : hypPositron;
+    if (hyp == nullptr) continue;
     const DTrackTimeBased *trackTB=hyp->Get_TrackTimeBased();
     if (trackTB==nullptr) continue; 
     vector<DTrackFitter::Extrapolation_t> extrapolations = trackTB->extrapolations.at(SYS_TRD);
