@@ -164,12 +164,13 @@ trk_mainframe::trk_mainframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt_t w, 
 				TGGroupFrame *prevnextframe = new TGGroupFrame(eventinfoframe, "Event", kHorizontalFrame);
 				eventinfoframe->AddFrame(prevnextframe, thints);
 					TGTextButton *prev	= new TGTextButton(prevnextframe,	"<-- Prev");
-					TGTextButton *next	= new TGTextButton(prevnextframe,	"Next -->");
+					next = new TGTextButton(prevnextframe,	"Next -->");
 					prevnextframe->AddFrame(prev, lhints);
 					prevnextframe->AddFrame(next, lhints);
 				
 					next->Connect("Clicked()","hdv_mainframe", hdvmf, "DoNext()");
 					prev->Connect("Clicked()","hdv_mainframe", hdvmf, "DoPrev()");
+                    prev->SetEnabled(false);
 
 					
 			//-------- Info
@@ -276,6 +277,7 @@ void trk_mainframe::DoNewEvent(void)
 {
 	DoUpdateMenus();
 	DoMyRedraw();
+    next->SetEnabled(true);
 }
 
 //---------------------------------
@@ -807,3 +809,11 @@ bool trk_mainframe::WireInList(const DCoordinateSystem *wire, vector<const DCDCT
 
 	return false;
 }
+
+void trk_mainframe::EnableControls(bool enabled) {
+    if (next != nullptr) {
+        next->SetEnabled(enabled);
+    }
+}
+
+

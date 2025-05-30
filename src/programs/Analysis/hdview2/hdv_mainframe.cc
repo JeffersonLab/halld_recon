@@ -247,6 +247,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   
   //-------------- Next, Previous
   prev	= new TGTextButton(eventcontrols,	"<-- Prev");
+  prev->SetEnabled(false);
   next	= new TGTextButton(eventcontrols,	"Next -->");
   TGVerticalFrame *contf = new TGVerticalFrame(eventcontrols);
   eventcontrols->AddFrame(prev, chints);
@@ -861,6 +862,14 @@ void hdv_mainframe::DoQuit(void)
 //-------------------
 void hdv_mainframe::DoNext(void)
 {
+    EnableControls(false);
+    if (trkmf != nullptr) {
+	    trkmf->EnableControls(false);
+    }
+    if (fmwpcmf != nullptr) {
+        fmwpcmf->EnableControls(false);
+    }
+
     gMYPROC->NextEvent();
 }
 
@@ -2733,3 +2742,9 @@ void hdv_mainframe::SetCalorimeterEnergyColor(TPolyLine *poly,double E) const{
   }
   poly->SetFillColor(TColor::GetColor(r,g,b));
 }
+
+
+void hdv_mainframe::EnableControls(bool enabled) {
+    next->SetEnabled(enabled);
+}
+

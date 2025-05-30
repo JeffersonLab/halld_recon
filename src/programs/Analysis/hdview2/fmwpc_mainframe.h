@@ -56,6 +56,7 @@ class fmwpc_mainframe:public TGMainFrame{
 		void DoTrackNumberMenuUpdate(Int_t widgetId, Int_t id);
 		void DoRequestFocus(Int_t id);
         void DoClose(void);
+        void EnableControls(bool enabled=true);
 		
 		
 	protected:
@@ -74,6 +75,8 @@ class fmwpc_mainframe:public TGMainFrame{
 		std::vector<TGComboBox*> trackno;
         std::map<std::string, TGCheckButton*> checkbuttons;
 
+		TGTextButton *next = nullptr;
+
         TGLabel *event, *run;
 
 		double slo, shi, zlo, zhi;
@@ -86,7 +89,6 @@ class fmwpc_mainframe:public TGMainFrame{
         void DrawDetectors(TCanvas *c, std::vector<TObject*> &graphics, std::string view);
 
 		bool WireInList(const DCoordinateSystem *wire, std::vector<const DCDCTrackHit*> &cdctrackhits);
-
 
 
 	ClassDef(fmwpc_mainframe,1)

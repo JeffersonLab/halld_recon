@@ -128,12 +128,13 @@ fmwpc_mainframe::fmwpc_mainframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt_t
 				TGGroupFrame *prevnextframe = new TGGroupFrame(eventinfoframe, "Event", kHorizontalFrame);
 				eventinfoframe->AddFrame(prevnextframe, thints);
 					TGTextButton *prev	= new TGTextButton(prevnextframe,	"<-- Prev");
-					TGTextButton *next	= new TGTextButton(prevnextframe,	"Next -->");
+					next = new TGTextButton(prevnextframe,	"Next -->");
 					prevnextframe->AddFrame(prev, lhints);
 					prevnextframe->AddFrame(next, lhints);
 				
 					next->Connect("Clicked()","hdv_mainframe", hdvmf, "DoNext()");
 					prev->Connect("Clicked()","hdv_mainframe", hdvmf, "DoPrev()");
+                    prev->SetEnabled(false);
 					
 			    //-------- Info
                 TGGroupFrame *infoframe = new TGGroupFrame(eventinfoframe, "Info", kHorizontalFrame);
@@ -250,6 +251,8 @@ void fmwpc_mainframe::DoNewEvent(void)
     ss << current_jevent.GetEventNumber();
     event->SetTitle(ss.str().c_str());
     event->Draw();
+
+    next->SetEnabled(true);
 }
 
 //---------------------------------
@@ -904,6 +907,12 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
                 }
             }
         }
+    }
+}
+
+void fmwpc_mainframe::EnableControls(bool enabled) {
+    if (next != nullptr) {
+        next->SetEnabled(enabled);
     }
 }
 

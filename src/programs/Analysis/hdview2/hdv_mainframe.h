@@ -160,6 +160,7 @@ class hdv_mainframe:public TGMainFrame {
 
 
 		void RedrawAuxillaryWindows(void);
+        void EnableControls(bool enabled=true);
 
 	private:
 	
