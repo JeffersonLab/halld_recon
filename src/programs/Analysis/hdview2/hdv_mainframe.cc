@@ -1221,6 +1221,10 @@ void hdv_mainframe::DoMyRedraw(void)
 	graphics_endA.clear();
 	graphics_endB.clear();
 
+    // Clear the BCAL and TOF polylines. Their contents are invalid now that graphics_end{A,B} are cleared
+    // They will be repopulated by DrawDetectorsXY but NOT repopulated by DrawGraphicsRPhi
+    bcalblocks.clear();
+	tofblocks.clear();
 
 	// Draw detectors depending on coordinate system we're using
 	if(coordinatetype == COORD_XY){
