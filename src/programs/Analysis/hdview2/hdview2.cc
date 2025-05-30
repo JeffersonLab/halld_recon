@@ -39,6 +39,7 @@ int main(int narg, char *argv[])
 
     japp->SetTicker(false);
     japp->SetTimeoutEnabled(false);
+    japp->SetParameterValue("nthreads", 1);
     japp->Initialize(); // Load any additional plugins before printing factory list
 
 
