@@ -168,7 +168,8 @@ void EventViewer::BeginRun(const std::shared_ptr<const JEvent>& event)
 //------------------------------------------------------------------
 void EventViewer::Process(const std::shared_ptr<const JEvent>& event)
 {
-    LOG_INFO(GetLogger()) << "Entering EventViewer::Process with event #" << event->GetEventNumber() << LOG_END;
+    LOG_INFO(GetLogger()) << "-----------------------------------";
+    LOG_INFO(GetLogger()) << "EventViewer: Processing event #" << event->GetEventNumber() << LOG_END;
 
     m_current_event = event.get();
 
@@ -182,7 +183,7 @@ void EventViewer::Process(const std::shared_ptr<const JEvent>& event)
     }
 
     if (hdvmf == nullptr) {
-        LOG_INFO(GetLogger()) << "Creating hdview_mainframe. Should only happen on first event";
+        LOG_INFO(GetLogger()) << "EventViewer: Creating GUI windows";
         // This should only be true on the very first event
 
         // Figure out factory names
@@ -197,8 +198,6 @@ void EventViewer::Process(const std::shared_ptr<const JEvent>& event)
                 facnames.push_back(fac_name);
             }
         }
-
-        LOG_INFO(GetLogger()) << "Creating hdv_mainframe";
 
 		hdvmf = new hdv_mainframe(gClient->GetRoot(), 1400, 700);
 		hdvmf->SetCandidateFactories(facnames);
@@ -221,7 +220,7 @@ void EventViewer::Process(const std::shared_ptr<const JEvent>& event)
 		  BCALHitMatrixD->GetXaxis()->SetTitle("Sector number");
 		  BCALParticles->GetXaxis()->SetTitle("Phi angle [deg]");
 		}
-        LOG_INFO(GetLogger()) << "Finished creating hdv_mainframe";
+        LOG_INFO(GetLogger()) << "EventViewer: Finished creating GUI windows";
     }
 
 	auto eventnumber = event->GetEventNumber();
@@ -300,16 +299,13 @@ void EventViewer::Process(const std::shared_ptr<const JEvent>& event)
             source = event->GetJEventSource()->GetResourceName();
         }
 
-		cout<<"----------- New Event "<<eventnumber<<"  (run " << event->GetRunNumber()<<") -------------"<<endl;
+        LOG_INFO(GetLogger()) << "EventViewer: Redrawing GUI windows";
 		hdvmf->SetEvent(eventnumber);
 		hdvmf->SetRun(event->GetRunNumber());
 		hdvmf->SetSource(source.c_str());
-        LOG_INFO(GetLogger()) << "Redrawing all frames";
-
 		hdvmf->DoMyRedraw();	
 		hdvmf->RedrawAuxillaryWindows();
 
-        LOG_INFO(GetLogger()) << "Finished redrawing all frames";
 	}else{
 	
 		// If this is the first event in a sequence we are skipping the draw
@@ -328,7 +324,8 @@ void EventViewer::Process(const std::shared_ptr<const JEvent>& event)
 		if( Nevents_since_last_draw%1 == 0 ) cout.flush();
 	}
 
-    LOG_INFO(GetLogger()) << "Finished drawing. Processing ROOT events";
+    hdvmf->EnableControls();
+    LOG_INFO(GetLogger()) << "EventViewer: JANA2 finished processing; handing control over to ROOT";
     bool ready_for_next_event = false;
     while (!ready_for_next_event) {
 
@@ -339,8 +336,7 @@ void EventViewer::Process(const std::shared_ptr<const JEvent>& event)
             ready_for_next_event = true;
         }
     }
-
-    LOG_INFO(GetLogger()) << "EventViewer has finished with event #" << event->GetEventNumber() << LOG_END;
+    LOG_INFO(GetLogger()) << "EventViewer: Handing control back to JANA2 to process next event";
 }
 
 //------------------------------------------------------------------

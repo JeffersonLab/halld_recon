@@ -2693,11 +2693,8 @@ void hdv_mainframe::RedrawAuxillaryWindows(void)
 	// specifies to only draw events with certain objects and some events
 	// are skipped. The hdv_mainframe window is automatically redrawn, in
 	// those cases so that is not included here.
-    std::cout << "Redrawing Aux windows" << std::endl;
 	if( trkmf ) trkmf->DoNewEvent();
 	if( fmwpcmf ) fmwpcmf->DoNewEvent();
-    std::cout << "Redrawing Aux windows" << std::endl;
-	
 }
 
 // Set the color of a hit FCAL/ECAL/CCAL block according to energy.
