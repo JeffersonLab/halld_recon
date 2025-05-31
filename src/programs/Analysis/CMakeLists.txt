@@ -5,7 +5,7 @@ set (analysis_programs
         hd_dump
         hd_eventfilter
         hd_root
-#        hdview2   # TODO: NWB: This one will take more work
+        hdview2
         )
 
 
