@@ -13,6 +13,10 @@
 #include <cmath>
 using namespace std;
 
+#include <chrono>
+#include <ratio>
+using namespace std::chrono;
+
 // some of these aren't being used anymore, so I've commented them out - sdobbs, 6/3/14
 //#define HALF_CELL 0.5
 //#define MAX_DEFLECTION 0.15
@@ -27,8 +31,6 @@ using namespace std;
 //#define MIN_TANL 2.0
 #define ONE_THIRD  0.33333333333333333
 #define SQRT3      1.73205080756887719
-
-
 
 // Variance for position along wire using PHENIX angle dependence, transverse
 // diffusion, and an intrinsic resolution of 127 microns.
@@ -87,6 +89,20 @@ void DFDCSegment_factory::BeginRun(const std::shared_ptr<const JEvent>& event) {
   
   BEAM_VARIANCE=1.0;
   app->SetDefaultParameter("FDC:BEAM_VARIANCE",BEAM_VARIANCE);
+
+  PROFILE_TIME=false;
+  app->SetDefaultParameter("TRK:PROFILE_TIME", PROFILE_TIME);
+}
+
+//------------------
+// Finish
+//------------------
+void DFDCSegment_factory::Finish()
+{
+  if (PROFILE_TIME){
+    cout << "Average segment finding time = "
+	 << 1000.*cumulative_time/cumulative_events << " ms" << endl;
+  }
 }
 
 ///
@@ -94,14 +110,17 @@ void DFDCSegment_factory::BeginRun(const std::shared_ptr<const JEvent>& event) {
 /// Routine where pseudopoints are combined into track segments
 ///
 void DFDCSegment_factory::Process(const std::shared_ptr<const JEvent>& event) {
-  myeventno=event->GetEventNumber();
-
   vector<const DFDCPseudo*>pseudopoints;
   event->Get(pseudopoints);  
  
   // Skip segment finding if there aren't enough points to form a sensible 
   // segment 
   if (pseudopoints.size()>=3){
+    high_resolution_clock::time_point t0,t1;
+    if (PROFILE_TIME){
+      t0 = high_resolution_clock::now();
+    }
+    
     // Group pseudopoints by package
     vector<const DFDCPseudo*>package[4];
     for (vector<const DFDCPseudo*>::const_iterator i=pseudopoints.begin();
@@ -115,7 +134,14 @@ void DFDCSegment_factory::Process(const std::shared_ptr<const JEvent>& event) {
       // We need at least 3 points to define a circle, so skip if we don't 
       // have enough points.
       if (package[j].size()>2) FindSegments(package[j]);
-    } 
+    }
+    
+    if (PROFILE_TIME){
+      t1 = high_resolution_clock::now();
+      duration<double> time_span = duration_cast<duration<double>>(t1 - t0);
+      cumulative_time+=double(time_span.count());
+      cumulative_events+=1.0;
+    }
   } // pseudopoints>2
 }
 
@@ -460,8 +486,7 @@ DFDCSegment_factory::RiemannHelicalFit(vector<const DFDCPseudo*>&points){
   // list of points on track and corresponding covariance matrices
   vector<xyz_t>XYZ(num_points);
   DMatrix CR(num_points,num_points);
-  DMatrix CRPhi(num_points,num_points); 
-  
+  DMatrix CRPhi(num_points,num_points);
  
   // Fill initial matrices for R and RPhi measurements
   for (unsigned int m=0;m<num_measured;m++){

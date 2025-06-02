@@ -51,8 +51,7 @@ class DFDCSegment_factory : public JFactoryT<DFDCSegment> {
     DVector2 xy;
     double z,covr,covrphi;
   }xyz_t;
-	
-  
+	  
   jerror_t FindSegments(vector<const DFDCPseudo*>&points);
   //		jerror_t CorrectPoints(vector<DFDCPseudo*>point,DMatrix XYZ);
   jerror_t GetHelicalTrackPosition(double z,const DFDCSegment *segment,
@@ -73,43 +72,45 @@ class DFDCSegment_factory : public JFactoryT<DFDCSegment> {
 
   void FillSegmentData(DFDCSegment *segment);
 
-	protected:
-		///
-		/// DFDCSegment_factory::BeginRun
-		///
-		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+protected:
+  ///
+  /// DFDCSegment_factory::BeginRun
+  ///
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Finish() override;
+  ///
+  /// DFDCSegment_factory::Process
+  /// this is the place that finds track segments and  
+  /// converts pseudopoints into space points.
+  ///
+  void Process(const std::shared_ptr<const JEvent>& event) override;
 
-		///
-		/// DFDCSegment_factory::Process
-		/// this is the place that finds track segments and  
-		/// converts pseudopoints into space points.
-		///
-		void Process(const std::shared_ptr<const JEvent>& event) override;
-
-	private:
-		double N[3];
-	        double varN[3][3];
-	 	double dist_to_origin,xc,yc,rc;
-		double xavg[3],var_avg;
-		
-		// Track parameters
-		double tanl,z0,zvertex,D,phi0;
-		double var_tanl,Phi1;
-		double rotation_sense;
-		unsigned int ref_plane;
-		double RotationSenseToCharge;
-	
-		double chisq;
-		int Ndof;
-
-                const DMagneticFieldMap *bfield;
-		const DLorentzDeflections *lorentz_def;
-//		double ref_time;
-//		bool use_tof,use_sc;
-		double TARGET_Z,BEAM_VARIANCE;
-		int DEBUG_LEVEL;
-
-		int myeventno;
+private:
+  double N[3];
+  double varN[3][3];
+  double dist_to_origin,xc,yc,rc;
+  double xavg[3],var_avg;
+  
+  // Track parameters
+  double tanl,z0,zvertex,D,phi0;
+  double var_tanl,Phi1;
+  double rotation_sense;
+  unsigned int ref_plane;
+  double RotationSenseToCharge;
+  
+  double chisq;
+  int Ndof;
+  
+  const DMagneticFieldMap *bfield;
+  const DLorentzDeflections *lorentz_def;
+  //		double ref_time;
+  //		bool use_tof,use_sc;
+  double TARGET_Z,BEAM_VARIANCE;
+  int DEBUG_LEVEL;
+  
+  // For profiling
+  bool PROFILE_TIME;
+  double cumulative_time=0.,cumulative_events=0.;
 };
 
 #endif // DFACTORY_DFDCSEGMENT_H
