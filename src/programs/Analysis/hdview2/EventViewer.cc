@@ -74,7 +74,7 @@ extern EventViewer::RequiredClassesLogic REQUIRED_CLASSES_LOGIC;
 
 // These are declared in hdv_mainframe.cc, but as static so we need to do it here as well (yechh!)
 static float FCAL_Zmin = 622.8;
-static float FCAL_Rmin = 6.0;
+static float FCAL_Rmin = 0.0;
 static float FCAL_Rmax = 212.0/2.0;
 static float BCAL_Rmin = 65.0;
 static float BCAL_Zlen = 390.0;
