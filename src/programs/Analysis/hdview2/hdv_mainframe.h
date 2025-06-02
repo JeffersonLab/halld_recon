@@ -160,6 +160,7 @@ class hdv_mainframe:public TGMainFrame {
 
 
 		void RedrawAuxillaryWindows(void);
+        void EnableControls(bool enabled=true);
 
 	private:
 	
@@ -177,7 +178,7 @@ class hdv_mainframe:public TGMainFrame {
 		TRootEmbeddedCanvas *endviewA;
 		TRootEmbeddedCanvas *endviewB;
 		
-		TGLabel *event, *run, *trig, *source;
+		TGLabel *tgevent, *run, *trig, *source;
 		
 		TGComboBox *timetracksfactory;
 		TGComboBox *wiretracksfactory;
@@ -222,6 +223,9 @@ class hdv_mainframe:public TGMainFrame {
 		long sleep_time; // in milliseconds
 		
 		template<typename T> void FillPoly(T *sA, T *sB, T *eA, std::vector<TVector3> &v);
+
+        double m_insert_size = 0;
+        double m_insert_block_size = 0;
 		
 	ClassDef(hdv_mainframe,1)
 };

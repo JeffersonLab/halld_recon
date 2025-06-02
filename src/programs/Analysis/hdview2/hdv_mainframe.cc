@@ -7,20 +7,20 @@
 using namespace std;
 
 #include <unistd.h>
-#include <pthread.h>
 #include <sys/time.h>
 
 #include <TRACKING/DMCThrown.h>
 #include "hdv_mainframe.h"
-#include "hdview2.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 #include "FDC/DFDCGeometry.h"
 #include "FCAL/DFCALGeometry.h"
+#include "ECAL/DECALGeometry.h"
 #include "TOF/DTOFGeometry.h"
 #include "DVector2.h"
 #include "HDGEOMETRY/DGeometry.h"
 #include <PID/DNeutralParticle.h>
 #include <DAQ/DEPICSvalue.h>
+#include "DANA/DEvent.h"
 
 #include <TPolyMarker.h>
 #include <TLine.h>
@@ -39,13 +39,6 @@ using namespace std;
 #include <TColor.h>
 #include <TMath.h>
 #include <TArc.h>
-
-extern JApplication *japp;
-//TGeoVolume *MOTHER = NULL;
-//TGeoCombiTrans *MotherRotTrans = NULL;
-
-extern int GO;
-extern bool SKIP_EPICS_EVENTS;
 
 // These values are just used to draw the detectors for visualization.
 // These should be replaced by a database lookup or something similar
@@ -110,12 +103,20 @@ static vector<vector <DFDCWire *> >fdcwires;
 hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(p,w,h)
 {
   //Get pointer to DGeometry object
-  DApplication* dapp=dynamic_cast<DApplication*>(japp);
-  const DGeometry *dgeom  = dapp->GetDGeometry(RUNNUMBER);
+  const auto& event = gMYPROC->GetCurrentEvent();
+  const DGeometry *dgeom = DEvent::GetDGeometry(event.shared_from_this());
   
   tofgeom = new DTOFGeometry(dgeom);
   fcalgeom= new DFCALGeometry(dgeom);
-  
+
+  // Figure out ECAL details
+  if (dgeom->HaveInsert()) {
+    m_insert_size = dgeom->GetFCALInsertSize();
+    auto ecal = new DECALGeometry(dgeom);
+    m_insert_block_size = ecal->blockSize();
+    delete ecal;
+  }
+
   dgeom->GetFDCWires(fdcwires);
   
   // Get Target parameters from XML
@@ -246,6 +247,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   
   //-------------- Next, Previous
   prev	= new TGTextButton(eventcontrols,	"<-- Prev");
+  prev->SetEnabled(false);
   next	= new TGTextButton(eventcontrols,	"Next -->");
   TGVerticalFrame *contf = new TGVerticalFrame(eventcontrols);
   eventcontrols->AddFrame(prev, chints);
@@ -279,13 +281,13 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   TGLabel *eventlab = new TGLabel(eventlabs, "Event:");
   TGLabel *triglab = new TGLabel(eventlabs, "GTP bits:");
   run = new TGLabel(eventvals, "--------------");
-  event = new TGLabel(eventvals, "--------------");
+  tgevent = new TGLabel(eventvals, "--------------");
   trig = new TGLabel(eventvals, "--------------");
   eventlabs->AddFrame(runlab, rhints);
   eventlabs->AddFrame(eventlab,rhints);
   eventlabs->AddFrame(triglab,rhints);
   eventvals->AddFrame(run, lhints);
-  eventvals->AddFrame(event, lhints);
+  eventvals->AddFrame(tgevent, lhints);
   eventvals->AddFrame(trig, lhints);
  
   //----------------- Inspectors
@@ -851,15 +853,8 @@ void hdv_mainframe::SetRange(void)
 void hdv_mainframe::DoQuit(void)
 {
 	SavePreferences();
-
-	japp->Quit();
-	japp->Fini();
-	delete japp;
-	japp = NULL;
-
-	// This is supposed to return from the Run() method in "main()"
-	// since we call SetReturnFromRun(true), but it doesn't seem to work.
-	gApplication->Terminate(0);	
+	japp->Stop(false, true); // Tell JANA not to emit any more events, but save everything thus far
+    DoNext(); // Release the final event from the JEventProcessor_EventViewer so that processing can finish
 }
 
 //-------------------
@@ -867,19 +862,15 @@ void hdv_mainframe::DoQuit(void)
 //-------------------
 void hdv_mainframe::DoNext(void)
 {
-	if(eventloop){
-		if(SKIP_EPICS_EVENTS){
-			while(true){
-				eventloop->OneEvent();
-				vector<const DEPICSvalue*> epicsvalues;
-				eventloop->Get(epicsvalues);
-				if(epicsvalues.empty()) break;
-				cout << "Skipping EPICS event " << eventloop->GetJEvent().GetEventNumber() << endl;
-			}
-		}else{
-			eventloop->OneEvent();
-		}
-	}
+    EnableControls(false);
+    if (trkmf != nullptr) {
+	    trkmf->EnableControls(false);
+    }
+    if (fmwpcmf != nullptr) {
+        fmwpcmf->EnableControls(false);
+    }
+
+    gMYPROC->NextEvent();
 }
 
 //-------------------
@@ -896,7 +887,7 @@ void hdv_mainframe::DoPrev(void)
 //-------------------
 void hdv_mainframe::DoStop(void)
 {
-	GO = 0;
+    gMYPROC->SetRunContinuously(0);
 }
 
 //-------------------
@@ -904,7 +895,7 @@ void hdv_mainframe::DoStop(void)
 //-------------------
 void hdv_mainframe::DoCont(void)
 {
-	GO = 1;
+    gMYPROC->SetRunContinuously(1);
 }
 
 //-------------------
@@ -930,10 +921,6 @@ void hdv_mainframe::DoOpenTrackInspector(void)
 {
 	if(trkmf==NULL){
 		trkmf = new trk_mainframe(this, NULL, 100, 100);
-		if(trkmf){
-			next->Connect("Clicked()","trk_mainframe", trkmf, "DoNewEvent()");
-			prev->Connect("Clicked()","trk_mainframe", trkmf, "DoNewEvent()");
-		}
 	}else{
 		trkmf->RaiseWindow();
 		trkmf->RequestFocus();
@@ -947,10 +934,6 @@ void hdv_mainframe::DoOpenFMWPCInspector(void)
 {
     if(fmwpcmf==NULL){
         fmwpcmf = new fmwpc_mainframe(this, NULL, 100, 100);
-        if(fmwpcmf){
-            next->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
-            prev->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
-        }
     }else{
         fmwpcmf->RaiseWindow();
         fmwpcmf->RequestFocus();
@@ -1238,6 +1221,10 @@ void hdv_mainframe::DoMyRedraw(void)
 	graphics_endA.clear();
 	graphics_endB.clear();
 
+    // Clear the BCAL and TOF polylines. Their contents are invalid now that graphics_end{A,B} are cleared
+    // They will be repopulated by DrawDetectorsXY but NOT repopulated by DrawGraphicsRPhi
+    bcalblocks.clear();
+	tofblocks.clear();
 
 	// Draw detectors depending on coordinate system we're using
 	if(coordinatetype == COORD_XY){
@@ -1255,10 +1242,10 @@ void hdv_mainframe::DoMyRedraw(void)
 	AddGraphicsEndB(gMYPROC->graphics_tof_hits); 
 
 	// Draw detector hits and tracks for the correct coordinates in all views
-	vector<MyProcessor::DGraphicSet>::iterator iter = gMYPROC->graphics.begin();
+	vector<EventViewer::DGraphicSet>::iterator iter = gMYPROC->graphics.begin();
 	for(; iter!=gMYPROC->graphics.end(); iter++){
 	
-		if(iter->type==MyProcessor::kMarker){
+		if(iter->type==EventViewer::kMarker){
 			// Markers
 			TPolyMarker *sA = new TPolyMarker();
 			TPolyMarker *sB = new TPolyMarker();
@@ -1730,9 +1717,9 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		shift[1].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		shift[2].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
 		shift[3].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space
-		double insertSize=fcalgeom->insertSize();
-		if (insertSize>0){
-		  blocksize=fcalgeom->insertBlockSize();
+
+		if (m_insert_size>0){
+		  blocksize=m_insert_block_size;
 		  shift[4].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
 		  shift[5].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		  shift[6].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
@@ -1748,9 +1735,9 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		    double x[5], y[5];
 		    for(int i=0; i<4; i++){
 		      DVector2 pos = fcalBlockPos;
-		      if (insertSize>0 
-			  && fabs(pos.X())<insertSize
-			  && fabs(pos.Y())<insertSize){
+		      if (m_insert_size>0 
+			  && fabs(pos.X())<m_insert_size
+			  && fabs(pos.Y())<m_insert_size){
 			pos+=shift[i+4];
 		      }
 		      else{
@@ -2105,16 +2092,15 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		// Set up 4 2-D vectors that point from the center of a block to its
 		// corners. This makes it easier to represent each corner as a vector
 		// in lab corrdinate whch we can extract r, phi from.
-		double blocksize = fcalgeom->blockSize();
+		double blocksize = m_insert_block_size;
 		DVector2 shift[8];
 		shift[0].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
 		shift[1].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		shift[2].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
 		shift[3].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space
 	
-		double insertSize=fcalgeom->insertSize();
-		if (insertSize>0){
-		  blocksize=fcalgeom->insertBlockSize();
+		if (m_insert_size>0){
+		  blocksize=m_insert_block_size;
 		  shift[4].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
 		  shift[5].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		  shift[6].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
@@ -2128,9 +2114,9 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		  double r[4], phi[4];
 		  for(int i=0; i<4; i++){
 		    DVector2 pos = fcalBlockPos; 
-		    if (insertSize>0 
-			  && fabs(pos.X())<insertSize
-			  && fabs(pos.Y())<insertSize){
+		    if (m_insert_size>0 
+			  && fabs(pos.X())<m_insert_size
+			  && fabs(pos.Y())<m_insert_size){
 		      pos+=shift[i+4];
 		    }
 		    else{
@@ -2295,12 +2281,12 @@ void hdv_mainframe::DrawLabel(TCanvas *c, vector<TObject*> &graphics, const char
 //-------------------
 void hdv_mainframe::SetEvent(ULong64_t id)
 {
-	if(!event)return;
+	if(!tgevent)return;
 
 	stringstream ss;
 	ss << id;
-	event->SetTitle(ss.str().c_str());
-	event->Draw();
+	tgevent->SetTitle(ss.str().c_str());
+	tgevent->Draw();
 }
 
 //-------------------
@@ -2308,7 +2294,7 @@ void hdv_mainframe::SetEvent(ULong64_t id)
 //-------------------
 void hdv_mainframe::SetRun(Int_t id)
 {
-	if(!event)return;
+	if(!tgevent)return;
 
 	stringstream ss;
 	ss << id;
@@ -2321,7 +2307,7 @@ void hdv_mainframe::SetRun(Int_t id)
 //-------------------
 void hdv_mainframe::SetTrig(char *trigstring)
 {
-	if(!event)return;
+	if(!tgevent)return;
 
 	trig->SetTitle(trigstring);
 	trig->Draw();
@@ -2713,7 +2699,6 @@ void hdv_mainframe::RedrawAuxillaryWindows(void)
 	// those cases so that is not included here.
 	if( trkmf ) trkmf->DoNewEvent();
 	if( fmwpcmf ) fmwpcmf->DoNewEvent();
-	
 }
 
 // Set the color of a hit FCAL/ECAL/CCAL block according to energy.
@@ -2758,3 +2743,9 @@ void hdv_mainframe::SetCalorimeterEnergyColor(TPolyLine *poly,double E) const{
   }
   poly->SetFillColor(TColor::GetColor(r,g,b));
 }
+
+
+void hdv_mainframe::EnableControls(bool enabled) {
+    next->SetEnabled(enabled);
+}
+
