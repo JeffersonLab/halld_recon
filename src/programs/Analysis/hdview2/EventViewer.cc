@@ -736,7 +736,7 @@ void EventViewer::FillGraphics(void)
 	    const DECALHit *hit = ecalhits[i]; 
 	    if (hit->E<0.) continue;
 
-	    TPolyLine *poly = hdvmf->GetFCALPolyLine(100+hit->row,100+hit->column);
+	    TPolyLine *poly = hdvmf->GetECALPolyLine(hit->row,hit->column);
 	    if(!poly) continue;
 	   
 	    hdvmf->SetCalorimeterEnergyColor(poly,hit->E);
