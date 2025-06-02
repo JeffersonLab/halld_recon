@@ -58,6 +58,10 @@ float FCAL_Zlen = 45.0;
 float FCAL_Zmin = 622.8;
 static float FCAL_Rmin = 6.0;
 static float FCAL_Rmax = 212.0/2.0;
+float ECAL_Zlen = 20.0;
+float ECAL_Zmin = 632.5;
+static float ECAL_Rmin = 2.0;
+static float ECAL_Rmax = 41.8;
 static float CCAL_Zlen = 18.0;
 static float CCAL_Zmin = 876.106;
 static float CCAL_Rmin = 2.0;
@@ -114,7 +118,6 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   if (dgeom->HaveInsert()) {
     ecalgeom= new DECALGeometry(dgeom);
     m_insert_size = dgeom->GetFCALInsertSize();
-    cout << "******************** Insert size " << m_insert_size << endl;
     auto ecal = new DECALGeometry(dgeom);
     m_insert_block_size = ecal->blockSize();
     delete ecal;
@@ -1427,12 +1430,21 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		
 		// ----- FCAL ------
         if(GetCheckButton("fcal")) {
+	  if (ecalgeom!=nullptr) FCAL_Rmin=ECAL_Rmax;
             TBox *fcal1 = new TBox(FCAL_Zmin, FCAL_Rmin, FCAL_Zmin + FCAL_Zlen, FCAL_Rmax);
             TBox *fcal2 = new TBox(FCAL_Zmin, -FCAL_Rmin, FCAL_Zmin + FCAL_Zlen, -FCAL_Rmax);
             fcal1->SetFillColor(40);
             fcal2->SetFillColor(40);
             graphics_sideA.push_back(fcal1);
             graphics_sideA.push_back(fcal2);
+	    if (ecalgeom!=nullptr){
+	      TBox *fcal3 = new TBox(ECAL_Zmin, ECAL_Rmin, ECAL_Zmin + ECAL_Zlen, ECAL_Rmax);
+	      TBox *fcal4 = new TBox(ECAL_Zmin, -ECAL_Rmin, ECAL_Zmin + ECAL_Zlen, -ECAL_Rmax);
+	      fcal3->SetFillColor(40);
+	      fcal4->SetFillColor(40);
+	      graphics_sideA.push_back(fcal3);
+	      graphics_sideA.push_back(fcal4);
+	    }
         }
 		
 		// ----- CCAL ------
