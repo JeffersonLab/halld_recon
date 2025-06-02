@@ -93,6 +93,7 @@ static double GEMTRD_ywidth=0.;
 static bool got_GEMTRD=false;
 
 static DFCALGeometry *fcalgeom = NULL;
+static DECALGeometry *ecalgeom = NULL;
 static DTOFGeometry *tofgeom = NULL;
 
 static vector<vector <DFDCWire *> >fdcwires;
@@ -111,7 +112,9 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
 
   // Figure out ECAL details
   if (dgeom->HaveInsert()) {
+    ecalgeom= new DECALGeometry(dgeom);
     m_insert_size = dgeom->GetFCALInsertSize();
+    cout << "******************** Insert size " << m_insert_size << endl;
     auto ecal = new DECALGeometry(dgeom);
     m_insert_block_size = ecal->blockSize();
     delete ecal;
@@ -1735,14 +1738,7 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		    double x[5], y[5];
 		    for(int i=0; i<4; i++){
 		      DVector2 pos = fcalBlockPos;
-		      if (m_insert_size>0 
-			  && fabs(pos.X())<m_insert_size
-			  && fabs(pos.Y())<m_insert_size){
-			pos+=shift[i+4];
-		      }
-		      else{
-			pos+=shift[i];
-		      }
+		      pos+=shift[i];
 		      x[i] = pos.X();
 		      y[i] = pos.Y();
 		    }
@@ -1755,6 +1751,35 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		    graphics_endB.push_back(poly);
 		    
 		    fcalblocks[chan] = poly; // record so we can set the color later
+		  }
+		}
+
+		// ----- ECAL -----
+		// Draw the ECAL blocks if the FCAL insert is present
+		if (ecalgeom!=nullptr && GetCheckButton("fcal")){
+		  ecalblocks.clear();
+		  for(int chan=0; chan<ecalgeom->kECALMaxChannels; chan++){
+		    int row=ecalgeom->row(chan);
+		    int col=ecalgeom->column(chan);
+		    if (ecalgeom->isBlockActive(row,col)==false) continue;
+		    DVector2 ecalBlockPos=ecalgeom->positionOnFace(chan);
+
+		    double x[5], y[5];
+		    for(int i=0; i<4; i++){
+		      DVector2 pos = ecalBlockPos;
+		      pos+=shift[i+4];
+		      x[i] = pos.X();
+		      y[i] = pos.Y();
+		    }
+		    x[4] = x[0];
+		    y[4] = y[0];
+				
+		    TPolyLine *poly = new TPolyLine(5, x, y);
+		    poly->SetFillColor(0);
+		    poly->SetLineColor(kBlack);
+		    graphics_endB.push_back(poly);
+		    
+		    ecalblocks[chan] = poly; // record so we can set the color later
 		  }
 		}
 
@@ -2114,14 +2139,7 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		  double r[4], phi[4];
 		  for(int i=0; i<4; i++){
 		    DVector2 pos = fcalBlockPos; 
-		    if (m_insert_size>0 
-			  && fabs(pos.X())<m_insert_size
-			  && fabs(pos.Y())<m_insert_size){
-		      pos+=shift[i+4];
-		    }
-		    else{
-		      pos+=shift[i];
-		    }
+		    pos+=shift[i];
 		    r[i] = pos.Mod();
 		    phi[i] = pos.Phi_0_2pi(pos.Phi());
 		  }
@@ -2132,6 +2150,33 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		  graphics_endB.push_back(poly);
 		  
 		  fcalblocks[chan] = poly; // record so we can set the color later
+		}
+
+		// ----- ECAL -----
+		// Draw the ECAL blocks if the FCAL insert is present
+		if (ecalgeom!=nullptr){
+		  ecalblocks.clear();
+		  for(int chan=0; chan<ecalgeom->kECALMaxChannels; chan++){
+		    int row=ecalgeom->row(chan);
+		    int col=ecalgeom->column(chan);
+		    if (ecalgeom->isBlockActive(row,col)==false) continue;
+		    DVector2 ecalBlockPos=ecalgeom->positionOnFace(chan);
+
+		    double r[4], phi[4];
+		    for(int i=0; i<4; i++){
+		      DVector2 pos = ecalBlockPos;
+		      pos+=shift[i+4];
+		      r[i] = pos.Mod();
+		      phi[i] = pos.Phi_0_2pi(pos.Phi());
+		    }
+				
+		    TPolyLine *poly = new TPolyLine(4, phi, r);
+		    poly->SetFillColor(18);
+		    poly->SetLineColor(kBlack);
+		    graphics_endB.push_back(poly);
+		    
+		    ecalblocks[chan] = poly; // record so we can set the color later
+		  }
 		}
 	}
 
@@ -2615,6 +2660,25 @@ TPolyLine* hdv_mainframe::GetFCALPolyLine(int row, int column)
 {
 	if(!fcalgeom)return NULL;
 	return GetFCALPolyLine(fcalgeom->channel(row, column));
+}
+
+//-------------------
+// GetECALPolyLine
+//-------------------
+TPolyLine* hdv_mainframe::GetECALPolyLine(int channel)
+{
+	map<int, TPolyLine*>::iterator iter = ecalblocks.find(channel);
+	if(iter==ecalblocks.end())return NULL;
+	return iter->second;
+}
+
+//-------------------
+// GetFCALPolyLine
+//-------------------
+TPolyLine* hdv_mainframe::GetECALPolyLine(int row, int column)
+{
+	if(!ecalgeom)return NULL;
+	return GetECALPolyLine(ecalgeom->channel(row, column));
 }
 
 //-------------------
