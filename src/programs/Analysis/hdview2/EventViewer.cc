@@ -1400,7 +1400,10 @@ void EventViewer::FillGraphics(void)
 		for(unsigned int i=0; i<neutrals.size(); i++){
 		  auto locNeutralShower = neutrals[i]->dNeutralShower;
 		  DetectorSystem_t locDetectorSystem = locNeutralShower->dDetectorSystem;
-		  if(locDetectorSystem == SYS_FCAL){
+		  if(locDetectorSystem == SYS_FCAL
+		     || locDetectorSystem == SYS_ECAL
+		     || locDetectorSystem == SYS_ECAL_FCAL
+		     ){
 			
 			TVector3 pos( locNeutralShower->dSpacetimeVertex.X(), 
 				      locNeutralShower->dSpacetimeVertex.Y(), 
@@ -1783,6 +1786,8 @@ void EventViewer::FillGraphics(void)
 		  auto locNeutralShower = photons[i]->dNeutralShower;
 		  DetectorSystem_t locDetSys = locNeutralShower->dDetectorSystem;
 		  if(locDetSys==SYS_FCAL)color = kOrange;
+		  if(locDetSys==SYS_ECAL)color = kOrange+1;
+		  if(locDetSys==SYS_ECAL_FCAL)color = kOrange+2;
 		  if(locDetSys==SYS_BCAL)color = kYellow+2;
 		  //if(locDetSys==DPhoton::kCharge)color = kRed;
 		  AddKinematicDataTrack(photons[i]->Get_BestFOM(), color, 1.00);
