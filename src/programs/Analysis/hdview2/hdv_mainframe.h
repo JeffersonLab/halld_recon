@@ -148,6 +148,8 @@ class hdv_mainframe:public TGMainFrame {
 		void GetReconFactory(std::string &name, std::string &tag);
 		TPolyLine* GetFCALPolyLine(int channel);
 		TPolyLine* GetFCALPolyLine(int row, int column);
+  TPolyLine* GetECALPolyLine(int channel);
+  TPolyLine* GetECALPolyLine(int row, int column);
 		TPolyLine* GetCCALPolyLine(int row, int col);
 		TPolyLine* GetBCALPolyLine(int mod, int layer, int sector);
 		TPolyLine* GetTOFPolyLine(int translate_side, int tof_ch);
@@ -160,6 +162,7 @@ class hdv_mainframe:public TGMainFrame {
 
 
 		void RedrawAuxillaryWindows(void);
+        void EnableControls(bool enabled=true);
 
 	private:
 	
@@ -177,7 +180,7 @@ class hdv_mainframe:public TGMainFrame {
 		TRootEmbeddedCanvas *endviewA;
 		TRootEmbeddedCanvas *endviewB;
 		
-		TGLabel *event, *run, *trig, *source;
+		TGLabel *tgevent, *run, *trig, *source;
 		
 		TGComboBox *timetracksfactory;
 		TGComboBox *wiretracksfactory;
@@ -214,6 +217,7 @@ class hdv_mainframe:public TGMainFrame {
 		std::map<std::string, std::vector<TGLabel*> > reconlabs;
 		std::map<std::string, TGCheckButton*> checkbuttons;
 		std::map<int, TPolyLine*> fcalblocks;
+  std::map<int, TPolyLine*> ecalblocks;
 		std::map<int, TPolyLine*> bcalblocks;
 		std::map<int, TPolyLine*> ccalblocks;
 		std::map<int, std::map<int, TPolyLine*> > tofblocks;
@@ -222,6 +226,9 @@ class hdv_mainframe:public TGMainFrame {
 		long sleep_time; // in milliseconds
 		
 		template<typename T> void FillPoly(T *sA, T *sB, T *eA, std::vector<TVector3> &v);
+
+        double m_insert_size = 0;
+        double m_insert_block_size = 0;
 		
 	ClassDef(hdv_mainframe,1)
 };

@@ -8,10 +8,11 @@ class DReferenceTrajectoryHDV: public DReferenceTrajectory{
 
     public:
         DReferenceTrajectoryHDV(const DMagneticFieldMap *bfield
+                                        , JApplication *app = nullptr
                                         , double q=1.0
                                         , swim_step_t *swim_steps=NULL
                                         , int max_swim_steps=0
-                                        , double step_size=-1.0):  DReferenceTrajectory(bfield, q, swim_steps,max_swim_steps,step_size){}
+                                        , double step_size=-1.0):  DReferenceTrajectory(bfield, app, q, swim_steps,max_swim_steps,step_size){}
         //DReferenceTrajectoryHDV(const DMagneticFieldMap *bfield) :  DReferenceTrajectory(bfield){}
         DReferenceTrajectoryHDV(const DReferenceTrajectory& rt) :  DReferenceTrajectory(rt){}
 
