@@ -9,6 +9,7 @@
 #include "TTAB/DTranslationTable.h"
 
 #include "FCAL/DFCALGeometry.h"
+#include "ECAL/DECALGeometry.h"
 #include <FCAL/DFCALHit.h>
 #include <BCAL/DBCALHit.h>
 
@@ -20,6 +21,7 @@
 #include <TH2.h>
 
 typedef  vector< vector<double> >  fcal_constants_t;
+typedef  vector< vector<double> >  ecal_constants_t;
 
 class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 	public:
@@ -39,12 +41,17 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 
 		fcal_constants_t fcal_gains;
                 fcal_constants_t fcal_pedestals;
+                ecal_constants_t ecal_gains;
+                ecal_constants_t ecal_pedestals;
  
 		int fcal_ssp[sample];
 		int fcal_gtp[sample];
 
 		int bcal_ssp[sample];
 		int bcal_gtp[sample];
+
+	        int ecal_ssp[sample];
+		int ecal_gtp[sample];
 
 		typedef struct {
 		  int row;
@@ -58,13 +65,15 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		  
 		  int merged;
 		} fcal_signal;
-		
 
 		typedef struct {
 		  int module;
 		  int layer;
 		  int sector;
 		  int end;
+
+			int row;
+			int column;
 
 		  double time;      /* Pulse time in ns */
 		  double energy;    /* Pulse energy in MeV */
@@ -75,18 +84,34 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		  int merged;
 		  //int pedestal;
 		}  bcal_signal;
-				
+
+	        typedef struct {
+		  int row;
+		  int column;
+		  
+		  double energy;
+		  double time;
+		  
+		  double adc_en[sample];
+		  int adc_amp[sample];
+		  
+		  int merged;
+		} ecal_signal;
+	
 		typedef struct {
 		  
 		  int  fcal;
 		  int  bcal;
+		  int  ecal;
 		  int  en_thr;  
     
 		  int  fcal_min;
 		  int  fcal_max;
 		  int  bcal_min;
 		  int  bcal_max;
-		  
+		  int  ecal_min;
+		  int  ecal_max;
+			
 		  int  st_nhit;
 		  int  tagh_nhit;
 		  int  tof_nhit;
@@ -115,12 +140,15 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		  
 		  float  fcal_en;
 		  float  bcal_en;
+		  float  ecal_en;
 		  float  en_thr;
 		  
 		  float  fcal_min_en;
 		  float  fcal_max_en; 
 		  float  bcal_min_en;
-		  float  bcal_max_en;		  
+		  float  bcal_max_en;
+		  float  ecal_min_en;
+		  float  ecal_max_en;
 		} trigger_conf;
 				
 		typedef struct{
@@ -143,17 +171,29 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		  int end;
 		} bcal_mod;
 
+	        typedef struct{
+		  int roc;
+		  int slot;
+		  int ch;
+
+		  int col;
+		  int row;
+		} ecal_mod;
+	
 		static vector<trigger_conf> triggers_enabled;
 
 		static vector<fcal_mod> fcal_trig_mask;
 		static vector<bcal_mod> bcal_trig_mask;
+	        static vector<ecal_mod> ecal_trig_mask;
 
 		vector<fcal_signal> fcal_signal_hits;
 		vector<bcal_signal> bcal_signal_hits;
-
+	        vector<ecal_signal> ecal_signal_hits;
+	
 		vector<fcal_signal> fcal_merged_hits;
 		vector<bcal_signal> bcal_merged_hits;
-
+	        vector<ecal_signal> ecal_merged_hits;
+	
 		static std::mutex params_mutex;
 		static std::mutex rcdb_mutex;
   		static bool RCDB_LOADED;
@@ -174,6 +214,16 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		static int    BCAL_NSB;
 		static int    BCAL_WINDOW;
 
+	        float  ECAL_ADC_PER_MEV;
+		static int    ECAL_CELL_THR;
+		int    ECAL_EN_SC;
+		static int    ECAL_NSA;
+		static int    ECAL_NSB;
+		static int    ECAL_WINDOW;
+	
+	        static float FCAL_GAIN;
+	        static float ECAL_GAIN;
+	
 		int    FCAL_BCAL_EN;
 		
 		float  ST_ADC_PER_MEV;
@@ -203,11 +253,12 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		
 		int simu_baseline_fcal;
 		int simu_baseline_bcal;
+	        int simu_baseline_ecal;
 		double pedestal_sigma;
 
 		int simu_gain_fcal;
 		int simu_gain_bcal;
-
+	        int simu_gain_ecal;
 
 		int Read_RCDB(const std::shared_ptr<const JEvent>& event, bool print_messages=true);		
 		int SignalPulse(double en, double time, double amp_array[sample], int type);
@@ -234,7 +285,10 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		
 		void LoadFCALConst( fcal_constants_t &table, 
 				    const vector<double> &fcal_const_ch, 
-				    const DFCALGeometry  &fcalGeom);	
+				    const DFCALGeometry  &fcalGeom);
+	        void LoadECALConst( ecal_constants_t &table, 
+				    const vector<double> &ecal_const_ch, 
+				    const DECALGeometry  &ecalGeom);
 
 
 		void GetSeeds(const std::shared_ptr<const JEvent>& event, UInt_t &seed1, UInt_t &seed2, UInt_t &seed3);
@@ -242,6 +296,10 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		TH1F *hfcal_gains;
 		TH2F *hfcal_gains2;
 		TH1F *hfcal_ped;
+
+	        TH1F *hecal_gains;
+		TH2F *hecal_gains2;
+		TH1F *hecal_ped;
 
 		int debug;
 		
