@@ -17,6 +17,8 @@
 #include <DANA/DEvent.h>
 #include <PAIR_SPECTROMETER/DPSCHit.h>
 #include <FDC/DFDCHit.h>
+#include <TRIGGER/DTrigger.h>
+#include <TRIGGER/DL1MCTrigger.h>
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -235,9 +237,18 @@ void JEventProcessor_highlevel_online::Init()
 
 
 	dHist_BCALVsFCAL2_TrigBit1 = new TH2I("BCALVsFCAL2_TrigBit1","TRIG BIT 1;E (FCAL2) (count);E (BCAL) (count)", 200, 0., 10000, 200, 0., 50000);
+	dHist_BCALVsFCAL2_TrigBit1_Emulate = new TH2I("BCALVsFCAL2_TrigBit1_Emulate","TRIG BIT 1;E (FCAL2) (count);E (BCAL) (count)", 200, 0., 10000, 200, 0., 50000);
 	dHist_BCALVsFCAL_TrigBit1 = new TH2I("BCALVsFCAL_TrigBit1","TRIG BIT 1;E (FCAL) (count);E (BCAL) (count)", 200, 0., 10000, 200, 0., 50000);
+	dHist_BCALVsFCAL_TrigBit1_Emulate = new TH2I("BCALVsFCAL_TrigBit1_Emulate","TRIG BIT 1;E (FCAL) (count);E (BCAL) (count)", 200, 0., 10000, 200, 0., 50000);
 	dHist_BCALVsECAL_TrigBit1 = new TH2I("BCALVsECAL_TrigBit1","TRIG BIT 1;E (ECAL) (count);E (BCAL) (count)", 200, 0., 10000, 200, 0., 50000);
+	dHist_BCALVsECAL_TrigBit1_Emulate = new TH2I("BCALVsECAL_TrigBit1_Emulate","TRIG BIT 1;E (ECAL) (count);E (BCAL) (count)", 200, 0., 10000, 200, 0., 50000);
 	dHist_ECALVsFCAL_TrigBit1 = new TH2I("ECALVsFCAL_TrigBit1","TRIG BIT 1;E (FCAL) (count);E (ECAL) (count)", 200, 0., 20000, 200, 0., 20000);
+	dHist_ECALVsFCAL_TrigBit1_Emulate = new TH2I("ECALVsFCAL_TrigBit1_Emulate","TRIG BIT 1;E (FCAL) (count);E (ECAL) (count)", 200, 0., 20000, 200, 0., 20000);
+
+	dHist_FCAL2VsFCAL2_TrigBit1_Emulate = new TH2I("FCAL2VsFCAL2_TrigBit1_Emulate","TRIG BIT 1;E (FCAL2) (count GTP);E (FCAL2) (count)", 200, 0., 10000, 200, 0., 10000);
+	dHist_FCALVsFCAL_TrigBit1_Emulate = new TH2I("FCALVsFCAL_TrigBit1_Emulate","TRIG BIT 1;E (FCAL) (count GTP);E (FCAL) (count)", 200, 0., 10000, 200, 0., 10000);
+	dHist_ECALVsECAL_TrigBit1_Emulate = new TH2I("ECALVsECAL_TrigBit1_Emulate","TRIG BIT 1;E (ECAL) (count GTP);E (ECAL) (count)", 200, 0., 10000, 200, 0., 10000);
+	dHist_BCALVsBCAL_TrigBit1_Emulate = new TH2I("BCALVsBCAL_TrigBit1_Emulate","TRIG BIT 1;E (BCAL) (count GTP);E (BCAL) (count)", 200, 0., 10000, 200, 0., 10000);
 
 	dHist_L1bits_gtp = new TH1I("L1bits_gtp", "L1 trig bits from GTP;Trig. bit (1-32)", 34, 0.5, 34.5);
 	dHist_L1bits_fp  = new TH1I("L1bits_fp", "L1 trig bits from FP;Trig. bit (1-32)", 32, 0.5, 32.5);
@@ -414,6 +425,7 @@ void JEventProcessor_highlevel_online::BeginRun(const std::shared_ptr<const JEve
 //------------------
 void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
+
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
 	locEvent->Get(locTrackTimeBasedVector);
 
@@ -481,6 +493,14 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 	vector<const DL1Trigger*> locL1Triggers;
 	locEvent->Get(locL1Triggers);
 	const DL1Trigger* locL1Trigger = locL1Triggers.empty() ? NULL : locL1Triggers[0];
+
+	//vector<const DTrigger*> locTriggers;
+	//locEvent->Get(locTriggers);
+	//const DTrigger* locTrigger = locTriggers.empty() ? NULL : locTriggers[0];
+
+	vector<const DL1MCTrigger*> locL1MCTriggers;
+	locEvent->Get(locL1MCTriggers, "DATA");
+	const DL1MCTrigger* locL1MCTrigger = locL1MCTriggers.empty() ? NULL : locL1MCTriggers[0];
 
 	vector<const DChargedTrack*> locChargedTracks;
 	locEvent->Get(locChargedTracks, "PreSelect");
@@ -636,6 +656,9 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 	  
 	  Int_t pulse_int = fcal_hit->pulse_integral - fcal_hit->nsamples_integral*100;
 	  if(pulse_int < 0) continue;
+	  
+	  //cout<<fcal_hit->row<<" "<<fcal_hit->column<<" "<<pulse_int<<endl;
+	  
 	  fcal_tot_en += pulse_int;
 	}
 	
@@ -792,6 +815,20 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 	  
 		if(locgtpTrigBits[0] == 1) //bit 1
                   {
+			  if(locL1MCTrigger != NULL) {
+				  //cout<<"new event"<<endl;
+				  //cout<<locL1MCTrigger->bcal_gtp<<" "<<locL1MCTrigger->bcal_adc<<" "<<bcal_tot_en<<endl;
+				  //cout<<locL1MCTrigger->fcal_gtp<<" "<<locL1MCTrigger->fcal_adc<<" "<<fcal_tot_en<<endl;
+				  //cout<<locL1MCTrigger->ecal_gtp<<" "<<locL1MCTrigger->ecal_adc<<" "<<ecal_tot_en<<endl;
+				  dHist_BCALVsFCAL2_TrigBit1_Emulate->Fill(0.4957*Float_t(locL1MCTrigger->fcal_gtp)+Float_t(locL1MCTrigger->ecal_gtp), Float_t(locL1MCTrigger->bcal_gtp));
+				  dHist_BCALVsFCAL_TrigBit1_Emulate->Fill(0.4957*Float_t(locL1MCTrigger->fcal_gtp), Float_t(locL1MCTrigger->bcal_gtp));
+				  dHist_BCALVsECAL_TrigBit1_Emulate->Fill(Float_t(locL1MCTrigger->ecal_gtp), Float_t(locL1MCTrigger->bcal_gtp));
+				  dHist_ECALVsFCAL_TrigBit1_Emulate->Fill(0.4957*Float_t(locL1MCTrigger->fcal_gtp), Float_t(locL1MCTrigger->ecal_gtp));
+				  dHist_FCAL2VsFCAL2_TrigBit1_Emulate->Fill(0.4957*Float_t(locL1MCTrigger->fcal_gtp)+Float_t(locL1MCTrigger->ecal_gtp), 0.4957*Float_t(fcal_tot_en) + Float_t(ecal_tot_en));
+				  dHist_FCALVsFCAL_TrigBit1_Emulate->Fill(Float_t(locL1MCTrigger->fcal_gtp), Float_t(fcal_tot_en));
+				  dHist_ECALVsECAL_TrigBit1_Emulate->Fill(Float_t(locL1MCTrigger->ecal_gtp), Float_t(ecal_tot_en));
+				  dHist_BCALVsBCAL_TrigBit1_Emulate->Fill(Float_t(locL1MCTrigger->bcal_gtp), Float_t(bcal_tot_en));
+			  }
 		    dHist_BCALVsFCAL2_TrigBit1->Fill(0.4957*Float_t(fcal_tot_en)+Float_t(ecal_tot_en), Float_t(bcal_tot_en));
 		    dHist_BCALVsFCAL_TrigBit1->Fill(0.4957*Float_t(fcal_tot_en), Float_t(bcal_tot_en));
 		    dHist_BCALVsECAL_TrigBit1->Fill(Float_t(ecal_tot_en), Float_t(bcal_tot_en));
