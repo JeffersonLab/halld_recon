@@ -47,15 +47,9 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 
 		TH2I* dHist_NumTriggers;
 		TH2I* dHist_BCALVsFCAL2_TrigBit1;
-	        TH2I* dHist_BCALVsFCAL2_TrigBit1_Emulate;
 	        TH2I* dHist_BCALVsFCAL_TrigBit1;
-	        TH2I* dHist_BCALVsFCAL_TrigBit1_Emulate;
-	        TH2I* dHist_FCAL2VsFCAL2_TrigBit1_Emulate, *dHist_BCALVsBCAL_TrigBit1_Emulate;
-	        TH2I* dHist_ECALVsECAL_TrigBit1_Emulate, *dHist_FCALVsFCAL_TrigBit1_Emulate;
-	TH2I* dHist_BCALVsECAL_TrigBit1;
-	TH2I* dHist_BCALVsECAL_TrigBit1_Emulate;
-	TH2I* dHist_ECALVsFCAL_TrigBit1;
-	TH2I* dHist_ECALVsFCAL_TrigBit1_Emulate;
+	        TH2I* dHist_BCALVsECAL_TrigBit1;
+		TH2I* dHist_ECALVsFCAL_TrigBit1;
 		TH1I* dHist_L1bits_gtp;
 		TH1I* dHist_L1bits_fp;
                 TH1I* dHist_L1bits_fp_twelvehundhits; // BCAL LED Pseudo Trigger(1200 hits in BCAL)
