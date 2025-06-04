@@ -1034,6 +1034,16 @@ bool DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactoryT<DTrigger
 				locTrigger->Set_GTP_FCALEnergy(locTriggerEnergySumsIterator->getFCALEnergySum());
 			}
 		}
+
+		const hddm_r::TriggerEcalEnergySumList& locTriggerEcalEnergySumList = iter->getTriggerEcalEnergySums();
+		hddm_r::TriggerEcalEnergySumList::iterator locTriggerEcalEnergySumIterator = locTriggerEcalEnergySumList.begin();
+		if(locTriggerEcalEnergySumIterator == locTriggerEcalEnergySumList.end()) {
+			locTrigger->Set_GTP_ECALEnergy(0);
+		} else { //should only be 1
+			for(; locTriggerEcalEnergySumIterator != locTriggerEcalEnergySumList.end(); ++locTriggerEcalEnergySumIterator) {
+				locTrigger->Set_GTP_ECALEnergy(locTriggerEcalEnergySumIterator->getECALEnergySum());
+			}
+		}
 		
 		data.push_back(locTrigger);
 	}
