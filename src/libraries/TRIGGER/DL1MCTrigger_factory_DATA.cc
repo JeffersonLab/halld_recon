@@ -91,8 +91,6 @@ void DL1MCTrigger_factory_DATA::Init(void)
   //BCAL_WINDOW      =  20;
 
   ECAL_ADC_PER_MEV =  1.8359;
-  ECAL_GAIN        =  0;
-  FCAL_GAIN        =  1;
   
   FCAL_BCAL_EN     =  45000; 
 
@@ -483,8 +481,6 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
 // Process
 //------------------
 void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& event){
-
-	cout<<"GAINS "<<ECAL_GAIN<<" "<<FCAL_GAIN<<endl;
 	
 	if(BYPASS) {
                 DL1MCTrigger *trigger = new DL1MCTrigger;
