@@ -9,7 +9,8 @@ class DL1MCTrigger: public JObject{
   
  DL1MCTrigger():trig_mask(0),fcal_en(0),fcal_adc(0),fcal_adc_en(0),fcal_gtp(0),fcal_gtp_en(0),
     bcal_en(0),bcal_adc(0),bcal_adc_en(0),bcal_gtp(0),bcal_gtp_en(0),
-    ecal_en(0),ecal_adc(0),ecal_adc_en(0),ecal_gtp(0),ecal_gtp_en(0) {}
+    ecal_en(0),ecal_adc(0),ecal_adc_en(0),ecal_gtp(0),ecal_gtp_en(0),
+    fcal2_en(0),fcal2_adc(0),fcal2_adc_en(0),fcal2_gtp(0),fcal2_gtp_en(0) {}
  
   
   uint32_t trig_mask;
@@ -31,6 +32,12 @@ class DL1MCTrigger: public JObject{
   float   ecal_adc_en;
   int     ecal_gtp;
   float   ecal_gtp_en;
+
+  float   fcal2_en;
+  int     fcal2_adc;
+  float   fcal2_adc_en;
+  int     fcal2_gtp;
+  float   fcal2_gtp_en;
 	
   int trig_time[32];
 

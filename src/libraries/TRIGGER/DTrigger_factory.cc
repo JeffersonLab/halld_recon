@@ -90,6 +90,7 @@ void DTrigger_factory::Process(const std::shared_ptr<const JEvent>& event)
                 locTrigger->Set_GTP_BCALEnergy(locMCTrigger->bcal_gtp_en);
                 locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
 		locTrigger->Set_GTP_ECALEnergy(locMCTrigger->ecal_gtp_en);
+		locTrigger->Set_GTP_FCAL2Energy(locMCTrigger->fcal2_gtp_en);
             }
         }
 
@@ -124,6 +125,7 @@ void DTrigger_factory::Process(const std::shared_ptr<const JEvent>& event)
             locTrigger->Set_GTP_BCALEnergy(locMCTrigger->bcal_gtp_en);
             locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
 	    locTrigger->Set_GTP_ECALEnergy(locMCTrigger->ecal_gtp_en);
+	    locTrigger->Set_GTP_FCAL2Energy(locMCTrigger->fcal2_gtp_en);
 
         }
     }

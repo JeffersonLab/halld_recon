@@ -16,6 +16,7 @@ class DTrigger : public JObject
 		float Get_GTP_BCALEnergy(void) const {return dGTP_BCALEnergy;};
 		float Get_GTP_FCALEnergy(void) const {return dGTP_FCALEnergy;};
 	        float Get_GTP_ECALEnergy(void) const {return dGTP_ECALEnergy;};
+	        float Get_GTP_FCAL2Energy(void) const {return dGTP_FCAL2Energy;};
 
 		//SETTERS
 		void Set_L1TriggerBits(uint32_t locL1TriggerBits){dL1TriggerBits = locL1TriggerBits;}
@@ -24,6 +25,7 @@ class DTrigger : public JObject
 		void Set_GTP_BCALEnergy(float locGTP_BCALEnergy) { dGTP_BCALEnergy = locGTP_BCALEnergy; }
 		void Set_GTP_FCALEnergy(float locGTP_FCALEnergy) { dGTP_FCALEnergy = locGTP_FCALEnergy; }
 	        void Set_GTP_ECALEnergy(float locGTP_ECALEnergy) { dGTP_ECALEnergy = locGTP_ECALEnergy; }
+	        void Set_GTP_FCAL2Energy(float locGTP_FCAL2Energy) { dGTP_FCAL2Energy = locGTP_FCAL2Energy; }
 		void Set_GTP_SCHits(float locGTP_SCHits) { dGTP_SCHits = locGTP_SCHits; }
 
 		void Summarize(JObjectSummary& summary) const override {
@@ -40,6 +42,7 @@ class DTrigger : public JObject
 		float dGTP_BCALEnergy = 0.;
 		float dGTP_FCALEnergy = 0.;
 	        float dGTP_ECALEnergy = 0.;
+	        float dGTP_FCAL2Energy = 0.;
 		float dGTP_SCHits = 0.;
 
 };

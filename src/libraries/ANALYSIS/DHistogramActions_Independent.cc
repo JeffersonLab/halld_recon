@@ -4341,7 +4341,7 @@ bool DHistogramAction_TriggerStudies::Perform_Action(const std::shared_ptr<const
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action();
 	{
-		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCALEnergy(), locTrigger->Get_GTP_BCALEnergy());
+		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCAL2Energy(), locTrigger->Get_GTP_BCALEnergy());
 	}
 	Unlock_Action();
 

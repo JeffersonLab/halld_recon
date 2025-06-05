@@ -625,7 +625,7 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		    status = 0;
 		}
 
-	    if(fcaldigihit->pulse_peak < FCAL_CELL_THR) continue;
+	    //if(fcaldigihit->pulse_peak < FCAL_CELL_THR) continue;
 	    
 	    fcal_signal_hits.push_back(fcal_tmp);
 	  }
@@ -773,7 +773,7 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		    status = 0;
  		}
 
-	    if(bcaldigihit->pulse_peak < BCAL_CELL_THR) continue;
+	    //if(bcaldigihit->pulse_peak < BCAL_CELL_THR) continue;
 	    
 	    bcal_signal_hits.push_back(bcal_tmp);
 	  }	  
@@ -936,7 +936,7 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		    status = 0;
 		}
 
-	    if(ecaldigihit->pulse_peak < ECAL_CELL_THR) continue;
+	    //if(ecaldigihit->pulse_peak < ECAL_CELL_THR) continue;
 	    
 	    ecal_signal_hits.push_back(ecal_tmp);
 	  }
@@ -1049,7 +1049,8 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 	    if(bcal_gtp[ii] > bcal_gtp_max) bcal_gtp_max = bcal_gtp[ii];
 	    if(ecal_gtp[ii] > ecal_gtp_max) ecal_gtp_max = ecal_gtp[ii];
 	  }	
-	  	  
+
+	  // add gain to sums?
 	  trigger->fcal_en      =  fcal_hit_en;
 	  trigger->fcal_adc     =  fcal_hit_adc_en;
 	  trigger->fcal_adc_en  =  fcal_hit_adc_en/FCAL_ADC_PER_MEV/1000.;
@@ -1067,6 +1068,13 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 	  trigger->ecal_adc_en  =  ecal_hit_adc_en/ECAL_ADC_PER_MEV/1000.;
 	  trigger->ecal_gtp     =  ecal_gtp_max;
 	  trigger->ecal_gtp_en  =  ecal_gtp_max/ECAL_ADC_PER_MEV/1000.;
+
+	  // scale sum according to gains applied in trigger equation
+	  trigger->fcal2_en      =  ECAL_GAIN*ecal_hit_en + FCAL_GAIN*fcal_hit_en;
+	  trigger->fcal2_adc     =  ECAL_GAIN*ecal_hit_adc_en + FCAL_GAIN*fcal_hit_adc_en;
+	  trigger->fcal2_adc_en  =  (ECAL_GAIN*ecal_hit_adc_en/ECAL_ADC_PER_MEV + FCAL_GAIN*fcal_hit_adc_en/FCAL_ADC_PER_MEV)/1000.;
+	  trigger->fcal2_gtp     =  ECAL_GAIN*ecal_gtp_max + FCAL_GAIN*fcal_gtp_max;
+	  trigger->fcal2_gtp_en  =  (ECAL_GAIN*ecal_gtp_max/ECAL_ADC_PER_MEV + FCAL_GAIN*fcal_gtp_max/FCAL_ADC_PER_MEV)/1000.;
 	  
 	  Insert(trigger);	 
 	  

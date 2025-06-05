@@ -1035,13 +1035,15 @@ bool DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactoryT<DTrigger
 			}
 		}
 
-		const hddm_r::TriggerEcalEnergySumList& locTriggerEcalEnergySumList = iter->getTriggerEcalEnergySums();
-		hddm_r::TriggerEcalEnergySumList::iterator locTriggerEcalEnergySumIterator = locTriggerEcalEnergySumList.begin();
-		if(locTriggerEcalEnergySumIterator == locTriggerEcalEnergySumList.end()) {
+		const hddm_r::TriggerFcal2EnergySumList& locTriggerFcal2EnergySumList = iter->getTriggerFcal2EnergySums();
+		hddm_r::TriggerFcal2EnergySumList::iterator locTriggerFcal2EnergySumIterator = locTriggerFcal2EnergySumList.begin();
+		if(locTriggerFcal2EnergySumIterator == locTriggerFcal2EnergySumList.end()) {
 			locTrigger->Set_GTP_ECALEnergy(0);
+			locTrigger->Set_GTP_FCAL2Energy(locTrigger->Get_GTP_FCALEnergy());
 		} else { //should only be 1
-			for(; locTriggerEcalEnergySumIterator != locTriggerEcalEnergySumList.end(); ++locTriggerEcalEnergySumIterator) {
-				locTrigger->Set_GTP_ECALEnergy(locTriggerEcalEnergySumIterator->getECALEnergySum());
+			for(; locTriggerFcal2EnergySumIterator != locTriggerFcal2EnergySumList.end(); ++locTriggerFcal2EnergySumIterator) {
+				locTrigger->Set_GTP_ECALEnergy(locTriggerFcal2EnergySumIterator->getECALEnergySum());
+				locTrigger->Set_GTP_FCAL2Energy(locTriggerFcal2EnergySumIterator->getFCAL2EnergySum());
 			}
 		}
 		
