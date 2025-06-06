@@ -10,8 +10,10 @@
 
 #include "FCAL/DFCALGeometry.h"
 #include "ECAL/DECALGeometry.h"
-#include <FCAL/DFCALHit.h>
-#include <BCAL/DBCALHit.h>
+#include "FCAL/DFCALHit.h"
+#include "BCAL/DBCALHit.h"
+
+#include "START_COUNTER/DSCHit.h"
 
 #include "ANALYSIS/DTreeInterface.h"
 
@@ -59,6 +61,10 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		  
 		  double energy;
 		  double time;
+
+		  int pulse_peak;
+		  int pulse_time;
+		  int pulse_integral;
 		  
 		  double adc_en[sample];
 		  int adc_amp[sample];
@@ -78,6 +84,10 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		  double time;      /* Pulse time in ns */
 		  double energy;    /* Pulse energy in MeV */
 
+		  int pulse_peak;
+		  int pulse_time;
+		  int pulse_integral;
+			
 		  double adc_en[sample];
 		  int adc_amp[sample];
 		  
@@ -91,6 +101,10 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		  
 		  double energy;
 		  double time;
+
+		  int pulse_peak;
+		  int pulse_time;
+		  int pulse_integral;
 		  
 		  double adc_en[sample];
 		  int adc_amp[sample];
@@ -240,6 +254,7 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		
 		int OUTPUT_TREE;
 		int USE_RAW_SAMPLES;
+	        int USE_DIGI;
 
 		//TREE
 		DTreeInterface* dTreeInterface;
@@ -262,6 +277,7 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 
 		int Read_RCDB(const std::shared_ptr<const JEvent>& event, bool print_messages=true);		
 		int SignalPulse(double en, double time, double amp_array[sample], int type);
+	        int SignalPulseDigi(double en, double time, double amp_array[sample], int type);
 
 		void AddBaseline(double adc_amp[sample], double pedestal, DRandom2 &gDRandom);
 
@@ -270,6 +286,7 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		template <typename T>  int FADC_SSP(vector<T> merged_hits, 
 						    int detector);
 		int GTP(int detector);
+	        template <typename T>  int GTPDigi(vector<T> digi_hits, int detector);
 		int FindTriggers(DL1MCTrigger *trigger);
 		void PrintTriggers();				
 

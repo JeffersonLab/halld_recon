@@ -108,7 +108,7 @@ void DL1MCTrigger_factory_DATA::Init(void)
   
   OUTPUT_TREE = 0;
   USE_RAW_SAMPLES = 0;
-  
+  USE_DIGI = 1;
 
   simu_baseline_fcal  =  1;
   simu_baseline_bcal  =  1;
@@ -152,6 +152,8 @@ void DL1MCTrigger_factory_DATA::Init(void)
 			      "Write out tree with trigger information, for debugging.");
   app->SetDefaultParameter("TRIG:USE_RAW_SAMPLES", USE_RAW_SAMPLES,
 			      "Use the measured raw fADC samples instead of the simulated ones (only works for raw mode data).");
+  app->SetDefaultParameter("TRIG:USE_DIGI", USE_DIGI,
+			      "Use the DigiHits instead of the simulated ones.");
   
   std::lock_guard<std::mutex> lock(params_mutex);
   if(!PARAMS_LOADED) {
@@ -588,6 +590,9 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 
 	    fcal_tmp.energy  = fcal_hits[ii]->E;
 	    fcal_tmp.time    = fcal_hits[ii]->t;
+	    fcal_tmp.pulse_peak = fcaldigihit->pulse_peak;
+	    fcal_tmp.pulse_time = (fcaldigihit->pulse_time >> 6) & 0x1FF; // consider only course time;
+	    fcal_tmp.pulse_integral = fcaldigihit->pulse_integral - fcaldigihit->nsamples_integral*TRIG_BASELINE;
 	    memset(fcal_tmp.adc_amp,0,sizeof(fcal_tmp.adc_amp));
 	    memset(fcal_tmp.adc_en, 0,sizeof(fcal_tmp.adc_en));
 
@@ -625,8 +630,6 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		    status = 0;
 		}
 
-	    //if(fcaldigihit->pulse_peak < FCAL_CELL_THR) continue;
-	    
 	    fcal_signal_hits.push_back(fcal_tmp);
 	  }
 	  
@@ -697,12 +700,15 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 			if( (fcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE) > 0.)
 			  fcal_hit_adc_en += (fcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE);
 	}
-	
-	status += FADC_SSP(fcal_merged_hits, 1);
-	
-	status += GTP(1);
 
-
+	if(USE_DIGI && !USE_RAW_SAMPLES)
+		status += GTPDigi(fcal_signal_hits, 1);
+	else {
+		status += FADC_SSP(fcal_merged_hits, 1);
+		
+		status += GTP(1);
+	}
+		
 	//cerr << "BCAL energy sum" << endl;
 	//cerr << "  num hits = " << bcal_hits.size() << endl;
 
@@ -752,6 +758,9 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 
 	    bcal_tmp.energy  = bcal_hits[ii]->E;
 	    bcal_tmp.time    = bcal_hits[ii]->t;
+	    bcal_tmp.pulse_peak = bcaldigihit->pulse_peak;
+	    bcal_tmp.pulse_time = (bcaldigihit->pulse_time >> 6) & 0x1FF; // consider only course time;
+	    bcal_tmp.pulse_integral = bcaldigihit->pulse_integral - bcaldigihit->nsamples_integral*TRIG_BASELINE;
 	    memset(bcal_tmp.adc_amp,0,sizeof(bcal_tmp.adc_amp));
 	    memset(bcal_tmp.adc_en, 0,sizeof(bcal_tmp.adc_en));
 	    
@@ -772,8 +781,6 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		    status = SignalPulse(bcal_adc_en, bcal_tmp.time, bcal_tmp.adc_en, 2);
 		    status = 0;
  		}
-
-	    //if(bcaldigihit->pulse_peak < BCAL_CELL_THR) continue;
 	    
 	    bcal_signal_hits.push_back(bcal_tmp);
 	  }	  
@@ -842,11 +849,14 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 				  bcal_hit_adc_en += bcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE;	  
 	}
 	
-	
-	status = FADC_SSP(bcal_merged_hits, 2);
-
-	status = GTP(2);
-
+	if(USE_DIGI && !USE_RAW_SAMPLES)
+		status += GTPDigi(bcal_signal_hits, 2);
+	else {
+		status = FADC_SSP(bcal_merged_hits, 2);
+		
+		status = GTP(2);
+	}
+		
 	// temporary mask until files in RCDB
 	int ecal_row_mask_min = 15;
 	int ecal_row_mask_max = 24;
@@ -899,6 +909,9 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 
 	    ecal_tmp.energy  = ecal_hits[ii]->E;
 	    ecal_tmp.time    = ecal_hits[ii]->t;
+	    ecal_tmp.pulse_peak = ecaldigihit->pulse_peak;
+	    ecal_tmp.pulse_time = (ecaldigihit->pulse_time >> 6) & 0x1FF; // consider only course time;
+	    ecal_tmp.pulse_integral = ecaldigihit->pulse_integral - ecaldigihit->nsamples_integral*TRIG_BASELINE;
 	    memset(ecal_tmp.adc_amp,0,sizeof(ecal_tmp.adc_amp));
 	    memset(ecal_tmp.adc_en, 0,sizeof(ecal_tmp.adc_en));
 
@@ -935,8 +948,6 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		    status = SignalPulse(ecal_adc_en, ecal_tmp.time, ecal_tmp.adc_en, 3);
 		    status = 0;
 		}
-
-	    //if(ecaldigihit->pulse_peak < ECAL_CELL_THR) continue;
 	    
 	    ecal_signal_hits.push_back(ecal_tmp);
 	  }
@@ -1011,9 +1022,13 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 			  ecal_hit_adc_en += (ecal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE);
 	}
 	
-	status += FADC_SSP(ecal_merged_hits, 3);
+	if(USE_DIGI && !USE_RAW_SAMPLES)
+		status += GTPDigi(ecal_signal_hits, 3);
+	else {
+		status += FADC_SSP(ecal_merged_hits, 3);
 
-	status += GTP(3);
+		status += GTP(3);
+	}
 	
 	// Search for triggers
 
@@ -1038,19 +1053,18 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 // 	cerr << " bcal_gtp_max    = " << bcal_gtp_max << endl;
 
 	
-	if(l1_found){
+	//if(l1_found){
 	  
 	  int fcal_gtp_max = 0;
 	  int bcal_gtp_max = 0;
 	  int ecal_gtp_max = 0;
-	  
+
 	  for(unsigned int ii = 0; ii < sample; ii++){
 	    if(fcal_gtp[ii] > fcal_gtp_max) fcal_gtp_max = fcal_gtp[ii];
 	    if(bcal_gtp[ii] > bcal_gtp_max) bcal_gtp_max = bcal_gtp[ii];
 	    if(ecal_gtp[ii] > ecal_gtp_max) ecal_gtp_max = ecal_gtp[ii];
 	  }	
 
-	  // add gain to sums?
 	  trigger->fcal_en      =  fcal_hit_en;
 	  trigger->fcal_adc     =  fcal_hit_adc_en;
 	  trigger->fcal_adc_en  =  fcal_hit_adc_en/FCAL_ADC_PER_MEV/1000.;
@@ -1075,9 +1089,10 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 	  trigger->fcal2_adc_en  =  (ECAL_GAIN*ecal_hit_adc_en/ECAL_ADC_PER_MEV + FCAL_GAIN*fcal_hit_adc_en/FCAL_ADC_PER_MEV)/1000.;
 	  trigger->fcal2_gtp     =  ECAL_GAIN*ecal_gtp_max + FCAL_GAIN*fcal_gtp_max;
 	  trigger->fcal2_gtp_en  =  (ECAL_GAIN*ecal_gtp_max/ECAL_ADC_PER_MEV + FCAL_GAIN*fcal_gtp_max/FCAL_ADC_PER_MEV)/1000.;
-	  
-	  Insert(trigger);	 
-	  
+
+	  // inser trigger sums for all events
+	  Insert(trigger); 
+	  		  
 	  if(OUTPUT_TREE) {
 	  	dTreeFillData.Fill_Single<ULong64_t>("RunNumber", runnumber);
 	  	dTreeFillData.Fill_Single<ULong64_t>("EventNumber", eventnumber);
@@ -1099,9 +1114,9 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		dTreeInterface->Fill(dTreeFillData);
 	  }
 	  
-	} else{
-	  delete trigger;
-	}
+	  //} else{
+	  //delete trigger;
+	  //}
 	
 	return; //NOERROR;
 }
@@ -1640,6 +1655,56 @@ int DL1MCTrigger_factory_DATA::GTP(int detector){
 
 }
 
+template <typename T>  int DL1MCTrigger_factory_DATA::GTPDigi(vector<T> digi_hits, int detector){
+
+  // 1  - FCAL
+  // 2  - BCAL
+  // 3  - ECAL
+
+  int EN_THR =  4096; 
+  int INT_WINDOW = 20; 
+
+  switch(detector){
+  case 1:
+    EN_THR     =  FCAL_CELL_THR;
+    INT_WINDOW =  FCAL_WINDOW;
+    break;
+  case 2:
+    EN_THR     =  BCAL_CELL_THR;
+    INT_WINDOW =  BCAL_WINDOW;
+    break;
+  case 3:
+    EN_THR     =  ECAL_CELL_THR;
+    INT_WINDOW =  ECAL_WINDOW;
+    break;
+  default:
+    break;
+  }
+
+  for(unsigned int hit = 0; hit < digi_hits.size(); hit++){
+	  
+    // require pulse peak above threshold
+    if(digi_hits[hit].pulse_peak < EN_THR)
+	    continue;
+	    
+    // (for later) require in trigger timing window
+    //int adc_time = digi_hits[hit].pulse_time;
+    //if((adc_time < 15) || (adc_time > 50)) continue;
+
+    // insert DigiHit pulse integral as single sample
+    if(detector == 1)
+      fcal_gtp[10] += digi_hits[hit].pulse_integral;
+    else if(detector == 3)
+      ecal_gtp[10] += digi_hits[hit].pulse_integral;
+    else 
+      bcal_gtp[10] += digi_hits[hit].pulse_integral;
+
+  }
+
+  
+  return 0;
+
+}
 
 template <typename T>  int DL1MCTrigger_factory_DATA::FADC_SSP(vector<T> merged_hits, int detector){
   
