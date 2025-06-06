@@ -1086,9 +1086,9 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 	  // scale sum according to gains applied in trigger equation
 	  trigger->fcal2_en      =  ECAL_GAIN*ecal_hit_en + FCAL_GAIN*fcal_hit_en;
 	  trigger->fcal2_adc     =  ECAL_GAIN*ecal_hit_adc_en + FCAL_GAIN*fcal_hit_adc_en;
-	  trigger->fcal2_adc_en  =  (ECAL_GAIN*ecal_hit_adc_en/ECAL_ADC_PER_MEV + FCAL_GAIN*fcal_hit_adc_en/FCAL_ADC_PER_MEV)/1000.;
+	  trigger->fcal2_adc_en  =  (ecal_hit_adc_en/ECAL_ADC_PER_MEV + fcal_hit_adc_en/FCAL_ADC_PER_MEV)/1000.;
 	  trigger->fcal2_gtp     =  ECAL_GAIN*ecal_gtp_max + FCAL_GAIN*fcal_gtp_max;
-	  trigger->fcal2_gtp_en  =  (ECAL_GAIN*ecal_gtp_max/ECAL_ADC_PER_MEV + FCAL_GAIN*fcal_gtp_max/FCAL_ADC_PER_MEV)/1000.;
+	  trigger->fcal2_gtp_en  =  (ecal_gtp_max/ECAL_ADC_PER_MEV + fcal_gtp_max/FCAL_ADC_PER_MEV)/1000.;
 
 	  // inser trigger sums for all events
 	  Insert(trigger); 
