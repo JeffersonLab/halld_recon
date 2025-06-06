@@ -34,6 +34,8 @@ public:
   double adc_time_scale;
   
   double base_time;
+  double time_walk_par1=0.;
+  double time_walk_par2=0.;
 
   bool isBlockActive( int row, int column ) const {
     if( row < 0 ||  row >= kECALBlocksTall )return false;
@@ -60,7 +62,7 @@ public:
   unsigned int DB_PEDESTAL;
   unsigned int HIT_DEBUG;
   
-  bool INSTALLED;
+  bool INSTALLED,APPLY_WALK_CORRECTION;
 
   bool   m_activeBlock[kECALBlocksTall][kECALBlocksWide];
   int    m_channelNumber[kECALBlocksTall][kECALBlocksWide];
