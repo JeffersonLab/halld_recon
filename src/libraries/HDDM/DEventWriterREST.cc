@@ -648,6 +648,9 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 		hddm_r::TriggerEnergySumsList triggerEnergySum = trigger().addTriggerEnergySumses(1);
 		triggerEnergySum().setBCALEnergySum(locTriggers[i]->Get_GTP_BCALEnergy());
 		triggerEnergySum().setFCALEnergySum(locTriggers[i]->Get_GTP_FCALEnergy());
+		hddm_r::TriggerFcal2EnergySumList triggerFcal2EnergySum = trigger().addTriggerFcal2EnergySums(1);
+		triggerFcal2EnergySum().setECALEnergySum(locTriggers[i]->Get_GTP_ECALEnergy());
+		triggerFcal2EnergySum().setFCAL2EnergySum(locTriggers[i]->Get_GTP_FCAL2Energy());
 	}
 	
 	// push any DBeamHelicity objects to the output record

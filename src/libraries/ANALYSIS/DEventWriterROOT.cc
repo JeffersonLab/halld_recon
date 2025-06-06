@@ -184,6 +184,8 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, const std::
 	locBranchRegister.Register_Single<UInt_t>("L1TriggerBits");
 	locBranchRegister.Register_Single<Double_t>("L1BCALEnergy");
 	locBranchRegister.Register_Single<Double_t>("L1FCALEnergy");
+	locBranchRegister.Register_Single<Double_t>("L1ECALEnergy");
+	locBranchRegister.Register_Single<Double_t>("L1FCAL2Energy");
 
 	//create info about electron beam
 	locBranchRegister.Register_Single<Bool_t>("HasEBeamHelicity");
@@ -1392,6 +1394,8 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 	locTreeFillData->Fill_Single<UInt_t>("L1TriggerBits", locTrigger->Get_L1TriggerBits());
 	locTreeFillData->Fill_Single<Double_t>("L1BCALEnergy", locTrigger->Get_GTP_BCALEnergy());
 	locTreeFillData->Fill_Single<Double_t>("L1FCALEnergy", locTrigger->Get_GTP_FCALEnergy());
+	locTreeFillData->Fill_Single<Double_t>("L1ECALEnergy", locTrigger->Get_GTP_ECALEnergy());
+	locTreeFillData->Fill_Single<Double_t>("L1FCAL2Energy", locTrigger->Get_GTP_FCAL2Energy());
 
 	//INFO
 	if(locBeamHelicity == NULL) {

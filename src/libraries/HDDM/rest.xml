@@ -122,7 +122,8 @@
             tsync="float" tunit="ns"/>
     <trigger minOccurs="0" maxOccurs="1" jtag="string"
 			 l1_trig_bits="int" l1_fp_trig_bits="int">
- 	  <triggerEnergySums BCALEnergySum="float" FCALEnergySum="float" minOccurs="0"/>
+      <triggerEnergySums BCALEnergySum="float" FCALEnergySum="float" minOccurs="0"/>
+      <triggerFcal2EnergySum ECALEnergySum="float" FCAL2EnergySum="float" minOccurs="0"/>
     </trigger>
     <electronBeam maxOccurs="1" minOccurs="0" jtag="string" helicitydata="int" />
 
