@@ -441,33 +441,42 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       myCluster->channel_Emax=dECALGeom->channel(min_row-1+ir_max,
 						 min_col-1+ic_max);
       
-      // Compute energy-weighted time
-      double fsum=0.,t=0.,fmax=0.;
+      // Find the channel corresponding to the block with the maximum energy
+      // in the shower
+      double fmax=0.;
       int ic_peak_max=0,ir_peak_max=0;
       for (unsigned int j=0;j<clusterHits.size();j++){
 	double f=CalcClusterEDeriv(b,clusterHits[j],peaks[k]);
-	t+=f*clusterHits[j].t;
-	fsum+=f;
 	if (f>fmax){
 	  fmax=f;
 	  ic_peak_max=clusterHits[j].column-min_col+1;
 	  ir_peak_max=clusterHits[j].row-min_row+1;
 	}
       }
-      myCluster->t=t/fsum;
-
+ 
       // Add hits in 5x5 array centered on the crystal with the maximum
-      // energy as associated objects to the cluster
-      GetRowColRanges(2,num_rows,num_cols,ir_peak_max,ic_peak_max,lo_row,hi_row,lo_col,
-		      hi_col);
+      // energy as associated objects to the cluster.  Find the energy-weighted
+      // time.  Find the 3x3 and 5x5 energy sums.
+      GetRowColRanges(2,num_rows,num_cols,ir_peak_max,ic_peak_max,lo_row,hi_row,
+		      lo_col,hi_col);
+      double E1=ecal_hits[clusterHits[imap[ic_peak_max][ir_peak_max]-1].id]->E;
+      double E5x5=0.,E3x3=0.,t=0.;
       for (int my_ir=lo_row;my_ir<=hi_row;my_ir++){
 	for (int my_ic=lo_col;my_ic<=hi_col;my_ic++){
 	  int index=imap[my_ic][my_ir];
 	  if (index>0){
+	    const DECALHit *myHit=ecal_hits[clusterHits[index-1].id];
+	    E5x5+=myHit->E;
+	    t+=myHit->t*myHit->E;
+	    if (abs(my_ic-ic_peak_max)<=1 && abs(my_ir-ir_peak_max)<=1){
+	      E3x3+=myHit->E;
+	    }
 	    myCluster->AddAssociatedObject(ecal_hits[clusterHits[index-1].id]);
 	  }
 	}
       }
+      myCluster->t=t/E5x5;
+
       // flag if the cluster is near the border with the FCAL
       if (min_row>0&&max_row<39&&min_col>0&&max_col<39){
 	myCluster->isNearBorder=false;
