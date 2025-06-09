@@ -18,8 +18,8 @@ class JEventProcessor_MilleFieldOff : public JEventProcessor {
 
  private:
   void Init() override;
-  void BeginRun(const std::shared_ptr<const JEvent>& event, int32_t runnumber);
-  void Process(const std::shared_ptr<const JEvent>& event, uint64_t eventnumber);
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
   void EndRun() override;
   void Finish() override;
 
