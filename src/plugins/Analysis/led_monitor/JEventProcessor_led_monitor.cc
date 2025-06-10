@@ -166,45 +166,13 @@ void JEventProcessor_led_monitor::Process(const std::shared_ptr<const JEvent> &e
       int nsamples_integral  = ecal_hit->nsamples_integral;
       
       double peak_ps = (double) pulse_peak - (double)pedestal / nsamples_pedestal;
-      double int_ps  = (double) pulse_int - (double) pedestal * (double) nsamples_integral / nsamples_pedestal;
       
       uint32_t  adc_time = (ecal_hit->pulse_time  & 0x7FC0) >> 6;
-      
+
+      // Debug time
       if((column == 1) && (row == 28))
 	htime->Fill(float(adc_time));
-      
-      
-#if 1
-      const Df250WindowRawData *windorawdata;
-      const Df250PulseData     *pulsedata; 
-      
-      ecal_hit->GetSingle(pulsedata);         
-      pulsedata->GetSingle(windorawdata);
-      
-      if(pulsedata){
-	
-	unsigned int max_amp = 0;
-	
-	if(windorawdata){       
-	  
-	  const vector<uint16_t> &samplesvector = windorawdata->samples;          
-	  unsigned int nsamples = samplesvector.size();
-	  
-	  for(uint16_t samp = 0; samp < nsamples; samp++){
-	    
-	    unsigned int adc_amp = samplesvector[samp];
-	    
-	    if (adc_amp > max_amp) max_amp = adc_amp;	   
-	    
-	  }  // Loop over samples
-	  
-	  peak_ps = (double)max_amp - 100.;
-	  
-	  ecal_wave_ind[column][row]->Fill(peak_ps);	 	  
-	}
-	
-      }
-#endif
+           
       
       if( (adc_time > adc_time_min) && (adc_time < adc_time_max))      
 	ecal_wave_ind[column][row]->Fill(peak_ps);	 
