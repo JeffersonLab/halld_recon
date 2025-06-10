@@ -135,6 +135,8 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       myCluster->x=x;
       myCluster->y=y;
       myCluster->channel_Emax=ch_Emax;
+      myCluster->E1E9=Emax/Etot;
+      myCluster->E9E25=1.;
       myCluster->nBlocks=num_hits;
       myCluster->chisq=0.;
       myCluster->ndf=0;
@@ -476,6 +478,8 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	}
       }
       myCluster->t=t/E5x5;
+      myCluster->E1E9=E1/E3x3;
+      myCluster->E9E25=E3x3/E5x5;
 
       // flag if the cluster is near the border with the FCAL
       if (min_row>0&&max_row<39&&min_col>0&&max_col<39){

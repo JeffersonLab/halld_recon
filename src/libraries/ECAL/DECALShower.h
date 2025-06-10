@@ -19,6 +19,7 @@ struct DECALShower : public JObject {
   DECALShower(){};
 
   double E,t;
+  double E1E9,E9E25;
   DVector3 pos;
   TMatrixFSym ExyztCovariance;
   bool isNearBorder;
