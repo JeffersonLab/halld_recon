@@ -43,8 +43,8 @@ void JEventProcessor_MilleFieldOn::Init() {
   milleWriter = new Mille(output_filename.data());
 }
 
-void JEventProcessor_MilleFieldOn::BeginRun(const std::shared_ptr<const JEvent> &event, int32_t runnumber) {
-  // This is called whenever the run number changes
+void JEventProcessor_MilleFieldOn::BeginRun(const std::shared_ptr<const JEvent> &event) {
+   // This is called whenever the run number changes
   // Check for magnetic field
   bool dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField *>(DEvent::GetBfield(event)) != nullptr);
 
@@ -58,7 +58,7 @@ void JEventProcessor_MilleFieldOn::BeginRun(const std::shared_ptr<const JEvent> 
   }
 }
 
-void JEventProcessor_MilleFieldOn::Process(const std::shared_ptr<const JEvent> &event, uint64_t eventnumber) {
+void JEventProcessor_MilleFieldOn::Process(const std::shared_ptr<const JEvent> &event) {
 
   int straw_offset[29] = {0,    0,    42,   84,   138,  192,  258,  324,
                           404,  484,  577,  670,  776,  882,  1005, 1128,
