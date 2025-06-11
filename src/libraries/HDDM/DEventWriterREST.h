@@ -17,6 +17,7 @@
 #include "PID/DMCReaction.h"
 #include "PID/DBeamPhoton.h"
 #include "TRACKING/DMCThrown.h"
+#include "ECAL/DECALShower.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALHit.h"
 #include "CCAL/DCCALShower.h"

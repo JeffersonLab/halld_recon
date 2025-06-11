@@ -382,6 +382,10 @@ bool DEventSourceREST::GetObjects(const std::shared_ptr<const JEvent> &event, JF
       return (Extract_DSCHit(record,
                      dynamic_cast<JFactoryT<DSCHit>*>(factory)));
    }
+   if (dataClassName =="DECALShower") {
+      return (Extract_DECALShower(record,
+				  dynamic_cast<JFactoryT<DECALShower>*>(factory)));
+   }
    if (dataClassName =="DFCALShower") {
       return (Extract_DFCALShower(record,
                      dynamic_cast<JFactoryT<DFCALShower>*>(factory)));
@@ -1030,6 +1034,18 @@ bool DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactoryT<DTrigger
 				locTrigger->Set_GTP_FCALEnergy(locTriggerEnergySumsIterator->getFCALEnergySum());
 			}
 		}
+
+		const hddm_r::TriggerFcal2EnergySumList& locTriggerFcal2EnergySumList = iter->getTriggerFcal2EnergySums();
+		hddm_r::TriggerFcal2EnergySumList::iterator locTriggerFcal2EnergySumIterator = locTriggerFcal2EnergySumList.begin();
+		if(locTriggerFcal2EnergySumIterator == locTriggerFcal2EnergySumList.end()) {
+			locTrigger->Set_GTP_ECALEnergy(0);
+			locTrigger->Set_GTP_FCAL2Energy(locTrigger->Get_GTP_FCALEnergy());
+		} else { //should only be 1
+			for(; locTriggerFcal2EnergySumIterator != locTriggerFcal2EnergySumList.end(); ++locTriggerFcal2EnergySumIterator) {
+				locTrigger->Set_GTP_ECALEnergy(locTriggerFcal2EnergySumIterator->getECALEnergySum());
+				locTrigger->Set_GTP_FCAL2Energy(locTriggerFcal2EnergySumIterator->getFCAL2EnergySum());
+			}
+		}
 		
 		data.push_back(locTrigger);
 	}
@@ -1082,7 +1098,60 @@ bool DEventSourceREST::Extract_DBeamHelicity(hddm_r::HDDM *record, JFactoryT<DBe
 	return true; //NOERROR;
 }
 
+//-----------------------
+// Extract_DECALShower
+//-----------------------
+bool DEventSourceREST::Extract_DECALShower(hddm_r::HDDM *record,
+					   JFactoryT<DECALShower>* factory)
+{
+  /// Copies the data from the ecalShower hddm record. This is
+  /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+  /// returns OBJECT_NOT_AVAILABLE immediately.
+  
+  if (factory==NULL) {
+    return false; //OBJECT_NOT_AVAILABLE
+  }
+  string tag = factory->GetTag();
+  
+  vector<DECALShower*> data;
+  
+  // loop over ecal shower records
+  const hddm_r::EcalShowerList &showers = record->getEcalShowers();
+  hddm_r::EcalShowerList::iterator iter;
+  for (iter = showers.begin(); iter != showers.end(); ++iter) {
+    if (iter->getJtag() != tag)
+      continue;
+     
+    DECALShower *shower = new DECALShower();
+    shower->pos.SetXYZ(iter->getX(),iter->getY(),iter->getZ());
+    shower->E = iter->getE();
+    shower->t = iter->getT();
+    
+    TMatrixFSym covariance(5);
+    covariance(0,0) = iter->getEerr()*iter->getEerr();
+    covariance(1,1) = iter->getXerr()*iter->getXerr();
+    covariance(2,2) = iter->getYerr()*iter->getYerr();
+    covariance(3,3) = iter->getZerr()*iter->getZerr();
+    covariance(4,4) = iter->getTerr()*iter->getTerr();
+    covariance(1,2) = covariance(2,1) = iter->getXycorr()*iter->getXerr()*iter->getYerr();
+    covariance(1,3) = covariance(3,1) = iter->getXzcorr()*iter->getXerr()*iter->getZerr();
+    covariance(2,3) = covariance(3,2) = iter->getYzcorr()*iter->getYerr()*iter->getZerr();
+    covariance(0,3) = covariance(3,0) = iter->getEzcorr()*iter->getEerr()*iter->getZerr();
+    covariance(3,4) = covariance(4,3) = iter->getTzcorr()*iter->getTerr()*iter->getZerr();
+    shower->ExyztCovariance.ResizeTo(5,5);
+    shower->ExyztCovariance = covariance;
+    
+    shower->nBlocks = iter->getNumBlocks();
+    shower->isNearBorder = iter->getIsNearBorder();
+    
+    data.push_back(shower);
+  }
 
+  // Copy into factory
+  factory->Set(data);
+  
+  return true; //NOERROR;
+}
 
 //-----------------------
 // Extract_DFCALShower
@@ -1165,7 +1234,14 @@ bool DEventSourceREST::Extract_DFCALShower(hddm_r::HDDM *record,
       hddm_r::FcalShowerNBlocksList::iterator locFcalShowerNBlocksIterator = locFcalShowerNBlocksList.begin();
       if(locFcalShowerNBlocksIterator != locFcalShowerNBlocksList.end()) {
 		  shower->setNumBlocks(locFcalShowerNBlocksIterator->getNumBlocks());
-      }      
+      }
+      shower->setIsNearBorder(false);
+      const hddm_r::FcalShowerIsNearBorderList& locFcalShowerIsNearBorderList = iter->getFcalShowerIsNearBorders();
+      hddm_r::FcalShowerIsNearBorderList::iterator locFcalShowerIsNearBorderIterator = locFcalShowerIsNearBorderList.begin();
+      if(locFcalShowerIsNearBorderIterator != locFcalShowerIsNearBorderList.end()) {
+	shower->setIsNearBorder(locFcalShowerIsNearBorderIterator->getIsNearBorder());
+      }
+      
       data.push_back(shower);
    }
 
@@ -2041,7 +2117,7 @@ uint32_t DEventSourceREST::Convert_SignedIntToUnsigned(int32_t locSignedInt) con
 bool DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
                                    JFactoryT<DDIRCPmtHit>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
-   /// Copies the data from the fcalShower hddm record. This is
+   /// Copies the data from the DIRC hddm record. This is
    /// call from JEventSourceREST::GetObjects. If factory is NULL, this
    /// returns OBJECT_NOT_AVAILABLE immediately.
 

@@ -92,7 +92,9 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       cov(0,0)=E*E_VAR1+E_VAR2+E_VAR3*E*E;
       cov(3,3)=X0_over_E*X0_over_E*cov(0,0);
       cov(3,0)=cov(0,3)=X0_over_E*cov(0,0);
+      shower->ExyztCovariance.ResizeTo(5,5);
       shower->ExyztCovariance=cov;
+      
       shower->AddAssociatedObject(cluster);
 	
       Insert(shower);
