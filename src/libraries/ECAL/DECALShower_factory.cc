@@ -76,6 +76,8 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       shower->nBlocks=cluster->nBlocks;
       shower->isNearBorder=cluster->isNearBorder;
       shower->E=E;
+      shower->E1E9=cluster->E1E9;
+      shower->E9E25=cluster->E9E25;
       shower->t=cluster->t;
 
       double z=GetCorrectedZ(E);

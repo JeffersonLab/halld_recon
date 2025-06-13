@@ -19,6 +19,7 @@ struct DECALShower : public JObject {
   DECALShower(){};
 
   double E,t;
+  double E1E9,E9E25;
   DVector3 pos;
   TMatrixFSym ExyztCovariance;
   bool isNearBorder;
@@ -60,6 +61,8 @@ struct DECALShower : public JObject {
   
   void Summarize(JObjectSummary& summary) const override {
     summary.add(E, "E(GeV)", "%f");
+    summary.add(E1E9, "E1/E9", "%f");
+    summary.add(E9E25, "E9/E25", "%f");
     summary.add(t, "t(ns)", "%f");
     summary.add(pos.x(), "x(cm)", "%f");
     summary.add(pos.y(), "y(cm)", "%f");

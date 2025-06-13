@@ -1144,6 +1144,15 @@ bool DEventSourceREST::Extract_DECALShower(hddm_r::HDDM *record,
     shower->nBlocks = iter->getNumBlocks();
     shower->isNearBorder = iter->getIsNearBorder();
     
+    const hddm_r::EcalShowerPropertiesList& locEcalShowerPropertiesList = iter->getEcalShowerPropertiesList();
+    hddm_r::EcalShowerPropertiesList::iterator locEcalShowerPropertiesIterator = locEcalShowerPropertiesList.begin();
+    shower->E1E9=0.;
+    shower->E9E25=0.;
+    if(locEcalShowerPropertiesIterator != locEcalShowerPropertiesList.end()) {
+      shower->E1E9=locEcalShowerPropertiesIterator->getE1E9();
+      shower->E9E25=locEcalShowerPropertiesIterator->getE9E25();
+    }
+       
     data.push_back(shower);
   }
 
