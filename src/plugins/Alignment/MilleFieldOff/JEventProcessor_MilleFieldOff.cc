@@ -43,7 +43,7 @@ void JEventProcessor_MilleFieldOff::Init() {
   milleWriter = new Mille(output_filename.data());
 }
 
-void JEventProcessor_MilleFieldOff::BeginRun(const std::shared_ptr<const JEvent> &event, int32_t runnumber) {
+void JEventProcessor_MilleFieldOff::BeginRun(const std::shared_ptr<const JEvent> &event) {
 
   // This is called whenever the run number changes
   // Check for magnetic field
@@ -60,7 +60,7 @@ void JEventProcessor_MilleFieldOff::BeginRun(const std::shared_ptr<const JEvent>
   }
 }
 
-void JEventProcessor_MilleFieldOff::Process(const std::shared_ptr<const JEvent> &event, uint64_t eventnumber) {
+void JEventProcessor_MilleFieldOff::Process(const std::shared_ptr<const JEvent> &event) {
 
   int straw_offset[29] = {0,    0,    42,   84,   138,  192,  258,  324,
                           404,  484,  577,  670,  776,  882,  1005, 1128,

@@ -1034,6 +1034,18 @@ bool DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactoryT<DTrigger
 				locTrigger->Set_GTP_FCALEnergy(locTriggerEnergySumsIterator->getFCALEnergySum());
 			}
 		}
+
+		const hddm_r::TriggerFcal2EnergySumList& locTriggerFcal2EnergySumList = iter->getTriggerFcal2EnergySums();
+		hddm_r::TriggerFcal2EnergySumList::iterator locTriggerFcal2EnergySumIterator = locTriggerFcal2EnergySumList.begin();
+		if(locTriggerFcal2EnergySumIterator == locTriggerFcal2EnergySumList.end()) {
+			locTrigger->Set_GTP_ECALEnergy(0);
+			locTrigger->Set_GTP_FCAL2Energy(locTrigger->Get_GTP_FCALEnergy());
+		} else { //should only be 1
+			for(; locTriggerFcal2EnergySumIterator != locTriggerFcal2EnergySumList.end(); ++locTriggerFcal2EnergySumIterator) {
+				locTrigger->Set_GTP_ECALEnergy(locTriggerFcal2EnergySumIterator->getECALEnergySum());
+				locTrigger->Set_GTP_FCAL2Energy(locTriggerFcal2EnergySumIterator->getFCAL2EnergySum());
+			}
+		}
 		
 		data.push_back(locTrigger);
 	}
@@ -1132,6 +1144,15 @@ bool DEventSourceREST::Extract_DECALShower(hddm_r::HDDM *record,
     shower->nBlocks = iter->getNumBlocks();
     shower->isNearBorder = iter->getIsNearBorder();
     
+    const hddm_r::EcalShowerPropertiesList& locEcalShowerPropertiesList = iter->getEcalShowerPropertiesList();
+    hddm_r::EcalShowerPropertiesList::iterator locEcalShowerPropertiesIterator = locEcalShowerPropertiesList.begin();
+    shower->E1E9=0.;
+    shower->E9E25=0.;
+    if(locEcalShowerPropertiesIterator != locEcalShowerPropertiesList.end()) {
+      shower->E1E9=locEcalShowerPropertiesIterator->getE1E9();
+      shower->E9E25=locEcalShowerPropertiesIterator->getE9E25();
+    }
+       
     data.push_back(shower);
   }
 

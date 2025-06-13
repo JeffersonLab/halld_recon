@@ -63,7 +63,6 @@
 
 		float max = h->GetMaximum();
 		float setmax = h->Integral()/2360.*4; // set maximum to 4 times the average bin content
-		printf("%f %f %f\n",setmax, max, setmax/max);
 		if (setmax<0.01) setmax=0.01;
 		h->GetZaxis()->SetRangeUser(0.00001, setmax);
 

@@ -278,6 +278,10 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	  ecal().setTzcorr(ecalshowers[i]->ZTcorr());
 	  ecal().setNumBlocks(ecalshowers[i]->nBlocks);
 	  ecal().setIsNearBorder(ecalshowers[i]->isNearBorder);
+
+	  hddm_r::EcalShowerPropertiesList locEcalShowerPropertiesList = ecal().addEcalShowerPropertiesList(1);
+	  locEcalShowerPropertiesList().setE1E9(ecalshowers[i]->E1E9);
+	  locEcalShowerPropertiesList().setE9E25(ecalshowers[i]->E9E25);
 	}
 	// push any DFCALShower objects to the output record
 	for (size_t i=0; i < fcalshowers.size(); i++)
@@ -648,6 +652,9 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 		hddm_r::TriggerEnergySumsList triggerEnergySum = trigger().addTriggerEnergySumses(1);
 		triggerEnergySum().setBCALEnergySum(locTriggers[i]->Get_GTP_BCALEnergy());
 		triggerEnergySum().setFCALEnergySum(locTriggers[i]->Get_GTP_FCALEnergy());
+		hddm_r::TriggerFcal2EnergySumList triggerFcal2EnergySum = trigger().addTriggerFcal2EnergySums(1);
+		triggerFcal2EnergySum().setECALEnergySum(locTriggers[i]->Get_GTP_ECALEnergy());
+		triggerFcal2EnergySum().setFCAL2EnergySum(locTriggers[i]->Get_GTP_FCAL2Energy());
 	}
 	
 	// push any DBeamHelicity objects to the output record
