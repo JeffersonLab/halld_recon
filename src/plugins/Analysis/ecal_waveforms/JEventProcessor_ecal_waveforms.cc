@@ -48,6 +48,9 @@ void JEventProcessor_ecal_waveforms::Init()
     // lockService should be initialized here like this
     lockService = app->GetService<JLockService>();
 
+    par_row = 5;
+    par_col = 5;
+    
     JParameterManager *parms = app->GetJParameterManager();
     parms->SetDefaultParameter("ROW", par_row);
     parms->SetDefaultParameter("COL", par_col);
