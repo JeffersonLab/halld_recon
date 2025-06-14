@@ -91,7 +91,7 @@ void JEventProcessor_cal_cal::Init()
     h_fecal_mgg_v_blk[i] = new TH2F(Form("fecal_mgg_v_blk_%d", i), ";#font[42]{Block #};#font[42]{m_{#gamma#gamma} [GeV/c^{2}]};#font[42]{Events #}", 2800, -0.5, 2799.5, 1200, 0., 1.2);
     h_fcal_mgg_v_blk[i] = new TH2F(Form("fcal_mgg_v_blk_%d", i), ";#font[42]{Block #};#font[42]{m_{#gamma#gamma} [GeV/c^{2}]};#font[42]{Events #}", 2800, -0.5, 2799.5, 1200, 0., 1.2);
   }
-  for (int i = 0; i < 14; i ++) {
+  for (int i = 0; i < 15; i ++) {
     h_fcal_fdc_mgg_v_blk[i] = new TH2F(Form("fcal_fdc_mgg_v_blk_%d", i), ";#font[42]{Block #};#font[42]{m_{#gamma#gamma} [GeV/c^{2}]};#font[42]{Events #}", 2800, -0.5, 2799.5, 1200, 0., 1.2);
   }
   h_ecal_mgg_v_layer = new TH2F("ecal_mgg_v_layer", ";#font[42]{Layer #};#font[42]{m_{#gamma#gamma} [GeV/c^{2}]};#font[42]{Events #}", 21, -0.5, 20.5, 1200, 0., 1.2);
@@ -867,8 +867,12 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     tof_match1 = 0;
     if (delta_x_min1 < 6 && delta_y_min1 < 6) {
       tof_match1 = 1;
+    }
+    int tofs_match1 = 0;
+    if (delta_x_min1 < 10 && delta_y_min1 < 10) {
+      tofs_match1 = 1;
     }      
-		      
+    
     h_fcal_xy[0]->Fill(xc1, yc1);
     h_fcal_cr[0]->Fill(col1 - 29, row1 - 29);
     for (int k = 1; k < 11; k ++) {
@@ -938,7 +942,11 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       if (delta_x_min2 < 6 && delta_y_min2 < 6) {
 	tof_match2 = 1;
       }
-    
+      int tofs_match2 = 0;
+      if (delta_x_min2 < 10 && delta_y_min2 < 10) {
+	tofs_match2 = 1;
+      }
+      
       DLorentzVector pi0P4 = photon1P4 + photon2P4;
       DLorentzVector pi0P4_fdc = photon1P4_fdc + photon2P4_fdc;
 
@@ -1101,83 +1109,44 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
 	  if (e1 > 0.5 && e2 > 0.5 && locFCALShowers.size() < 10) {
 	    h_fcal_mgg_v_blk[20]->Fill(ch1, pi0P4.M(), m_weight);
 	    h_fcal_mgg_v_blk[20]->Fill(ch2, pi0P4.M(), m_weight);
-	    h_fcal_fdc_mgg_v_blk[0]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-	    h_fcal_fdc_mgg_v_blk[0]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	  }
 	  if (e1 > 0.5 && e2 > 0.5) {
 	    h_fcal_mgg_v_blk[21]->Fill(ch1, pi0P4.M(), m_weight);
 	    h_fcal_mgg_v_blk[21]->Fill(ch2, pi0P4.M(), m_weight);
-	    h_fcal_fdc_mgg_v_blk[1]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-	    h_fcal_fdc_mgg_v_blk[1]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	  }
 	  if ((e1 > 0.5 && e2 > 0.5) && (frac1 > thres_frac1 && frac2 > thres_frac2)) {
 	    h_fcal_mgg_v_blk[22]->Fill(ch1, pi0P4.M(), m_weight);
 	    h_fcal_mgg_v_blk[22]->Fill(ch2, pi0P4.M(), m_weight);
-	    h_fcal_fdc_mgg_v_blk[2]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-	    h_fcal_fdc_mgg_v_blk[2]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	  }
 	  if (tof_match1 == 0 && tof_match2 == 0) {
 	    if (e1 > 0.5 && e2 > 0.5 && locFCALShowers.size() < 10) {
 	      h_fcal_mgg_v_blk[23]->Fill(ch1, pi0P4.M(), m_weight);
 	      h_fcal_mgg_v_blk[23]->Fill(ch2, pi0P4.M(), m_weight);
-	      h_fcal_fdc_mgg_v_blk[3]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-	      h_fcal_fdc_mgg_v_blk[3]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	    }
 	    if (e1 > 0.5 && e2 > 0.5 && eb > 8) {
 	      h_fcal_mgg_v_blk[24]->Fill(ch1, pi0P4.M(), m_weight);
 	      h_fcal_mgg_v_blk[24]->Fill(ch2, pi0P4.M(), m_weight);
-	      h_fcal_fdc_mgg_v_blk[4]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-	      h_fcal_fdc_mgg_v_blk[4]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	    }
 	    if ((e1 > 0.5 && e2 > 0.5) && (frac1 > thres_frac1 && frac2 > thres_frac2)) {
 	      h_fcal_mgg_v_blk[25]->Fill(ch1, pi0P4.M(), m_weight);
 	      h_fcal_mgg_v_blk[25]->Fill(ch2, pi0P4.M(), m_weight);
-	      h_fcal_fdc_mgg_v_blk[5]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-	      h_fcal_fdc_mgg_v_blk[5]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	    }
 	    if ((trig_bit[1] == 1 || trig_bit[3] == 1)) {
 	      if (e1 > 0.5 && e2 > 0.5 && locFCALShowers.size() < 10) {
 		h_fcal_mgg_v_blk[26]->Fill(ch1, pi0P4.M(), m_weight);
 		h_fcal_mgg_v_blk[26]->Fill(ch2, pi0P4.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[6]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[6]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	      }
 	      if (e1 > 0.5 && e2 > 0.5) {
 		h_fcal_mgg_v_blk[27]->Fill(ch1, pi0P4.M(), m_weight);
 		h_fcal_mgg_v_blk[27]->Fill(ch2, pi0P4.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[7]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[7]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	      }
 	      if ((e1 > 0.5 && e2 > 0.5) && (frac1 > thres_frac1 && frac2 > thres_frac2)) {
 		h_fcal_mgg_v_blk[28]->Fill(ch1, pi0P4.M(), m_weight);
 		h_fcal_mgg_v_blk[28]->Fill(ch2, pi0P4.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[8]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[8]->Fill(ch2, pi0P4_fdc.M(), m_weight);
-	      }
-	    }
-	    if (trig_bit[3] == 1) {
-	      if (e1 > 0.1 && e2 > 0.1) {
-		h_fcal_fdc_mgg_v_blk[9]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[9]->Fill(ch2, pi0P4_fdc.M(), m_weight);
-	      }
-	      if (e1 > 0.2 && e2 > 0.2) {
-		h_fcal_fdc_mgg_v_blk[10]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[10]->Fill(ch2, pi0P4_fdc.M(), m_weight);
-	      }
-	      if (e1 > 0.3 && e2 > 0.3) {
-		h_fcal_fdc_mgg_v_blk[11]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[11]->Fill(ch2, pi0P4_fdc.M(), m_weight);
-	      }
-	      if (e1 > 0.4 && e2 > 0.4) {
-		h_fcal_fdc_mgg_v_blk[12]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[12]->Fill(ch2, pi0P4_fdc.M(), m_weight);
-	      }
-	      if (e1 > 0.2 && e2 > 0.2 && (frac1 > thres_frac1 && frac2 > thres_frac2)) {
-		h_fcal_fdc_mgg_v_blk[13]->Fill(ch1, pi0P4_fdc.M(), m_weight);
-		h_fcal_fdc_mgg_v_blk[13]->Fill(ch2, pi0P4_fdc.M(), m_weight);
 	      }
 	    }
 	  }
+	  
 	  if ((trig_bit[1] == 1 || trig_bit[3] == 1)) {
 	    if ((e1 > 0.5 && e2 > 0.5) && (frac1 > thres_frac1 && frac2 > thres_frac2)) {
 	      h_fcal_mgg_v_blk[29]->Fill(ch1, pi0P4.M(), m_weight);
@@ -1192,8 +1161,100 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
 	  }
 	}
       }
-    }
+      if (1.8 <= fabs(diff_t1) && fabs(diff_t1) <= 4.8 && 1.8 <= fabs(diff_t2) && fabs(diff_t2) <= 4.8) {
 
+	for (unsigned int k = 0; k < locBeamPhotons.size(); k ++) {
+	  
+	  const DBeamPhoton * ebeam = locBeamPhotons[k]; 
+	  double eb = ebeam->lorentzMomentum().E();
+	  	  
+	  DetectorSystem_t sys = ebeam->dSystem;
+	  int counter = ebeam->dCounter;
+	  double tb = ebeam->time();
+	  double zb = ebeam->position().Z();
+	  double locDeltaTRF = tb - (locRFTime + (zb - m_beamZ) / 29.9792458);
+	  m_weight = 0;
+	  if (fabs(locDeltaTRF) <= m_TIME_CUT_RF_TAG) {
+	    m_weight = 1;
+	  } else if ( ( -(m_TIME_CUT_RF_TAG + 6.0 * 2.0 * m_TIME_CUT_RF_TAG) <= locDeltaTRF && locDeltaTRF <= -(m_TIME_CUT_RF_TAG + 2.0 * m_TIME_CUT_RF_TAG) ) || 
+		      ( (m_TIME_CUT_RF_TAG + 2.0 * m_TIME_CUT_RF_TAG) <= locDeltaTRF && locDeltaTRF <= (m_TIME_CUT_RF_TAG + 6.0 * 2.0 * m_TIME_CUT_RF_TAG) ) ) {
+	    m_weight = -0.1;
+	  } else {
+	    continue;
+	  }
+	  if (e1 > 0.2 && e2 > 0.2 && locFCALShowers.size() < 10) {
+	    h_fcal_fdc_mgg_v_blk[0]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+	    h_fcal_fdc_mgg_v_blk[0]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	  }
+	  if (e1 > 0.2 && e2 > 0.2) {
+	    h_fcal_fdc_mgg_v_blk[1]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+	    h_fcal_fdc_mgg_v_blk[1]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	  }
+	  if ((e1 > 0.2 && e2 > 0.2) && (frac1 > thres_frac1 && frac2 > thres_frac2)) {
+	    h_fcal_fdc_mgg_v_blk[2]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+	    h_fcal_fdc_mgg_v_blk[2]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	  }
+	  if (tof_match1 == 0 && tof_match2 == 0) {
+	    if (e1 > 0.2 && e2 > 0.2 && locFCALShowers.size() < 10) {
+	      h_fcal_fdc_mgg_v_blk[3]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+	      h_fcal_fdc_mgg_v_blk[3]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	    }
+	    if (e1 > 0.2 && e2 > 0.2) {
+	      h_fcal_fdc_mgg_v_blk[4]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+	      h_fcal_fdc_mgg_v_blk[4]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	    }
+	    if ((e1 > 0.2 && e2 > 0.2) && (frac1 > thres_frac1 && frac2 > thres_frac2)) {
+	      h_fcal_fdc_mgg_v_blk[5]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+	      h_fcal_fdc_mgg_v_blk[5]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	    }
+	    if ((trig_bit[1] == 1 || trig_bit[3] == 1)) {
+	      if (e1 > 0.2 && e2 > 0.2 && locFCALShowers.size() < 10) {
+		h_fcal_fdc_mgg_v_blk[6]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+		h_fcal_fdc_mgg_v_blk[6]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	      }
+	      if (e1 > 0.2 && e2 > 0.2) {
+		h_fcal_fdc_mgg_v_blk[7]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+		h_fcal_fdc_mgg_v_blk[7]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	      }
+	      if ((e1 > 0.2 && e2 > 0.2) && (frac1 > thres_frac1 && frac2 > thres_frac2)) {
+		h_fcal_fdc_mgg_v_blk[8]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+		h_fcal_fdc_mgg_v_blk[8]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	      }
+	    }
+	    if (trig_bit[3] == 1) {
+	      if (e1 > 0.2 && e2 > 0.2) {
+		h_fcal_fdc_mgg_v_blk[9]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+		h_fcal_fdc_mgg_v_blk[9]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	      }
+	      if (e1 > 0.3 && e2 > 0.3) {
+		h_fcal_fdc_mgg_v_blk[10]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+		h_fcal_fdc_mgg_v_blk[10]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	      }
+	    }
+	    if (trig_bit[1] == 1 && trig_bit[3] == 0) {
+	      if (e1 > 0.2 && e2 > 0.2) {
+		h_fcal_fdc_mgg_v_blk[11]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+		h_fcal_fdc_mgg_v_blk[11]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	      }
+	      if (e1 > 0.3 && e2 > 0.3) {
+		h_fcal_fdc_mgg_v_blk[12]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+		h_fcal_fdc_mgg_v_blk[12]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	      }
+	    }
+	  }
+	  if (tofs_match1 == 0 && tofs_match2 == 0) {
+	    if (trig_bit[1] == 1 && e1 > 0.2 && e2 > 0.2) {
+	      h_fcal_fdc_mgg_v_blk[13]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+	      h_fcal_fdc_mgg_v_blk[13]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	    }
+	    if (trig_bit[3] == 1 && e1 > 0.2 && e2 > 0.2) {
+	      h_fcal_fdc_mgg_v_blk[14]->Fill(ch1, pi0P4_fdc.M(), m_weight);
+	      h_fcal_fdc_mgg_v_blk[14]->Fill(ch2, pi0P4_fdc.M(), m_weight);
+	    }
+	  }
+	}
+      }
+    }
   }
 
   /*
