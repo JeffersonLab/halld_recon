@@ -311,8 +311,10 @@ JEventSource_EVIOpp::~JEventSource_EVIOpp()
 	if(f250Emulator) delete f250Emulator;
 	if(f125Emulator) delete f125Emulator;
 	
-	if(VERBOSE>0) evioout << "Closing hdevio event source \"" << GetResourceName() << "\"" <<endl;
-	if(PRINT_STATS){
+    // We don't want to print stats if the source wasn't even opened
+    bool source_was_opened = (hdevio != nullptr) || (hdet != nullptr);
+
+	if (PRINT_STATS && source_was_opened) {
 		auto tdiff = duration_cast<duration<double>>(tend - tstart);
 		double rate = (double)NEVENTS_PROCESSED/tdiff.count();
 		
@@ -344,12 +346,14 @@ JEventSource_EVIOpp::~JEventSource_EVIOpp()
 
 	// Delete HDEVIO and print stats
 	if(hdevio){
+	    if(VERBOSE>0) evioout << "Closing hdevio event source \"" << GetResourceName() << "\"" <<endl;
 		hdevio->PrintStats();
 		delete hdevio;
 	}
 
 	// Delete HDET and print stats
 	if(hdet){
+	    if(VERBOSE>0) evioout << "Closing hdet event source \"" << GetResourceName() << "\"" <<endl;
 		hdet->PrintStats();
 		delete hdet;
 	}
