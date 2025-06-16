@@ -201,8 +201,8 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
   auto locFCALHits = event->Get<DFCALHit>();
   auto locEventRFBunches = event->Get<DEventRFBunch>();
   double locRFTime = locEventRFBunches.empty() ? 0.0 : locEventRFBunches[0]->dTime;
-  int laymin = 10;
-  if (event->GetRunNumber() < 130000) laymin = 2;
+  //int laymin = 10;
+  //if (event->GetRunNumber() < 130000) laymin = 2;
   
   lockService->RootFillLock(this);
   //locRFTime += m_time_rf_offset;
@@ -244,9 +244,9 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       sc_trg_nb ++;
   }
   
-  bool b_good_ecalfcal_energy_sum = FCAL_trg_Esum + ECAL_trg_Esum < 10;
-  bool b_good_fcal_shower_nb = 2 <= locFCALShowers.size() && locFCALShowers.size() <= 8;
-  bool b_good_ecalfcal_shower_nb = 2 <= (locECALShowers.size() + locFCALShowers.size()) && (locECALShowers.size() + locFCALShowers.size()) <= 8;
+  //bool b_good_ecalfcal_energy_sum = FCAL_trg_Esum + ECAL_trg_Esum < 10;
+  //bool b_good_fcal_shower_nb = 2 <= locFCALShowers.size() && locFCALShowers.size() <= 8;
+  //bool b_good_ecalfcal_shower_nb = 2 <= (locECALShowers.size() + locFCALShowers.size()) && (locECALShowers.size() + locFCALShowers.size()) <= 8;
   h_esum_bcal[0]->Fill(BCAL_trg_Esum_raw);
   h_esum_ecal[0]->Fill(ECAL_trg_Esum_raw);
   h_esum_fcal[0]->Fill(FCAL_trg_Esum_raw);
@@ -273,13 +273,14 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       h_esum_trg[3]->Fill(FCAL_trg_Esum_raw + ECAL_trg_Esum_raw, BCAL_trg_Esum_raw);
     }
   }
+
   // Vertex info
   DVector3 vertex;
   vertex.SetXYZ(m_beamX, m_beamY, m_beamZ);
   m_2ndfdc_package = 240;
   DVector3 vertex_1stFDC_package(m_beamX, m_beamY, m_2ndfdc_package);
   
-  bool b_inner_layers = false;
+  //bool b_inner_layers = false;
   float m_weight = 0;
   
   //if (m_FCAL1 == 0) {
@@ -311,14 +312,14 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     if (ecalHit1.size() < 2) continue;
     double ce1 = ecalCluster1->E;
     double ce1_max = 0;
-    for (int j = 0; j < ecalHit1.size(); j ++) if (ce1_max < ecalHit1[j]->E) ce1_max = ecalHit1[j]->E;
+    for (int j = 0; j < (int) ecalHit1.size(); j ++) if (ce1_max < ecalHit1[j]->E) ce1_max = ecalHit1[j]->E;
     int ch1 = ecalCluster1->channel_Emax;
     h_ecal_e_v_ce->Fill(ce1, ce1 / e1);
     h_ecal_e_ratio->Fill(ce1, ce1_max / ce1);
     int col1 = ecalGeom->column(ch1);
     int row1 = ecalGeom->row(ch1);
-    int lay1 = get_ecal_layer(row1, col1);
-    if (lay1 < 3) b_inner_layers = true;
+    //int lay1 = get_ecal_layer(row1, col1);
+    //if (lay1 < 3) b_inner_layers = true;
     float xc1 = ecalCluster1->x;
     float yc1 = ecalCluster1->y;
     double radiusc1 = sqrt(xc1 * xc1 + yc1 * yc1);;
@@ -330,17 +331,17 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     if (14 <= ring1_nb && ring1_nb <= 20) thres_frac1 = 0.3;
     if (21 <= ring1_nb && ring1_nb <= 25) thres_frac1 = 0.25;
     
-    h_ecal_blk_v_layer->Fill(lay1, ch1);
-    h_ecal_ring->Fill(ring1_nb);
-    h_ecal_layer->Fill(lay1);
-    h_ecal_cr_ring[lay1]->Fill(col1 - 20, row1 - 20);
-    double phi_ecal1 = position1.Phi();
+    //h_ecal_blk_v_layer->Fill(lay1, ch1);
+    //h_ecal_ring->Fill(ring1_nb);
+    //h_ecal_layer->Fill(lay1);
+    //h_ecal_cr_ring[lay1]->Fill(col1 - 20, row1 - 20);
+    //double phi_ecal1 = position1.Phi();
     double delta_x_min1 = 1000.;
     double delta_y_min1 = 1000.;
-    double delta_phi_min1 = 1000.;
-    int sc_match1 = check_SC_match(phi_ecal1, locRFTime, locSCHits, delta_phi_min1);
+    //double delta_phi_min1 = 1000.;
+    //int sc_match1 = check_SC_match(phi_ecal1, locRFTime, locSCHits, delta_phi_min1);
     int tof_match1 = check_TOF_match(position1, locRFTime, vertex, locTOFPoints, delta_x_min1, delta_y_min1);
-    bool b_tof_veto1 = delta_x_min1 > 8 && delta_y_min1 > 8;
+    //bool b_tof_veto1 = delta_x_min1 > 8 && delta_y_min1 > 8;
     //if (!b_tof_veto1) continue;
     //if (tof_match1 != 0) continue;
     tof_match1 = 0;
@@ -376,15 +377,15 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       vector<const DECALHit*> ecalHit2;
       ecalCluster2->Get(ecalHit2);
       if (ecalHit2.size() < 2) continue;
-      double ce2 = ecalCluster2->E;
+      //double ce2 = ecalCluster2->E;
       double ce2_max = 0;
-      for (int k = 0; k < ecalHit2.size(); k ++) if (ce2_max < ecalHit2[k]->E) ce2_max = ecalHit2[k]->E;
+      for (int k = 0; k < (int) ecalHit2.size(); k ++) if (ce2_max < ecalHit2[k]->E) ce2_max = ecalHit2[k]->E;
       //const vector< DECALCluster::DECALClusterHit_t > ECALhitVector2 = ecalCluster2->HitInfo();
       //if (ECALhitVector2.size() < 1) continue;
       int ch2 = ecalCluster2->channel_Emax;
       int col2 = ecalGeom->column(ch2);
       int row2 = ecalGeom->row(ch2);
-      int lay2 = get_ecal_layer(row2, col2);
+      //int lay2 = get_ecal_layer(row2, col2);
       float xc2 = ecalCluster2->x;
       float yc2 = ecalCluster2->y;
       double radiusc2 = sqrt(xc2 * xc2 + yc2 * yc2);;
@@ -396,13 +397,13 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       if (14 <= ring2_nb && ring2_nb <= 20) thres_frac2 = 0.3;
       if (21 <= ring2_nb && ring2_nb <= 25) thres_frac2 = 0.25;
       
-      double phi_ecal2 = position2.Phi();
+      //double phi_ecal2 = position2.Phi();
       double delta_x_min2 = 1000.;
       double delta_y_min2 = 1000.;
-      double delta_phi_min2 = 1000.;
-      int sc_match2 = check_SC_match(phi_ecal2, locRFTime, locSCHits, delta_phi_min2);
+      //double delta_phi_min2 = 1000.;
+      //int sc_match2 = check_SC_match(phi_ecal2, locRFTime, locSCHits, delta_phi_min2);
       int tof_match2 = check_TOF_match(position2, locRFTime, vertex, locTOFPoints, delta_x_min2, delta_y_min2);
-      bool b_tof_veto2 = delta_x_min2 > 8 && delta_y_min2 > 8;
+      //bool b_tof_veto2 = delta_x_min2 > 8 && delta_y_min2 > 8;
       //if (!b_tof_veto2) continue;
       //if (tof_match2 != 0) continue;
       tof_match2 = 0;
@@ -458,8 +459,8 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
 	  const DBeamPhoton * ebeam = locBeamPhotons[k]; 
 	  double eb = ebeam->lorentzMomentum().E();
 	  
-	  DetectorSystem_t sys = ebeam->dSystem;
-	  int counter = ebeam->dCounter;
+	  //DetectorSystem_t sys = ebeam->dSystem;
+	  //int counter = ebeam->dCounter;
 	  double tb = ebeam->time();
 	  double zb = ebeam->position().Z();
 	  double locDeltaTRF = tb - (locRFTime + (zb - m_beamZ) / 29.9792458);
@@ -530,9 +531,9 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       const vector< DFCALCluster::DFCALClusterHit_t > FCALhitVector2 = fcalCluster2->GetHits();
       if (FCALhitVector2.size() < 2) continue;
       int ch2 = fcalCluster2->getChannelEmax();
-      int col2 = fcalGeom->column(ch2);
-      int row2 = fcalGeom->row(ch2);
-      int lay2 = get_fcal_layer(row2, col2);
+      //int col2 = fcalGeom->column(ch2);
+      //int row2 = fcalGeom->row(ch2);
+      //int lay2 = get_fcal_layer(row2, col2);
       double emax2 = fcalCluster2->getEmax();
       double frac2 = emax2 / fcalCluster2->getEnergy();
       DVector3  posInCal2 = fcalCluster2->getCentroid();
@@ -546,13 +547,13 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       if (14 <= ring2_nb && ring2_nb <= 20) thres_frac2 = 0.3;
       if (21 <= ring2_nb && ring2_nb <= 25) thres_frac2 = 0.25;
       
-      double phi_fcal2 = position2.Phi();
+      //double phi_fcal2 = position2.Phi();
       double delta_x_min2 = 1000.;
       double delta_y_min2 = 1000.;
-      double delta_phi_min2 = 1000.;
-      int sc_match2 = check_SC_match(phi_fcal2, locRFTime, locSCHits, delta_phi_min2);
+      //double delta_phi_min2 = 1000.;
+      //int sc_match2 = check_SC_match(phi_fcal2, locRFTime, locSCHits, delta_phi_min2);
       int tof_match2 = check_TOF_match(position2, locRFTime, vertex, locTOFPoints, delta_x_min2, delta_y_min2);
-      bool b_tof_veto2 = delta_x_min2 > 8 && delta_y_min2 > 8;
+      //bool b_tof_veto2 = delta_x_min2 > 8 && delta_y_min2 > 8;
       //if (!b_tof_veto2) continue;
       //if (tof_match2 != 0) continue;
       tof_match2 = 0;
@@ -568,10 +569,10 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
 	for (unsigned int k = 0; k < locBeamPhotons.size(); k ++) {
 	  
 	  const DBeamPhoton * ebeam = locBeamPhotons[k]; 
-	  double eb = ebeam->lorentzMomentum().E();
+	  //double eb = ebeam->lorentzMomentum().E();
 	  
-	  DetectorSystem_t sys = ebeam->dSystem;
-	  int counter = ebeam->dCounter;
+	  //DetectorSystem_t sys = ebeam->dSystem;
+	  //int counter = ebeam->dCounter;
 	  double tb = ebeam->time();
 	  double zb = ebeam->position().Z();
 	  double locDeltaTRF = tb - (locRFTime + (zb - m_beamZ) / 29.9792458);
@@ -627,7 +628,7 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       }
     }
   }
-    
+
   for (unsigned int i = 0; i < locFCALShowers.size(); i++) {
     double e1 = locFCALShowers[i]->getEnergy();
     DVector3 position1(0, 0, 0);
@@ -654,9 +655,9 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     int ch1 = fcalCluster1->getChannelEmax();
     int col1 = fcalGeom->column(ch1);
     int row1 = fcalGeom->row(ch1);
-    int lay1 = get_fcal_layer(row1, col1);
-    h_fcal_cluster_size->Fill(FCALhitVector1.size());
-    h_fcal_layer->Fill(lay1);
+    //int lay1 = get_fcal_layer(row1, col1);
+    //h_fcal_cluster_size->Fill(FCALhitVector1.size());
+    //h_fcal_layer->Fill(lay1);
     
     //cout <<"chi1 " << ch1 << " col1 " << col1 << " row1 " << row1 << endl;
     double emax1 = fcalCluster1->getEmax();
@@ -674,26 +675,26 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     if (21 <= ring1_nb && ring1_nb <= 25) thres_frac1 = 0.25;
     h_fcal_e_v_ce->Fill(ce1, ce1 / e1);
     h_fcal_e_ratio->Fill(ce1, emax1 / ce1);    
-    h_fcal_blk_v_layer->Fill(lay1 - 10, ch1);
-    h_fcal_ring->Fill(ring1_nb);
-    h_fcal_cr_ring[lay1 - laymin]->Fill(col1 - 29, row1 - 29);
-    double phi_fcal1 = position1.Phi();
+    //h_fcal_blk_v_layer->Fill(lay1 - 10, ch1);
+    //h_fcal_ring->Fill(ring1_nb);
+    //h_fcal_cr_ring[lay1 - laymin]->Fill(col1 - 29, row1 - 29);
+    //double phi_fcal1 = position1.Phi();
     double delta_x_min1 = 1000.;
     double delta_y_min1 = 1000.;
-    double delta_phi_min1 = 1000.;
-    int sc_match1 = check_SC_match(phi_fcal1, locRFTime, locSCHits, delta_phi_min1);
+    //double delta_phi_min1 = 1000.;
+    //int sc_match1 = check_SC_match(phi_fcal1, locRFTime, locSCHits, delta_phi_min1);
     int tof_match1 = check_TOF_match(position1, locRFTime, vertex, locTOFPoints, delta_x_min1, delta_y_min1);
-    bool b_tof_veto1 = delta_x_min1 > 8 && delta_y_min1 > 8; 
+    //bool b_tof_veto1 = delta_x_min1 > 8 && delta_y_min1 > 8; 
     //if (!b_tof_veto1) continue;
     //if (tof_match1 != 0) continue;
     tof_match1 = 0;
     if (delta_x_min1 < 6 && delta_y_min1 < 6) {
       tof_match1 = 1;
     }
-    int tofs_match1 = 0;
-    if (delta_x_min1 < 10 && delta_y_min1 < 10) {
-      tofs_match1 = 1;
-    }      
+    //int tofs_match1 = 0;
+    //if (delta_x_min1 < 10 && delta_y_min1 < 10) {
+    //tofs_match1 = 1;
+    //}      
     
     h_fcal_xy[0]->Fill(xc1, yc1);
     h_fcal_cr[0]->Fill(col1 - 29, row1 - 29);
@@ -737,7 +738,7 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       int ch2 = fcalCluster2->getChannelEmax();
       int col2 = fcalGeom->column(ch2);
       int row2 = fcalGeom->row(ch2);
-      int lay2 = get_fcal_layer(row2, col2);
+      //int lay2 = get_fcal_layer(row2, col2);
       double emax2 = fcalCluster2->getEmax();
       double frac2 = emax2 / fcalCluster2->getEnergy();
       DVector3  posInCal2 = fcalCluster2->getCentroid();
@@ -751,23 +752,23 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       if (14 <= ring2_nb && ring2_nb <= 20) thres_frac2 = 0.3;
       if (21 <= ring2_nb && ring2_nb <= 25) thres_frac2 = 0.25;
     
-      double phi_fcal2 = position2.Phi();
+      //double phi_fcal2 = position2.Phi();
       double delta_x_min2 = 1000.;
       double delta_y_min2 = 1000.;
-      double delta_phi_min2 = 1000.;
-      int sc_match2 = check_SC_match(phi_fcal2, locRFTime, locSCHits, delta_phi_min2);
+      //double delta_phi_min2 = 1000.;
+      //int sc_match2 = check_SC_match(phi_fcal2, locRFTime, locSCHits, delta_phi_min2);
       int tof_match2 = check_TOF_match(position2, locRFTime, vertex, locTOFPoints, delta_x_min2, delta_y_min2);
-      bool b_tof_veto2 = delta_x_min2 > 8 && delta_y_min2 > 8;
+      //bool b_tof_veto2 = delta_x_min2 > 8 && delta_y_min2 > 8;
       //if (!b_tof_veto2) continue;
       //if (tof_match2 != 0) continue;
       tof_match2 = 0;
       if (delta_x_min2 < 6 && delta_y_min2 < 6) {
 	tof_match2 = 1;
       }
-      int tofs_match2 = 0;
-      if (delta_x_min2 < 10 && delta_y_min2 < 10) {
-	tofs_match2 = 1;
-      }
+      //int tofs_match2 = 0;
+      //if (delta_x_min2 < 10 && delta_y_min2 < 10) {
+      //tofs_match2 = 1;
+      //}
       
       DLorentzVector pi0P4 = photon1P4 + photon2P4;
       DLorentzVector pi0P4_fdc = photon1P4_fdc + photon2P4_fdc;
@@ -819,8 +820,8 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
 	  const DBeamPhoton * ebeam = locBeamPhotons[k]; 
 	  double eb = ebeam->lorentzMomentum().E();
 	  	  
-	  DetectorSystem_t sys = ebeam->dSystem;
-	  int counter = ebeam->dCounter;
+	  //DetectorSystem_t sys = ebeam->dSystem;
+	  //int counter = ebeam->dCounter;
 	  double tb = ebeam->time();
 	  double zb = ebeam->position().Z();
 	  double locDeltaTRF = tb - (locRFTime + (zb - m_beamZ) / 29.9792458);
@@ -892,7 +893,7 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
   
   
   lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK  
-  
+
   return;
 }
 
