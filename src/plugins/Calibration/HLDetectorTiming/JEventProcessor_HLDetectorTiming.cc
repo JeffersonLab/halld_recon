@@ -447,6 +447,22 @@ void JEventProcessor_HLDetectorTiming::CreateHistograms(string dirname)
 	dTOFRFTime[dirname] = new TH1F( "TOF - RF Time", 
 										"t_{TOF} - t_{RF} at Target; t_{TOF} - t_{RF} at Target [ns]; Entries", 
 										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+
+	//
+	dTOFRFTimeVSBCALRFTime[dirname] = new TH2F( "TOF - RF Time VS BCAL - RF time", 
+					"t_{TOF} - t_{RF} VS t_{BCAL} - t_{RF} at Target; t_{BCAL} - t_{RF} at Target [ns]; t_{TOF} - t_{RF} at Target [ns];", 
+						    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T, NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dTOFRFTimeVSFCALRFTime[dirname] = new TH2F( "TOF - RF Time VS FCAL - RF time", 
+					"t_{TOF} - t_{RF} VS t_{FCAL} - t_{RF} at Target; t_{FCAL} - t_{RF} at Target [ns]; t_{TOF} - t_{RF} at Target [ns];", 
+						    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T, NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dTOFRFTimeVSECALRFTime[dirname] = new TH2F( "TOF - RF Time VS ECAL - RF time", 
+					"t_{TOF} - t_{RF} VS t_{ECAL} - t_{RF} at Target; t_{ECAL} - t_{RF} at Target [ns]; t_{TOF} - t_{RF} at Target [ns];", 
+						    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T, NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	//
+	
+
+
+
 	dTOFSCTime[dirname] = new TH1F( "TOF - SC Target Time", 
 										"t_{TOF} - t_{SC} at Target; t_{TOF} - t_{SC} at Target [ns]; Entries", 
 										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
@@ -1501,6 +1517,11 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     // Try using the detector matches
     // Loop over the charged tracks
 
+    vector <double> TOFmRF;
+    vector <double> BCALmRF;
+    vector <double> FCALmRF;
+    vector <double> ECALmRF;
+    
     for (i = 0; i < chargedTrackVector.size(); i++) {
         const DChargedTrackHypothesis *pionHypothesis;
 
@@ -1537,6 +1558,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
         auto locTOFHitMatchParams      = pionHypothesis->Get_TOFHitMatchParams();
         auto locFCALShowerMatchParams  = pionHypothesis->Get_FCALShowerMatchParams();
         auto locBCALShowerMatchParams  = pionHypothesis->Get_BCALShowerMatchParams();
+        auto locECALShowerMatchParams  = pionHypothesis->Get_ECALShowerMatchParams();
 
         // We will only use tracks matched to the start counter for our calibration since this will be our reference for t0
         if(!NO_START_COUNTER) {
@@ -1632,6 +1654,8 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 					dTOFSCTime[key]->Fill(flightTimeCorrectedTOFTime - flightTimeCorrectedSCTime);
 			   	}
 				dTOFRFTime[key]->Fill(flightTimeCorrectedTOFTime - thisRFBunch->dTime);
+				//cout<<"key = "<<key<<endl;
+				TOFmRF.push_back(flightTimeCorrectedTOFTime - thisRFBunch->dTime);
 				dEarliestFDCTime[key]->Fill(earliestFDCTime);
 
 				 
@@ -1691,6 +1715,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 			if (locBCALShowerMatchParams != NULL) {
 			   	float flightTimeCorrectedBCALTime = locBCALShowerMatchParams->dBCALShower->t - locBCALShowerMatchParams->dFlightTime - targetCenterCorrection;
 				dBCALShowerRFTime[key]->Fill(flightTimeCorrectedBCALTime - thisRFBunch->dTime);
+				BCALmRF.push_back(flightTimeCorrectedBCALTime - thisRFBunch->dTime);
 				
 			   	if(!NO_START_COUNTER) {
 			   		dBCALShowerSCTime[key]->Fill(flightTimeCorrectedBCALTime - flightTimeCorrectedSCTime);
@@ -1719,14 +1744,48 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 			if (locFCALShowerMatchParams != NULL) {
 			   	float flightTimeCorrectedFCALTime = locFCALShowerMatchParams->dFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime - targetCenterCorrection;
 				dFCALShowerRFTime[key]->Fill(flightTimeCorrectedFCALTime - thisRFBunch->dTime);
+				FCALmRF.push_back(flightTimeCorrectedFCALTime - thisRFBunch->dTime);
 
 			   	if(!NO_START_COUNTER) {
 					dFCALShowerSCTime[key]->Fill(flightTimeCorrectedFCALTime - flightTimeCorrectedSCTime);
 			   	}
 			}
+			if (locECALShowerMatchParams != NULL) {
+			   	float flightTimeCorrectedECALTime = locECALShowerMatchParams->dECALShower->t - locECALShowerMatchParams->dFlightTime - targetCenterCorrection;
+				dECALShowerRFTime[key]->Fill(flightTimeCorrectedECALTime - thisRFBunch->dTime);
+				ECALmRF.push_back(flightTimeCorrectedECALTime - thisRFBunch->dTime);
+
+			   	if(!NO_START_COUNTER) {
+					dECALShowerSCTime[key]->Fill(flightTimeCorrectedECALTime - flightTimeCorrectedSCTime);
+			   	}
+			}
 		}
     } // End of loop over time based tracks
-		
+
+    if ((TOFmRF.size()>0) && (BCALmRF.size()>0)) {
+      for (unsigned int m=0; m<TOFmRF.size(); m++) {
+	for (unsigned int j=0; j<BCALmRF.size(); j++) {
+	  dTOFRFTimeVSBCALRFTime["Physics Triggers"]->Fill(BCALmRF[j], TOFmRF[m]);
+	}
+      }
+    }
+    if ((TOFmRF.size()>0) && (FCALmRF.size()>0)) {
+      for (unsigned int m=0; m<TOFmRF.size(); m++) {
+	for (unsigned int j=0; j<FCALmRF.size(); j++) {
+	  dTOFRFTimeVSFCALRFTime["Physics Triggers"]->Fill(FCALmRF[j], TOFmRF[m]);
+	}
+      }
+    }
+    if ((TOFmRF.size()>0) && (ECALmRF.size()>0)) {
+      for (unsigned int m=0; m<TOFmRF.size(); m++) {
+	for (unsigned int j=0; j<ECALmRF.size(); j++) {
+	  dTOFRFTimeVSECALRFTime["Physics Triggers"]->Fill(ECALmRF[j], TOFmRF[m]);
+	}
+      }
+    }
+
+
+    
    DEvent::GetLockService(event)->RootFillUnLock(this);
 
 
