@@ -278,6 +278,10 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	  ecal().setTzcorr(ecalshowers[i]->ZTcorr());
 	  ecal().setNumBlocks(ecalshowers[i]->nBlocks);
 	  ecal().setIsNearBorder(ecalshowers[i]->isNearBorder);
+
+	  hddm_r::EcalShowerPropertiesList locEcalShowerPropertiesList = ecal().addEcalShowerPropertiesList(1);
+	  locEcalShowerPropertiesList().setE1E9(ecalshowers[i]->E1E9);
+	  locEcalShowerPropertiesList().setE9E25(ecalshowers[i]->E9E25);
 	}
 	// push any DFCALShower objects to the output record
 	for (size_t i=0; i < fcalshowers.size(); i++)
