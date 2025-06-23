@@ -126,6 +126,9 @@ class DParticleID: public JObject
 		bool Distance_ToTrack(const DReferenceTrajectory* rt, const DSCHit* locSCHit, double locInputStartTime, shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, DVector3* locOutputProjPos = nullptr, DVector3* locOutputProjMom = nullptr) const;
 		bool ProjectTo_SC(const DReferenceTrajectory* rt, unsigned int locSCSector, double& locDeltaPhi, DVector3& locProjPos, DVector3& locProjMom, DVector3& locPaddleNorm, double& locPathLength, double& locFlightTime, double& locFlightTimeVariance, int& locSCPlane) const;
 
+  double Distance_ToTrack(const DECALHit *locECALHit,
+			  const DVector3 &locProjPos) const;
+  
 		double Distance_ToTrack(const DFCALShower *locFCALShower,
 					const DVector3 &locProjPos) const;
   double Distance_ToTrack(const DECALShower *locECALShower,
@@ -140,6 +143,7 @@ class DParticleID: public JObject
 		bool Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DFCALHit *locFCALHit,double &locDOCA,double &locHitTime) const;
   		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DTRDSegment* locTRDSegment,shared_ptr<DTRDMatchParams>& locTRDMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
   		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DECALShower* locECALShower, double locInputStartTime, shared_ptr<DECALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
+  bool Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DECALHit *locECALHit,double &locDOCA,double &locHitTime) const;
 
 		/********************************************************** CUT MATCH DISTANCE **********************************************************/
 
@@ -233,6 +237,9 @@ class DParticleID: public JObject
 				   double& StartTime) const;
   bool Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
 		     const vector<const DECALShower*>& ECALShowers,
+		     double& StartTime) const;
+  bool Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
+		     const vector<const DECALHit*>& ECALHits,
 		     double& StartTime) const;
 		  
 		/********************************************************** MISCELLANEOUS **********************************************************/
