@@ -119,7 +119,7 @@ DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
 	//IF YOU CHANGE THESE, PLEASE (!!) UPDATE THE CUT LINES DRAWN FOR THE MONITORING IN:
 	// src/plugins/Analysis/monitoring_hists/HistMacro_Matching_*.C
 
-	ECAL_CUT_PAR1=0.26;
+	ECAL_CUT_PAR1=1.5;
 	app->SetDefaultParameter("ECAL:CUT_PAR1",ECAL_CUT_PAR1);
 	ECAL_CUT_PAR2=1.8;
 	app->SetDefaultParameter("ECAL:CUT_PAR2",ECAL_CUT_PAR2);
@@ -789,9 +789,25 @@ double DParticleID::Distance_ToTrack(const DFCALHit *locFCALHit,
 // closest to a projected track position
 double DParticleID::Distance_ToTrack(const DECALShower *locECALShower,
 				     const DVector3 &locProjPos) const{
-  double dx=locECALShower->pos.x()-locProjPos.x();
-  double dy=locECALShower->pos.y()-locProjPos.y();
-  return sqrt(dx*dx+dy*dy);
+  // Find minimum distance between track projection and each of the hits
+  // associated with the shower.
+  double d2min=(locECALShower->pos - locProjPos).Perp2();
+  double xproj=locProjPos.x();
+  double yproj=locProjPos.y();
+
+  const DECALCluster*cluster = locECALShower->GetSingle<DECALCluster>();
+  vector<const DECALHit *>hits=cluster->Get<DECALHit>();
+  for (unsigned int m=0;m<hits.size();m++){
+    DVector2 posHit=dECALGeometry->positionOnFace(hits[m]->row,
+						  hits[m]->column);
+    double dx=xproj-posHit.X();
+    double dy=yproj-posHit.Y();
+    double d2=dx*dx+dy*dy;
+    if (d2<d2min){
+      d2min=d2;
+    }
+  }
+  return sqrt(d2min);
 }
 
 // NOTE: For these functions, an initial guess for start time is expected as input so that out-of-time tracks can be skipped
@@ -1296,9 +1312,7 @@ bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &
       *locOutputProjMom = locProjMom;
     }
 
-  double dx=locECALShower->pos.x()-locProjPos.x();
-  double dy=locECALShower->pos.y()-locProjPos.y();
-  double d = sqrt(dx*dx+dy*dy);
+  double d = Distance_ToTrack(locECALShower,locProjPos);
   double p=locProjMom.Mag();
   //SET MATCHING INFORMATION
   if(locShowerMatchParams == nullptr)

@@ -28,6 +28,8 @@
 #include <FCAL/DFCALCluster.h>
 #include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALGeometry_factory.h>
+#include <ECAL/DECALHit.h>
+#include <ECAL/DECALCluster.h>
 #include <ECAL/DECALGeometry.h>
 #include <FMWPC/DCTOFPoint.h>
 #include <TOF/DTOFPoint.h>
