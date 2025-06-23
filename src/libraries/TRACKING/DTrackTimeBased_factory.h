@@ -17,6 +17,8 @@
 #include <BCAL/DBCALShower.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALHit.h>
+#include <ECAL/DECALShower.h>
+#include <ECAL/DECALHit.h>
 #include <TOF/DTOFPoint.h>
 #include <CDC/DCDCHit.h>
 #include <START_COUNTER/DSCHit.h>
@@ -73,6 +75,8 @@ class DTrackTimeBased_factory:public JFactoryT<DTrackTimeBased>{
 			   vector<const DBCALShower*>&bcal_showers,	  
 			   vector<const DFCALShower*>&fcal_showers,
 			   vector<const DFCALHit*>&fcal_hits,
+			   vector<const DECALShower*>&ecal_showers,
+			   vector<const DECALHit*>&ecal_hits,
 			   vector<DTrackTimeBased::DStartTime_t>&start_times);
   bool DoFit(const DTrackWireBased *track,
 	     vector<DTrackTimeBased::DStartTime_t>&start_times,
@@ -107,6 +111,7 @@ class DTrackTimeBased_factory:public JFactoryT<DTrackTimeBased>{
   bool dIsNoFieldFlag,INSERT_MISSING_HYPOTHESES;
   bool USE_SC_TIME; // use start counter hits for t0
   bool USE_FCAL_TIME; // use fcal hits for t0
+  bool USE_ECAL_TIME; // use ecal hits for t0
   bool USE_BCAL_TIME; // use bcal hits for t0
   bool USE_TOF_TIME; // use tof hits for t0
 //  double SC_DPHI_CUT_WB;

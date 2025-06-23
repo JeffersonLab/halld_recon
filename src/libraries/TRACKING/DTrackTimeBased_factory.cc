@@ -28,8 +28,6 @@ using namespace std;
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include <deque>
 
-
-
 // Routine for sorting start times
 bool DTrackTimeBased_T0_cmp(DTrackTimeBased::DStartTime_t a,
 			    DTrackTimeBased::DStartTime_t b){
@@ -162,6 +160,9 @@ void DTrackTimeBased_factory::Init()
 
 	USE_FCAL_TIME=true;
 	app->SetDefaultParameter("TRKFIT:USE_FCAL_TIME",USE_FCAL_TIME);
+	
+	USE_ECAL_TIME=true;
+	app->SetDefaultParameter("TRKFIT:USE_ECAL_TIME",USE_ECAL_TIME);
 	
 	USE_BCAL_TIME=true;
 	app->SetDefaultParameter("TRKFIT:USE_BCAL_TIME",USE_BCAL_TIME);
@@ -342,6 +343,14 @@ void DTrackTimeBased_factory::Process(const std::shared_ptr<const JEvent>& event
     event->Get(fcal_hits);
     event->Get(fcal_showers);
   }
+
+  // Get ECAL showers
+  vector<const DECALShower*>ecal_showers;
+  vector<const DECALHit*>ecal_hits; // for fallback to single hits in ECAL
+  if (USE_ECAL_TIME){
+    event->Get(ecal_hits);
+    event->Get(ecal_showers);
+  }
   
   vector<const DMCThrown*> mcthrowns;
   event->Get(mcthrowns, "FinalState");
@@ -354,7 +363,8 @@ void DTrackTimeBased_factory::Process(const std::shared_ptr<const JEvent>& event
 
     // Create vector of start times from various sources
     vector<DTrackTimeBased::DStartTime_t>start_times;
-    CreateStartTimeList(track,sc_hits,tof_points,bcal_showers,fcal_showers,fcal_hits,start_times);
+    CreateStartTimeList(track,sc_hits,tof_points,bcal_showers,fcal_showers,
+			fcal_hits,ecal_showers,ecal_hits,start_times);
 	
     // Fit the track
     DoFit(track,start_times,event,track->mass());
@@ -758,6 +768,8 @@ void DTrackTimeBased_factory
 			vector<const DBCALShower*>&bcal_showers,	
 			vector<const DFCALShower*>&fcal_showers,
 			vector<const DFCALHit*>&fcal_hits,
+			vector<const DECALShower*>&ecal_showers,
+			vector<const DECALHit*>&ecal_hits,
 			vector<DTrackTimeBased::DStartTime_t>&start_times){
   DTrackTimeBased::DStartTime_t start_time;
    
@@ -801,9 +813,29 @@ void DTrackTimeBased_factory
     start_time.t0_sigma=sqrt(locStartTimeVariance);
     //    start_time.t0_sigma=sqrt(locTimeVariance); //uncomment when ready
     start_time.system=SYS_FCAL;
-    start_times.push_back(start_time); 
-
+    start_times.push_back(start_time);
   }
+
+  // Get start time estimate from ECAL
+  locStartTime = track_t0;  // Initial guess from tracking
+  if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_ECAL),ecal_showers,locStartTime)){
+    // Fill in the start time vector
+    start_time.t0=locStartTime;
+    start_time.t0_sigma=sqrt(locStartTimeVariance);
+    //    start_time.t0_sigma=sqrt(locTimeVariance); //uncomment when ready
+    start_time.system=SYS_ECAL;
+    start_times.push_back(start_time); 
+  }
+  // look for matches to single ECAL hits
+  else if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_ECAL),ecal_hits,locStartTime)){
+    // Fill in the start time vector
+    start_time.t0=locStartTime;
+    start_time.t0_sigma=sqrt(locStartTimeVariance);
+    //    start_time.t0_sigma=sqrt(locTimeVariance); //uncomment when ready
+    start_time.system=SYS_ECAL;
+    start_times.push_back(start_time);
+  }
+  
   // Get start time estimate from BCAL
   locStartTime=track_t0;
   if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_BCAL),bcal_showers,locStartTime)){
@@ -825,7 +857,7 @@ void DTrackTimeBased_factory
   mStartTime=start_times[0].t0;
   mStartDetector=start_times[0].system;
 
-  //  _DBG_ << mStartDetector << " " << mStartTime << endl;
+  //_DBG_ << SystemName(mStartDetector) << " " << mStartTime << endl;
 
 }
 
