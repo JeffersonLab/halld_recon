@@ -275,7 +275,7 @@ class DParticleID: public JObject
 		
 		const DDIRCLut *Get_DIRCLut() const;
 		void GetSingleFCALHits(vector<const DFCALShower*>&locFCALShowers,vector<const DFCALHit*>&locFCALHits,vector<const DFCALHit*>&singleHits) const;
-	
+  void GetSingleECALHits(vector<const DECALShower*>&locECALShowers,vector<const DECALHit*>&locECALHits,vector<const DECALHit*>&singleHits) const;
 
 	protected:
 		// gas material properties

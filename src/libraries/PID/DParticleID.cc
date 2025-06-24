@@ -4284,3 +4284,24 @@ void DParticleID::GetSingleFCALHits(vector<const DFCALShower*>&locFCALShowers,
     locSingleHits.push_back(locFCALHits[loc_i]);
   }
 }
+
+// Look for single hits in the ECAL not associated with clusters
+void DParticleID::GetSingleECALHits(vector<const DECALShower*>&locECALShowers,
+				    vector<const DECALHit *>&locECALHits,
+				    vector<const DECALHit*>&locSingleHits) const {
+  vector<oid_t>used_ecal_ids;
+  for (size_t loc_j=0;loc_j<locECALShowers.size();loc_j++){
+    const DECALCluster*cluster = locECALShowers[loc_j]->GetSingle<DECALCluster>();
+    vector<const DECALHit *>ecal_hits_in_cluster=cluster->Get<DECALHit>();
+    for (size_t loc_i=0;loc_i<ecal_hits_in_cluster.size();loc_i++){
+      used_ecal_ids.push_back(ecal_hits_in_cluster[loc_i]->id);
+    }
+  }
+  for (size_t loc_i=0;loc_i<locECALHits.size();loc_i++){
+    if (find(used_ecal_ids.begin(),used_ecal_ids.end(),
+	     locECALHits[loc_i]->id)!=used_ecal_ids.end()){
+      continue;
+    }
+    locSingleHits.push_back(locECALHits[loc_i]);
+  }
+}
