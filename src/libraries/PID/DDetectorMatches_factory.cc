@@ -14,6 +14,9 @@ void DDetectorMatches_factory::Init()
 {
   ENABLE_FCAL_SINGLE_HITS = false;
   GetApplication()->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);
+
+  ENABLE_FCAL_SINGLE_HITS = false;
+  GetApplication()->SetDefaultParameter("PID:ENABLE_ECAL_SINGLE_HITS",ENABLE_ECAL_SINGLE_HITS);
 }
 
 //------------------
@@ -109,6 +112,22 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	    
 	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
 	      MatchToFCAL(locParticleID,locTrackTimeBasedVector[loc_j],
+			  locSingleHits,locDetectorMatches);
+	    }
+	  }
+	}
+
+	// Try to find matches between tracks and single hits in ECAL
+	if (ENABLE_ECAL_SINGLE_HITS){
+	  vector<const DECALHit*> locECALHits;
+	  event->Get(locECALHits);
+	  if (locECALHits.size()>0){
+	    vector<const DECALHit*>locSingleHits;
+	    locParticleID->GetSingleECALHits(locECALShowers,locECALHits,
+					     locSingleHits);
+	    
+	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
+	      MatchToECAL(locParticleID,locTrackTimeBasedVector[loc_j],
 			  locSingleHits,locDetectorMatches);
 	    }
 	  }
@@ -414,4 +433,33 @@ DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID,
     }
   }
 }
+
+// Try to find matches between a track and a single hit in ECAL
+void 
+DDetectorMatches_factory::MatchToECAL(const DParticleID* locParticleID,
+				      const DTrackTimeBased *locTrackTimeBased,
+				      vector<const DECALHit *>&locSingleHits,
+				      DDetectorMatches* locDetectorMatches) const {
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_ECAL);
+  if (extrapolations.size()==0) return;
+
+  for (unsigned int i=0;i<locSingleHits.size();i++){
+    double locDOCA=0.,locHitTime;
+    if (locParticleID->Distance_ToTrack(locTrackTimeBased->t0(),
+					extrapolations[0],locSingleHits[i],
+					locDOCA,locHitTime)){
+      shared_ptr<DECALSingleHitMatchParams> locMatchParams=std::make_shared<DECALSingleHitMatchParams>();
+      
+      locMatchParams->dEHit=locSingleHits[i]->E;
+      locMatchParams->dTHit=locHitTime;
+      locMatchParams->dFlightTime = extrapolations[0].t;
+      locMatchParams->dFlightTimeVariance = 0.; // Fill this in!
+      locMatchParams->dPathLength = extrapolations[0].s;
+      locMatchParams->dDOCAToHit = locDOCA;
+      
+      locDetectorMatches->Add_Match(locTrackTimeBased,locMatchParams);
+    }
+  }
+}
+
 
