@@ -15,7 +15,7 @@ void DDetectorMatches_factory::Init()
   ENABLE_FCAL_SINGLE_HITS = false;
   GetApplication()->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);
 
-  ENABLE_FCAL_SINGLE_HITS = false;
+  ENABLE_ECAL_SINGLE_HITS = false;
   GetApplication()->SetDefaultParameter("PID:ENABLE_ECAL_SINGLE_HITS",ENABLE_ECAL_SINGLE_HITS);
 }
 
