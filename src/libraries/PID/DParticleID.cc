@@ -2309,6 +2309,31 @@ shared_ptr<const DFCALSingleHitMatchParams> DParticleID::Get_BestFCALSingleHitMa
 	return locBestMatchParams;
 }
 
+bool DParticleID::Get_BestECALSingleHitMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DECALSingleHitMatchParams>& locBestMatchParams) const
+{
+	//choose the "best" shower to use for computing quantities
+	vector<shared_ptr<const DECALSingleHitMatchParams> > locMatchParams;
+	if(!locDetectorMatches->Get_ECALSingleHitMatchParams(locTrack, locMatchParams))
+		return false;
+
+	locBestMatchParams = Get_BestECALSingleHitMatchParams(locMatchParams);
+	return true;
+}
+
+shared_ptr<const DECALSingleHitMatchParams> DParticleID::Get_BestECALSingleHitMatchParams(vector<shared_ptr<const DECALSingleHitMatchParams> >& locMatchParams) const
+{
+	double locMinDistance = 9.9E9;
+	shared_ptr<const DECALSingleHitMatchParams> locBestMatchParams;
+	for(size_t loc_i = 0; loc_i < locMatchParams.size(); ++loc_i)
+	{
+		if(locMatchParams[loc_i]->dDOCAToHit >= locMinDistance)
+			continue;
+		locMinDistance = locMatchParams[loc_i]->dDOCAToHit;
+		locBestMatchParams = locMatchParams[loc_i];
+	}
+	return locBestMatchParams;
+}
+
 bool DParticleID::Get_DIRCMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DDIRCMatchParams>& locBestMatchParams) const
 {
 	//choose the "best" shower to use for computing quantities
