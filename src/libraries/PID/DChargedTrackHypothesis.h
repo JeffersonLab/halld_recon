@@ -72,6 +72,7 @@ class DChargedTrackHypothesis : public DKinematicData
 		shared_ptr<const DFMWPCMatchParams> Get_FMWPCMatchParams(void) const{return dTrackingInfo->dFMWPCMatchParams;}
   		shared_ptr<const DTRDMatchParams> Get_TRDMatchParams(void) const{return dTrackingInfo->dTRDMatchParams;}
   		shared_ptr<const DECALShowerMatchParams> Get_ECALShowerMatchParams(void) const{return dTrackingInfo->dECALShowerMatchParams;}
+  shared_ptr<const DECALSingleHitMatchParams> Get_ECALSingleHitMatchParams(void) const{return dTrackingInfo->dECALSingleHitMatchParams;}
 
 		//SETTERS
 
@@ -99,7 +100,8 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_FMWPCMatchParams(shared_ptr<const DFMWPCMatchParams> locMatchParams){dTrackingInfo->dFMWPCMatchParams = locMatchParams;}
   		void Set_TRDMatchParams(shared_ptr<const DTRDMatchParams> locMatchParams){dTrackingInfo->dTRDMatchParams = locMatchParams;}
   		void Set_ECALShowerMatchParams(shared_ptr<const DECALShowerMatchParams> locMatchParams){dTrackingInfo->dECALShowerMatchParams = locMatchParams;}
-
+  void Set_ECALSingleHitMatchParams(shared_ptr<const DECALSingleHitMatchParams> locMatchParams){dTrackingInfo->dECALSingleHitMatchParams = locMatchParams;}
+  
 		void Summarize(JObjectSummary& summary) const override
 		{
 			summary.add(dTrackingInfo->dTrackTimeBased->candidateid, "candidate", "%d");
@@ -180,6 +182,7 @@ class DChargedTrackHypothesis : public DKinematicData
 				shared_ptr<const DFMWPCMatchParams> dFMWPCMatchParams=nullptr;
 		  		shared_ptr<const DTRDMatchParams> dTRDMatchParams=nullptr;
 		  		shared_ptr<const DECALShowerMatchParams> dECALShowerMatchParams = nullptr;
+		  shared_ptr<const DECALSingleHitMatchParams> dECALSingleHitMatchParams = nullptr;
 		};
 
 	private:
@@ -428,6 +431,7 @@ inline void DChargedTrackHypothesis::DTrackingInfo::Reset(void)
 	dFMWPCMatchParams = nullptr;
 	dTRDMatchParams = nullptr;
 	dECALShowerMatchParams = nullptr;
+	dECALSingleHitMatchParams = nullptr;
 }
 
 inline void DChargedTrackHypothesis::DEOverPInfo::Reset(void)
