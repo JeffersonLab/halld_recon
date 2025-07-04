@@ -17,6 +17,7 @@
 #include "PID/DMCReaction.h"
 #include "PID/DBeamPhoton.h"
 #include "TRACKING/DMCThrown.h"
+#include "ECAL/DECALShower.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALHit.h"
 #include "CCAL/DCCALShower.h"
@@ -31,6 +32,7 @@
 #include "FMWPC/DFMWPCHit.h"
 #include "HDDM/DEventHitStatistics.h"
 #include "RF/DRFTime.h"
+#include "DAQ/DBeamHelicity.h"
 
 using namespace std;
 

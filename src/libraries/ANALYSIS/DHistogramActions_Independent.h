@@ -42,6 +42,8 @@
 #include "FCAL/DFCALHit.h"
 #include "CCAL/DCCALShower.h"
 #include "CCAL/DCCALHit.h"
+#include "ECAL/DECALShower.h"
+#include "ECAL/DECALHit.h"
 
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRACKING/DTrackWireBased.h"
@@ -212,6 +214,9 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 		TH2I* dHist_FCALShowerYVsX = nullptr;
 		TH1I* dHist_FCALShowerEnergy = nullptr;
 
+                TH2I* dHist_ECALShowerYVsX = nullptr;
+                TH1I* dHist_ECALShowerEnergy = nullptr;
+
 		TH2I* dHist_CCALShowerYVsX = nullptr;
 		TH1I* dHist_CCALShowerEnergy = nullptr;
 
@@ -355,6 +360,17 @@ class DHistogramAction_DetectorMatching : public DAnalysisAction
 		map<bool, TH2I*> dHistMap_TrackFCALRowVsColumn_HasHit;
 		map<bool, TH2I*> dHistMap_TrackFCALRowVsColumn_NoHit;
 
+                map<bool, TH2I*> dHistMap_TrackECALYVsX_HasHit;
+		map<bool, TH2I*> dHistMap_TrackECALYVsX_NoHit;
+		map<bool, TH1I*> dHistMap_TrackECALR_HasHit;
+		map<bool, TH1I*> dHistMap_TrackECALR_NoHit;
+		map<bool, TH1I*> dHistMap_TrackECALP_HasHit;
+		map<bool, TH1I*> dHistMap_TrackECALP_NoHit;
+		map<bool, TH2I*> dHistMap_TrackECALRowVsColumn_HasHit;
+		map<bool, TH2I*> dHistMap_TrackECALRowVsColumn_NoHit;
+	        map<bool, TH2I*> dHistMap_ECALTrackDistanceVsP;
+		map<bool, TH2I*> dHistMap_ECALTrackDistanceVsTheta;
+
 		map<bool, TH2I*> dHistMap_TrackBCALModuleVsZ_HasHit;
 		map<bool, TH2I*> dHistMap_TrackBCALModuleVsZ_NoHit;
 		map<bool, TH2I*> dHistMap_TrackBCALPhiVsZ_HasHit;
@@ -479,6 +495,9 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		map<int, TH2I*> dHistMap_FCALEOverPVsP;
 		map<int, TH2I*> dHistMap_FCALEOverPVsTheta;
 
+  	        map<int, TH2I*> dHistMap_ECALEOverPVsP;
+		map<int, TH2I*> dHistMap_ECALEOverPVsTheta;
+
 		map<DetectorSystem_t, map<int, TH2I*> > dHistMap_dEdXVsP;
 		map<DetectorSystem_t, map<Particle_t, TH2I*> > dHistMap_DeltadEdXVsP;
 //		map<DetectorSystem_t, map<Particle_t, TH2I*> > dHistMap_dEdXPullVsP;
@@ -552,6 +571,11 @@ class DHistogramAction_Neutrals : public DAnalysisAction
 		TH1I* dHist_FCALNeutralShowerEnergy = nullptr;
 		TH1I* dHist_FCALNeutralShowerDeltaT = nullptr;
 		TH2I* dHist_FCALNeutralShowerDeltaTVsE = nullptr;
+
+                TH1I* dHist_ECALTrackDOCA = nullptr;
+		TH1I* dHist_ECALNeutralShowerEnergy = nullptr;
+		TH1I* dHist_ECALNeutralShowerDeltaT = nullptr;
+		TH2I* dHist_ECALNeutralShowerDeltaTVsE = nullptr;
 
 		TH1I* dHist_CCALNeutralShowerEnergy = nullptr;
 		TH1I* dHist_CCALNeutralShowerDeltaT = nullptr;
@@ -912,6 +936,7 @@ class DHistogramAction_NumReconstructedObjects : public DAnalysisAction
 
 		TH1D* dHist_NumBeamPhotons = nullptr;
 		TH1D* dHist_NumFCALShowers = nullptr;
+                TH1D* dHist_NumECALShowers = nullptr;
 		TH1D* dHist_NumCCALShowers = nullptr;
 		TH1D* dHist_NumBCALShowers = nullptr;
 		TH1D* dHist_NumNeutralShowers = nullptr;
@@ -922,6 +947,7 @@ class DHistogramAction_NumReconstructedObjects : public DAnalysisAction
 
 		TH1D* dHist_NumTrackBCALMatches = nullptr;
 		TH1D* dHist_NumTrackFCALMatches = nullptr;
+                TH1D* dHist_NumTrackECALMatches = nullptr;
 		TH1D* dHist_NumTrackTOFMatches = nullptr;
 		TH1D* dHist_NumTrackSCMatches = nullptr;
 
@@ -933,6 +959,7 @@ class DHistogramAction_NumReconstructedObjects : public DAnalysisAction
 		TH1I* dHist_NumTOFHits = nullptr;
 		TH1I* dHist_NumBCALHits = nullptr;
 		TH1I* dHist_NumFCALHits = nullptr;
+                TH1I* dHist_NumECALHits = nullptr;
 		TH1I* dHist_NumCCALHits = nullptr;
 
 		TH1I* dHist_NumRFSignals = nullptr; //all sources

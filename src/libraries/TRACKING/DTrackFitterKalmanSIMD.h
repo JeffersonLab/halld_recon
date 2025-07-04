@@ -15,7 +15,6 @@
 #include "CDC/DCDCTrackHit.h"
 #include "FDC/DFDCPseudo.h"
 #include <TRD/DTRDPoint.h>
-#include <TRD/DGEMPoint.h>
 #include <TH3.h>
 #include <TH2.h>
 #include <TH1I.h>
@@ -184,7 +183,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void AddCDCHit(const DCDCTrackHit *cdchit);
   void AddFDCHit(const DFDCPseudo *fdchit);
   void AddTRDHit(const DTRDPoint *trdhit);
-  void AddGEMHit(const DGEMPoint *gemhit);
 
   jerror_t KalmanLoop(void);
   virtual kalman_error_t KalmanReverse(double fdc_anneal,double cdc_anneal,
@@ -263,7 +261,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
     bad_hit,
     late_hit,
     trd_hit,
-    gem_hit,
   };
   enum fit_region{
     kForward,
@@ -384,9 +381,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   jerror_t PropagateCentral(int length, int &index,DVector2 &my_xy,
 			    double &var_t_factor,
 			    DMatrix5x1 &Sc,bool &stepped_to_boundary);
-  void PropagateThroughFCAL(const DetectorSystem_t detector,const double dEdx,
-			    const double dz,double &z,DMatrix5x1 &S,double &t,
-			    double &s);
 
   shared_ptr<TMatrixFSym> Get7x7ErrorMatrix(DMatrixDSym C);
   shared_ptr<TMatrixFSym> Get7x7ErrorMatrixForward(DMatrixDSym C);
@@ -488,6 +482,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double dECALz,dECALzBack,dECALsize;
   vector<double>dFMWPCz_vec;
   vector<double>dTRDz_vec;
+  double dGEMTRDz;
 
   // Mass hypothesis
   double MASS,INV_MASS,mass2;
@@ -543,8 +538,8 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   bool ALIGNMENT,ALIGNMENT_CENTRAL,ALIGNMENT_FORWARD;
   double COVARIANCE_SCALE_FACTOR_FORWARD, COVARIANCE_SCALE_FACTOR_CENTRAL;
 
-  bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS,USE_GEM_HITS;
-  bool got_trd_gem_hits;
+  bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS;
+  bool got_trd_gem_hits; // CHECK
 
   // Maximum number of sigma's away from the predicted position to include hit
   double NUM_CDC_SIGMA_CUT,NUM_FDC_SIGMA_CUT;

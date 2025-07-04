@@ -78,7 +78,6 @@
 	TH1I *cdc_num_events = (TH1I*)gDirectory->FindObjectAny("cdc_num_events");
 	if(cdc_num_events) Nevents = (double)cdc_num_events->GetBinContent(1);
  	TH2D *cdc_axes = (TH2D *)gDirectory->FindObjectAny("cdc_axes");
- 	if(!cdc_axes) return;
 
 	// Just for testing
 	if(gPad == NULL){
@@ -95,10 +94,12 @@
 
 	// Draw axes
 	double minScale = 0.0, maxScale = 0.10;
-	cdc_axes->SetStats(0);
-	cdc_axes->Fill(100,100); // without this, the color ramp is not drawn
-	cdc_axes->GetZaxis()->SetRangeUser(minScale, maxScale);
-	cdc_axes->Draw("colz");
+	if(cdc_axes){
+	  cdc_axes->SetStats(0);
+	  cdc_axes->Fill(100,100); // without this, the color ramp is not drawn
+	  cdc_axes->GetZaxis()->SetRangeUser(minScale, maxScale);
+	  cdc_axes->Draw("colz");
+	}
 	
 	// Draw inner and outer circles so we can see if outer ring is missing
 	TEllipse *e = new TEllipse(0.0, 0.0, 56.0, 56.0);
@@ -112,7 +113,7 @@
 	for(unsigned int iring=1; iring<=28; iring++){
 		char hname[256];
 		sprintf(hname, "cdc_occ_ring_%02d", iring);
-		TH1 *h = (TH1*)(dir->Get(hname));
+		TH1 *h = (TH1*)(gDirectory->Get(hname));
 		if(h){
 			sprintf(hname, "cdc_occ_ring_norm_%02d", iring);
 			TH1 *hh = (TH1*)h->Clone(hname);

@@ -274,10 +274,6 @@ void DFCALCluster::shower_profile( const userhits_t* const hitList,
    double y = hitList->hit[ihit].y;
    double moliere_radius=MOLIERE_RADIUS;
    double min_dist=fcalgeom->blockSize();
-   if (hitList->hit[ihit].ch>=fcalgeom->numFcalChannels()){
-     moliere_radius=PbWO4_MOLIERE_RADIUS;
-     min_dist=fcalgeom->insertBlockSize();
-   }
    double dist = sqrt(SQR(x - fCentroid.x()) + SQR(y - fCentroid.y()));
    if (dist > MAX_SHOWER_RADIUS)
       return;

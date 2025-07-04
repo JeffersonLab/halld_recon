@@ -62,6 +62,8 @@ class DFMWPCHit_factory:public JFactoryT<DFMWPCHit>{
 
   //void FillCalibTable(vector< vector<double> > &table, vector<double> &raw_table);
   
+  bool INSTALLED;
+
   // Geometry information
   unsigned int maxChannels;
   unsigned int Nlayers; // number of layers

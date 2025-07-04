@@ -33,8 +33,8 @@
 	double Nevents = 1.0;
 	if(ecal_num_events) Nevents = (double)ecal_num_events->GetBinContent(1);
 
-	TLegend *legend_sa = new TLegend(0.1,0.85,0.3,0.9);
-	if(ecal_occ)legend_sa->AddEntry(ecal_occ, "fADC","f");
+//	TLegend *legend_sa = new TLegend(0.1,0.85,0.3,0.9);
+//	if(ecal_occ)legend_sa->AddEntry(ecal_occ, "fADC","f");
 
 	// Just for testing
 	if(gPad == NULL){
@@ -67,7 +67,7 @@
 		lat.Draw();
 	}
 
-	legend_sa->Draw();
+	//legend_sa->Draw();
 
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------

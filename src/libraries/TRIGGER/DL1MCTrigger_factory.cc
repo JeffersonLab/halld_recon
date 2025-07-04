@@ -24,6 +24,27 @@ using namespace std;
 
 static bool print_data_message = true;
 
+bool DL1MCTrigger_factory::RCDB_LOADED = false;
+bool DL1MCTrigger_factory::PARAMS_LOADED = false;
+std::mutex DL1MCTrigger_factory::params_mutex;
+std::mutex DL1MCTrigger_factory::rcdb_mutex;
+
+vector<DL1MCTrigger_factory::trigger_conf> DL1MCTrigger_factory::triggers_enabled;
+
+vector<DL1MCTrigger_factory::fcal_mod> DL1MCTrigger_factory::fcal_trig_mask;
+vector<DL1MCTrigger_factory::bcal_mod> DL1MCTrigger_factory::bcal_trig_mask;
+
+int    DL1MCTrigger_factory::FCAL_CELL_THR = 65;
+int    DL1MCTrigger_factory::FCAL_NSA = 10;
+int    DL1MCTrigger_factory::FCAL_NSB = 3;
+int    DL1MCTrigger_factory::FCAL_WINDOW = 10;
+
+int    DL1MCTrigger_factory::BCAL_CELL_THR = 20;
+int    DL1MCTrigger_factory::BCAL_NSA = 19;
+int    DL1MCTrigger_factory::BCAL_NSB = 3;
+int    DL1MCTrigger_factory::BCAL_WINDOW = 20;
+
+
 //------------------
 // Init
 //------------------
@@ -44,18 +65,19 @@ void DL1MCTrigger_factory::Init()
   // spring run of 2017: 25 F + B > 45000
 
   FCAL_ADC_PER_MEV =  3.73;
-  FCAL_CELL_THR    =  65;
+  //FCAL_CELL_THR    =  65;
   FCAL_EN_SC       =  25;
-  FCAL_NSA         =  10;
-  FCAL_NSB         =  3;
-  FCAL_WINDOW      =  10;
+  //FCAL_NSA         =  10;
+  //FCAL_NSB         =  3;
+  //FCAL_WINDOW      =  10;
 
-  BCAL_ADC_PER_MEV =  34.48276; // Not corrected energy 
-  BCAL_CELL_THR    =  20;
+  //BCAL_ADC_PER_MEV =  34.48276; // Not corrected energy 
+  BCAL_ADC_PER_MEV =  22.7273;  
+  //BCAL_CELL_THR    =  20;
   BCAL_EN_SC       =  1;
-  BCAL_NSA         =  19;
-  BCAL_NSB         =  3;
-  BCAL_WINDOW      =  20;
+  //BCAL_NSA         =  19;
+  //BCAL_NSB         =  3;
+  //BCAL_WINDOW      =  20;
 
   FCAL_BCAL_EN     =  45000; 
 
@@ -87,29 +109,38 @@ void DL1MCTrigger_factory::Init()
                               "Bypass trigger by hard coding physics bit");
   app->SetDefaultParameter("TRIG:FCAL_ADC_PER_MEV", FCAL_ADC_PER_MEV,
 			      "FCAL energy calibration for the Trigger");
-  app->SetDefaultParameter("TRIG:FCAL_CELL_THR", FCAL_CELL_THR,
-			      "FCAL energy threshold per cell");
   app->SetDefaultParameter("TRIG:FCAL_EN_SC", FCAL_EN_SC,
 			      "FCAL energy threshold");
-  app->SetDefaultParameter("TRIG:FCAL_NSA", FCAL_NSA,
-			      "FCAL NSA");
-  app->SetDefaultParameter("TRIG:FCAL_NSB", FCAL_NSB,
-			      "FCAL NSB");
-  app->SetDefaultParameter("TRIG:FCAL_WINDOW", FCAL_WINDOW,
-			      "FCAL GTP integration window");
 
   app->SetDefaultParameter("TRIG:BCAL_ADC_PER_MEV", BCAL_ADC_PER_MEV,
 			      "BCAL energy calibration for the Trigger");
-  app->SetDefaultParameter("TRIG:BCAL_CELL_THR", BCAL_CELL_THR,
-			      "BCAL energy threshold per cell");
   app->SetDefaultParameter("TRIG:BCAL_EN_SC", BCAL_EN_SC,
 			      "BCAL energy threshold");
-  app->SetDefaultParameter("TRIG:BCAL_NSA", BCAL_NSA,
-			      "BCAL NSA");
-  app->SetDefaultParameter("TRIG:BCAL_NSB", BCAL_NSB,
-			      "BCAL NSB");
-  app->SetDefaultParameter("TRIG:BCAL_WINDOW", BCAL_WINDOW,
-			      "BCAL GTP integration window");
+
+
+  if(!PARAMS_LOADED) {
+  	  std::lock_guard<std::mutex> lock(params_mutex);
+	  PARAMS_LOADED = true;
+
+	  app->SetDefaultParameter("TRIG:FCAL_CELL_THR", FCAL_CELL_THR,
+					  "FCAL energy threshold per cell");
+	  app->SetDefaultParameter("TRIG:FCAL_NSA", FCAL_NSA,
+					  "FCAL NSA");
+	  app->SetDefaultParameter("TRIG:FCAL_NSB", FCAL_NSB,
+					  "FCAL NSB");
+	  app->SetDefaultParameter("TRIG:FCAL_WINDOW", FCAL_WINDOW,
+					  "FCAL GTP integration window");
+	
+	  app->SetDefaultParameter("TRIG:BCAL_CELL_THR", BCAL_CELL_THR,
+					  "BCAL energy threshold per cell");
+	  app->SetDefaultParameter("TRIG:BCAL_NSA", BCAL_NSA,
+					  "BCAL NSA");
+	  app->SetDefaultParameter("TRIG:BCAL_NSB", BCAL_NSB,
+					  "BCAL NSB");
+	  app->SetDefaultParameter("TRIG:BCAL_WINDOW", BCAL_WINDOW,
+					  "BCAL GTP integration window");
+  }
+  
 
   app->SetDefaultParameter("TRIG:ST_ADC_PER_MEV", ST_ADC_PER_MEV,
 			      "ST energy calibration for the Trigger");
@@ -699,6 +730,12 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
 {
 
 #if HAVE_RCDB
+  {
+  // RCDB queries are heavy, so we load the data once for all threads
+  std::lock_guard<std::mutex> lock(rcdb_mutex);
+  
+  if(RCDB_LOADED) return 0;
+  RCDB_LOADED = true;
 
   vector<const DTranslationTable*> ttab;  
   event->Get(ttab);
@@ -1062,7 +1099,8 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
       }	
       
     }  // Loop over slots
-  }    // Loop over crates       
+  }    // Loop over crates 
+  }      
   
   return 0;
 
@@ -1116,7 +1154,6 @@ int  DL1MCTrigger_factory::SignalPulse(double en, double time, double amp_array[
     amp_array[i] += amp*time_stamp*en;
     
   }
-  
   return 0;  
 }
 
@@ -1483,7 +1520,7 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
 // Fill fcal calibration tables similar to FCALHit factory
 void DL1MCTrigger_factory::LoadFCALConst(fcal_constants_t &table, const vector<double> &fcal_const_ch, 
 					 const DFCALGeometry  &fcalGeom){
-  for (int ch = 0; ch < fcalGeom.numFcalChannels(); ch++) {
+  for (int ch = 0; ch < fcalGeom.numChannels(); ch++) {
     int row = fcalGeom.row(ch);
     int col = fcalGeom.column(ch);
     table[row][col] = fcal_const_ch[ch];

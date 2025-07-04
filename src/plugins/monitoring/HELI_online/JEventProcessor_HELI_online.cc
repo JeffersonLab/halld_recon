@@ -9,9 +9,10 @@
 #include "JEventProcessor_HELI_online.h"
 using namespace std;
 
+
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+//#include <JANA/JFactory.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
@@ -43,7 +44,7 @@ JEventProcessor_HELI_online::~JEventProcessor_HELI_online(){
 // Init
 //------------------
 void JEventProcessor_HELI_online::Init(void){
-  // This is called once at program startup. 
+  // This is called once at program startup 
   
   
   fEventLatest    =  0;                                    //init all the stuff
@@ -106,9 +107,9 @@ void JEventProcessor_HELI_online::Init(void){
   strcpy(fHWPEPICSChanValue,"IGL1I00OD16_16");
 
 
-  if(HELIVERBOSE > 0){                                     //if debugging       
-    //    dFile = fopen("heli.log","w");                         //open a separate file for logging (maybe from infile name later)
-    dFile = fopen(HELILOG.c_str(),"w");                         //open a separate file for logging (maybe from infile name later)
+  if(HELIVERBOSE > 0){                                      //if debugging       
+    //    dFile = fopen("heli.log","w");                    //open a separate file for logging (maybe from infile name later)
+    dFile = fopen(HELILOG.c_str(),"a");                     //open a separate file for logging (maybe from infile name later)
     for(int n=0;n<10;n++){                                  //init the array that holds event bit and helicity data.
       dHelBits[n]=0;
     }
@@ -121,7 +122,7 @@ void JEventProcessor_HELI_online::Init(void){
 //------------------
 void JEventProcessor_HELI_online::BeginRun(const std::shared_ptr<const JEvent>& event){
   // This is called whenever the run number changes
-  auto runnumber = event->GetEventNumber();
+  auto runnumber = event->GetRunNumber();
   // Init all the counters
   fEventInRun     = 0;  
   fPlusInRun      = 0;	  
@@ -171,6 +172,8 @@ void JEventProcessor_HELI_online::BeginRun(const std::shared_ptr<const JEvent>& 
 //------------------
 void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& event){
 
+ 
+
   auto eventnumber = event->GetEventNumber();
   vector<const DBeamHelicity*> locBH;
   event->Get(locBH);                                       //get the BH from the current evnt
@@ -178,8 +181,18 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
   if(locBH.empty()){ 
     return; //NOERROR;
   }
-  
+
+  // Get DCODAROCInfo for this ROC
+  vector<const DCODAROCInfo*> locCODAROCInfos;
+  event->Get(locCODAROCInfos);
+  uint64_t locReferenceClockTime = 0;
+  for (const auto& locCODAROCInfo : locCODAROCInfos) {
+    if(locCODAROCInfo->rocid == 71) {
+      locReferenceClockTime = locCODAROCInfo->timestamp;
+    }
+  }    
   m_mtx.lock();                                           //lock this thread
+  fReferenceClockTime = locReferenceClockTime;
 
   //do some event inits
 
@@ -197,12 +210,17 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
   //t settle present, so skip the event
   if(fUseTSettle && f_t_settle){ 
     fHelicity = 0;  
-    if(HELIVERBOSE > 1)printEvent();
+    if(HELIVERBOSE > 0)printEvent();
     m_mtx.unlock();                                            // Unlock main mutex
     return; //NOERROR;
   }
 
-   
+
+
+
+
+
+  
   //------------------------------------------ start latest event handling -------------------------------------------------------------------
   //For multi threaded running need to handle furthers ahead events differently from  standard events                                        |
 
@@ -257,14 +275,14 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
 	fBits  += f_helicity;                             //acquire another bit
 	fNBitsRead++;                                     //increment bit counter
 	fPatFlag=0;                                       //reset
-	if(HELIVERBOSE > 0){
+	if(HELIVERBOSE > 1){
 	  fprintf(dFile,"#NewBit %ld, Hel %d, Got %d bits %d\n",fEventno,f_helicity,fNBitsRead,fBits);
 	}
 	if(fNBitsRead == fNBitsReqd){
 	  fBitsNow = fBits;                               //copy the delayed generator word to the current one
 	  for(uint d=0; d<fNPatDel;d++){                  //and move on by the required number of patterns to make it the present generator.
 	    nextRand(&fBitsNow);
-	    if(HELIVERBOSE > 0)fprintf(dFile,"#Got Extra Bit %d for Now Helicity\n",d+1);
+	    if(HELIVERBOSE > 1)fprintf(dFile,"#Got Extra Bit %d for Now Helicity\n",d+1);
 	  }
 	}
       }
@@ -346,7 +364,7 @@ void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& e
   else if  (fHelicity ==  1) fPlusInRun++;
   else                       fNullInRun++;
 
-  if(HELIVERBOSE > 1)printEvent();
+  if(HELIVERBOSE > 0)printEvent();
 
   m_mtx.unlock();                                            // Unlock main mutex
   
@@ -382,7 +400,8 @@ void JEventProcessor_HELI_online::EndRun(){
 //------------------
 void JEventProcessor_HELI_online::Finish(void){
   // Called before program exit after event processing is finished.
-  fclose(dFile);
+  if(dFile!=NULL)
+  	fclose(dFile);
   return; //NOERROR;
 }
 
@@ -525,7 +544,8 @@ int JEventProcessor_HELI_online::printEvent(){
   dHelBits[0]  = f_t_settle;
   dHelBits[1]  = f_pattern_sync;
   dHelBits[2]  = f_pair_sync;
-  dHelBits[3]  = Helb2h[f_helicity];
+  dHelBits[3]  = f_helicity;
+  //dHelBits[3]  = Helb2h[f_helicity];
   dHelBits[4]  = f_ihwp;
   dHelBits[5]  = fHelPred;                                 
   dHelBits[6]  = fHelNow;                                  
@@ -534,7 +554,7 @@ int JEventProcessor_HELI_online::printEvent(){
   dHelBits[9]  = f_beam_on;                                 
   dHelBits[10] = fHelicity;                                 
   
-  fprintf(dFile,"%lu ", fEventno);                        //print events to file. No # tag for these, but all other log lines tagged with #label
+  fprintf(dFile,"%lu %lu", fEventno,fReferenceClockTime);  //print events to file. No # tag for these, but all other log lines tagged with #label
   for(int n=0;n<11;n++){                                  //and all the bits
     fprintf(dFile," %d",dHelBits[n]);
   }

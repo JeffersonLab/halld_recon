@@ -6,6 +6,7 @@
 #ifndef _DTRDHit_factory_
 #define _DTRDHit_factory_
 
+#include <array>
 #include <vector>
 using namespace std;
 
@@ -14,17 +15,16 @@ using namespace std;
 #include "DTRDDigiHit.h"
 #include "DTRDHit.h"
 
-// store constants so that they can be accessed by pixel number
-typedef  vector<double>  trd_digi_constants_t;
-
 class DTRDHit_factory:public JFactoryT<DTRDHit>{
 	public:
 		DTRDHit_factory(){};
 		~DTRDHit_factory(){};
 
-		// calibration constants stored in channel format
-		vector<trd_digi_constants_t> time_offsets;
-
+		bool IS_XY_TIME_DIFF_CUT;
+		double XY_TIME_DIFF;
+		double HIT_SIZE_MAX;
+		int CDIFF_MIN;
+		int FREQ_COUNT;		
 	private:
 		void Init() override;
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
@@ -32,7 +32,6 @@ class DTRDHit_factory:public JFactoryT<DTRDHit>{
 		void EndRun() override;
 		void Finish() override;
 
-		double t_base[7];
 		double pulse_peak_threshold;
 };
 

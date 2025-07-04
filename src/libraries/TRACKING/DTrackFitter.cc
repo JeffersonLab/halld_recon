@@ -63,6 +63,7 @@ DTrackFitter::DTrackFitter(const std::shared_ptr<const JEvent>& event)
 	extrapolations.emplace(SYS_TRD,myvector);
 	extrapolations.emplace(SYS_FMWPC,myvector);
 	extrapolations.emplace(SYS_CTOF,myvector);
+	extrapolations.emplace(SYS_ECAL,myvector);
 	extrapolations.emplace(SYS_NULL,myvector);	
 
 	extrapolations[SYS_TOF].reserve(1);
@@ -72,9 +73,10 @@ DTrackFitter::DTrackFitter(const std::shared_ptr<const JEvent>& event)
 	extrapolations[SYS_CDC].reserve(200);
 	extrapolations[SYS_START].reserve(1);
 	extrapolations[SYS_DIRC].reserve(1);
-	extrapolations[SYS_TRD].reserve(5);
+	extrapolations[SYS_TRD].reserve(1);
 	extrapolations[SYS_FMWPC].reserve(6);
 	extrapolations[SYS_CTOF].reserve(1);
+	extrapolations[SYS_ECAL].reserve(2);
 	extrapolations[SYS_NULL].reserve(1);
 	
 	pulls.reserve(30);
@@ -105,7 +107,6 @@ void DTrackFitter::Reset(void)
 	cdchits.clear();
 	fdchits.clear();
 	trdhits.clear();
-	gemhits.clear();
 	fit_type = kWireBased;
 	chisq = 1.0E6;
 	Ndof=0;
@@ -171,23 +172,6 @@ void DTrackFitter::AddHit(const DTRDPoint* trdhit)
 void DTrackFitter::AddHits(vector<const DTRDPoint*> trdhits)
 {
   for(unsigned int i=0; i<trdhits.size(); i++)this->trdhits.push_back(trdhits[i]);
-  fit_status = kFitNotDone;
-}
-
-// AddHit
-//-------------------
-void DTrackFitter::AddHit(const DGEMPoint* gemhit)
-{
-  gemhits.push_back(gemhit);
-  fit_status = kFitNotDone;
-}
-
-//-------------------
-// AddHits
-//-------------------
-void DTrackFitter::AddHits(vector<const DGEMPoint*> gemhits)
-{
-  for(unsigned int i=0; i<gemhits.size(); i++)this->gemhits.push_back(gemhits[i]);
   fit_status = kFitNotDone;
 }
 
@@ -265,11 +249,9 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
   vector<const DCDCTrackHit*> cdctrackhits;
   vector<const DFDCPseudo*> fdcpseudos;
   vector<const DTRDPoint *> trdhits_in;
-  vector<const DGEMPoint *> gemhits_in;
   loop->Get(cdctrackhits);
   loop->Get(fdcpseudos);
   loop->Get(trdhits_in);
-  loop->Get(gemhits_in);
 
   // Get Bfield at the position at the middle of the extrapolations, i.e. the 
   // region where we actually have measurements...
@@ -292,9 +274,6 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
     vector<Extrapolation_t>extraps=extrapolations.at(SYS_TRD);
     if (trdhits_in.size()>0){
       hitselector->GetTRDHits(extraps,trdhits_in,this);
-    }
-    if (gemhits_in.size()>0){
-      hitselector->GetGEMHits(extraps,gemhits_in,gemhits);
     }
   }
   if (got_hits==false){

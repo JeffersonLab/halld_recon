@@ -242,7 +242,6 @@ void JEventProcessor_RF_online::BeginRun(const std::shared_ptr<const JEvent> &lo
 {
 	// This is called whenever the run number changes
 
-    // TODO: NWB: Excise all uses of brun_was_called and Set_brun_called from codebase
 }
 
 void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &locEvent)
@@ -259,8 +258,9 @@ void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &loc
 	vector<const DTAGHHit*> locTAGHHits;
 	locEvent->Get(locTAGHHits);
 
-	auto dRFTimeFactory = static_cast<DRFTime_factory*>(locEvent->GetFactory("DRFTime", ""));
-
+	vector<const DRFTime*> rftimes;
+	auto dRFTimeFactory = static_cast<DRFTime_factory*>( locEvent->Get(rftimes) );
+	
 	//Convert TDCs to Times
 	//Use std::set: times are NOT necessarily in order (for high-resolution mode, times interleaved between different internal channels)
 	map<DetectorSystem_t, set<double> > locRFTimes;
@@ -344,7 +344,7 @@ void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &loc
 */
 
 	//MAKE/FILL ROC HISTOGRAMS
-	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 	{
 		//roc info consistency:
 			//compare roc infos: delta-t of each to avg-t-exlcuding-itself //separate histograms for each delta
@@ -371,7 +371,7 @@ void JEventProcessor_RF_online::Process(const std::shared_ptr<const JEvent> &loc
 			dHistMap_ROCInfoDeltaT[locROCID]->Fill(locDeltaT);
 		}
 	}
-	lockService->RootUnLock(); //RELEASE ROOT LOCK!!
+	lockService->RootFillUnLock(this); //RELEASE ROOT LOCK!!
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock

@@ -28,7 +28,10 @@ class JEventSource_EVIOpp;
 
 class DEVIOWorkerThread{
 	public:
-			
+  int PrintLimitFDC;
+  int PrintLimitCDC;
+  int PrintLimitTRD;
+  
 		enum JOBTYPE{
 			JOB_NONE       = 0x0,
 			JOB_QUIT       = 0x1,
@@ -91,7 +94,9 @@ class DEVIOWorkerThread{
 		bool  PARSE_EVENTTAG;
 		bool  PARSE_TRIGGER;
 		bool  PARSE_SSP;
+	        bool  SKIP_SSP_FORMAT_ERROR;
 		bool  PARSE_GEMSRS;
+		bool  PARSE_HELICITY;
                 int   NSAMPLES_GEMSRS;
 
 		bool  LINK_TRIGGERTIME;
@@ -130,6 +135,7 @@ class DEVIOWorkerThread{
 		void               ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 		void           ParseDGEMSRSBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 		void   MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t apv_id, vector<int>rawData16bits);
+        void   ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 
 		void LinkAllAssociations(void);
 

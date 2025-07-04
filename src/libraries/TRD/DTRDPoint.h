@@ -11,6 +11,7 @@
 #include "DTRDStripCluster.h"
 #include <vector>
 
+using namespace std;
 
 ///
 /// class DTRDPoint: definition for a reconstructed point in the FDC
@@ -29,10 +30,10 @@ class DTRDPoint : public JObject {
       double t_x,t_y; ///< time of the two cathode clusters
       double time; ///< time corresponding to this pseudopoint.
       int status; ///< status word for pseudopoint
-      int detector; ///< WIRE = 0 and GEM = 1
-      double covxx,covxy,covyy; ///< Covariance terms for (x,y) 
-      double dE_amp; /// < energy deposition, from pulse height
-      int itrack;
+      //double covxx,covxy,covyy; ///< Covariance terms for (x,y) 
+      double dE; /// < energy deposition 
+      double dE_x,dE_y; /// < energy deposition for each plane
+	  //int itrack; //?
 
       void Summarize(JObjectSummary& summary) const override {
          summary.add(x, "x", "%3.2f");
@@ -42,8 +43,9 @@ class DTRDPoint : public JObject {
          summary.add(t_y, "t_y", "%3.2f");
          summary.add(time, "time", "%3.1f");
          summary.add(status, "status", "%d");
-         summary.add(detector, "detector", "%d");
-         summary.add(dE_amp, "dE_amp", "%3.1f");
+         summary.add(dE, "dE", "%3.1f");
+		 summary.add(dE_x, "dE_x", "%3.1f");
+		 summary.add(dE_y, "dE_y", "%3.1f");
       }
 
 };

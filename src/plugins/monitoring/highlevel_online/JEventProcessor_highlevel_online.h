@@ -25,7 +25,7 @@
 #include <TAGGER/DTAGHHit.h>
 #include <BCAL/DBCALDigiHit.h>
 #include <FCAL/DFCALDigiHit.h>
-#include <CCAL/DCCALDigiHit.h>
+#include <ECAL/DECALDigiHit.h>
 #include <DAQ/Df250PulsePedestal.h>
 #include <PAIR_SPECTROMETER/DPSPair.h>
 #include <PAIR_SPECTROMETER/DPSCPair.h>
@@ -46,8 +46,10 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 		TH1F* dHist_BeamBunchPeriod_DFT;
 
 		TH2I* dHist_NumTriggers;
-		TH2I* dHist_BCALVsFCAL_TrigBit1;
-		TH2I* dHist_CCALVsFCAL_TrigBit1;
+		TH2I* dHist_BCALVsFCAL2_TrigBit1;
+	        TH2I* dHist_BCALVsFCAL_TrigBit1;
+	        TH2I* dHist_BCALVsECAL_TrigBit1;
+		TH2I* dHist_ECALVsFCAL_TrigBit1;
 		TH1I* dHist_L1bits_gtp;
 		TH1I* dHist_L1bits_fp;
                 TH1I* dHist_L1bits_fp_twelvehundhits; // BCAL LED Pseudo Trigger(1200 hits in BCAL)
@@ -68,11 +70,15 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 		TH1I *dKp_Km;
 		TH1I *dpip_pim_pi0;
 		TH2I *dbeta_vs_p;
+		TH2I *dbeta_vs_p_BCAL;
+		TH2I *dbeta_vs_p_TOF;
 		TH1I *dptrans;
 		TH1I *dme_rho;
 		TH1I *dme_omega;
-		
-		TH2D *dF1TDC_fADC_tdiff;
+
+                TH2I *dHist_heli_asym_gtp;
+
+                TH2D *dF1TDC_fADC_tdiff;
 		map<pair<int,int>, double> f1tdc_bin_map; // key=<rocid,slot> val=bin
 		
 		template<typename T> void FillF1Hist(vector<const T*> hits);
@@ -89,8 +95,9 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 
 		int fcal_cell_thr;
 		int bcal_cell_thr;
-		int ccal_cell_thr;
+		int ecal_cell_thr;
 		int fcal_row_mask_min, fcal_row_mask_max, fcal_col_mask_min, fcal_col_mask_max;
+	        int ecal_row_mask_min, ecal_row_mask_max, ecal_col_mask_min, ecal_col_mask_max;
 
 		vector<double> dNumHadronicTriggers_CoherentPeak_RFSignal;
 		vector<double> dNumHadronicTriggers_CoherentPeak_RFSideband;

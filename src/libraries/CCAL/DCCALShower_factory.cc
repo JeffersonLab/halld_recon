@@ -11,6 +11,7 @@
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
 #include "DANA/DGeometryManager.h"
+#include <DANA/DEvent.h>
 #include "HDGEOMETRY/DGeometry.h"
 
 static mutex CCAL_MUTEX;
@@ -86,6 +87,12 @@ void DCCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     auto jcalib = calib_man->GetJCalibration(runnumber);
     auto geo_manager = app->GetService<DGeometryManager>();
     auto geom = geo_manager->GetDGeometry(runnumber);
+
+	// check to see if the detector is install - don't load anything if it's not
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/CCAL/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		return;
 
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -979,7 +986,8 @@ void DCCALShower_factory::main_island(vector<int> &ia, vector<int> &id, vector<g
 	//-------------------- Prepare gammas for final processing --------------------//
 	
 	// convert position to units of cm:
-	
+	const double xsize=2.09;
+	const double ysize=2.09;
 	for(int ig = 0; ig < nadcgam; ig++) {
 		gammas[ig].energy /= 10000.;
 		gammas[ig].x  = (static_cast<double>(MCOL+1)-2.*gammas[ig].x)*xsize/2.;
@@ -1790,6 +1798,8 @@ void DCCALShower_factory::gamma_hyc(int nadc, vector<int> ia, vector<int> id, do
 	double ee, xx, yy;             // 
 	double d2, xm2, xm2cut;        // 
 	double chir, chil, chiu, chid; //
+	const double ysize=2.09;
+	const double xsize=2.09;
 	
 	dxy     = 0.05;
 	stepmin = 0.002;

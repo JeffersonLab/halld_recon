@@ -25,8 +25,10 @@ class DCustomAction_p3pi_Pi0Cuts : public DAnalysisAction
 {
 	public:
 
-                DCustomAction_p3pi_Pi0Cuts(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFCAL, string locActionUniqueString = "") : 
-	        DAnalysisAction(locReaction, "Custom_p3pi_Pi0Cuts", locUseKinFitResultsFlag, locActionUniqueString), dMinFCAL(locMinFCAL){}
+        DCustomAction_p3pi_Pi0Cuts(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFCAL, double locMinECAL, 
+        			string locActionUniqueString = "") : 
+	        DAnalysisAction(locReaction, "Custom_p3pi_Pi0Cuts", locUseKinFitResultsFlag, locActionUniqueString), 
+	        dMinFCAL(locMinFCAL), dMinECAL(locMinECAL) {}
 
 		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
 		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) {}
@@ -37,6 +39,7 @@ class DCustomAction_p3pi_Pi0Cuts : public DAnalysisAction
 
 		//Store any histograms as member variables here
 		double dMinFCAL;
+		double dMinECAL;
 		
 };
 

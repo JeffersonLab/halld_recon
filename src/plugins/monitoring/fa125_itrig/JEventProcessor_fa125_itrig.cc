@@ -77,9 +77,10 @@ void JEventProcessor_fa125_itrig::Init()
 	// ROOT mutex like this:
 	//
 
-  MAKE_TREE = 0;
   auto app = GetApplication();
   lockService = app->GetService<JLockService>();
+  
+  MAKE_TREE = 0;
   app->SetDefaultParameter("fa125_itrig:MAKE_TREE", MAKE_TREE, "Make a ROOT tree file");
 
 
@@ -90,7 +91,7 @@ void JEventProcessor_fa125_itrig::Init()
 
   hevents = new TH1I("num_events","Number of events", 1, 0.0, 1.0);
 
-  for (int i=0; i<70; i++) rocmap[i] = 0;  // rocmap[rocid] = bin number for roc rocid in histogram
+  for (int i=0; i<77; i++) rocmap[i] = 0;  // rocmap[rocid] = bin number for roc rocid in histogram
 
   int xlabels[70] = {0};
   int nbins;
@@ -125,6 +126,9 @@ void JEventProcessor_fa125_itrig::Init()
   }
 
   if (MAKE_TREE) {
+
+    lockService->RootWriteLock();
+    
     tree = new TTree("T","Df125 trigger times");
   
     ULong64_t eventnum;
@@ -151,6 +155,7 @@ void JEventProcessor_fa125_itrig::Init()
     int itrigdiff;
     tree->Branch("itrigdiff",&itrigdiff,"itrigdiff/I");
 
+    lockService->RootUnLock();    
   }
 
   main->cd();
@@ -174,8 +179,9 @@ void JEventProcessor_fa125_itrig::Process(const std::shared_ptr<const JEvent> &e
   auto eventnumber = event->GetEventNumber();
 
   // Event count used by RootSpy->RSAI so it knows how many events have been seen.
-
+  lockService->RootFillLock(this);
   hevents->Fill(0.5);
+  lockService->RootFillUnLock(this);  
 
   ULong64_t timestamp = 0;
 
@@ -203,7 +209,7 @@ void JEventProcessor_fa125_itrig::Process(const std::shared_ptr<const JEvent> &e
     int tdiff, itrigdiff;
         
     if (MAKE_TREE) {
-
+      lockService->RootWriteLock(); 
       tree->SetBranchAddress("eventnum",&eventnum);
       tree->SetBranchAddress("timestamp",&timestamp);
       tree->SetBranchAddress("ttime",&ttime);
@@ -212,6 +218,7 @@ void JEventProcessor_fa125_itrig::Process(const std::shared_ptr<const JEvent> &e
       tree->SetBranchAddress("itrigger",&itrigger);
       tree->SetBranchAddress("tdiff",&tdiff);
       tree->SetBranchAddress("itrigdiff",&itrigdiff);
+      lockService->RootUnLock();
     }
   
     const Df125TriggerTime *tt = NULL;
@@ -309,15 +316,22 @@ void JEventProcessor_fa125_itrig::Process(const std::shared_ptr<const JEvent> &e
         posdiff = posdiff>>1;
       }
 
-      lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+
 
       // increment monitoring histo when trigger time and itrigger are both off by more than 1 bit
 
-      if ( diffcount_ttime>1 && diffcount_itrig>1 ) hdiffs->Fill(rocmap[rocid],slot,1);  
+      if ( diffcount_ttime>1 && diffcount_itrig>1 ) {
+	lockService->RootFillLock(this); 
+	hdiffs->Fill(rocmap[rocid],slot,1);
+	lockService->RootFillUnLock(this);
+      }
+      
+      if (MAKE_TREE) {
+	lockService->RootWriteLock();
+	tree->Fill();
+	lockService->RootUnLock();	
+      }
 
-      if (MAKE_TREE) tree->Fill();
-
-      lockService->RootFillUnLock(this);
 
     }  // for each Df125TriggerTime
 

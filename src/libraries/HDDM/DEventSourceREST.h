@@ -23,6 +23,7 @@
 #include <PID/DDetectorMatches.h>
 #include "TRACKING/DMCThrown.h"
 #include <TRACKING/DTrackTimeBased.h>
+#include <ECAL/DECALShower.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALShower_factory.h>
 #include <FCAL/DFCALHit.h>
@@ -44,6 +45,8 @@
 #include <TAGGER/DTAGMGeometry.h>
 #include <TAGGER/DTAGHGeometry.h>
 #include <HDDM/DEventHitStatistics.h>
+#include "DAQ/DBeamHelicity.h"
+
 #include "DResourcePool.h"
 
 #include <TMatrixF.h>
@@ -77,6 +80,8 @@ class DEventSourceREST:public JEventSource
                     JFactoryT<DCTOFPoint>* factory);
    bool Extract_DFCALShower(hddm_r::HDDM *record,
                     JFactoryT<DFCALShower>* factory);
+   bool Extract_DECALShower(hddm_r::HDDM *record,
+			    JFactoryT<DECALShower>* factory);
    bool Extract_DBCALShower(hddm_r::HDDM *record,
                     JFactoryT<DBCALShower>* factory);
    bool Extract_DCCALShower(hddm_r::HDDM *record,
@@ -85,6 +90,8 @@ class DEventSourceREST:public JEventSource
                     JFactoryT<DTrackTimeBased>* factory, const std::shared_ptr<const JEvent>& locEvent);
    bool Extract_DTrigger(hddm_r::HDDM *record,
                     JFactoryT<DTrigger>* factory);
+   bool Extract_DBeamHelicity(hddm_r::HDDM *record,
+                    JFactoryT<DBeamHelicity>* factory);
    bool Extract_DDetectorMatches(const std::shared_ptr<const JEvent>& locEvent, hddm_r::HDDM *record,
                     JFactoryT<DDetectorMatches>* factory);
 #if 0

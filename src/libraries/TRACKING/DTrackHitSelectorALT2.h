@@ -22,7 +22,6 @@ class DTrackHitSelectorALT2:public DTrackHitSelector{
 	void GetCDCHits(double Bz,double q,const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out, int N) const;
 	void GetFDCHits(double Bz,double q,
 			const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DFDCPseudo*> &fdchits_in, vector<const DFDCPseudo*> &fdchits_out,int N) const;
-	void GetGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DGEMPoint*> &gemhits_in, vector<const DGEMPoint*> &gemhits_out) const;
 	void GetTRDHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DTRDPoint*> &trdhits_in, vector<const DTRDPoint*> &trdhits_out) const;
 
 	private:
@@ -32,7 +31,6 @@ class DTrackHitSelectorALT2:public DTrackHitSelector{
 		bool MAKE_DEBUG_TREES;
 		double MIN_HIT_PROB_CDC;	
 		double MIN_HIT_PROB_FDC;
-		double MIN_HIT_PROB_GEM;
 		double MIN_HIT_PROB_TRD;
 		double MIN_FDC_SIGMA_ANODE_CANDIDATE;
 		double MIN_FDC_SIGMA_CATHODE_CANDIDATE;

@@ -8,7 +8,6 @@
 #include "JEventProcessor_FDC_Efficiency.h"
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include "DANA/DEvent.h"
-#include "HistogramTools.h"
 
 static TH1D *fdc_wire_measured_cell[25]; //Filled with total actually detected before division at end
 static TH1D *fdc_wire_expected_cell[25]; // Contains total number of expected hits by DOCA
@@ -462,14 +461,14 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 
 	  
 	if (expectHit && fdc_wire_expected_cell[cellNum] != NULL && cellNum < 25){
-	  // japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-	  // hExpectedHitsVsDOCA->Fill(distanceToWire);
-	  // hExpectedHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
-	  // hExpectedHitsVsTheta->Fill(theta_deg);
-	  // hExpectedHitsVsMom->Fill(tmom);
-	  // hExpectedHitsVsPhi->Fill(phi_deg);
-	  // hExpectedHitsVsHitCells->Fill(cells);
-	  // japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	  lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	  hExpectedHitsVsDOCA->Fill(distanceToWire);
+	  hExpectedHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+	  hExpectedHitsVsTheta->Fill(theta_deg);
+	  hExpectedHitsVsMom->Fill(tmom);
+	  hExpectedHitsVsPhi->Fill(phi_deg);
+	  hExpectedHitsVsHitCells->Fill(cells);
+	  lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 	  Double_t w, v;
 	  if(fdc_wire_expected_cell[cellNum] != NULL && cellNum < 25){
@@ -497,20 +496,14 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 	      }
 	    }
 
-      Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs DOCA", distanceToWire, "Measured Hits", 100, 0 , 0.5);
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs Tracking FOM", thisTimeBasedTrack->FOM, "Measured Hits", 100, 0 , 1.0);
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs theta", theta_deg, "Measured Hits", 100, 0, 180);
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs phi", phi_deg, "Measured Hits", 100, -180, 180);
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs p", tmom, "Measured Hits", 100, 0 , 10.0);
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs Hit Cells", cells, "Measured Hits", 25, -0.5 , 24.5);  
-	    // lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-	    // hMeasuredHitsVsDOCA->Fill(distanceToWire);
-	    // hMeasuredHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
-	    // hMeasuredHitsVsTheta->Fill(theta_deg);
-	    // hMeasuredHitsVsMom->Fill(tmom);
-	    // hMeasuredHitsVsPhi->Fill(phi_deg);
-	    // hMeasuredHitsVsHitCells->Fill(cells);
-	    // lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	    hMeasuredHitsVsDOCA->Fill(distanceToWire);
+	    hMeasuredHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+	    hMeasuredHitsVsTheta->Fill(theta_deg);
+	    hMeasuredHitsVsMom->Fill(tmom);
+	    hMeasuredHitsVsPhi->Fill(phi_deg);
+	    hMeasuredHitsVsHitCells->Fill(cells);
+	    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 	    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	    v = fdc_wire_measured_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;

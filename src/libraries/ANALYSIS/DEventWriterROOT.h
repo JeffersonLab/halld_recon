@@ -20,9 +20,11 @@
 #include "BCAL/DBCALShower.h"
 #include "FCAL/DFCALShower.h"
 #include "CCAL/DCCALShower.h"
+#include "ECAL/DECALShower.h"
 #include "TRACKING/DMCThrown.h"
 #include <TRACKING/DMCTrajectoryPoint.h>
 #include "TRACKING/DTrackTimeBased.h"
+#include "DAQ/DBeamHelicity.h"
 
 #include "PID/DVertex.h"
 #include "PID/DChargedTrack.h"

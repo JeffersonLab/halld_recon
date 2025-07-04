@@ -11,7 +11,7 @@
 
 ///
 /// class DTRDPoint_factory: definition for a JFactory that
-/// produces points from wire hits and GEM strips
+/// produces points from strip hits
 /// 
 class DTRDPoint_factory : public JFactoryT<DTRDPoint> {
 	public:
@@ -30,16 +30,14 @@ class DTRDPoint_factory : public JFactoryT<DTRDPoint> {
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
 		void EndRun() override;
 
-		double calcClusterTime(const DTRDStripCluster *clus);
-		double calcClusterPosition(const DTRDStripCluster *clus);
+// 		double calcClusterTime(const DTRDStripCluster *clus);
+// 		double calcClusterPosition(const DTRDStripCluster *clus);
  		
 	private:		
-		double wireX0, stripY0, wireX_pitch, stripY_pitch;
-		double wire_time_max;
-		double gemX0, gemY0, gem_pitch;
-		double gem_time_max, gem_dE_max;
-		vector<double>dTRDz;
-
+  		double TIME_DIFF_MAX;
+  double DRIFT_VELOCITY;
+  double dTRDx=0.,dTRDy=0.,dTRDz=0.;
+   		double dE_DIFF_MAX;
 };
 
 #endif // DFACTORY_DTRDPOINT_H

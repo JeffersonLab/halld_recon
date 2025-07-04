@@ -759,22 +759,22 @@ void JEventProcessor_CDC_Efficiency::Fill_ExpectedHit(int ringNum, int wireNum, 
    //Fill the expected number of hits histogram
    if (distanceToWire < DOCACUT)
    {
-      lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       {
          Double_t w = cdc_expected_ring[ringNum]->GetBinContent(wireNum, 1) + 1.0;
          cdc_expected_ring[ringNum]->SetBinContent(wireNum, 1, w);
       }
-      lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
    }
 
    int locDOCABin = (int) (distanceToWire * 10) % 8;
    TH2D* locHistToFill = cdc_expected_ringmap[locDOCABin][ringNum];
-   lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+   lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
    {
       Double_t w = locHistToFill->GetBinContent(wireNum, 1) + 1.0;
       locHistToFill->SetBinContent(wireNum, 1, w);
    }
-   lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+   lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 const DCDCTrackHit* JEventProcessor_CDC_Efficiency::Find_Hit(int locRing, int locProjectedStraw, map<int, set<const DCDCTrackHit*> >& locSortedCDCTrackHits)

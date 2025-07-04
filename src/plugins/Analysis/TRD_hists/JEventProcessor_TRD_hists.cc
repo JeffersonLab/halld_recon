@@ -13,12 +13,7 @@ using namespace std;
 #include <TRD/DTRDHit.h>
 #include <TRD/DTRDStripCluster.h>
 #include <TRD/DTRDPoint.h>
-
-#include <DAQ/DGEMSRSWindowRawData.h>
-#include <TRD/DGEMDigiWindowRawData.h>
-#include <TRD/DGEMHit.h>
-#include <TRD/DGEMStripCluster.h>
-#include <TRD/DGEMPoint.h>
+#include <PID/DChargedTrack.h>
 
 #include <TDirectory.h>
 #include <TH1.h>
@@ -26,26 +21,20 @@ using namespace std;
 #include <TProfile.h>
 
 // root hist pointers
-const int NTRDplanes = 4;
-const int NTRDstrips = 240;
-const int NTRDwires = 24;
-const int NGEMplanes = 10;
-const int NGEMstrips = 256;
-const int NAPVchannels = 128;
-const int NGEMsamples = 21;
 
 static TH1I *trd_num_events;
 static TH1I *num_tracks;
 
-static TH2I *hWireTRDPoint_TrackX, *hWireTRDPoint_TrackY;
-static TH2I *hGEMTRDHit_TrackX, *hGEMTRDHit_TrackY, *hGEMTRDHit_DeltaXY;
-static TH2I *hWireTRDPoint_DeltaXY, *hWireTRDPoint_DeltaXY_Pos, *hWireTRDPoint_DeltaXY_Neg;
-static TH2I *hGEMTRDHit_DeltaX_T;
-static TH1I *hWireTRDPoint_Time;
-static TH2I *hGEMSRSPoint_TrackX[5], *hGEMSRSPoint_TrackY[5];
-static TH2I *hGEMSRSPoint_DeltaXY[5], *hGEMSRSPoint_DeltaXY_Pos[5], *hGEMSRSPoint_DeltaXY_Neg[5];
+static TH2I *hTRDPoint_TrackX, *hTRDPoint_TrackY, *hTRDPoint_DeltaXY;
+static TH2I *hTRDPoint_DeltaX_T;
+static TH1I *hTRDPoint_Time;
 
-static TH2I *hWire_GEMTRDXstrip, *hWire_GEMTRDX_DeltaT;
+static TH2I *hTRDPoint_TrackX_EPCut, *hTRDPoint_TrackY_EPCut, *hTRDPoint_DeltaXY_EPCut;
+static TH2I *hTRDPoint_DeltaX_T_EPCut;
+static TH1I *hTRDPoint_Time_EPCut;
+
+static TH1I *hTRDMatchedTrack_EP;
+
 
 //----------------------------------------------------------------------------------
 
@@ -91,31 +80,19 @@ void JEventProcessor_TRD_hists::Init() {
     // Straight track histograms...
     gDirectory->mkdir("StraightTracks")->cd();
 
-    hWireTRDPoint_TrackX = new TH2I("WireTRDPoint_TrackX","; Wire TRD X (cm); Extrapolated track X (cm)",200,-55,55,200,-55,55);
-    hWireTRDPoint_TrackY = new TH2I("WireTRDPoint_TrackY","; Wire TRD Y (cm); Extrapolated track Y (cm)",200,-85,-65,200,-85,-65);
-    hWireTRDPoint_DeltaXY = new TH2I("WireTRDPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hWireTRDPoint_DeltaXY_Pos = new TH2I("WireTRDPoint_DeltaXY_Pos","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hWireTRDPoint_DeltaXY_Neg = new TH2I("WireTRDPoint_DeltaXY_Neg","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hWireTRDPoint_Time = new TH1I("WireTRDPoint_Time","; hit time",1000,0,1000);
 
     // GEM TRD
-    hGEMTRDHit_TrackX = new TH2I("GEMTRDHit_TrackX","; GEM TRD X; Extrapolated track X",200,-55,55,200,-55,55);
-    hGEMTRDHit_TrackY = new TH2I("GEMTRDHit_TrackY","; GEM TRD Y; Extrapolated track Y",200,-85,-65,200,-85,-65);
-    hGEMTRDHit_DeltaXY = new TH2I("GEMTRDHit_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hGEMTRDHit_DeltaX_T = new TH2I("GEMTRDHit_DeltaX_T","; #Delta X; hit time",1000,-20,20,1000,0,1000);
+    hTRDPoint_TrackX = new TH2I("TRDPoint_TrackX","; GEM TRD X; Extrapolated track X",200,-55,55,200,-55,55);
+    hTRDPoint_TrackY = new TH2I("TRDPoint_TrackY","; GEM TRD Y; Extrapolated track Y",200,-85,-65,200,-85,-65);
+    hTRDPoint_DeltaXY = new TH2I("TRDPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
+    hTRDPoint_DeltaX_T = new TH2I("TRDPoint_DeltaX_T","; #Delta X; hit time",1000,-20,20,1000,0,1000);
+	hTRDPoint_Time = new TH1I("TRDPoint_Time","; hit time",1000,0,1000);
 
-    // GEM SRS
-    for(int i=0; i<5; i++) {
-	    hGEMSRSPoint_TrackX[i] = new TH2I(Form("GEMSRSPoint_TrackX_%d",i),Form("Package %d; GEM SRS X (cm); Extrapolated track X (cm)",i),200,-55,55,200,-55,55);
-	    hGEMSRSPoint_TrackY[i] = new TH2I(Form("GEMSRSPoint_TrackY_%d",i),Form("Package %d; GEM SRS Y (cm); Extrapolated track Y (cm)",i),200,-85,-65,200,-85,-65);
-	    hGEMSRSPoint_DeltaXY[i] = new TH2I(Form("GEMSRSPoint_DeltaXY_%d",i),Form("Package %d; #Delta X (cm); #Delta Y (cm)",i),500,-5,5,500,-5,5);
-	     hGEMSRSPoint_DeltaXY_Pos[i] = new TH2I(Form("GEMSRSPoint_DeltaXY_Pos_%d",i),Form("Package %d; #Delta X (cm); #Delta Y (cm)",i),500,-5,5,500,-5,5);
-	     hGEMSRSPoint_DeltaXY_Neg[i] = new TH2I(Form("GEMSRSPoint_DeltaXY_Neg_%d",i),Form("Package %d; #Delta X (cm); #Delta Y (cm)",i),500,-5,5,500,-5,5);
-    }
-
-    // GEM-Wire TRD correlatioin
-    hWire_GEMTRDXstrip = new TH2I("Wire_GEMTRDXstrip", "GEM TRD X strip vs TRD wire # ; TRD wire # ; GEM TRD X strip #", NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
-    hWire_GEMTRDX_DeltaT = new TH2I("Wire_GEMTRDX_DeltaT", "GEM TRD X Amplitude vs #Delta t ; #Delta t (ns) ; GEM TRD X Amplitude", 500, -500, 500, 100, 0, 10000);
+    hTRDPoint_TrackX_EPCut = new TH2I("TRDPoint_TrackX_EPCut","; GEM TRD X; Extrapolated track X",200,-55,55,200,-55,55);
+    hTRDPoint_TrackY_EPCut = new TH2I("TRDPoint_TrackY_EPCut","; GEM TRD Y; Extrapolated track Y",200,-85,-65,200,-85,-65);
+    hTRDPoint_DeltaXY_EPCut = new TH2I("TRDPoint_DeltaXY_EPCut","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
+    hTRDPoint_DeltaX_T_EPCut = new TH2I("TRDPoint_DeltaX_T_EPCut","; #Delta X; hit time",1000,-20,20,1000,0,1000);
+	hTRDPoint_Time_EPCut = new TH1I("TRDPoint_Time_EPCut","; hit time",1000,0,1000);
 
     // back to main dir
     mainDir->cd();
@@ -127,13 +104,10 @@ void JEventProcessor_TRD_hists::Init() {
 void JEventProcessor_TRD_hists::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
 
-    auto runnumber = event->GetRunNumber();
-
-    // special conditions for different geometries
-    if(runnumber < 70000) wirePlaneOffset = 0;
-    else wirePlaneOffset = 4;
+    //auto runnumber = event->GetRunNumber();
 
     const DGeometry *geom = DEvent::GetDGeometry(event);
+
     vector<double> z_trd;
     geom->GetTRDZ(z_trd);
 
@@ -174,26 +148,11 @@ void JEventProcessor_TRD_hists::Process(const std::shared_ptr<const JEvent>& eve
     }
 */
 
-    vector<const DTRDDigiHit*> digihits;
-    event->Get(digihits);
-    vector<const DTRDHit*> hits;
-    event->Get(hits);
-    vector<const DTRDStripCluster*> clusters;
-    event->Get(clusters);
     vector<const DTRDPoint*> points;
     event->Get(points);
 
-    vector<const DGEMDigiWindowRawData*> windowrawdata;
-    event->Get(windowrawdata);
-    vector<const DGEMHit*> gem_hits;
-    event->Get(gem_hits);
-    vector<const DGEMStripCluster*> gem_clusters;
-    event->Get(gem_clusters);
-    vector<const DGEMPoint*> gem_points;
-    event->Get(gem_points);
-
     vector<const DTrackWireBased*> straight_tracks;
-    vector<const DTrackTimeBased*> tracks;
+    vector<const DChargedTrack*> tracks;
     if (dIsNoFieldFlag)
 	    event->Get(straight_tracks, "StraightLine");
     else
@@ -207,10 +166,10 @@ void JEventProcessor_TRD_hists::Process(const std::shared_ptr<const JEvent>& eve
 	DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     ///////////////////////////
-    // TRD DigiHits and Hits //
+    // TRD points //
     ///////////////////////////
 
-    if (digihits.size() > 0) trd_num_events->Fill(1);
+    if (points.size() > 0) trd_num_events->Fill(1);
 
     // check if have good extrapolated track with TRD wire point
     bool goodTrack = false;
@@ -225,65 +184,23 @@ void JEventProcessor_TRD_hists::Process(const std::shared_ptr<const JEvent>& eve
 
 	    for (const auto& extrapolation : extrapolations) {
 	
-		    // correlate wire TRD with extrapolated tracks
+		    // correlate  TRD with extrapolated tracks
 		    for (const auto& point : points) {
 
-			    if(point->detector == 0 && fabs(extrapolation.position.Z() - 548.8) < 5.) { 
+				hTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
+				hTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
+				
+				double locDeltaX = point->x - extrapolation.position.X();
+				double locDeltaY = point->y - extrapolation.position.Y();
+				hTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
+				hTRDPoint_DeltaX_T->Fill(locDeltaX, point->time);
 
-				    hWireTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
-				    hWireTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
-				    
-				    double locDeltaX = point->x - extrapolation.position.X();
-				    double locDeltaY = point->y - extrapolation.position.Y();
-				    hWireTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
-
-				    if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
-					    hWireTRDPoint_Time->Fill(point->time);
-					    goodTrack = true;
-				    }
-			    }
+				if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
+					hTRDPoint_Time->Fill(point->time);
+					goodTrack = true;
+				}
 		    }
 
-		    // correlate GEM TRD with extrapolated tracks
-		    for (const auto& hit : hits) {
-			    if(hit->plane == 6 && fabs(extrapolation.position.Z() - 570.7) < 5.) {
-
-				    for (const auto& gem_hit : gem_hits) {
-					    if(gem_hit->plane == 7 && fabs(extrapolation.position.Z() - 570.7) < 5.) {		    
-						    // only look at tracks with good wire hit
-						    if(!goodTrack) continue;
-
-						    // choose particular region of GEMTRD XY plane
-						    //if(abs(hit->strip-17) > 3 || abs(gem_hit->strip-240) > 3)
-						    //	    continue;
-						    
-						    double locStripX = -5.25 + hit->strip*0.04;
-						    double locStripY = -80.0 + hit->strip*0.04;
-						    hGEMTRDHit_TrackX->Fill(locStripX, extrapolation.position.X());
-						    hGEMTRDHit_TrackY->Fill(locStripY, extrapolation.position.Y());
-						    
-						    double locDeltaX = locStripX - extrapolation.position.X();
-						    double locDeltaY = locStripY - extrapolation.position.Y();
-						    hGEMTRDHit_DeltaXY->Fill(locDeltaX, locDeltaY);
-						    
-						    hGEMTRDHit_DeltaX_T->Fill(locDeltaX, hit->t);
-					    }
-				    }
-			    }
-		    }
-
-		    // correlate GEM SRS with extrapolated tracks
-		    for (const auto& point : gem_points) {
-			    if(point->detector == 4 && fabs(extrapolation.position.Z() - 576.7) < 5.) { 
-
-				    hGEMSRSPoint_TrackX[point->detector]->Fill(point->x, extrapolation.position.X());
-				    hGEMSRSPoint_TrackY[point->detector]->Fill(point->y, extrapolation.position.Y());
-				    
-				    double locDeltaX = point->x - extrapolation.position.X();
-				    double locDeltaY = point->y - extrapolation.position.Y();
-				    hGEMSRSPoint_DeltaXY[point->detector]->Fill(locDeltaX, locDeltaY);
-			    }
-		    }
 	    }
     }
 
@@ -292,62 +209,61 @@ void JEventProcessor_TRD_hists::Process(const std::shared_ptr<const JEvent>& eve
     /////////////////////////////
 
     for (const auto& track : tracks) {
+    	const DChargedTrackHypothesis* locChargedTrackHypothesis = track->Get_BestTrackingFOM();
+    	// make cuts based on locChargedTrackHypothesis->PID() ?
+    	auto locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
+    	
+	    //int locCharge = locChargedTrackHypothesis->charge();
+    	//Particle_t locPID = locChargedTrackHypothesis->PID();
+		double locP = locTrackTimeBased->momentum().Mag();
+		//double locTheta = locTrackTimeBased->momentum().Theta()*180.0/TMath::Pi();
+    	
+    	auto locFCALShowerMatchParams = locChargedTrackHypothesis->Get_FCALShowerMatchParams();
+    	auto locTOFHitMatchParams = locChargedTrackHypothesis->Get_TOFHitMatchParams();
 
-	    int charge = track->charge();
-	    vector<DTrackFitter::Extrapolation_t>extrapolations=track->extrapolations.at(SYS_TRD);
+	    //int charge = locChargedTrackHypothesis->charge();
+	    vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased->extrapolations.at(SYS_TRD);
 	    //cout<<"found straight track with "<<extrapolations.size()<<" extrapolations"<<endl;
 
 	    for (const auto& extrapolation : extrapolations) {
 	
-		    // correlate wire TRD with extrapolated tracks
+		    // correlate  TRD with extrapolated tracks
 		    for (const auto& point : points) {
 
-			    if(point->detector == 0 && fabs(extrapolation.position.Z() - 548.8) < 5.) { 
+				hTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
+				hTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
+				
+				double locDeltaX = point->x - extrapolation.position.X();
+				double locDeltaY = point->y - extrapolation.position.Y();
+				hTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
+				hTRDPoint_DeltaX_T->Fill(locDeltaX, point->time);
 
-				    hWireTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
-				    hWireTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
-				    
-				    double locDeltaX = point->x - extrapolation.position.X();
-				    double locDeltaY = point->y - extrapolation.position.Y();
-				    hWireTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
-				    if(charge > 0) hWireTRDPoint_DeltaXY_Pos->Fill(locDeltaX, locDeltaY);
-				    else hWireTRDPoint_DeltaXY_Neg->Fill(locDeltaX, locDeltaY);
+				if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
+					hTRDPoint_Time->Fill(point->time);
+					goodTrack = true;
+				}
+				
+				// select electrons
+				if(locFCALShowerMatchParams != NULL) {
+					const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
+					double locEOverP = locFCALShower->getEnergy()/locP;
 
-				    if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
-					    hWireTRDPoint_Time->Fill(point->time);
-					    goodTrack = true;
-				    }
-			    }
-		    }
+					hTRDMatchedTrack_EP->Fill(locEOverP);		
+					
+					if(locEOverP > 0.9 && locEOverP < 1.1) {
+						hTRDPoint_TrackX_EPCut->Fill(point->x, extrapolation.position.X());
+						hTRDPoint_TrackY_EPCut->Fill(point->y, extrapolation.position.Y());
+						
+						hTRDPoint_DeltaXY_EPCut->Fill(locDeltaX, locDeltaY);
+						hTRDPoint_DeltaX_T_EPCut->Fill(locDeltaX, point->time);
 
-		    // correlate GEM TRD with extrapolated tracks
-		    for (const auto& hit : hits) {
-			    if(hit->plane == 6 && fabs(extrapolation.position.Z() - 570.7) < 5.) {
+						if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
+							hTRDPoint_Time_EPCut->Fill(point->time);
+						}
+					
+					}
+				}
 
-				    // only look at tracks with good wire hit
-				    if(!goodTrack) continue;
-				    
-				    double locStripX = 32.6 + hit->strip*0.04;
-				    hGEMTRDHit_TrackX->Fill(locStripX, extrapolation.position.X());
-				    
-				    double locDeltaX = locStripX - extrapolation.position.X();
-				    hGEMTRDHit_DeltaX_T->Fill(locDeltaX, hit->t);
-			    }
-		    }
-
-		    // correlate GEM SRS with extrapolated tracks
-		    for (const auto& point : gem_points) {
-			    if(point->detector == 4 && fabs(extrapolation.position.Z() - 576.7) < 5.) { 
-
-				    hGEMSRSPoint_TrackX[point->detector]->Fill(point->x, extrapolation.position.X());
-				    hGEMSRSPoint_TrackY[point->detector]->Fill(point->y, extrapolation.position.Y());
-				    
-				    double locDeltaX = point->x - extrapolation.position.X();
-				    double locDeltaY = point->y - extrapolation.position.Y();
-				    hGEMSRSPoint_DeltaXY[point->detector]->Fill(locDeltaX, locDeltaY);
-				    if(charge > 0) hGEMSRSPoint_DeltaXY_Pos[point->detector]->Fill(locDeltaX, locDeltaY);
-				    else hGEMSRSPoint_DeltaXY_Neg[point->detector]->Fill(locDeltaX, locDeltaY);
-			    }
 		    }
 	    }
     }
@@ -356,23 +272,8 @@ void JEventProcessor_TRD_hists::Process(const std::shared_ptr<const JEvent>& eve
     // Plots for good tracks //
     ///////////////////////////
 
-    if(goodTrack) {
-	    for (const auto& hit : hits) {
-		    if(hit->plane != 0 && hit->plane != 4) continue; // only Wire TRD
-		    int wire = hit->strip;
-
-		    // GEM TRD hits
-		    for (const auto& gemtrd_hit : hits) {
-			    if(gemtrd_hit->plane != 2 && gemtrd_hit->plane != 6) continue; 
-			    double locDeltaT = gemtrd_hit->t - hit->t;
-			    
-			    hWire_GEMTRDX_DeltaT->Fill(locDeltaT, gemtrd_hit->pulse_height);
-			   
-			    //if(fabs(locDeltaT) < 20.)
-			    hWire_GEMTRDXstrip->Fill(wire, gemtrd_hit->strip);
-		    }
-	    }
-    }
+//     if(goodTrack) {
+//     }
 
 	DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }

@@ -14,6 +14,9 @@ void DDetectorMatches_factory::Init()
 {
   ENABLE_FCAL_SINGLE_HITS = false;
   GetApplication()->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);
+
+  ENABLE_ECAL_SINGLE_HITS = false;
+  GetApplication()->SetDefaultParameter("PID:ENABLE_ECAL_SINGLE_HITS",ENABLE_ECAL_SINGLE_HITS);
 }
 
 //------------------
@@ -50,6 +53,9 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	vector<const DFCALShower*> locFCALShowers;
 	event->Get(locFCALShowers);
 
+	vector<const DECALShower*> locECALShowers;
+	event->Get(locECALShowers);
+
 	vector<const DBCALShower*> locBCALShowers;
 	event->Get(locBCALShowers);
 
@@ -66,6 +72,9 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	vector<const DFMWPCCluster *> locFMWPCClusters;
 	event->Get(locFMWPCClusters);
 
+	vector<const DTRDSegment *> locTRDSegments;
+	event->Get(locTRDSegments);
+
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches();
 
 	//Match tracks to showers/hits
@@ -80,6 +89,8 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 		  MatchToCTOF(locParticleID, locTrackTimeBasedVector[loc_i], locCTOFPoints, locDetectorMatches);
 		  MatchToFMWPC(locTrackTimeBasedVector[loc_i], locFMWPCClusters, locDetectorMatches);
 		}
+		MatchToTRD(locParticleID, locTrackTimeBasedVector[loc_i], locTRDSegments, locDetectorMatches);
+		MatchToECAL(locParticleID, locTrackTimeBasedVector[loc_i], locECALShowers, locDetectorMatches);
 	}
 
 	//Find nearest tracks to showers
@@ -87,6 +98,8 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 		MatchToTrack(locParticleID, locBCALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
 	for(size_t loc_i = 0; loc_i < locFCALShowers.size(); ++loc_i)
 		MatchToTrack(locParticleID, locFCALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
+	for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i)
+		MatchToTrack(locParticleID, locECALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
 
 	// Try to find matches between tracks and single hits in FCAL
 	if (ENABLE_FCAL_SINGLE_HITS){
@@ -99,6 +112,22 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	    
 	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
 	      MatchToFCAL(locParticleID,locTrackTimeBasedVector[loc_j],
+			  locSingleHits,locDetectorMatches);
+	    }
+	  }
+	}
+
+	// Try to find matches between tracks and single hits in ECAL
+	if (ENABLE_ECAL_SINGLE_HITS){
+	  vector<const DECALHit*> locECALHits;
+	  event->Get(locECALHits);
+	  if (locECALHits.size()>0){
+	    vector<const DECALHit*>locSingleHits;
+	    locParticleID->GetSingleECALHits(locECALShowers,locECALHits,
+					     locSingleHits);
+	    
+	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
+	      MatchToECAL(locParticleID,locTrackTimeBasedVector[loc_j],
 			  locSingleHits,locDetectorMatches);
 	    }
 	  }
@@ -255,6 +284,20 @@ void DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID, con
 	}
 }
 
+void DDetectorMatches_factory::MatchToECAL(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DECALShower*>& locECALShowers, DDetectorMatches* locDetectorMatches) const
+{
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_ECAL);
+  if (extrapolations.size()==0) return;
+
+  double locInputStartTime = locTrackTimeBased->t0();
+  for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i)
+    {
+      shared_ptr<DECALShowerMatchParams>locShowerMatchParams;
+      if(locParticleID->Cut_MatchDistance(extrapolations, locECALShowers[loc_i], locInputStartTime, locShowerMatchParams))
+	    locDetectorMatches->Add_Match(locTrackTimeBased, locECALShowers[loc_i], locShowerMatchParams);
+	}
+}
+
 void DDetectorMatches_factory::MatchToSC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DSCHit*>& locSCHits, DDetectorMatches* locDetectorMatches) const
 {
   vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_START);
@@ -284,6 +327,18 @@ void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, con
 	// run DIRC LUT algorithm and add detector match
 	if(locParticleID->Cut_MatchDIRC(extrapolations, locDIRCHits, locInputStartTime, locTrackTimeBased->PID(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams))
 		locDetectorMatches->Add_Match(locTrackTimeBased, locDIRCMatchParams);
+}
+
+void DDetectorMatches_factory::MatchToTRD(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DTRDSegment*>& locTRDSegments, DDetectorMatches* locDetectorMatches) const
+{
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_TRD);
+  if (extrapolations.size()==0) return;
+
+  for(size_t loc_i = 0; loc_i < locTRDSegments.size(); ++loc_i){
+    shared_ptr<DTRDMatchParams> locTRDMatchParams;
+    if(locParticleID->Cut_MatchDistance(extrapolations, locTRDSegments[loc_i], locTRDMatchParams))
+      locDetectorMatches->Add_Match(locTrackTimeBased, locTRDMatchParams);
+  }
 }
 
 void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, const DBCALShower* locBCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const
@@ -333,6 +388,24 @@ void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, co
 	locDetectorMatches->Set_DistanceToNearestTrack(locFCALShower, locMinDistance);
 }
 
+void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, const DECALShower* locECALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const
+{
+  double locMinDistance = 999.0;
+  for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
+    {
+      map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations=locTrackTimeBasedVector[loc_i]->extrapolations;
+      if (extrapolations.size()==0) return;
+      
+      shared_ptr<DECALShowerMatchParams> locShowerMatchParams;
+      double locInputStartTime = locTrackTimeBasedVector[loc_i]->t0();
+      if(!locParticleID->Distance_ToTrack(extrapolations.at(SYS_ECAL), locECALShower, locInputStartTime, locShowerMatchParams))
+	continue;
+      if(locShowerMatchParams->dDOCAToShower < locMinDistance)
+	locMinDistance = locShowerMatchParams->dDOCAToShower;
+    }
+  locDetectorMatches->Set_DistanceToNearestTrack(locECALShower, locMinDistance);
+}
+
 // Try to find matches between a track and a single hit in FCAL
 void 
 DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID,
@@ -360,4 +433,33 @@ DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID,
     }
   }
 }
+
+// Try to find matches between a track and a single hit in ECAL
+void 
+DDetectorMatches_factory::MatchToECAL(const DParticleID* locParticleID,
+				      const DTrackTimeBased *locTrackTimeBased,
+				      vector<const DECALHit *>&locSingleHits,
+				      DDetectorMatches* locDetectorMatches) const {
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_ECAL);
+  if (extrapolations.size()==0) return;
+
+  for (unsigned int i=0;i<locSingleHits.size();i++){
+    double locDOCA=0.,locHitTime;
+    if (locParticleID->Distance_ToTrack(locTrackTimeBased->t0(),
+					extrapolations[0],locSingleHits[i],
+					locDOCA,locHitTime)){
+      shared_ptr<DECALSingleHitMatchParams> locMatchParams=std::make_shared<DECALSingleHitMatchParams>();
+      
+      locMatchParams->dEHit=locSingleHits[i]->E;
+      locMatchParams->dTHit=locHitTime;
+      locMatchParams->dFlightTime = extrapolations[0].t;
+      locMatchParams->dFlightTimeVariance = 0.; // Fill this in!
+      locMatchParams->dPathLength = extrapolations[0].s;
+      locMatchParams->dDOCAToHit = locDOCA;
+      
+      locDetectorMatches->Add_Match(locTrackTimeBased,locMatchParams);
+    }
+  }
+}
+
 

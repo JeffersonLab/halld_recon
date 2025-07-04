@@ -15,9 +15,11 @@ class DTRDDigiHit : public JObject {
 		uint32_t plane;
 		uint32_t strip;
 		uint32_t pulse_peak;           ///< identified pulse peak as returned by FPGA algorithm
-		uint32_t pulse_time;           ///< identified pulse time as returned by FPGA algorithm
+		uint32_t pulse_time;           ///< identified leading edge pulse time as returned by FPGA algorithm
+		uint32_t peak_time;            ///< identified peak time as returned by FPGA algorithm
 		uint32_t pedestal;             ///< pedestal info used by FPGA (if any)
 		uint32_t QF;                   ///< Quality Factor from FPGA algorithms
+		uint32_t NPK;
 		uint32_t nsamples_integral;    ///< number of samples used in integral 
 		uint32_t nsamples_pedestal;    ///< number of samples used in pedestal
 
@@ -27,8 +29,10 @@ class DTRDDigiHit : public JObject {
 			summary.add(strip, NAME_OF(strip), "%4d");
 			summary.add(pulse_peak, NAME_OF(pulse_peak), "%d");
 			summary.add(pulse_time, NAME_OF(pulse_time), "%d");
+			summary.add(peak_time, NAME_OF(peak_time), "%d");
 			summary.add(pedestal, NAME_OF(pedestal), "%d");
 			summary.add(QF, NAME_OF(QF), "%d");
+			summary.add(NPK, NAME_OF(NPK), "%d");
 			summary.add(nsamples_integral, NAME_OF(nsamples_integral), "%d");
 			summary.add(nsamples_pedestal, NAME_OF(nsamples_pedestal), "%d");
 		}

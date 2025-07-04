@@ -97,6 +97,9 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	    locEventLoop->Get(fcalhits);
 	}
 
+	std::vector<const DECALShower*> ecalshowers;
+	locEventLoop->Get(ecalshowers);
+	
 	std::vector<const DBCALShower*> bcalshowers;
 	locEventLoop->Get(bcalshowers);
 
@@ -134,11 +137,14 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	std::vector<const DTrigger*> locTriggers;
 	locEventLoop->Get(locTriggers);
 
+	std::vector<const DBeamHelicity*> locBeamHelicities;
+	locEventLoop->Get(locBeamHelicities);
+
 	//Check to see if there are any objects to write out.  If so, don't write out an empty event
 	bool locOutputDataPresentFlag = false;
 	if((!reactions.empty()) || (!locBeamPhotons.empty()) || (!tracks.empty()))
 		locOutputDataPresentFlag = true;
-	else if((!fcalshowers.empty()) || (!bcalshowers.empty()) || (!tofpoints.empty()) || (!starthits.empty()))
+	else if((!ecalshowers.empty()) || (!fcalshowers.empty()) || (!bcalshowers.empty()) || (!tofpoints.empty()) || (!starthits.empty()))
 		locOutputDataPresentFlag = true;
 	//don't need to check detector matches: no matches if none of the above objects
 	if(!locOutputDataPresentFlag)
@@ -250,7 +256,33 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 			locTaghChannelList().setCounter(locBeamPhotons_TAGGEDMCGEN[loc_i]->dCounter);
 		}
 	}
+	// push any DECALShower objects to the output record
+	for (size_t i=0; i < ecalshowers.size(); i++)
+	{
+	  hddm_r::EcalShowerList ecal = res().addEcalShowers(1);
+	  DVector3 pos = ecalshowers[i]->pos;
+	  ecal().setX(pos(0));
+	  ecal().setY(pos(1));
+	  ecal().setZ(pos(2));
+	  ecal().setT(ecalshowers[i]->t);
+	  ecal().setE(ecalshowers[i]->E);
+	  ecal().setXerr(ecalshowers[i]->xErr());
+	  ecal().setYerr(ecalshowers[i]->yErr());
+	  ecal().setZerr(ecalshowers[i]->zErr());
+	  ecal().setTerr(ecalshowers[i]->tErr());
+	  ecal().setEerr(ecalshowers[i]->EErr());
+	  ecal().setXycorr(ecalshowers[i]->XYcorr());
+	  ecal().setXzcorr(ecalshowers[i]->XZcorr());
+	  ecal().setYzcorr(ecalshowers[i]->YZcorr());
+	  ecal().setEzcorr(ecalshowers[i]->EZcorr());
+	  ecal().setTzcorr(ecalshowers[i]->ZTcorr());
+	  ecal().setNumBlocks(ecalshowers[i]->nBlocks);
+	  ecal().setIsNearBorder(ecalshowers[i]->isNearBorder);
 
+	  hddm_r::EcalShowerPropertiesList locEcalShowerPropertiesList = ecal().addEcalShowerPropertiesList(1);
+	  locEcalShowerPropertiesList().setE1E9(ecalshowers[i]->E1E9);
+	  locEcalShowerPropertiesList().setE9E25(ecalshowers[i]->E9E25);
+	}
 	// push any DFCALShower objects to the output record
 	for (size_t i=0; i < fcalshowers.size(); i++)
 	{
@@ -295,7 +327,8 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
         locFcalShowerPropertiesList().setE9E25(fcalshowers[i]->getE9E25());
         hddm_r::FcalShowerNBlocksList locFcalShowerNBlocksList = fcal().addFcalShowerNBlockses(1);
 	locFcalShowerNBlocksList().setNumBlocks(fcalshowers[i]->getNumBlocks());
-
+	hddm_r::FcalShowerIsNearBorderList locFcalShowerIsNearBorderList = fcal().addFcalShowerIsNearBorders(1);
+	locFcalShowerIsNearBorderList().setIsNearBorder(fcalshowers[i]->getIsNearBorder());
     }
             
 
@@ -619,6 +652,32 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 		hddm_r::TriggerEnergySumsList triggerEnergySum = trigger().addTriggerEnergySumses(1);
 		triggerEnergySum().setBCALEnergySum(locTriggers[i]->Get_GTP_BCALEnergy());
 		triggerEnergySum().setFCALEnergySum(locTriggers[i]->Get_GTP_FCALEnergy());
+		hddm_r::TriggerFcal2EnergySumList triggerFcal2EnergySum = trigger().addTriggerFcal2EnergySums(1);
+		triggerFcal2EnergySum().setECALEnergySum(locTriggers[i]->Get_GTP_ECALEnergy());
+		triggerFcal2EnergySum().setFCAL2EnergySum(locTriggers[i]->Get_GTP_FCAL2Energy());
+	}
+	
+	// push any DBeamHelicity objects to the output record
+	if(locBeamHelicities.size() == 0) {
+		// write out data with helicity == zero if there's no object
+		// first bit says whether or not there is valid helicity data
+		hddm_r::ElectronBeamList electronBeam = res().addElectronBeams(1);
+		electronBeam().setHelicitydata(0); 
+	
+	}
+	for (size_t i=0; i < locBeamHelicities.size(); ++i)
+	{
+		hddm_r::ElectronBeamList electronBeam = res().addElectronBeams(1);
+		int flags = locBeamHelicities[i]->valid      // first bit indicates if this event has valid helicity data
+					| (locBeamHelicities[i]->helicity     << 1)
+					| (locBeamHelicities[i]->pattern_sync << 2)
+					| (locBeamHelicities[i]->t_settle     << 3)
+					| (locBeamHelicities[i]->pair_sync    << 4)
+					| (locBeamHelicities[i]->ihwp         << 5)
+					| (locBeamHelicities[i]->beam_on      << 6);
+// 					| (locBeamHelicities[i]->real_hel     << 7)
+// 					| (locBeamHelicities[i]->valid        << 8);
+		electronBeam().setHelicitydata(flags);
 
 	}
 
@@ -651,7 +710,46 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 				bcalList().setTflight(locBCALShowerMatchParamsVector[loc_k]->dFlightTime);
 				bcalList().setTflightvar(locBCALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
 			}
+			
+			vector<shared_ptr<const DECALShowerMatchParams>> locECALShowerMatchParamsVector;
+			locDetectorMatches[loc_i]->Get_ECALMatchParams(tracks[loc_j], locECALShowerMatchParamsVector);
+			for (size_t loc_k = 0; loc_k < locECALShowerMatchParamsVector.size(); ++loc_k)
+			{
+			  hddm_r::EcalMatchParamsList ecalList = matches().addEcalMatchParamses(1);
+			  ecalList().setTrack(loc_j);
+			  
+			  const DECALShower* locECALShower = locECALShowerMatchParamsVector[loc_k]->dECALShower;
+			  size_t locECALindex = 0;
+			  for(; locECALindex < ecalshowers.size(); ++locECALindex)
+			    {
+			      if(ecalshowers[locECALindex] == locECALShower)
+				break;
+			    }
+			  ecalList().setShower(locECALindex);
 
+			  ecalList().setDoca(locECALShowerMatchParamsVector[loc_k]->dDOCAToShower);
+			  ecalList().setDx(locECALShowerMatchParamsVector[loc_k]->dx);
+			  ecalList().setPathlength(locECALShowerMatchParamsVector[loc_k]->dPathLength);
+			  ecalList().setTflight(locECALShowerMatchParamsVector[loc_k]->dFlightTime);
+			  ecalList().setTflightvar(locECALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
+			}
+
+			vector<shared_ptr<const DECALSingleHitMatchParams>> locECALSingleHitMatchParamsVector;
+			locDetectorMatches[loc_i]->Get_ECALSingleHitMatchParams(tracks[loc_j], locECALSingleHitMatchParamsVector);
+			for (size_t loc_k = 0; loc_k < locECALSingleHitMatchParamsVector.size(); ++loc_k)
+			{
+			  hddm_r::EcalSingleHitMatchParamsList ecalSingleHitList = matches().addEcalSingleHitMatchParamses(1);
+			  ecalSingleHitList().setTrack(loc_j);
+			  
+			  ecalSingleHitList().setEhit(locECALSingleHitMatchParamsVector[loc_k]->dEHit);
+			  ecalSingleHitList().setThit(locECALSingleHitMatchParamsVector[loc_k]->dTHit);
+			  ecalSingleHitList().setDoca(locECALSingleHitMatchParamsVector[loc_k]->dDOCAToHit);
+			  ecalSingleHitList().setDx(locECALSingleHitMatchParamsVector[loc_k]->dx);
+			  ecalSingleHitList().setPathlength(locECALSingleHitMatchParamsVector[loc_k]->dPathLength);
+			  ecalSingleHitList().setTflight(locECALSingleHitMatchParamsVector[loc_k]->dFlightTime);
+			  ecalSingleHitList().setTflightvar(locECALSingleHitMatchParamsVector[loc_k]->dFlightTimeVariance);
+			}
+			
 			vector<shared_ptr<const DFCALShowerMatchParams>> locFCALShowerMatchParamsVector;
 			locDetectorMatches[loc_i]->Get_FCALMatchParams(tracks[loc_j], locFCALShowerMatchParamsVector);
 			for (size_t loc_k = 0; loc_k < locFCALShowerMatchParamsVector.size(); ++loc_k)

@@ -19,6 +19,8 @@ using namespace std;
 #include "FDC/DFDCPseudo.h"
 #include "DAQ/Df125PulsePedestal.h"
 #include <DAQ/Df125PulseTime.h>
+#include <DAQ/Df125Config.h>
+#include <DAQ/Df125FDCPulse.h>
 
 #include <TMath.h>
 #include <TDirectory.h>
@@ -214,17 +216,6 @@ void JEventProcessor_FDC_online::Process(const std::shared_ptr<const JEvent>& ev
     vector<const DFDCPseudo *>fdcpseudohits;
     event->Get(fdcpseudohits);
 
-    // FILL HISTOGRAMS
-    // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-
-    if( (anodedigis.size()>0) || (cathodedigis.size()>0) )
-        fdc_num_events->Fill(1);
-
-    for(unsigned int i = 0; i < fdcpseudohits.size(); i++){
-        fdc_occ_plane[fdcpseudohits[i]->wire->layer - 1]->Fill(fdcpseudohits[i]->xy.X(),fdcpseudohits[i]->xy.Y());
-    }
-
     for (unsigned int i=0;i<cathodedigis.size();i++){
         const DFDCCathodeDigiHit *digi=cathodedigis[i];
 
@@ -237,6 +228,7 @@ void JEventProcessor_FDC_online::Process(const std::shared_ptr<const JEvent>& ev
         const Df125PulsePedestal *pulseped;
         digi->GetSingle(pulseped);
 
+		// old data format
         if (pulseped!=NULL){
             float peak=pulseped->pulse_peak;
             float ped=pulseped->pedestal;
@@ -259,7 +251,55 @@ void JEventProcessor_FDC_online::Process(const std::shared_ptr<const JEvent>& ev
                 ADCnh[pack][cell][ud][strip]++;
             }
         }
-    }
+        // new data format
+        else {
+         	const Df125FDCPulse *FDCPulseObj = NULL;
+      		digi->GetSingle(FDCPulseObj);
+      		
+      		if(FDCPulseObj == NULL) continue;
+     
+        	// load configuration information
+			uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
+			uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
+			uint16_t NW   = 0;
+			uint16_t IE   = 0;
+			
+			// Cut on quality factor?
+			vector<const Df125Config*> configs;
+			digi->Get(configs);
+			
+			// Set some constants to defaults until they appear correctly in the config words in the future
+			// The defaults are taken from Run 4607
+			if(!configs.empty()){
+				const Df125Config *config = configs[0];
+				//IBIT = config->IBIT == 0xffff ? 4 : config->IBIT;
+				ABIT = config->ABIT == 0xffff ? 3 : config->ABIT;
+				PBIT = config->PBIT == 0xffff ? 0 : config->PBIT;
+				NW   = config->NW   == 0xffff ? 80 : config->NW;
+				IE   = config->IE   == 0xffff ? 16 : config->IE;
+				}else{
+				static int Nwarnings = 0;
+				if(Nwarnings<10){
+				   _DBG_ << "NO Df125Config object associated with Df125FDCPulse object!" << endl;
+				   Nwarnings++;
+				   if(Nwarnings==10) _DBG_ << " --- LAST WARNING!! ---" << endl;
+				}
+			}
+
+            float peak=FDCPulseObj->peak_amp << ABIT;
+            float ped=digi->pedestal;
+            if(peak>ped+thresh){
+                // cout<<" pack,cell,ud,strip,pn,peak="<<pack<<" "<<cell<<" "<<ud<<" "<<strip<<" "<<p_pulse_num<<" "<<peak-ped<<endl;
+                ADCmax[pack][cell][ud][strip][ADCnh[pack][cell][ud][strip]]=peak-ped;
+
+				float time=(double)digi->pulse_time/8.;
+				ADCtime[pack][cell][ud][strip][ADCnh[pack][cell][ud][strip]]=time;
+
+                ADCnh[pack][cell][ud][strip]++;
+            }
+        
+        }
+    } 
 
     for (unsigned int i=0;i<anodedigis.size();i++){
         const DFDCWireDigiHit *wdigi=anodedigis[i];
@@ -271,6 +311,17 @@ void JEventProcessor_FDC_online::Process(const std::shared_ptr<const JEvent>& ev
         //     cout<<" pack,cell,wire="<<pack<<" "<<cell<<" "<<wire<<endl;
         TDCnh[pack][cell][wire]++;
     } 
+
+    // FILL HISTOGRAMS
+    // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+
+    if( (anodedigis.size()>0) || (cathodedigis.size()>0) )
+        fdc_num_events->Fill(1);
+
+    for(unsigned int i = 0; i < fdcpseudohits.size(); i++){
+        fdc_occ_plane[fdcpseudohits[i]->wire->layer - 1]->Fill(fdcpseudohits[i]->xy.X(),fdcpseudohits[i]->xy.Y());
+    }
 
     float val,val1,val2;
     for (int pack=0;pack<4;pack++){

@@ -55,8 +55,8 @@ A) You can try reducing the #z-bins by increasing their widths. However, much su
 *
 *
 * The BCAL photons are evaluated in different vertex-z bins for calculating their kinematics (momentum & timing).
-* This is because their kinematics have a strong dependence on vertex-z, while the FCAL showers do not (see above derivations).
-* Whereas the FCAL photons have only a small dependence, so their kinematics are regardless of vertex-z.
+* This is because their kinematics have a strong dependence on vertex-z, while the ECAL/FCAL showers do not (see above derivations).
+* Whereas the ECAL/FCAL photons have only a small dependence, so their kinematics are regardless of vertex-z.
 * For more discussion the above, see the derivations in the DSourceComboTimeHandler and DSourceComboP4Handler classes.
 *
 *
@@ -67,9 +67,9 @@ A) You can try reducing the #z-bins by increasing their widths. However, much su
 * This is because photons only survive their timing cuts for certain beam bunches.
 * Comboing only within a given beam bunch reduces the #photons we need to combo, and is thus faster.
 *
-* When comboing, first all of the FCAL showers alone are used to build the requested combos.
+* When comboing, first all of the ECAL/FCAL showers alone are used to build the requested combos.
 * Then, the BCAL showers surviving the timing cuts within the input vertex-z bin are used to build the requested combos.
-* Finally, combos are created using a mix of these BCAL & FCAL showers.
+* Finally, combos are created using a mix of these BCAL & ECAL/FCAL showers.
 * The results from this comboing is saved for all cases, that way they can be easily retrieved and combined as needed for similar requests.
 *
 *
@@ -186,6 +186,10 @@ void DSourceComboer::Define_DefaultCuts(void)
 	dEOverPCuts_TF1FunctionStrings[Electron][SYS_FCAL] = "[0]";
 	dEOverPCuts_TF1Params[Electron][SYS_FCAL] = {0.7};
 
+	//e- ECAL
+	dEOverPCuts_TF1FunctionStrings[Electron][SYS_ECAL] = "[0]";
+	dEOverPCuts_TF1Params[Electron][SYS_ECAL] = {0.7};
+
 	//e- BCAL
 	dEOverPCuts_TF1FunctionStrings[Electron][SYS_BCAL] = "[0]";
 	dEOverPCuts_TF1Params[Electron][SYS_BCAL] = {0.7};
@@ -197,6 +201,10 @@ void DSourceComboer::Define_DefaultCuts(void)
 	//mu- FCAL
 	dEOverPCuts_TF1FunctionStrings[MuonMinus][SYS_FCAL] = "[0]";
 	dEOverPCuts_TF1Params[MuonMinus][SYS_FCAL] = {0.2};
+
+	//mu- ECAL
+	dEOverPCuts_TF1FunctionStrings[MuonMinus][SYS_ECAL] = "[0]";
+	dEOverPCuts_TF1Params[MuonMinus][SYS_ECAL] = {0.2};
 
 	//mu- BCAL
 	dEOverPCuts_TF1FunctionStrings[MuonMinus][SYS_BCAL] = "[0]";
@@ -210,6 +218,10 @@ void DSourceComboer::Define_DefaultCuts(void)
 	//n FCAL
 	dBetaCuts_TF1FunctionStrings[Neutron][SYS_FCAL] = "[0]";
 	dBetaCuts_TF1Params[Neutron][SYS_FCAL] = {0.9};
+
+	//n ECAL
+	dBetaCuts_TF1FunctionStrings[Neutron][SYS_ECAL] = "[0]";
+	dBetaCuts_TF1Params[Neutron][SYS_ECAL] = {0.9};
 
 	//n BCAL
 	dBetaCuts_TF1FunctionStrings[Neutron][SYS_BCAL] = "[0]";
@@ -692,7 +704,7 @@ DSourceComboer::DSourceComboer(const std::shared_ptr<const JEvent>& locEvent)
 	{
 		vector<DetectorSystem_t> locdEdxSystems {SYS_CDC, SYS_FDC, SYS_START, SYS_TOF};
 		vector<Particle_t> locPIDs {Electron, Positron, MuonPlus, MuonMinus, PiPlus, PiMinus, KPlus, KMinus, Proton, AntiProton};
-		vector<DetectorSystem_t> locEOverPSystems {SYS_BCAL, SYS_FCAL};
+		vector<DetectorSystem_t> locEOverPSystems {SYS_BCAL, SYS_FCAL, SYS_ECAL};
 
 		//get and change to the base (file/global) directory
 		gDirectory->cd("/");
@@ -1467,6 +1479,16 @@ bool DSourceComboer::Cut_dEdxAndEOverP(const DChargedTrackHypothesis* locCharged
 			locPassedCutFlag = false;
 	}
 
+	//ECAL E/p
+	auto locECALShowerMatchParams = locChargedTrackHypothesis->Get_ECALShowerMatchParams();
+	if(locECALShowerMatchParams != nullptr)
+	{
+		const DECALShower* locECALShower = locECALShowerMatchParams->dECALShower;
+		double locEOverP = locECALShower->E/locP;
+		if(!Cut_EOverP(locPID, SYS_ECAL, locP, locEOverP))
+			locPassedCutFlag = false;
+	}
+
 	return locPassedCutFlag;
 }
 
@@ -1583,7 +1605,7 @@ DCombosByReaction DSourceComboer::Build_ParticleCombos(const DReactionVertexInfo
 	*
 	* MIXED STAGE: VERTEX-Z
 	* Now, as discussed earlier, showers can be broken up into z-dependent and z-independent varieties.
-	* Z-Independent: FCAL photons
+	* Z-Independent: ECAL/FCAL photons
 	* Z-Dependent: BCAL showers or FCAL massive neutrals
 	* However, since
 	* Again, for details, see the comments in DSourceComboTimeHandler and DSourceComboP4Handler.
@@ -1713,8 +1735,8 @@ void DSourceComboer::Combo_WithNeutralsAndBeam(const vector<const DReaction*>& l
 	if(dDebugLevel > 0)
 	{
 		auto locNumDetectedShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].size();
-		auto locNumFCALShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_ZIndependent()][{}].size(); // Includes ComCal showers
-		cout << endl << "Comboing neutrals, z-independent, #FCAL/BCAL showers: " << locNumFCALShowers << "/" << locNumDetectedShowers - locNumFCALShowers << endl;
+		auto locNumFCALShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_ZIndependent()][{}].size(); // Includes ECAL/ComCal showers
+		cout << endl << "Comboing neutrals, z-independent, #(FCAL+ECAL)/BCAL showers: " << locNumFCALShowers << "/" << locNumDetectedShowers - locNumFCALShowers << endl;
 	}
 
 	if(dDebugLevel >= 5)
@@ -1739,7 +1761,7 @@ void DSourceComboer::Combo_WithNeutralsAndBeam(const vector<const DReaction*>& l
 		}
 	}
 
-	//Create full source-particle combos (including neutrals): First using only FCAL showers, then using all showers
+	//Create full source-particle combos (including neutrals): First using only ECAL/FCAL showers, then using all showers
 	Create_SourceCombos(locPrimaryComboUse, d_MixedStage_ZIndependent, locReactionChargedCombo, 0);
 	auto locZDependentComboUse = Create_ZDependentSourceComboUses(locReactionVertexInfo, locReactionChargedCombo);
 	if(dDebugLevel > 0)
@@ -2066,7 +2088,7 @@ void DSourceComboer::Create_SourceCombos(const DSourceComboUse& locComboUseToCre
 		return;
 	}
 
-	//if on the all-showers stage, first copy over ALL fcal-only results
+	//if on the all-showers stage, first copy over ALL ECAL/FCAL-only results
 	locSourceCombosByUseSoFar.emplace(locComboUseToCreate, Get_SourceComboVectorResource());
 	if(locComboingStage == d_MixedStage)
 		Copy_ZIndependentMixedResults(locComboUseToCreate, locChargedCombo_Presiding);
@@ -2077,7 +2099,7 @@ void DSourceComboer::Create_SourceCombos(const DSourceComboUse& locComboUseToCre
 	if((locComboingStage == d_MixedStage) && (locVertexZBin == DSourceComboInfo::Get_VertexZIndex_Unknown()))
 	{
 		//we need a zbin for BCAL showers, but it is unknown: can't cut yet!
-		//However, the FCAL ones were already cut during the z-independent stage, and have already been saved
+		//However, the ECAL/FCAL ones were already cut during the z-independent stage, and have already been saved
 		//so, just copy over the bcal results from the unknown use
 		for(auto& locCombo : *locSourceCombos)
 		{
@@ -2107,9 +2129,9 @@ void DSourceComboer::Create_SourceCombos(const DSourceComboUse& locComboUseToCre
 	auto locTargetPIDToSubtract = std::get<4>(locComboUseToCreate);
 	for(const auto& locSourceCombo : *locSourceCombos)
 	{
-		//If on all-showers stage, and combo is fcal-only, don't save (combo already created!!)
+		//If on all-showers stage, and combo is ECAL/FCAL-only, don't save (combo already created!!)
 		if((locComboingStage == d_MixedStage) && locSourceCombo->Get_IsComboingZIndependent())
-			continue; //this combo has already passed the cut & been saved: during the FCAL-only stage
+			continue; //this combo has already passed the cut & been saved: during the ECAL/FCAL-only stage
 		if(!dSourceComboP4Handler->Cut_InvariantMass_NoMassiveNeutrals(locSourceCombo, locDecayPID, locTargetPIDToSubtract, dTargetCenter, locVertexZBin, false))
 			continue; //vertex not used if accurate-flag is false: can be anything (target center)
 
@@ -2330,7 +2352,7 @@ void DSourceComboer::Combo_Vertically_NDecays(const DSourceComboUse& locComboUse
 	//so, let's get the combos for (e.g.) 1 pi0 and for N - 1 pi0s
 	const auto& locCombos_NMinus1 = *locSourceCombosByUseSoFar[locNMinus1ComboUse]; //Combos are a vector of (e.g.): -> N - 1 pi0s
 
-	//if on the all-showers stage, first copy over ALL fcal-only results
+	//if on the all-showers stage, first copy over ALL ECAL/FCAL-only results
 	locSourceCombosByUseSoFar.emplace(locComboUseToCreate, Get_SourceComboVectorResource());
 	if(locComboingStage == d_MixedStage)
 		Copy_ZIndependentMixedResults(locComboUseToCreate, locChargedCombo_Presiding);
@@ -2419,10 +2441,10 @@ void DSourceComboer::Combo_Vertically_NDecays(const DSourceComboUse& locComboUse
 		{
 			const auto locDecayCombo_1 = locDecayCombos_1[locComboSearchIndex];
 
-			//If on all-showers stage, and combo is fcal-only, don't save (combo already created!!)
+			//If on all-showers stage, and combo is ECAL/FCAL-only, don't save (combo already created!!)
 			auto locIsZIndependent = locIsZIndependent_NMinus1 && locDecayCombo_1->Get_IsComboingZIndependent();
 			if((locComboingStage == d_MixedStage) && locIsZIndependent)
-				continue; //this combo has already been created (assuming it was valid): during the FCAL-only stage
+				continue; //this combo has already been created (assuming it was valid): during the ECAL/FCAL-only stage
 
 			//conduct "TEST 2" search: search the N - 1 shower vector to see if any of the showers in this combo are duplicated
 			auto locUsedParticles_1 = DAnalysis::Get_SourceParticles(locDecayCombo_1->Get_SourceParticles(true)); //true: entire chain
@@ -2601,7 +2623,7 @@ void DSourceComboer::Combo_Vertically_NParticles(const DSourceComboUse& locCombo
 		}
 	}
 
-	//if on the all-showers stage, first copy over ALL fcal-only results
+	//if on the all-showers stage, first copy over ALL ECAL/FCAL-only results
 	locSourceCombosByUseSoFar.emplace(locComboUseToCreate, Get_SourceComboVectorResource());
 	if(locComboingStage == d_MixedStage)
 		Copy_ZIndependentMixedResults(locComboUseToCreate, nullptr);
@@ -2621,7 +2643,7 @@ void DSourceComboer::Combo_Vertically_NParticles(const DSourceComboUse& locCombo
 			{
 				auto locIsZIndependent = (locComboingStage == d_MixedStage_ZIndependent) || (Get_IsComboingZIndependent(*locFirstIterator, locPID) && Get_IsComboingZIndependent(*locSecondIterator, locPID));
 				if((locComboingStage == d_MixedStage) && locIsZIndependent)
-					continue; //this combo has already been created (assuming it was valid): during the FCAL-only stage
+					continue; //this combo has already been created (assuming it was valid): during the ECAL/FCAL-only stage
 
 				//See which RF bunches match up, if any //if charged or massive neutrals, ignore (they don't choose at this stage)
 				auto locValidRFBunches = (locPID != Gamma) ? vector<int>{} : dSourceComboTimeHandler->Get_CommonRFBunches(locRFBunches_First, *locSecondIterator, locVertexZBin);
@@ -2703,7 +2725,7 @@ void DSourceComboer::Combo_Vertically_NParticles(const DSourceComboUse& locCombo
 			auto& locParticle = locParticles[locParticleSearchIndex];
 			auto locIsZIndependent = (locComboingStage == d_MixedStage_ZIndependent) || (locIsZIndependent_NMinus1 && Get_IsComboingZIndependent(locParticle, locPID));
 			if((locComboingStage == d_MixedStage) && locIsZIndependent)
-				continue; //this combo has already been created (assuming it was valid): during the FCAL-only stage
+				continue; //this combo has already been created (assuming it was valid): during the ECAL/FCAL-only stage
 
 			//See which RF bunches match up //guaranteed to be at least one, due to selection in Get_ParticlesForComboing() function
 			//if charged or massive neutrals, ignore (they don't choose at this stage)
@@ -3229,7 +3251,7 @@ void DSourceComboer::Create_Combo_OneParticle(const DSourceComboUse& locComboUse
 		}
 	}
 
-	//if on the mixed stage, must be doing all neutrals: first copy over ALL fcal-only results
+	//if on the mixed stage, must be doing all neutrals: first copy over ALL ECAL/FCAL-only results
 	locSourceCombosByUseSoFar.emplace(locComboUseToCreate, Get_SourceComboVectorResource());
 	if(locComboingStage == d_MixedStage)
 		Copy_ZIndependentMixedResults(locComboUseToCreate, nullptr);
@@ -3240,7 +3262,7 @@ void DSourceComboer::Create_Combo_OneParticle(const DSourceComboUse& locComboUse
 	{
 		auto locIsZIndependent = Get_IsComboingZIndependent(locParticle, locPID);
 		if((locComboingStage == d_MixedStage) && locIsZIndependent)
-			continue; //this combo has already been created (assuming it was valid): during the FCAL-only stage
+			continue; //this combo has already been created (assuming it was valid): during the ECAL/FCAL-only stage
 
 		//check if this combo is unique!
 		//it will not be unique if: comboing photons, on mixed stage, and this combo has already been created for a different zbin
@@ -3324,7 +3346,7 @@ void DSourceComboer::Create_Combo_OneDecay(const DSourceComboUse& locComboUseToC
 	auto& locDecayUse = locFurtherDecays[0].first;
 	auto locChargedCombo_PreviousPresiding = Get_NextChargedCombo(locChargedCombo_Presiding, locDecayUse, locComboingStage, true, 1);
 
-	//if on the all-showers stage, first copy over ALL fcal-only results
+	//if on the all-showers stage, first copy over ALL ECAL/FCAL-only results
 	auto& locSourceCombosByUseSoFar = Get_CombosSoFar(locComboingStage, dComboInfoChargeContent[locComboInfoToCreate], locChargedCombo_PreviousPresiding);
 	auto& locSourceCombosByUseToSaveTo = Get_CombosSoFar(locComboingStage, dComboInfoChargeContent[locComboInfoToCreate], locChargedCombo_Presiding);
 	locSourceCombosByUseToSaveTo.emplace(locComboUseToCreate, Get_SourceComboVectorResource());
@@ -3338,7 +3360,7 @@ void DSourceComboer::Create_Combo_OneDecay(const DSourceComboUse& locComboUseToC
 	{
 		auto locIsZIndependent = locDecayCombo->Get_IsComboingZIndependent();
 		if((locComboingStage == d_MixedStage) && locIsZIndependent)
-			continue; //this combo has already been created (assuming it was valid): during the FCAL-only stage
+			continue; //this combo has already been created (assuming it was valid): during the ECAL/FCAL-only stage
 
 		auto& locValidRFBunches = dValidRFBunches_ByCombo[std::make_pair(locDecayCombo, std::get<1>(locDecayUse))];
 
@@ -3413,7 +3435,7 @@ void DSourceComboer::Combo_Horizontally_AddCombo(const DSourceComboUse& locCombo
 		return;
 	}
 
-	//if on the all-showers stage, first copy over ALL fcal-only results
+	//if on the all-showers stage, first copy over ALL ECAL/FCAL-only results
 	locSourceCombosByUseToSaveTo.emplace(locComboUseToCreate, Get_SourceComboVectorResource());
 	if(locComboingStage == d_MixedStage)
 		Copy_ZIndependentMixedResults(locComboUseToCreate, locChargedCombo_Presiding);
@@ -3440,7 +3462,7 @@ void DSourceComboer::Combo_Horizontally_AddCombo(const DSourceComboUse& locCombo
 		{
 			auto locIsZIndependent = locCombo_AllBut1->Get_IsComboingZIndependent();
 			if((locComboingStage == d_MixedStage) && locIsZIndependent)
-				continue; //this combo has already been created (assuming it was valid): during the FCAL-only stage
+				continue; //this combo has already been created (assuming it was valid): during the ECAL/FCAL-only stage
 
 			//get the valid RF bunches (those for the all-but-1, because we are comboing with charged which is "all")
 			const auto& locValidRFBunches = dValidRFBunches_ByCombo[std::make_pair(locCombo_AllBut1, std::get<1>(locAllBut1ComboUse))];
@@ -3527,7 +3549,7 @@ void DSourceComboer::Combo_Horizontally_AddCombo(const DSourceComboUse& locCombo
 		{
 			auto locIsZIndependent = (locIsZIndependent_AllBut1 && locDecayCombo_ToAdd->Get_IsComboingZIndependent());
 			if((locComboingStage == d_MixedStage) && locIsZIndependent)
-				continue; //this combo has already been created (assuming it was valid): during the FCAL-only stage
+				continue; //this combo has already been created (assuming it was valid): during the ECAL/FCAL-only stage
 
 			//search the all-but-1 shower vector to see if any of the showers in this combo are duplicated
 			auto locUsedParticles_ToAdd = DAnalysis::Get_SourceParticles(locDecayCombo_ToAdd->Get_SourceParticles(true)); //true: entire chain
@@ -3671,7 +3693,7 @@ void DSourceComboer::Combo_Horizontally_AddParticle(const DSourceComboUse& locCo
 		return;
 	}
 
-	//if on the all-showers stage, first copy over ALL fcal-only results
+	//if on the all-showers stage, first copy over ALL ECAL/FCAL-only results
 	locSourceCombosByUseToSaveTo.emplace(locComboUseToCreate, Get_SourceComboVectorResource());
 	if(locComboingStage == d_MixedStage)
 		Copy_ZIndependentMixedResults(locComboUseToCreate, nullptr);
@@ -3690,7 +3712,7 @@ void DSourceComboer::Combo_Horizontally_AddParticle(const DSourceComboUse& locCo
 		auto locUsedParticles_AllBut1 = DAnalysis::Get_SourceParticles(locUsedParticlePairs_AllBut1, ParticleCharge(locPID)); //true: entire chain
 		std::sort(locUsedParticles_AllBut1.begin(), locUsedParticles_AllBut1.end()); //necessary: may be out of order due to comboing of different decays
 
-		//also, pre-get the further decays & FCAL-only flag, as we'll need them to build new combos
+		//also, pre-get the further decays & ECAL/FCAL-only flag, as we'll need them to build new combos
 		auto locFurtherDecays = locCombo_AllBut1->Get_FurtherDecayCombos(); //the all-but-1 combo contents by use
 		auto locIsZIndependent_AllBut1 = locCombo_AllBut1->Get_IsComboingZIndependent();
 
@@ -3703,7 +3725,7 @@ void DSourceComboer::Combo_Horizontally_AddParticle(const DSourceComboUse& locCo
 		{
 			auto locIsZIndependent = (locComboingStage == d_MixedStage_ZIndependent) || (locIsZIndependent_AllBut1 && Get_IsComboingZIndependent(locParticle, locPID));
 			if((locComboingStage == d_MixedStage) && locIsZIndependent)
-				continue; //this combo has already been created (assuming it was valid): during the FCAL-only stage
+				continue; //this combo has already been created (assuming it was valid): during the ECAL/FCAL-only stage
 
 			//conduct search
 			if(std::binary_search(locUsedParticles_AllBut1.begin(), locUsedParticles_AllBut1.end(), locParticle))
@@ -3761,7 +3783,7 @@ const vector<const JObject*>& DSourceComboer::Get_ParticlesForComboing(Particle_
 		return dNeutralHadronShowers;
 	}
 	
-	if(locComboingStage == d_MixedStage_ZIndependent) //fcal
+	if(locComboingStage == d_MixedStage_ZIndependent) //ECAL/FCAL
 	{
 		locVertexZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();
 		auto locGroupBunchIterator = dShowersByBeamBunchByZBin[locVertexZBin].find(locBeamBunches);
@@ -3927,7 +3949,7 @@ const vector<const DSourceCombo*>& DSourceComboer::Get_CombosByBeamBunch(const D
 
 void DSourceComboer::Copy_ZIndependentMixedResults(const DSourceComboUse& locComboUseToCreate, const DSourceCombo* locChargedCombo_Presiding)
 {
-	//Copy the results from the FCAL-only stage through to the both stage (that way we don't have to repeat them)
+	//Copy the results from the ECAL/FCAL-only stage through to the both stage (that way we don't have to repeat them)
 
 	//THE INPUT locChargedCombo MUST BE:
 	//Whatever charged combo you are about to combo horizontally with to make this new, mixed combo
@@ -3936,7 +3958,7 @@ void DSourceComboer::Copy_ZIndependentMixedResults(const DSourceComboUse& locCom
 	auto locChargeContent = dComboInfoChargeContent[std::get<2>(locComboUseToCreate)];
 	auto& locSourceCombosByUseSoFar = Get_CombosSoFar(d_MixedStage_ZIndependent, locChargeContent, locChargedCombo_Presiding);
 
-	//Get FCAL results
+	//Get ECAL/FCAL results
 	auto locComboUseFCAL = Get_ZIndependentUse(locComboUseToCreate);
 	if(dDebugLevel >= 20)
 	{

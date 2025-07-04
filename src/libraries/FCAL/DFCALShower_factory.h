@@ -19,7 +19,6 @@
 #include <TH2F.h>
 
 class DFCALHit;
-class DECALHit;
 class DTrackWireBased;
 
 class DFCALShower_factory:public JFactoryT<DFCALShower>{
@@ -39,8 +38,7 @@ class DFCALShower_factory:public JFactoryT<DFCALShower>{
   void GetCorrectedEnergyAndPosition(const DFCALCluster* cluster, int ring_nb,
 				     double &Ecorrected,
 				     DVector3 &pos_corrected, double &errZ,
-				     const DVector3 *aVertex,
-				     bool in_insert=false);
+				     const DVector3 *aVertex);
   
   void GetLogWeightedPosition( const DFCALCluster* cluster, DVector3 &pos_log, 
   				     double Egamma, const DVector3 *aVertex  );
@@ -99,19 +97,9 @@ class DFCALShower_factory:public JFactoryT<DFCALShower>{
   double FCAL_SHOWER_OFFSET;
   double FCAL_C_EFFECTIVE;
 
-  // parameters for insert
-  double INSERT_PAR1,INSERT_PAR2,INSERT_PAR3,INSERT_PAR4;
-  double INSERT_RADIATION_LENGTH;
-  double INSERT_CRITICAL_ENERGY;
-  double INSERT_SHOWER_OFFSET;
-  double INSERT_C_EFFECTIVE;
-  double m_insertFront;
-  double INSERT_POS_RES1,INSERT_POS_RES2;
-  double INSERT_POS_PHI1,INSERT_POS_PHI2;
-  double INSERT_E_VAR1,INSERT_E_VAR2,INSERT_E_VAR3;
-
   const DFCALGeometry *fcalGeom=NULL;
-
+  bool haveInsert;
+  
   int VERBOSE;
   string COVARIANCEFILENAME;
   TH2F *CovarianceLookupTable[5][5];

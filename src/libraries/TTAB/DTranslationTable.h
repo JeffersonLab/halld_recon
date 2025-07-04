@@ -38,14 +38,13 @@ using namespace std;
 #include <DAQ/DF1TDCTriggerTime.h>
 #include <DAQ/DCAEN1290TDCHit.h>
 #include <DAQ/DDIRCTDCHit.h>
-#include <DAQ/DGEMSRSWindowRawData.h>
 #include <DAQ/DHELIDigiHit.h>
-
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
 #include <CDC/DCDCDigiHit.h>
 #include <FCAL/DFCALDigiHit.h>
 #include <ECAL/DECALDigiHit.h>
+#include <ECAL/DECALRefDigiHit.h>
 #include <CCAL/DCCALDigiHit.h>
 #include <CCAL/DCCALRefDigiHit.h>
 #include <FDC/DFDCCathodeDigiHit.h>
@@ -68,7 +67,6 @@ using namespace std;
 #include <TAC/DTACTDCDigiHit.h>
 #include <DIRC/DDIRCTDCDigiHit.h>
 #include <TRD/DTRDDigiHit.h>
-#include <TRD/DGEMDigiWindowRawData.h>
 #include <FMWPC/DFMWPCDigiHit.h>
 #include <FMWPC/DCTOFDigiHit.h>
 #include <FMWPC/DCTOFTDCDigiHit.h>
@@ -80,6 +78,7 @@ using namespace std;
 		X(DCDCDigiHit) \
 		X(DFCALDigiHit) \
 		X(DECALDigiHit) \
+		X(DECALRefDigiHit) \
 		X(DCCALDigiHit) \
 		X(DCCALRefDigiHit) \
 		X(DFDCCathodeDigiHit) \
@@ -102,7 +101,6 @@ using namespace std;
 		X(DTACTDCDigiHit) \
 		X(DDIRCTDCDigiHit) \
 		X(DTRDDigiHit) \
-		X(DGEMDigiWindowRawData) \
 		X(DCTOFDigiHit) \
  		X(DCTOFTDCDigiHit) \
 		X(DFMWPCDigiHit) \
@@ -113,6 +111,7 @@ using namespace std;
 		X(DCDCDigiHit) \
 		X(DFCALDigiHit) \
 		X(DECALDigiHit) \
+		X(DECALRefDigiHit) \
 		X(DCCALDigiHit) \
 		X(DCCALRefDigiHit) \
 		X(DFDCCathodeDigiHit) \
@@ -177,7 +176,8 @@ class DTranslationTable:public JObject{
 			FMWPC,
 			CTOF,
 			HELI,
-      ECAL,
+			ECAL,
+			ECAL_REF,
 			NUM_DETECTOR_TYPES
 		};
 
@@ -187,6 +187,7 @@ class DTranslationTable:public JObject{
 				case CDC: return "CDC";
 				case FCAL: return "FCAL";
 				case ECAL: return "ECAL";
+				case ECAL_REF: return "ECAL_REF";  
 				case CCAL: return "CCAL";
 			        case CCAL_REF: return "CCAL_REF";
 				case FDC_CATHODES: return "FDC_CATHODES";
@@ -253,7 +254,16 @@ class DTranslationTable:public JObject{
 			    return (row==rhs.row) && (col==rhs.col);
 			}
 		};
-	
+
+		class ECALRefIndex_t{
+ 		        public:
+			int id;
+
+			inline bool operator==(const ECALRefIndex_t &rhs) const {
+			    return (id==rhs.id);
+			}
+		};	
+  
 		class CCALIndex_t{
  		        public:
 			int row;
@@ -455,6 +465,7 @@ class DTranslationTable:public JObject{
 					TACIndex_t tac;
 					CCALIndex_t ccal;
 					ECALIndex_t ecal;
+					ECALRefIndex_t ecal_ref;
 					CCALRefIndex_t ccal_ref;
 					DIRCIndex_t dirc;
 					TRDIndex_t trd;
@@ -537,8 +548,9 @@ class DTranslationTable:public JObject{
 		DBCALDigiHit*       MakeBCALDigiHit(       const BCALIndex_t &idx,       const Df250PulseData *pd) const;
 		DFCALDigiHit*       MakeFCALDigiHit(       const FCALIndex_t &idx,       const Df250PulseData *pd) const;
 		DECALDigiHit*       MakeECALDigiHit(       const ECALIndex_t &idx,       const Df250PulseData *pd) const;
+  		DECALRefDigiHit*    MakeECALRefDigiHit(    const ECALRefIndex_t &idx,    const Df250PulseData *pd) const;
 		DCCALDigiHit*       MakeCCALDigiHit(       const CCALIndex_t &idx,       const Df250PulseData *pd) const;
-		DCCALRefDigiHit*    MakeCCALRefDigiHit(    const CCALRefIndex_t &idx,    const Df250PulseData *pd) const;
+		DCCALRefDigiHit*    MakeCCALRefDigiHit(    const CCALRefIndex_t &idx,    const Df250PulseData *pd) const;  
 		DSCDigiHit*         MakeSCDigiHit(         const SCIndex_t &idx,         const Df250PulseData *pd) const;
 		DTOFDigiHit*        MakeTOFDigiHit(        const TOFIndex_t &idx,        const Df250PulseData *pd) const;
 		DTAGMDigiHit*       MakeTAGMDigiHit(       const TAGMIndex_t &idx,       const Df250PulseData *pd) const;
@@ -555,7 +567,8 @@ class DTranslationTable:public JObject{
 		// fADC250 -- commissioning -> Fall 2016
 		DBCALDigiHit*       MakeBCALDigiHit(const BCALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
 		DFCALDigiHit*       MakeFCALDigiHit(const FCALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
-		DECALDigiHit*       MakeECALDigiHit(const ECALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
+                DECALDigiHit*       MakeECALDigiHit(const ECALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
+                DECALRefDigiHit*    MakeECALRefDigiHit(const ECALRefIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
 		DCCALDigiHit*       MakeCCALDigiHit(const CCALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
 		DCCALRefDigiHit*    MakeCCALRefDigiHit(const CCALRefIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
 		DSCDigiHit*         MakeSCDigiHit(  const SCIndex_t &idx,   const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
@@ -577,7 +590,6 @@ class DTranslationTable:public JObject{
                 DFDCCathodeDigiHit* MakeFDCCathodeDigiHit(const FDC_CathodesIndex_t &idx, const Df125FDCPulse *p) const;
                 DTRDDigiHit* MakeTRDDigiHit(const TRDIndex_t &idx, const Df125CDCPulse *p) const;
 		DTRDDigiHit* MakeTRDDigiHit(const TRDIndex_t &idx, const Df125FDCPulse *p) const;
-		DGEMDigiWindowRawData *MakeGEMDigiWindowRawData(const TRDIndex_t &idx, const DGEMSRSWindowRawData *p) const;
 		DFMWPCDigiHit* MakeFMWPCDigiHit(const FMWPCIndex_t &idx, const Df125CDCPulse *p) const;
 
 		// F1TDC

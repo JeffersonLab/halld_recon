@@ -357,7 +357,8 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
    dTOFz+=tof_face[2]+tof_plane[2];
    dTOFz*=0.5;  // mid plane between tof planes
-   geom->GetTRDZ(dTRDz_vec); // TRD planes
+   // TRD plane
+   geom->GetGEMTRDz(dGEMTRDz);
       
    // Get start counter geometry;
    if (geom->GetStartCounterGeom(sc_pos, sc_norm)){
@@ -409,8 +410,6 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    app->SetDefaultParameter("TRKFIT:USE_TRD_HITS",USE_TRD_HITS);
    USE_TRD_DRIFT_TIMES=true;
    app->SetDefaultParameter("TRKFIT:USE_TRD_DRIFT_TIMES",USE_TRD_DRIFT_TIMES);
-   USE_GEM_HITS=false;
-   app->SetDefaultParameter("TRKFIT:USE_GEM_HITS",USE_GEM_HITS);
 
 
    // Flag to enable calculation of alignment derivatives
@@ -809,13 +808,6 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
        got_trd_gem_hits=true;
      }
    }
-   if (USE_GEM_HITS){
-     for(unsigned int i=0; i<gemhits.size(); i++)AddGEMHit(gemhits[i]);
-     if (gemhits.size()>0){
-       //_DBG_ << " Got GEM" << endl;
-       got_trd_gem_hits=true;
-     }
-   }
 
    unsigned int num_good_cdchits=my_cdchits.size();
    unsigned int num_good_fdchits=my_fdchits.size(); 
@@ -1075,33 +1067,6 @@ inline void DTrackFitterKalmanSIMD::GetPosition(DVector3 &pos){
   DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
   pos.SetXYZ(x_+beam_pos.X(),y_+beam_pos.Y(),z_);
 }
-
-// Add GEM points
-void DTrackFitterKalmanSIMD::AddGEMHit(const DGEMPoint *gemhit){
-  DKalmanSIMDFDCHit_t *hit= new DKalmanSIMDFDCHit_t;
-
-  hit->t=gemhit->time;
-  hit->uwire=gemhit->x;
-  hit->vstrip=gemhit->y;
-  // From Justin (12/12/19):
-  // DGEMPoint (GEM2 SRS, plane closest to the DIRC):
-  // sigma_X = sigma_Y = 100 um
-  hit->vvar=0.01*0.01;
-  hit->uvar=hit->vvar;
-  hit->z=gemhit->z;
-  hit->cosa=1.;
-  hit->sina=0.;
-  hit->phiX=0.;
-  hit->phiY=0.;
-  hit->phiZ=0.;
-  hit->nr=0.;
-  hit->nz=0.;
-  hit->status=gem_hit;
-  hit->hit=NULL;
-
-  my_fdchits.push_back(hit);
-}
-
 
 
 // Add TRD points
@@ -8698,15 +8663,25 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   const double y_max=130.;
   bool hit_tof=false; 
   bool hit_dirc=false;
+  bool hit_ecal=false;
+  bool hit_ecal_exit=false;
+  bool hit_fcal_exit=false;
   bool hit_fcal=false;
+  bool hit_gemtrd=false;
   bool got_fmwpc=(dFMWPCz_vec.size()>0)?true:false;
   bool got_ecal=(dECALz<1000.)?true:false;
+  bool got_gemtrd=(dGEMTRDz<1000.)?true:false;
   unsigned int fmwpc_index=0;
-  unsigned int trd_index=0;
   while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
 	 && fabs(S(state_y))<y_max){
     // Bail if the momentum has dropped below some minimum
     if (fabs(S(state_q_over_p))>Q_OVER_P_MAX){
+      if (hit_fcal==true){
+	AddExtrapolation(SYS_FCAL,z,S,t,s);
+      }
+      if (hit_ecal==true){
+	AddExtrapolation(SYS_ECAL,z,S,t,s);
+      }
       if (DEBUG_LEVEL>2)
 	{
 	  _DBG_ << "Bailing: P = " << 1./fabs(S(state_q_over_p))
@@ -8769,12 +8744,13 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     if (ds<0.5 && z<406. && r2>65.*65.) ds=0.5;
     dz=ds*dz_ds;
     newz=z+dz;
-    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
-      newz=dTRDz_vec[trd_index]+EPS;
-      ds=(newz-z)/dz_ds;   
-    }
+
     if (hit_tof==false && newz>dTOFz){
       newz=dTOFz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
+    if (got_gemtrd==true && hit_gemtrd==false && newz>dGEMTRDz){
+      newz=dGEMTRDz+EPS;
       ds=(newz-z)/dz_ds;
     }
     if (hit_dirc==false && newz>dDIRCz){
@@ -8785,9 +8761,19 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       newz=dFCALz+EPS;
       ds=(newz-z)/dz_ds;
     }
-    if (got_ecal==true && newz>dECALz){
-      newz=dECALz+EPS;
+    if (hit_fcal_exit==false && newz>dFCALzBack){
+      newz=dFCALzBack+EPS;
       ds=(newz-z)/dz_ds;
+    }
+    if (got_ecal==true){
+      if (hit_ecal==false && newz>dECALz){
+	newz=dECALz+EPS;
+	ds=(newz-z)/dz_ds;
+      }
+      if (hit_ecal_exit==false && newz>dECALzBack){
+	newz=dECALzBack+EPS;
+	ds=(newz-z)/dz_ds;
+      }
     }
     if (fmwpc_index<dFMWPCz_vec.size()&&newz>dFMWPCz_vec[fmwpc_index]){
       newz=dFMWPCz_vec[fmwpc_index]+EPS;
@@ -8809,10 +8795,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     Step(z,newz,dEdx,S); 
     z=newz;
 
-    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
+    if (got_gemtrd==true && hit_gemtrd==false && newz>dGEMTRDz){
+      hit_gemtrd=true;
       AddExtrapolation(SYS_TRD,z,S,t,s);
-      trd_index++;
-    }
+    }  
     if (hit_dirc==false && newz>dDIRCz){
       hit_dirc=true;
       AddExtrapolation(SYS_DIRC,z,S,t,s);
@@ -8826,28 +8812,35 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       if (r2>dFCALradiusSq) return NOERROR;
 
       hit_fcal=true;
-      // We've reached the front face of the FCAL. Now we need to determine if
-      // we need to follow the track further in z to match to the ECAL instead
-      // if the insert is present.
-      if (got_ecal==false
-	  || (got_ecal==true && (fabs(S(state_x)-dFCALx)>dECALsize
-				 || fabs(S(state_y)-dFCALy)>dECALsize))){
-	PropagateThroughFCAL(SYS_FCAL,dEdx,dz,z,S,t,s);
+      AddExtrapolation(SYS_FCAL,z,S,t,s);
+    }
+    if (got_ecal==true){
+      if (hit_ecal==false && newz>dECALz){
+	hit_ecal=true;
+	AddExtrapolation(SYS_ECAL,z,S,t,s);
       }
-      // exit if the muon detector or ECAL is not installed
-      if (got_ecal==false && got_fmwpc==false) return NOERROR;
+      if (hit_ecal_exit==false && newz>dECALzBack){
+	hit_ecal_exit=true;
+	AddExtrapolation(SYS_ECAL,z,S,t,s);
+      }
     }
-    if (got_ecal==true && newz>dECALz){
-      if (fabs(S(state_x)-dFCALx)>dECALsize
-	  || fabs(S(state_y)-dFCALy)>dECALsize) return NOERROR;
-      PropagateThroughFCAL(SYS_ECAL,dEdx,dz,z,S,t,s);
-
-      // .. and exit
-      return NOERROR;
+    // Propagate to the downstream end of the FCAL.  We can exit early if the
+    // track reaches the outer radius of the FCAL.
+    if (hit_fcal==true){
+      if (r2>dFCALradiusSq){
+	AddExtrapolation(SYS_FCAL,z,S,t,s);
+	return NOERROR;
+      }
+      if (hit_fcal_exit==false && newz>dFCALzBack){
+	AddExtrapolation(SYS_FCAL,z,S,t,s);
+	if (got_fmwpc==false) return NOERROR;
+	
+	hit_fcal_exit=true;
+      }
     }
-
+      
     // Deal with muon detector
-    if (hit_fcal==true && got_ecal==false
+    if (got_fmwpc
 	&& (fabs(S(state_x))>dFMWPCsize || (fabs(S(state_y))>dFMWPCsize))){  
       return NOERROR;
     }
@@ -9967,12 +9960,7 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   
   // (signed) distance of closest approach to wire
   upred=x*cosa-y*sina;
-  if (hit->status==gem_hit){
-    doca=upred-u;
-  }
-  else{
-    doca=(upred-u)*cosalpha;
-  }
+  doca=(upred-u)*cosalpha;
 
   // Correction for lorentz effect
   double nz=hit->nz;
@@ -9983,7 +9971,6 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   // To transform from (x,y) to (u,v), need to do a rotation:
   //   u = x*cosa-y*sina
   //   v = y*cosa+x*sina
-  if (hit->status!=gem_hit){
     H_T(state_x,1)=sina+cosa*cosalpha*lorentz_factor;	
     H_T(state_y,1)=cosa-sina*cosalpha*lorentz_factor;
     
@@ -10000,13 +9987,6 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
     double factor=doca*tu*cosalpha2;
     H_T(state_ty,0)=sina*factor;
     H_T(state_tx,0)=-cosa*factor; 
-  }
-  else{  
-    H_T(state_x,1)=sina;
-    H_T(state_y,1)=cosa;    
-    H_T(state_x,0)=cosa;
-    H_T(state_y,0)=-sina;
-  }
 }
 
 // Update S and C using all the good adjacent hits in a particular FDC plane
@@ -10231,62 +10211,3 @@ void DTrackFitterKalmanSIMD::AddExtrapolation(DetectorSystem_t detector,
   }
 }
 
-// Propagate the track in the forward direction through the FCAL
-void DTrackFitterKalmanSIMD::PropagateThroughFCAL(const DetectorSystem_t detector,const double dEdx,const double dz,double &z,DMatrix5x1 &S,double &t,double &s){
-  AddExtrapolation(SYS_FCAL,z,S,t,s);
-
-  // Propagate the track to the back of the FCAL/ECAL block
-  double length=(detector==SYS_FCAL)?45.:20.;
-  int num=int(length/dz);
-  int m=0;
-  for (;m<num;m++){
-    // propagate t and s to back of FCAL/ECAL block
-    double q_over_p_sq=S(state_q_over_p)*S(state_q_over_p);
-    double one_over_beta2=1.+mass2*q_over_p_sq;
-    if (one_over_beta2>BIG) break;
-    double ds=dz*sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
-    t+=ds*sqrt(one_over_beta2); // in units where c=1
-    s+=ds;
-
-    double newz=z+dz;
-    // Step through field
-    Step(z,newz,dEdx,S);
-    z=newz;
-
-    if (detector==SYS_FCAL){
-      double r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
-      if (r2>dFCALradiusSq){
-	// Break out of the loop if the track exits out of the FCAL before
-	// reaching the back end of the block
-	break;
-      }
-      // Break out of the loop if the track would go into the insert region
-      // if ECAL is present
-      if (fabs(S(state_x)-dFCALx)<dECALsize
-	  && fabs(S(state_y)-dFCALy)<dECALsize) break;
-    }
-    else {
-      // Check for outer dimensions of the insert
-      if (fabs(S(state_x)-dFCALx)>dECALsize
-	  || fabs(S(state_y)-dFCALy)>dECALsize) break;
-    }
-  }
-  if (m==num){
-    double newz=(detector==SYS_FCAL)?dFCALzBack:dECALzBack;
-
-    // Propagate t and s to back of FCAL/ECAL block
-    double q_over_p_sq=S(state_q_over_p)*S(state_q_over_p);
-    double one_over_beta2=1.+mass2*q_over_p_sq;
-    if (one_over_beta2<BIG){
-      double ds=(newz-z)*sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
-      t+=ds*sqrt(one_over_beta2); // in units where c=1
-      s+=ds;
-
-      // Step through field
-      Step(z,newz,dEdx,S);
-      z=newz;
-    }
-  }
-  // add another extrapolation point at downstream end of FCAL/ECAL
-  AddExtrapolation(SYS_FCAL,z,S,t,s);
-}

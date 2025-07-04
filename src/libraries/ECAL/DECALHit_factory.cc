@@ -78,6 +78,11 @@ void DECALHit_factory::Init(void)
     
     base_time  = 0;
     
+    INSTALLED = false;
+
+    APPLY_WALK_CORRECTION=true;
+    app->SetDefaultParameter("ECAL:APPLY_WALK_CORRECTION",
+			     APPLY_WALK_CORRECTION);
 
     return; //NOERROR;
 }
@@ -87,6 +92,15 @@ void DECALHit_factory::Init(void)
 //------------------
 void DECALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/ECAL/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		INSTALLED = false;
+	else
+		INSTALLED = true;
+		
+	if(!INSTALLED) return;
+
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
     int runnumber = event->GetRunNumber();
@@ -126,6 +140,21 @@ void DECALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     else
         jerr << "Unable to get BASE_TIME from /ECAL/base_time_offset !" << endl;
 
+    // load time walk parameters
+    map<string,double> time_walk_parms;
+
+    if (DEvent::GetCalib(event, "/ECAL/time_walk", time_walk_parms))
+        jout << "Error loading /ECAL/time_walk !" << endl;
+    if (time_walk_parms.find("par1") != time_walk_parms.end()){
+      time_walk_par1 = time_walk_parms["par1"];
+    }
+    else
+        jerr << "Unable to get par1 from /ECAL/time_walk !" << endl;
+    if (scale_factors.find("par2") != time_walk_parms.end()){
+      time_walk_par2 = time_walk_parms["par2"];
+    }
+    else
+        jerr << "Unable to get par2 from /ECAL/time_walk !" << endl;
 
     if (DEvent::GetCalib(event, "/ECAL/gains", ecal_gains_ch))
       jout << "DECALHit_factory: Error loading /ECAL/gains !" << endl;
@@ -216,6 +245,8 @@ void DECALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
 
+	if(!INSTALLED) return;
+
     vector<const DECALDigiHit*> digihits;
 
     event->Get(digihits);
@@ -267,7 +298,11 @@ void DECALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 	  
 	  hit->E = pulse_int_ped_subt;
 	  hit->t = pulse_time_correct;
-	  
+
+	  if (APPLY_WALK_CORRECTION){
+	    hit->t -= time_walk_par1*pow(pulse_amplitude,time_walk_par2);
+	  }
+
 	  if(pulse_amplitude > 0){
 	    hit->intOverPeak = (pulse_int - integratedPedestal)/pulse_amplitude;	    
 	  } else 
