@@ -860,7 +860,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     event->Get(chargedTrackVector);
 
     
-   
+   bool ECAL_EXISTS = true;
 
 	// extract the FCAL Geometry
 	vector<const DFCALGeometry*> fcalGeomVect;
@@ -874,12 +874,15 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 	// extract the ECAL Geometry
 	vector<const DECALGeometry*> ecalGeomVect;
 	event->Get( ecalGeomVect );
+	static bool print_messages = true;
 	if (ecalGeomVect.size() < 1){
-        cout << "ECAL Geometry not available?" << endl;
-        return; //OBJECT_NOT_AVAILABLE;
+		if(print_messages)
+        	jerr << "HLDetectorTiming: ECAL Geometry not available?" << endl;
+        print_messages = false;
+        
+        ECAL_EXISTS = false;
+        //return; //OBJECT_NOT_AVAILABLE;
 	}
-	const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
-
 
     // TTabUtilities object used for RF time conversion
     const DTTabUtilities* locTTabUtilities = NULL;
@@ -1159,41 +1162,43 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 		}
     }
 
-	// similar plots for the ECAL as for the FCAL
-    double ecalHitETot = 0;
-    double ecalHitEwtT = 0;
-    for (i = 0; i < ecalHitVector.size(); i++){
-        ecalHitETot += ecalHitVector[i]->E;
-        ecalHitEwtT += ecalHitVector[i]->E * ecalHitVector[i]->t;
-    }
-    ecalHitEwtT /= ecalHitETot;
-    
-    // FCAL energy
-	for (auto const& cut : passed_cuts) {
-		const string &key = cut.first;
-		bool passed = cut.second;
-		if(!passed) continue;
-
-		dECALTotalEnergy[key]->Fill(ecalHitETot);
-	}
-	    
-	// ECAL timing
-    for (i = 0; i < ecalHitVector.size(); i++){
-		double locTime = ( ecalHitVector[i]->t - ecalHitEwtT )*k_to_nsec; // CHECK
-
+	if(ECAL_EXISTS) {
+		// similar plots for the ECAL as for the FCAL
+		double ecalHitETot = 0;
+		double ecalHitEwtT = 0;
+		for (i = 0; i < ecalHitVector.size(); i++){
+			ecalHitETot += ecalHitVector[i]->E;
+			ecalHitEwtT += ecalHitVector[i]->E * ecalHitVector[i]->t;
+		}
+		ecalHitEwtT /= ecalHitETot;
+		
+		// FCAL energy
 		for (auto const& cut : passed_cuts) {
 			const string &key = cut.first;
 			bool passed = cut.second;
 			if(!passed) continue;
+	
+			dECALTotalEnergy[key]->Fill(ecalHitETot);
+		}
 			
-			dECALHitTimes[key]->Fill(ecalHitVector[i]->t);
-			dECALHitOccupancy[key]->Fill(ecalHitVector[i]->column, ecalHitVector[i]->row);
-			dECALHitLocalTimes[key]->Fill(ecalHitVector[i]->column, ecalHitVector[i]->row, locTime);
-			if(DO_OPTIONAL) {
-				dECALHitTimesPerChannel[key]->Fill(ecalGeom.channel(ecalHitVector[i]->row, ecalHitVector[i]->column), ecalHitVector[i]->t);
+		// ECAL timing
+		for (i = 0; i < ecalHitVector.size(); i++){
+			double locTime = ( ecalHitVector[i]->t - ecalHitEwtT )*k_to_nsec; // CHECK
+	
+			for (auto const& cut : passed_cuts) {
+				const string &key = cut.first;
+				bool passed = cut.second;
+				if(!passed) continue;
+				
+				dECALHitTimes[key]->Fill(ecalHitVector[i]->t);
+				dECALHitOccupancy[key]->Fill(ecalHitVector[i]->column, ecalHitVector[i]->row);
+				dECALHitLocalTimes[key]->Fill(ecalHitVector[i]->column, ecalHitVector[i]->row, locTime);
+				if(DO_OPTIONAL) {
+					dECALHitTimesPerChannel[key]->Fill(ecalGeomVect[0]->channel(ecalHitVector[i]->row, ecalHitVector[i]->column), ecalHitVector[i]->t);
+				}
 			}
 		}
-    }
+	}
 
     if(CCAL_CALIB) {
 		// Do the same thing for the CCAL as a start
