@@ -1360,8 +1360,10 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 	locEvent->GetSingle(locTrigger);
 
 	//GET ELECTRON BEAM HELICITY
-	auto locBeamHelicity = locEvent->GetSingle<DBeamHelicity>("CORRECTED");
-	
+	const DBeamHelicity* locBeamHelicity = NULL;
+	locEvent->GetSingle(locBeamHelicity);
+	//locEvent->GetSingle(locBeamHelicity, "CORRECTED");
+		
 	/************************************************* EXECUTE ANALYSIS ACTIONS ************************************************/
 	       
 	DEvent::GetLockService(locEvent)->RootWriteLock();
