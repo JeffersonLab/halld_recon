@@ -124,6 +124,7 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	    vector<const DECALHit*>locSingleHits;
 	    locParticleID->GetSingleECALHits(locECALShowers,locECALHits,
 					     locSingleHits);
+
 	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
 	      MatchToECAL(locParticleID,locTrackTimeBasedVector[loc_j],
 			  locSingleHits,locDetectorMatches);
@@ -433,10 +434,11 @@ DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID,
 }
 
 // Try to find matches between a track and a single hit in ECAL
-void DDetectorMatches_factory::MatchToECAL(const DParticleID* locParticleID,
-					   const DTrackTimeBased *locTrackTimeBased,
-					   vector<const DECALHit *>&locSingleHits,
-					   DDetectorMatches* locDetectorMatches) const {
+void 
+DDetectorMatches_factory::MatchToECAL(const DParticleID* locParticleID,
+				      const DTrackTimeBased *locTrackTimeBased,
+				      vector<const DECALHit *>&locSingleHits,
+				      DDetectorMatches* locDetectorMatches) const {
   vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_ECAL);
   if (extrapolations.size()==0) return;
 

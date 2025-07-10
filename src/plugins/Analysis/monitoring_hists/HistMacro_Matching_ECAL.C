@@ -83,8 +83,6 @@
 		locHist_ECAL_TrackDistanceVsTheta->GetXaxis()->SetRangeUser(0,10.);
 		locHist_ECAL_TrackDistanceVsTheta->GetYaxis()->SetRangeUser(0,10.);
 		locHist_ECAL_TrackDistanceVsTheta->Draw("COLZ");
-		//		TF1* locFunc = new TF1("ECAL_LCut_VsTheta", "2.75*(1.+0.002*x*x)", 0.0, 20.0);
-		//locFunc->Draw("SAME");
 	}
 
 	locCanvas->cd(3);

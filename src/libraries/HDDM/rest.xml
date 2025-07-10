@@ -146,6 +146,15 @@
                 track="int" shower="int"
                 dx="float" deltaphi="float" deltaz="float" pathlength="float" tflight="float" tflightvar="float"
                 tunit="ns" lunit="cm"/>
+      <ecalMatchParams maxOccurs="unbounded" minOccurs="0"
+                       track="int" shower="int"
+                       dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
+                       tunit="ns" lunit="cm"/>
+      <ecalSingleHitMatchParams maxOccurs="unbounded" minOccurs="0"
+                track="int" ehit="float" thit="float"
+                dx="float" doca="float" pathlength="float" tflight="float"
+		tflightvar="float"
+                tunit="ns" lunit="cm"/>
       <fcalMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" shower="int"
                 dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"

@@ -162,6 +162,9 @@ void DTrackTimeBased_factory::Init()
 	USE_ECAL_TIME=true;
 	app->SetDefaultParameter("TRKFIT:USE_ECAL_TIME",USE_ECAL_TIME);
 	
+	USE_ECAL_TIME=true;
+	app->SetDefaultParameter("TRKFIT:USE_ECAL_TIME",USE_ECAL_TIME);
+	
 	USE_BCAL_TIME=true;
 	app->SetDefaultParameter("TRKFIT:USE_BCAL_TIME",USE_BCAL_TIME);
        
@@ -341,6 +344,8 @@ void DTrackTimeBased_factory::Process(const std::shared_ptr<const JEvent>& event
     event->Get(fcal_hits);
     event->Get(fcal_showers);
   }
+
+  // Get ECAL showers
   vector<const DECALShower*>ecal_showers;
   vector<const DECALHit*>ecal_hits; // for fallback to single hits in ECAL
   if (USE_ECAL_TIME){
@@ -826,8 +831,29 @@ void DTrackTimeBased_factory
     start_time.t0_sigma=sqrt(locStartTimeVariance);
     //    start_time.t0_sigma=sqrt(locTimeVariance); //uncomment when ready
     start_time.system=SYS_FCAL;
+    start_times.push_back(start_time);
+  }
+
+  // Get start time estimate from ECAL
+  locStartTime = track_t0;  // Initial guess from tracking
+  if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_ECAL),ecal_showers,locStartTime)){
+    // Fill in the start time vector
+    start_time.t0=locStartTime;
+    start_time.t0_sigma=sqrt(locStartTimeVariance);
+    //    start_time.t0_sigma=sqrt(locTimeVariance); //uncomment when ready
+    start_time.system=SYS_ECAL;
     start_times.push_back(start_time); 
   }
+  // look for matches to single ECAL hits
+  else if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_ECAL),ecal_hits,locStartTime)){
+    // Fill in the start time vector
+    start_time.t0=locStartTime;
+    start_time.t0_sigma=sqrt(locStartTimeVariance);
+    //    start_time.t0_sigma=sqrt(locTimeVariance); //uncomment when ready
+    start_time.system=SYS_ECAL;
+    start_times.push_back(start_time);
+  }
+  
   // Get start time estimate from BCAL
   locStartTime=track_t0;
   if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_BCAL),bcal_showers,locStartTime)){
@@ -848,6 +874,7 @@ void DTrackTimeBased_factory
   // from the start counter.
   mStartTime=start_times[0].t0;
   mStartDetector=start_times[0].system;
+  //_DBG_ << SystemName(mStartDetector) << " " << mStartTime << endl;
 }
 
 // Create a list of start times and do the fit for a particular mass hypothesis

@@ -169,26 +169,32 @@ void JEventProcessor_highlevel_online::Init()
 	//timing cuts
 	dTimingCutMap[Gamma][SYS_BCAL] = 3.0;
 	dTimingCutMap[Gamma][SYS_FCAL] = 5.0;
+	dTimingCutMap[Gamma][SYS_ECAL] = 3.0;
 	dTimingCutMap[Proton][SYS_NULL] = -1.0;
 	dTimingCutMap[Proton][SYS_TOF] = 2.5;
 	dTimingCutMap[Proton][SYS_BCAL] = 2.5;
 	dTimingCutMap[Proton][SYS_FCAL] = 3.0;
+	dTimingCutMap[Proton][SYS_ECAL] = 3.0;
 	dTimingCutMap[PiPlus][SYS_NULL] = -1.0;
 	dTimingCutMap[PiPlus][SYS_TOF] = 2.0;
 	dTimingCutMap[PiPlus][SYS_BCAL] = 2.5;
 	dTimingCutMap[PiPlus][SYS_FCAL] = 3.0;
+	dTimingCutMap[PiPlus][SYS_ECAL] = 3.0;
 	dTimingCutMap[PiMinus][SYS_NULL] = -1.0;
 	dTimingCutMap[PiMinus][SYS_TOF] = 2.0;
 	dTimingCutMap[PiMinus][SYS_BCAL] = 2.5;
 	dTimingCutMap[PiMinus][SYS_FCAL] = 3.0;
+	dTimingCutMap[PiMinus][SYS_ECAL] = 3.0;
 	dTimingCutMap[Electron][SYS_NULL] = -1.0;
 	dTimingCutMap[Electron][SYS_TOF] = 2.0;
 	dTimingCutMap[Electron][SYS_BCAL] = 2.5;
 	dTimingCutMap[Electron][SYS_FCAL] = 3.0;
+	dTimingCutMap[Electron][SYS_ECAL] = 3.0;
 	dTimingCutMap[Positron][SYS_NULL] = -1.0;
 	dTimingCutMap[Positron][SYS_TOF] = 2.0;
 	dTimingCutMap[Positron][SYS_BCAL] = 2.5;
 	dTimingCutMap[Positron][SYS_FCAL] = 3.0;
+	dTimingCutMap[Positron][SYS_ECAL] = 3.0;
 
 	// All histograms go in the "highlevel" directory
 	TDirectory *main = gDirectory;
@@ -631,8 +637,8 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 	  
 	  if( ((int32_t)fcal_hit->pulse_peak-100) <= fcal_cell_thr) continue;
 	  
-	  uint32_t adc_time = (fcal_hit->pulse_time >> 6) & 0x1FF; // consider only course time
-	  //if((adc_time < 15) || (adc_time > 50)) continue; // changed from 20 and 70 based on run 30284  2/5/2017 DL
+	  // uint32_t adc_time = (fcal_hit->pulse_time >> 6) & 0x1FF; // consider only course time
+	  // if((adc_time < 15) || (adc_time > 50)) continue; // changed from 20 and 70 based on run 30284  2/5/2017 DL
 	  
 	  Int_t pulse_int = fcal_hit->pulse_integral - fcal_hit->nsamples_integral*100;
 	  if(pulse_int < 0) continue;

@@ -30,6 +30,8 @@
 #include <FCAL/DFCALCluster.h>
 #include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALGeometry_factory.h>
+#include <ECAL/DECALHit.h>
+#include <ECAL/DECALCluster.h>
 #include <ECAL/DECALGeometry.h>
 #include <FMWPC/DCTOFPoint.h>
 #include <TOF/DTOFPoint.h>
@@ -126,6 +128,9 @@ class DParticleID: public JObject
 		bool Distance_ToTrack(const DReferenceTrajectory* rt, const DSCHit* locSCHit, double locInputStartTime, shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, DVector3* locOutputProjPos = nullptr, DVector3* locOutputProjMom = nullptr) const;
 		bool ProjectTo_SC(const DReferenceTrajectory* rt, unsigned int locSCSector, double& locDeltaPhi, DVector3& locProjPos, DVector3& locProjMom, DVector3& locPaddleNorm, double& locPathLength, double& locFlightTime, double& locFlightTimeVariance, int& locSCPlane) const;
 
+  double Distance_ToTrack(const DECALHit *locECALHit,
+			  const DVector3 &locProjPos) const;
+  
 		double Distance_ToTrack(const DFCALShower *locFCALShower,
 					const DVector3 &locProjPos) const;
   double Distance_ToTrack(const DECALShower *locECALShower,
@@ -240,8 +245,8 @@ class DParticleID: public JObject
 		     const vector<const DECALShower*>& ECALShowers,
 		     double& StartTime) const;
   bool Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
-				   const vector<const DECALHit*>& ECALHits,
-				   double& StartTime) const;
+		     const vector<const DECALHit*>& ECALHits,
+		     double& StartTime) const;
 		  
 		/********************************************************** MISCELLANEOUS **********************************************************/
 

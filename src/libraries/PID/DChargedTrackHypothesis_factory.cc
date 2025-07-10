@@ -285,7 +285,7 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	if(dPIDAlgorithm->Get_BestECALMatchParams(locTrackTimeBased, locDetectorMatches, locECALShowerMatchParams))
 	  locChargedTrackHypothesis->Set_ECALShowerMatchParams(locECALShowerMatchParams);
 	if(dPIDAlgorithm->Get_BestECALSingleHitMatchParams(locTrackTimeBased, locDetectorMatches, locECALSingleHitMatchParams))
-		locChargedTrackHypothesis->Set_ECALSingleHitMatchParams(locECALSingleHitMatchParams);
+	  locChargedTrackHypothesis->Set_ECALSingleHitMatchParams(locECALSingleHitMatchParams);
 	
 	// Matching to CPP wire chambers
 	vector<shared_ptr<const DFMWPCMatchParams> > locFMWPCMatchParamsVec;
