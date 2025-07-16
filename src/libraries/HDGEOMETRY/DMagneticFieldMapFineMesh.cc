@@ -50,6 +50,16 @@ DMagneticFieldMapFineMesh::DMagneticFieldMapFineMesh(JCalibration *jcalib, strin
 }
 
 //---------------------------------
+// DMagneticFieldMapFineMesh    (Constructor)
+//---------------------------------
+DMagneticFieldMapFineMesh::DMagneticFieldMapFineMesh(const string& coarseMeshMsgpackFileName,	const string& fineMeshMsgpackFileName)
+: jcalib(nullptr), jresman(nullptr)
+{
+	ReadMsgpackFileCoarseMesh(coarseMeshMsgpackFileName);
+	ReadMsgpackFileFineMesh(fineMeshMsgpackFileName);
+}
+
+//---------------------------------
 // ~DMagneticFieldMapFineMesh    (Destructor)
 //---------------------------------
 DMagneticFieldMapFineMesh::~DMagneticFieldMapFineMesh()
@@ -1006,7 +1016,7 @@ void DMagneticFieldMapFineMesh::GenerateFineMesh(void){
   }
 }
 
-void DMagneticFieldMapFineMesh::WriteEvioFile(string evioFileName){
+void DMagneticFieldMapFineMesh::WriteEvioFile(const string& evioFileName) const {
   cout << "Writing fine-mesh B-field data to " << evioFileName << "..." <<endl;
 
   // Create vectors of the B-field components and gradients
@@ -1121,7 +1131,7 @@ void DMagneticFieldMapFineMesh::WriteEvioFile(string evioFileName){
 }
 
 // Read the B-field data from the evio file
-void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
+void DMagneticFieldMapFineMesh::ReadEvioFile(const string& evioFileName){
 	cout << "Reading fine-mesh B-field data from "<< evioFileName << endl;
 
 	// Open EVIO file
@@ -1211,4 +1221,115 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 	}
 	
 	delete[] buff;
+}
+
+void DMagneticFieldMapFineMesh::WriteMsgpackFileCoarseMesh(const string& msgpackFileName) const
+{
+	// serialize data to JSON
+	nlohmann::json json;
+	json["Btable"] = Btable;
+	json["Nx"    ] = Nx;
+	json["xmin"  ] = xmin;
+	json["xmax"  ] = xmax;
+	json["Ny"    ] = Ny;
+	json["ymin"  ] = ymin;
+	json["ymax"  ] = ymax;
+	json["Nz"    ] = Nz;
+	json["zmin"  ] = zmin;
+	json["zmax"  ] = zmax;
+
+	// convert JSON to MessagePack binary format to save space
+	// an additional factor > 2 could be saved by compressing the MessagePack data using bzip2 or similar
+	cout << "Writing coarse-mesh B-field data to " << msgpackFileName << " (MessagePack format)..." << endl;
+	std::ofstream outFile(msgpackFileName, std::ios::binary);
+	if (!outFile) {
+		cerr << "Could not open file " << msgpackFileName << " for writing." << endl;
+		return;
+	}
+	std::vector<uint8_t> msgpackData = nlohmann::json::to_msgpack(json);
+	outFile.write(reinterpret_cast<const char*>(msgpackData.data()), msgpackData.size());
+	outFile.close();
+}
+
+void DMagneticFieldMapFineMesh::ReadMsgpackFileCoarseMesh(const string& msgpackFileName)
+{
+	cout << "Reading coarse-mesh B-field data from " << msgpackFileName << endl;
+	std::ifstream inFile(msgpackFileName, std::ios::binary);
+	if (not inFile) {
+		cerr << "Could not open file " << msgpackFileName << " for reading." << endl;
+		return;
+	}
+	std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(inFile), {});
+	nlohmann::json json = nlohmann::json::from_msgpack(buffer);
+
+	// deserialize data from JSON
+	Btable = json["Btable"].get<vector<vector<vector<DMagneticFieldMapFineMesh::DBfieldPoint_t>>>>();
+	Nx     = json["Nx"    ].get<int>();
+	xmin   = json["xmin"  ].get<float>();
+	xmax   = json["xmax"  ].get<float>();
+	Ny     = json["Ny"    ].get<int>();
+	ymin   = json["ymin"  ].get<float>();
+	ymax   = json["ymax"  ].get<float>();
+	Nz     = json["Nz"    ].get<int>();
+	zmin   = json["zmin"  ].get<float>();
+	zmax   = json["zmax"  ].get<float>();
+
+	// calculate parameters
+	dx = (xmax - xmin) / (double)(Nx - 1);
+	dy = (ymax - ymin) / (double)((Ny < 2) ? 1 : Ny - 1);
+	dz = (zmax - zmin) / (double)(Nz - 1);
+	one_over_dx = 1.0 / dx;
+	one_over_dz = 1.0 / dz;
+}
+
+void DMagneticFieldMapFineMesh::WriteMsgpackFileFineMesh(const string& msgpackFileName) const
+{
+	// serialize data to JSON
+	nlohmann::json json;
+	json["mBfine"  ] = mBfine;
+	json["rminFine"] = rminFine;
+	json["rmaxFine"] = rmaxFine;
+	json["drFine"  ] = drFine;
+	json["zminFine"] = zminFine;
+	json["zmaxFine"] = zmaxFine;
+	json["dzFine"  ] = dzFine;
+
+	// convert JSON to MessagePack binary format to save space
+	// an additional factor > 2 could be saved by compressing the MessagePack data using bzip2 or similar
+	cout << "Writing fine-mesh B-field data to " << msgpackFileName << " (MessagePack format)..." << endl;
+	std::ofstream outFile(msgpackFileName, std::ios::binary);
+	if (!outFile) {
+		cerr << "Could not open file " << msgpackFileName << " for writing." << endl;
+		return;
+	}
+	std::vector<uint8_t> msgpackData = nlohmann::json::to_msgpack(json);
+	outFile.write(reinterpret_cast<const char*>(msgpackData.data()), msgpackData.size());
+	outFile.close();
+}
+
+void DMagneticFieldMapFineMesh::ReadMsgpackFileFineMesh(const string& msgpackFileName)
+{
+	cout << "Reading coarse-mesh B-field data from " << msgpackFileName << endl;
+	std::ifstream inFile(msgpackFileName, std::ios::binary);
+	if (not inFile) {
+		cerr << "Could not open file " << msgpackFileName << " for reading." << endl;
+		return;
+	}
+	std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(inFile), {});
+	nlohmann::json json = nlohmann::json::from_msgpack(buffer);
+
+	// deserialize data from JSON
+	mBfine   = json["mBfine"  ].get<vector<vector<DMagneticFieldMapFineMesh::DBfieldCylindrical_t>>>();
+	rminFine = json["rminFine"].get<double>();
+	rmaxFine = json["rmaxFine"].get<double>();
+	drFine   = json["drFine"  ].get<double>();
+	zminFine = json["zminFine"].get<double>();
+	zmaxFine = json["zmaxFine"].get<double>();
+	dzFine   = json["dzFine"  ].get<double>();
+
+	// calculate parameters
+	zscale = 1.0 / dzFine;
+	rscale = 1.0 / drFine;
+	NrFine = static_cast<unsigned int>((rmaxFine - rminFine) / drFine + 0.5);
+	NzFine = static_cast<unsigned int>((zmaxFine - zminFine) / dzFine + 0.5);
 }
