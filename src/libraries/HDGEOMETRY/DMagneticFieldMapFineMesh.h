@@ -17,10 +17,14 @@ using std::string;
 #include <JANA/Calibrations/JCalibration.h>
 #include <JANA/Calibrations/JResource.h>
 
+#include <nlohmann/json.hpp>
+
+
 class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
  public:
   DMagneticFieldMapFineMesh(JApplication *japp, int32_t runnumber=1, string namepath = "Magnets/Solenoid/solenoid_1350_poisson_20130925");
   DMagneticFieldMapFineMesh(JCalibration *jcalib, string namepath = "Magnets/Solenoid/solenoid_1350_poisson_20130925", int32_t runnumber=1);
+  DMagneticFieldMapFineMesh(const string& coarseMeshMsgpackFileName, const string& fineMeshMsgpackFileName);
   virtual ~DMagneticFieldMapFineMesh();
   
   int ReadMap(string namepath, int32_t runnumber=1, string context="");
@@ -49,8 +53,12 @@ class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
   void GetFieldAndGradient(double x,double y,double z,
 			   DBfieldCartesian_t &Bdata) const;
   void GetFineMeshMap(string namepath,int32_t runnumber);
-  void WriteEvioFile(string evioFileName);	
-  void ReadEvioFile(string evioFileName);
+  void WriteEvioFile(const string& evioFileName) const;
+  void ReadEvioFile(const string& evioFileName);
+  void WriteMsgpackFileCoarseMesh(const string& msgpackFileName) const;
+  void ReadMsgpackFileCoarseMesh(const string& msgpackFileName);
+  void WriteMsgpackFileFineMesh(const string& msgpackFileName) const;
+  void ReadMsgpackFileFineMesh(const string& msgpackFileName);
   void GenerateFineMesh(void);
   
   typedef struct{
@@ -91,5 +99,22 @@ class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
 			double &dBrdz,double &dBzdr,double &dBzdz) const;
 };
 
-#endif // _DMagneticFieldMapFineMesh_
+// define JSON serialization for the B-field structs
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+	DMagneticFieldMapFineMesh::DBfieldCylindrical_t,
+	Br, Bz, Bmag,
+	dBrdr, dBrdz, dBzdr, dBzdz
+)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+	DMagneticFieldMapFineMesh::DBfieldPoint_t,
+	x, y, z, Bx, By, Bz,
+	dBxdx, dBxdy, dBxdz,
+	dBydx, dBydy, dBydz,
+	dBzdx, dBzdy, dBzdz,
+	dBxdxdy, dBxdxdz, dBxdydz,
+	dBydxdy, dBydxdz, dBydydz,
+	dBzdxdy, dBzdxdz, dBzdydz,
+	Bmag
+)
 
+#endif // _DMagneticFieldMapFineMesh_
