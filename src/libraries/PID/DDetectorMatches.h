@@ -235,7 +235,6 @@ class DDetectorMatches : public JObject
 		inline bool Get_SCMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DSCHitMatchParams> >& locMatchParams) const;
 		inline bool Get_DIRCMatchParams(const DTrackingData* locTrack, shared_ptr<const DDIRCMatchParams>& locMatchParams) const;
   		inline bool Get_TRDMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DTRDMatchParams> >& locMatchParams) const;
-  inline bool Get_ECALSingleHitMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALSingleHitMatchParams> >& locMatchParams) const;
   		inline bool Get_ECALMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALShowerMatchParams> >& locMatchParams) const;
   inline bool Get_ECALSingleHitMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALSingleHitMatchParams> >& locMatchParams) const;
 	
@@ -347,17 +346,6 @@ inline bool DDetectorMatches::Get_BCALMatchParams(const DTrackingData* locTrack,
 	return true;
 }
 
-inline bool DDetectorMatches::Get_ECALSingleHitMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALSingleHitMatchParams> >& locMatchParams) const
-{
-  locMatchParams.clear();
-  auto locIterator = dTrackECALSingleHitMatchParams.find(locTrack);
-  if(locIterator == dTrackECALSingleHitMatchParams.end())
-    return false;
-  locMatchParams = locIterator->second;
-  return true;
-}
-
-
 inline bool DDetectorMatches::Get_ECALMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALShowerMatchParams> >& locMatchParams) const
 {
   locMatchParams.clear();
@@ -377,7 +365,6 @@ inline bool DDetectorMatches::Get_ECALSingleHitMatchParams(const DTrackingData* 
   locMatchParams = locIterator->second;
   return true;
 }
-
 
 inline bool DDetectorMatches::Get_FCALSingleHitMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DFCALSingleHitMatchParams> >& locMatchParams) const
 {
