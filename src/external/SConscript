@@ -2,6 +2,6 @@ import os
 
 Import('*')
 
+subdirs = ['nlohmann']
 subdirs = ['xstream']
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)
-
