@@ -53,6 +53,7 @@ subdirs = [
 'highlevel_online',
 'BCAL_Hadronic_Eff',
 'FCAL_Hadronic_Eff',
+'ECAL_Hadronic_Eff',
 'SC_Eff','TOF_Eff',
 'TS_scaler',
 'TrackingPulls',

@@ -307,6 +307,8 @@ inline double DChargedTrackHypothesis::t1(void) const
 		return Get_TOFHitMatchParams()->dTOFPoint->t;
 	else if(locDetector == SYS_FCAL)
 		return Get_FCALShowerMatchParams()->dFCALShower->getTime();
+	else if(locDetector == SYS_ECAL)
+		return Get_ECALShowerMatchParams()->dECALShower->t;
 	else if(locDetector == SYS_START)
 		return Get_SCHitMatchParams()->dHitTime;
 	return std::numeric_limits<double>::quiet_NaN();
@@ -323,7 +325,7 @@ inline double DChargedTrackHypothesis::t1_err(void) const
 		return sqrt(Get_FCALShowerMatchParams()->dFCALShower->ExyztCovariance(4, 4));
 	else if(locDetector == SYS_ECAL)
 		return sqrt(Get_ECALShowerMatchParams()->dECALShower->ExyztCovariance(4, 4));
-	else if(locDetector == SYS_FCAL)
+	else if(locDetector == SYS_START)
 		return sqrt(Get_SCHitMatchParams()->dHitTimeVariance);
 	return std::numeric_limits<double>::quiet_NaN();
 }

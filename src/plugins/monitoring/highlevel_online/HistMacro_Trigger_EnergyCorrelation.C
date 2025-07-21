@@ -39,7 +39,8 @@
 {
 	TDirectory *locTopDirectory = gDirectory;
 
-
+	gStyle->SetOptStat("eou");
+	
 	// Grab remaining histos from highlevel directory
 	TDirectory *locDirectory = (TDirectory*)gDirectory->FindObjectAny("highlevel");
 	if(!locDirectory)
@@ -75,7 +76,7 @@
 	{
 		locHist_ECALVsFCAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
 		locHist_ECALVsFCAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_ECALVsFCAL_TrigBit1->SetStats(0);
+		//locHist_ECALVsFCAL_TrigBit1->SetStats(0);
 		locHist_ECALVsFCAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
 		locHist_ECALVsFCAL_TrigBit1->Draw("colz");
 
@@ -92,7 +93,7 @@
 	{
 		locHist_BCALVsFCAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
 		locHist_BCALVsFCAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_BCALVsFCAL_TrigBit1->SetStats(0);
+		//locHist_BCALVsFCAL_TrigBit1->SetStats(0);
 		locHist_BCALVsFCAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
 		locHist_BCALVsFCAL_TrigBit1->Draw("colz");
 
@@ -110,7 +111,7 @@
 	{
 		locHist_BCALVsFCAL2_TrigBit1->GetXaxis()->SetTitleSize(0.05);
 		locHist_BCALVsFCAL2_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_BCALVsFCAL2_TrigBit1->SetStats(0);
+		//locHist_BCALVsFCAL2_TrigBit1->SetStats(0);
 		locHist_BCALVsFCAL2_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
 		locHist_BCALVsFCAL2_TrigBit1->Draw("colz");
                 entries = locHist_BCALVsFCAL2_TrigBit1->Integral();
@@ -130,7 +131,7 @@
 	{
 		locHist_BCALVsECAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
 		locHist_BCALVsECAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_BCALVsECAL_TrigBit1->SetStats(0);
+		//locHist_BCALVsECAL_TrigBit1->SetStats(0);
 		locHist_BCALVsECAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
 		locHist_BCALVsECAL_TrigBit1->Draw("colz");
 

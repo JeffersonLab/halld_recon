@@ -145,8 +145,6 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
   /// the same layer that are in time with each other.
   /// This will form clusters from all contiguous wires.
   
-  std::vector<DFMWPCCluster*> results;
-  
   // Loop over hits
   for(uint32_t istart=0; istart<H.size(); istart++){
     const DFMWPCHit *first_hit = H[istart];
@@ -192,10 +190,9 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
     DVector3 pos(x,y,z);
     newCluster->pos = pos;
 
-    results.push_back(newCluster);
+    Insert(newCluster);
     istart = iend-1;
   }
-  Set(results);
 }
 
 //------------------
