@@ -15,7 +15,11 @@
 
 class DBCALGeometry_factory:public JFactoryT<DBCALGeometry>{
 public:
-		DBCALGeometry_factory(){bcalgeometry=nullptr;};
+		DBCALGeometry_factory()	{
+			// DBCALGeometry need to be accessible from DEventSourceHDDM::GetObjects()
+			SetRegenerateFlag(true);
+			bcalgeometry=nullptr;
+		};
 		~DBCALGeometry_factory() override = default;
 
 		DBCALGeometry *bcalgeometry = nullptr;
