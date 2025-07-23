@@ -718,6 +718,12 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     vector<const DChargedTrack *> chargedTrackVector;
     event->Get(chargedTrackVector);
 
+    // code to catch detector matches that happend simultaneously in TOF and BCAL
+    // Detector time minus RF time if both these detectors have at least one hit
+    // then one can plot the time difference with the RF against each other.
+    vector<double> TOFmRF;
+    vector<double> BCALmRF;
+    
     for (i = 0; i < chargedTrackVector.size(); i++){
 
         // We only want negative particles to kick out protons
@@ -839,6 +845,9 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
                  flightTimeCorrectedTOFTime - thisRFBunch->dTime,
                  "t_{TOF} - t_{RF} at Target; t_{TOF} - t_{RF} at Target [ns]; Entries",
                  NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+	   TOFmRF.push_back(flightTimeCorrectedTOFTime - thisRFBunch->dTime);
+	   cout<<"TOF Match found"<<endl;
+	   
            // Fill the following when there is a SC/TOF match
            Fill1DHistogram("HLDetectorTiming", "TRACKING", "Earliest Flight-time Corrected FDC Time",
                  earliestFDCTime,
@@ -856,6 +865,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
                  flightTimeCorrectedBCALTime - thisRFBunch->dTime,
                  "t_{BCAL} - t_{RF} at Target; t_{BCAL} - t_{RF} [ns]; Entries",
                  NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+	   BCALmRF.push_back(flightTimeCorrectedBCALTime - thisRFBunch->dTime);
            // Add histogram suggested by Mark Dalton
            Fill2DHistogram("HLDetectorTiming", "TRACKING", "BCAL - SC Target Time Vs Correction",
                  locBCALShowerMatchParams->dFlightTime, flightTimeCorrectedBCALTime - flightTimeCorrectedSCTime,
@@ -881,6 +891,22 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 
     } // End of loop over time based tracks
 
+    // now fill histogram if match was found in TOF and BCAL
+    if ((TOFmRF.size()>0) && (BCALmRF.size()>0)){
+      cout<<"found double match"<<endl;
+      
+      for (unsigned int m=0; m<TOFmRF.size(); m++){
+	for (unsigned int j=0; j<BCALmRF.size(); j++){
+	  Fill2DHistogram("HLDetectorTiming", "TRACKING", "TOF - RF Time VS BCAL - RF Time",
+			  BCALmRF[j], TOFmRF[m],
+			  "#Deltat TOF-RFBunch vs. BCAL-RFBunch; t_{BCAL} - t_{RF} [ns] ;t_{TOF - t_{RF} [ns]",
+			  NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T, NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+	}
+      }      
+    }
+
+
+    
     if (DO_REACTION){
        // Trigger the analysis
        vector<const DAnalysisResults*> locAnalysisResultsVector;
