@@ -283,10 +283,16 @@ void JEventProcessor_highlevel_online::Init()
 	/*************************************************************** VERTEX ***************************************************************/
 
 	// Event Vertex-Z
-	dEventVertexZ = new TH1I("EventVertexZ", "Reconstructed Event Vertex Z;Event Vertex-Z (cm)", 600, -100.0, 200.0);
+	dEventVertexZ = new TH1I("EventVertexZ", "Event Vertex (R < 1 cm);Event Vertex Z (cm)", 750, 0.0, 150.0);
 
 	// Event Vertex-Y Vs Vertex-X
-	dEventVertexYVsX = new TH2I("EventVertexYVsX", "Reconstructed Event Vertex X/Y;Event Vertex-X (cm);Event Vertex-Y (cm)", 400, -10.0, 10.0, 400, -10.0, 10.0);
+	dEventVertexYVsX = new TH2I("EventVertexYVsX", "Event Vertex in Target (50 < Z < 80);Event Vertex X (cm);Event Vertex Y (cm)", 400, -4.0, 4.0, 400, -4.0, 4.0);
+
+	// Event Vertex-X Vs Vertex-Z
+	dEventVertexXVsZ = new TH2I("EventVertexXVsZ", "Event Vertex in Target (|Y| < 2 cm);Event Vertex Z (cm);Event Vertex X (cm)", 200, 48, 88, 150, -1.5, 1.5);
+
+	// Event Vertex-Y Vs Vertex-Z
+	dEventVertexYVsZ = new TH2I("EventVertexYVsZ", "Event Vertex in Target (|X| < 2 cm);Event Vertex Z (cm);Event Vertex Y (cm)", 200, 48, 88, 150, -1.5, 1.5);
 
 	/*************************************************************** 2 gamma inv. mass ***************************************************************/
 	// 2-gamma inv. mass
@@ -970,8 +976,17 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 	
 	if(locChargedTracks.size() >= 2)
 	{
-		dEventVertexZ->Fill(locVertex->dSpacetimeVertex.Z());
-		dEventVertexYVsX->Fill(locVertex->dSpacetimeVertex.X(), locVertex->dSpacetimeVertex.Y());
+		float vertX = locVertex->dSpacetimeVertex.X();
+		float vertY = locVertex->dSpacetimeVertex.Y();
+		float vertZ = locVertex->dSpacetimeVertex.Z();
+		if (sqrt(vertX*vertX + vertY*vertY) < 1)
+			dEventVertexZ->Fill(locVertex->dSpacetimeVertex.Z());
+		if (vertZ<80 && vertZ>50)
+			dEventVertexYVsX->Fill(vertX, vertY);
+		if (vertY<2 && vertY>-2)
+			dEventVertexXVsZ->Fill(vertZ, vertX);
+		if (vertX<2 && vertX>-2)
+			dEventVertexYVsZ->Fill(vertZ, vertY);
 	}
 	
 	/*************************************************************** 2 gamma inv. mass ***************************************************************/
