@@ -64,6 +64,8 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 
 		TH1I* dEventVertexZ;
 		TH2I* dEventVertexYVsX;
+		TH2I* dEventVertexXVsZ;
+		TH2I* dEventVertexYVsZ;
 
 		TH1I* d2gamma;
 		TH1I *dpip_pim;
