@@ -130,13 +130,15 @@ void DEVIOWorkerThread::Run(void)
 			jerr << "Stack trace follows:" << endl;
 			jerr << e.GetStackTrace() << endl;
 			jerr << e.what() << endl;
-			japp->Quit(10);
+			japp->SetExitCode(10);
+			japp->Quit(true);
 		} catch (exception &e) {
 			jerr << e.what() << endl;
 			for(auto pe : parsed_event_pool) delete pe; // delete all parsed events any any objects they hold
 			parsed_event_pool.clear();
 			current_parsed_events.clear(); // (these are also in parsed_event_pool so were already deleted)
-			japp->Quit(-1);
+			japp->SetExitCode(-1);
+			japp->Quit(true);
 		}
 		
 		// Reset and mark us as available for use
