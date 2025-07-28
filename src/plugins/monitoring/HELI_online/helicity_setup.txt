@@ -1,5 +1,3 @@
-# Helicity setup file. For some information on Helicity see: https://wiki.jlab.org/ciswiki/images/4/4c/Helicity_RSI_draft1.pdf.
-
 # Only lines starting with # (comment) or Keyword are allowed.
 # This mimics a calibration database, which would be better.
 # All lines are of the form: 
@@ -48,7 +46,7 @@ HEL_HWP_USE_EPICS 120282 999999  1               # set to 0 to use DB / File tab
 #                 RunMin RunMax Value
 
 HEL_HWP_STATE     120282 120442  0
-HEL_HWP_STATE     120283 120445 -1
+HEL_HWP_STATE     120443 120445 -1
 HEL_HWP_STATE     120446 120516  1   
 HEL_HWP_STATE     120517 120518 -1
 HEL_HWP_STATE     120518 120596  0   
@@ -75,3 +73,5 @@ HEL_HWP_STATE     121194 121194 -1
 HEL_HWP_STATE     121195 121277  1   
 
 
+#Jan 2025 to be updated. Assume all 1 for now
+HEL_HWP_STATE     121278 135000  1
