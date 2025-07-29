@@ -181,19 +181,18 @@ void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>&
 			// FCAL LED trigger fired
 			is_FCAL_LED_trigger = true;
 		}
-		if (trig->fp_trig_mask & 0x008) {   // Trigger front-panel bit 4
-			// ECAL LED trigger fired
-			is_ECAL_LED_trigger = true;
-		}
+		//if (trig->fp_trig_mask & 0x008) {   // Trigger front-panel bit 4
+		//	// ECAL LED trigger fired
+		//	is_ECAL_LED_trigger = true;
+		//}
 		if (trig->fp_trig_mask & 0x010) {   // Trigger front-panel bit 5
 			// ECAL alpha trigger fired
 			is_ECAL_LED_trigger = true;
 		}
-// 		if (trig->fp_trig_mask & 0x020) {   // Trigger front-panel bit 6
-// 			// CCAL LED trigger fired
-// 			//is_CCAL_LED_trigger = true;
-//             is_ctof_event = true;
-// 		}
+ 		if (trig->fp_trig_mask & 0x020) {   // Trigger front-panel bit 6
+ 			// ECAL LED trigger fired
+            is_ECAL_LED_trigger = true;
+ 		}
 		if (trig->fp_trig_mask & 0x4000 ) {   // Trigger front-panel bit 15
 			// DIRC LED trigger fired
 			is_DIRC_LED_trigger = true;
