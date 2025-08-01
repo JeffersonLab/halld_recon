@@ -24,6 +24,7 @@ bool filename_from_command_line = false;
 void ParseCommandLineArguments(int &narg, char *argv[]);
 void DecideOutputFilename(JApplication* app);
 void Usage();
+void printNoPluginsBanner();
 
 
 //-----------
@@ -38,7 +39,18 @@ int main(int narg, char *argv[])
 	DApplication dapp(narg, argv);
 	JApplication* app = dapp.GetJApp();
 
-	DecideOutputFilename(app); // Ensure that the command-line flag overrides the OUTPUT_FILENAME parameter
+
+	// Terminating on no plugins
+	std::string plugins;
+	app->GetParameter("PLUGINS", plugins);
+	if(plugins.empty()) {
+		printNoPluginsBanner();
+		return -1; // Exit early if no plugins are specified
+	}
+
+
+	// Ensure that the command-line flag overrides the OUTPUT_FILENAME parameter
+	DecideOutputFilename(app);
 
 	app->SetTimeoutEnabled(false);
 
@@ -163,4 +175,37 @@ void Usage(void)
 	cout<<endl;
 
 	exit(0);
+}
+
+
+//-----------
+// printNoPluginsBanner
+//-----------
+void printNoPluginsBanner() {
+    const std::vector<std::string> banner = {
+		"                                                                              ",
+        "                                                                              ",
+        "                                                                              ",
+        "███    ██  ██████      ██████  ██      ██    ██  ██████  ██ ███    ██ ███████ ",
+        "████   ██ ██    ██     ██   ██ ██      ██    ██ ██       ██ ████   ██ ██      ",
+        "██ ██  ██ ██    ██     ██████  ██      ██    ██ ██   ███ ██ ██ ██  ██ ███████ ",
+        "██  ██ ██ ██    ██     ██      ██      ██    ██ ██    ██ ██ ██  ██ ██      ██ ",
+        "██   ████  ██████      ██      ███████  ██████   ██████  ██ ██   ████ ███████ ",
+        "                                                                              ",
+        "                                                                              ",
+        "                                                                              ",
+        "                                                                              "
+    };
+
+    const std::string YELLOW = "\033[1;33m";
+    const std::string RESET  = "\033[0m";
+
+    std::cout << YELLOW;
+    for (const auto& line : banner) {
+        std::cout << line << std::endl;
+    }
+    std::cout << "WARNING: No plugins specified. It will result in no data being processed." << std::endl;
+    std::cout << "         Use the -Pplugins=plugin1,plugin2,... command line option to specify plugins." << std::endl;
+	std::cout << "Terminating....." <<std::endl;
+    std::cout << RESET << std::flush;
 }
