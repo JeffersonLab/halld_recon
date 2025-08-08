@@ -19,8 +19,35 @@
 // The working directory used was:
 //     ~hdops/2018.10.05.amorphous_normalization
 //
-string amorphous_label = "Normalized to Amorphous run from CCDB";
+string amorphous_label = "Normalized to Amorphous run 133141";
 
+	Double_t amorphous_data[] = {
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,    603024.0, 
+		   715809.0,    876503.0,    768876.0,    832468.0,    968221.0,    887220.0,    966896.0,    819973.0,    817816.0,    794689.0, 
+		   760821.0,    799343.0,    964819.0,    983185.0,    875640.0,   1007130.0,    872138.0,   1094751.0,    945558.0,   1248558.0, 
+		  1786723.0,   1123570.0,   1114447.0,   1497953.0,   1530973.0,    512074.0,    898413.0,    947271.0,   1394707.0,   1433727.0, 
+		  1377625.0,   1336832.0,    848098.0,   1720764.0,   1236145.0,   1203198.0,   1009402.0,   1193600.0,   1200645.0,   1659380.0, 
+		   763676.0,    961762.0,    982407.0,   1361042.0,   1243086.0,   1078576.0,   1152846.0,   1124651.0,   1086944.0,   1028931.0, 
+		  1045761.0,    974301.0,   1372879.0,    890618.0,   1532175.0,    605489.0,   1222477.0,   1147639.0,   1081689.0,   1532456.0, 
+		   929855.0,   1242304.0,    773876.0,    852506.0,    796618.0,   1023501.0,    891699.0,    911777.0,    678945.0,    387017.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+	0.0};
+//--------------------------------------------------------------------
 	TDirectory *locTopDirectory = gDirectory;
 
 	//Goto Beam Path
@@ -87,7 +114,7 @@ string amorphous_label = "Normalized to Amorphous run from CCDB";
 	locCanvas->cd(2);
 	gPad->SetTicks();
 	gPad->SetGrid();
-	if(locHist_BeamEnergy != NULL && locHist_BeamEnergy_amo != NULL)
+	if(locHist_BeamEnergy != NULL)
 	{
 		// Create normalized histogram
 		TH1D* locHist_BeamEnergy_norm = (TH1D*)gDirectory->Get("BeamEnergy_norm");
@@ -101,7 +128,13 @@ string amorphous_label = "Normalized to Amorphous run from CCDB";
 			// Normalize to amorphous baseline 
 			double scale = 0.0;
 			for(int ibin=1; ibin<=locHist_BeamEnergy_norm->GetNbinsX(); ibin++){
-				Double_t norm = locHist_BeamEnergy_amo->GetBinContent(ibin);
+				Double_t norm;
+				if (locHist_BeamEnergy_amo != NULL){
+				  amorphous_label = "Normalized to Amorphous run from CCDB";
+				  norm = locHist_BeamEnergy_amo->GetBinContent(ibin);
+				}
+				else
+				  norm = amorphous_data[ibin-1];
 				if( norm < 1000.0) continue;
 
 				Double_t v = (Double_t)locHist_BeamEnergy->GetBinContent(ibin);
@@ -116,7 +149,11 @@ string amorphous_label = "Normalized to Amorphous run from CCDB";
 			// Find leftmost non-zero bin 
 			double left_scale = 0.0;
 			for(int ibin=1; ibin<=locHist_BeamEnergy_norm->GetNbinsX(); ibin++){
-				if( locHist_BeamEnergy_amo->GetBinContent(ibin) < 10000.0) continue;
+				if( locHist_BeamEnergy_amo != NULL){
+				  if (locHist_BeamEnergy_amo->GetBinContent(ibin) < 10000.0) continue;
+				}
+				else
+				  if (amorphous_data[ibin-1] < 10000.0) continue;
 				Double_t v = (Double_t)locHist_BeamEnergy_norm->GetBinContent(ibin);
 				if(v>0.1){
 					left_scale = v;
