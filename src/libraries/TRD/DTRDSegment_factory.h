@@ -36,6 +36,7 @@ private:
   
   double dTRDz;
   int DEBUG_LEVEL;
+  bool INSTALLED;
 };
 
 #endif // DFACTORY_DTRDSEGMENT_H

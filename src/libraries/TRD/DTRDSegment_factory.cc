@@ -27,6 +27,15 @@ void DTRDSegment_factory::Init()
 
 void DTRDSegment_factory::BeginRun(const std::shared_ptr<const JEvent>& event) 
 { 
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/TRD/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		INSTALLED = false;
+	else
+		INSTALLED = true;
+		
+	if(!INSTALLED) return;
+
   // get the geometry
   DGeometry *geom = DEvent::GetDGeometry(event);
   // Get GEM geometry from xml (CCDB or private HDDS)
