@@ -19,7 +19,7 @@ class DECALGeometry:public JObject{
 public:
   JOBJECT_PUBLIC(DECALGeometry);
   
-  DECALGeometry(const DGeometry *geom);
+  DECALGeometry(const DGeometry *geom,JCalibration *calib);
   ~DECALGeometry(){}
   
   static const int kECALBlocksWide   = 40;
