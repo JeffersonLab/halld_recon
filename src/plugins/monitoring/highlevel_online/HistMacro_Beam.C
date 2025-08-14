@@ -60,6 +60,7 @@ string amorphous_label = "Normalized to Amorphous run 133141";
 	TH1* locHist_RFBeamBunchPeriod_DFT = (TH1*)gDirectory->Get("RFBeamBunchPeriod_DFT");
 	TH1* locHist_BeamEnergy = (TH1*)gDirectory->Get("BeamEnergy");
 	TH1* locHist_BeamEnergy_amo = (TH1*)gDirectory->Get("BeamEnergy_amo");
+	bool locUseCCDB = (locHist_BeamEnergy_amo != NULL && locHist_BeamEnergy_amo->GetEntries() > 0);
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -129,7 +130,7 @@ string amorphous_label = "Normalized to Amorphous run 133141";
 			double scale = 0.0;
 			for(int ibin=1; ibin<=locHist_BeamEnergy_norm->GetNbinsX(); ibin++){
 				Double_t norm;
-				if (locHist_BeamEnergy_amo != NULL){
+				if ( locUseCCDB ){
 				  amorphous_label = "Normalized to Amorphous run from CCDB";
 				  norm = locHist_BeamEnergy_amo->GetBinContent(ibin);
 				}
@@ -149,7 +150,7 @@ string amorphous_label = "Normalized to Amorphous run 133141";
 			// Find leftmost non-zero bin 
 			double left_scale = 0.0;
 			for(int ibin=1; ibin<=locHist_BeamEnergy_norm->GetNbinsX(); ibin++){
-				if( locHist_BeamEnergy_amo != NULL){
+				if( locUseCCDB ){
 				  if (locHist_BeamEnergy_amo->GetBinContent(ibin) < 10000.0) continue;
 				}
 				else
@@ -204,7 +205,7 @@ string amorphous_label = "Normalized to Amorphous run 133141";
 		}
 
 		TPad *beamenergypad = (TPad*)gDirectory->FindObjectAny("beamenergypad");
-		if(!beamenergypad) beamenergypad = new TPad("beamenergypad", "", 0.45, 0.65, 0.885, 0.895);
+		if(!beamenergypad) beamenergypad = new TPad("beamenergypad", "", 0.11, 0.65, 0.51, 0.895);
 		beamenergypad->SetTicks();
 		beamenergypad->Draw();
 		beamenergypad->cd();
