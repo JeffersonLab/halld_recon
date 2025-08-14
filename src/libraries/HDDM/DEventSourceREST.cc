@@ -2175,7 +2175,7 @@ uint32_t DEventSourceREST::Convert_SignedIntToUnsigned(int32_t locSignedInt) con
 bool DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
                                    JFactoryT<DDIRCPmtHit>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
-   /// Copies the data from the fcalShower hddm record. This is
+   /// Copies the data from the DIRC hddm record. This is
    /// call from JEventSourceREST::GetObjects. If factory is NULL, this
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
@@ -2223,7 +2223,7 @@ bool DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
 bool DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
                     JFactoryT<DFMWPCHit>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
-   /// Copies the data from the DIRC hddm record. This is
+   /// Copies the data from the fmwpc hit hddm record. This is
    /// call from JEventSourceREST::GetObjects. If factory is NULL, this
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
