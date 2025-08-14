@@ -222,7 +222,11 @@ class JEventProcessor_HLDetectorTiming:public JEventProcessor{
 		map<string, TH1F*> dCDCSCTime;
 		map<string, TH1F*> dCDCBCALTime;
 		map<string, TH1F*> dTOFRFTime;
-		map<string, TH1F*> dTOFSCTime;
+		map<string, TH2F*> dTOFRFTimeVSBCALRFTime;
+		map<string, TH2F*> dTOFRFTimeVSFCALRFTime;
+		map<string, TH2F*> dTOFRFTimeVSECALRFTime;
+
+                map<string, TH1F*> dTOFSCTime;
 		map<string, TH1F*> dEarliestCDCTime;
 		map<string, TH1F*> dEarliestFDCTime;
 		map<string, TH1F*> dBCALShowerRFTime;

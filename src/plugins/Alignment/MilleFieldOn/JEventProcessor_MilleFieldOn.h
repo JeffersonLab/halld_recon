@@ -16,11 +16,8 @@ class JEventProcessor_MilleFieldOn : public JEventProcessor {
 
  private:
   void Init() override;
-  void BeginRun(
-      const std::shared_ptr<const JEvent>& event,
-      int32_t runnumber);  ///< Called everytime a new run number is detected.
-  void Process(const std::shared_ptr<const JEvent>& event,
-                uint64_t eventnumber);  ///< Called every event.
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;  ///< Called everytime a new run number is detected.
+  void Process(const std::shared_ptr<const JEvent>& event) override;  ///< Called every event.
   void EndRun() override;
                         ///< has been called.
   void Finish() override;

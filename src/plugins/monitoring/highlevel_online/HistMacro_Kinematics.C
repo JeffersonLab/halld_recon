@@ -59,7 +59,7 @@
 	double Nevents = 1.0;
 	if(locHist_PSPairEnergy != NULL)
 	{
-		Nevents = (double)locHist_PSPairEnergy->GetEntries();
+		Nevents = (double)locHist_PSPairEnergy->Integral(0,450);
 		locHist_PSPairEnergy->GetXaxis()->SetTitleSize(0.05);
 		locHist_PSPairEnergy->GetYaxis()->SetTitleSize(0.04);
 		locHist_PSPairEnergy->GetXaxis()->SetLabelSize(0.05);
@@ -113,7 +113,8 @@
 	// ------ The following is used by RSAI --------
 	if( rs_GetFlag("Is_RSAI")==1 ){
 		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
-		if( min_events < 1 ) min_events = 1E4;
+		//if( min_events < 1 )
+                min_events = 1E4;
 		if( Nevents >= min_events ) {
 			cout << "PS Pair Energy AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
 			rs_SavePad("Kinematics", 1);

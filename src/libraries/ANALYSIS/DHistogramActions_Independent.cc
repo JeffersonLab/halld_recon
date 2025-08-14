@@ -1630,14 +1630,12 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 			if(locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_ECAL))
 			  {
 			    dHistMap_PVsTheta_HasHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locP);
-			    //if(locP > 1.0)
-			    if(locP > 2.0)
+			    if(locP > 1.0)
 			      dHistMap_PhiVsTheta_HasHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locPhi);
 			    if(locProjectedECALRowColumnMap.find(locTrack) != locProjectedECALRowColumnMap.end())
 			      {
 				dHistMap_TrackECALP_HasHit[locIsTimeBased]->Fill(locP);
-				//if(locP > 1.0)
-				if(locP > 2.0)
+				if(locP > 1.0)
 				  {
 				    pair<float, float>& locPositionPair = locProjectedECALXYMap[locTrack];
 				    dHistMap_TrackECALYVsX_HasHit[locIsTimeBased]->Fill(locPositionPair.first, locPositionPair.second);
@@ -1651,14 +1649,12 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 			else
 			  {
 			    dHistMap_PVsTheta_NoHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locP);
-			    //if(locP > 1.0)
-			    if(locP > 2.0)
+			    if(locP > 1.0)
 			      dHistMap_PhiVsTheta_NoHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locPhi);
 			    if(locProjectedECALRowColumnMap.find(locTrack) != locProjectedECALRowColumnMap.end())
 			      {
 				dHistMap_TrackECALP_NoHit[locIsTimeBased]->Fill(locP);
-				//if(locP > 1.0)
-				if(locP > 2.0)
+				if(locP > 1.0)
 				  {
 				    pair<float, float>& locPositionPair = locProjectedECALXYMap[locTrack];
 				    dHistMap_TrackECALYVsX_NoHit[locIsTimeBased]->Fill(locPositionPair.first, locPositionPair.second);
@@ -4341,7 +4337,7 @@ bool DHistogramAction_TriggerStudies::Perform_Action(const std::shared_ptr<const
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action();
 	{
-		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCALEnergy(), locTrigger->Get_GTP_BCALEnergy());
+		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCAL2Energy(), locTrigger->Get_GTP_BCALEnergy());
 	}
 	Unlock_Action();
 

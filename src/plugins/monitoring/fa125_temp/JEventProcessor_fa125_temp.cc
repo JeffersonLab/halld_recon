@@ -10,7 +10,7 @@
 #include "JEventProcessor_fa125_temp.h"
 
 #include <TDirectory.h>
-#include <TH2.h>
+#include <TProfile2D.h>
 
 
 #include "DAQ/Df125BORConfig.h"
@@ -61,7 +61,7 @@ void JEventProcessor_fa125_temp::Init()
   TDirectory *main = gDirectory;
   gDirectory->mkdir("fa125_temp")->cd();
 
-  htemp = new TH2D("temp","fa125 temperature (F) (must be below 185F); roc ; slot", 15, 1, 16, 17, 3, 20);
+  htemp = new TProfile2D("temp","fa125 temperature (F) (danger point: 185F); roc ; slot", 15, 1, 16, 17, 3, 20);
 
   for (int i=0; i<70; i++) rocmap[i] = 0;  // rocmap[rocid] = bin number for roc rocid in histogram
 

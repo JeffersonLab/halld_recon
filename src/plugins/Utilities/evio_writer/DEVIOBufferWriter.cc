@@ -329,7 +329,7 @@ void DEVIOBufferWriter::WriteEventToBuffer(const std::shared_ptr<const JEvent>& 
                 // BCAL cluster
                 if(auto *derived_obj_ptr = dynamic_cast<const DBCALCluster *>(obj_ptr))
                 	obj_bcalclusters.push_back(derived_obj_ptr);
-                for(auto clusterPtr : obj_ecalclusters) {
+                for(auto clusterPtr : obj_bcalclusters) {
                 	vector<const DBCALPoint*>   the_points;
                 	clusterPtr->Get(the_points);
                 	obj_bcalpoints.insert(obj_bcalpoints.end(), the_points.begin(), the_points.end());
