@@ -45,7 +45,6 @@ int main(int narg, char *argv[])
 	app->GetParameter("PLUGINS", plugins);
 	if(plugins.empty()) {
 		printNoPluginsBanner();
-		return -1; // Exit early if no plugins are specified
 	}
 
 
@@ -206,6 +205,5 @@ void printNoPluginsBanner() {
     }
     std::cout << "WARNING: No plugins specified. It will result in no data being processed." << std::endl;
     std::cout << "         Use the -Pplugins=plugin1,plugin2,... command line option to specify plugins." << std::endl;
-	std::cout << "Terminating....." <<std::endl;
     std::cout << RESET << std::flush;
 }
