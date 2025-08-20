@@ -1309,7 +1309,7 @@ void DMagneticFieldMapFineMesh::WriteMsgpackFileFineMesh(const string& msgpackFi
 
 void DMagneticFieldMapFineMesh::ReadMsgpackFileFineMesh(const string& msgpackFileName)
 {
-	cout << "Reading coarse-mesh B-field data from " << msgpackFileName << endl;
+	cout << "Reading fine-mesh B-field data from " << msgpackFileName << endl;
 	std::ifstream inFile(msgpackFileName, std::ios::binary);
 	if (not inFile) {
 		cerr << "Could not open file " << msgpackFileName << " for reading." << endl;
