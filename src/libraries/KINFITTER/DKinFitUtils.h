@@ -10,7 +10,9 @@
 #include "TLorentzVector.h"
 #include "TMatrixFSym.h"
 
+#ifndef _KINFITTER_STANDALONE_
 #include "JANA/JEvent.h"
+#endif
 
 #include "DResourcePool.h"
 
@@ -41,7 +43,9 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 		virtual void Reset_NewEvent(void);
 		virtual void Reset_NewFit(void){};
 		
+		#ifndef _KINFITTER_STANDALONE_
 		virtual void Set_RunDependent_Data(const std::shared_ptr<const JEvent>& event) {}
+		#endif
 
 		/************************************************************ CONTROL AND MAPPING ***********************************************************/
 
