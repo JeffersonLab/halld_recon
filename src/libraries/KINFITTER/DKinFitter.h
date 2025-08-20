@@ -17,7 +17,9 @@
 #include "TMath.h"
 #include "TDecompLU.h"
 
+#ifndef _KINFITTER_STANDALONE_
 #include "JANA/JEvent.h"
+#endif
 
 #include "DKinFitParticle.h"
 #include "DKinFitConstraint.h"
@@ -48,7 +50,9 @@ class DKinFitter //purely virtual: cannot directly instantiate class, can only i
 		//CONSTRUCTOR
 		DKinFitter(DKinFitUtils* locKinFitUtils);
 
+		#ifndef _KINFITTER_STANDALONE_
 		void Set_RunDependent_Data(const std::shared_ptr<const JEvent>& event) {}
+		#endif
 
 		//RESET
 		void Reset_NewEvent(void);
