@@ -9,6 +9,8 @@ subdirs.extend(['2trackskim', 'pi0bcalskim', 'pi0fcalskim', 'twogamma_fcal_skim'
 
 subdirs.extend(['Pi0Finder', 'EventTagPi0','es_test','omega_skim','cal_high_energy_skim', 'syncskim', 'dedx_tree', 'phi_skim', 'npp_skim', 'cpp_skim', 'production_check', 'epem_ml_skim'])
 
+subdirs.extend(['field_map_writer'])
+
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)
 
 # Optional targets
