@@ -23,6 +23,7 @@ if __name__ == "__main__":
   ROOT.gSystem.AddDynamicPath("$HALLD_RECON_HOME/$BMS_OSNAME/lib")
   print(f"{ROOT.gSystem.GetDynamicPath()=}")
   # load the shared library
+  # the standalone KINFITTER shared library is created by the Makefile in this directory
   ROOT.gInterpreter.Declare("#define _KINFITTER_STANDALONE_")
   ROOT.gInterpreter.ProcessLine('#include "KINFITTER/DKinFitUtils_StandAlone.h"')
   assert ROOT.gSystem.Load("libKINFITTER.so") >= 0, "Could not load 'libKINFITTER.so'"
