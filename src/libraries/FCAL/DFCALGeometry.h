@@ -18,7 +18,7 @@ class DFCALGeometry: public JObject {
 public:
   JOBJECT_PUBLIC(DFCALGeometry);
   
-  DFCALGeometry(const DGeometry *geom);
+  DFCALGeometry(const DGeometry *geom,JCalibration *calib);
   ~DFCALGeometry(){}
   
   // these numbers are fixed for the FCAL as constructed
@@ -78,7 +78,7 @@ protected:
 
  private:
   void GetGridGeometry(const DGeometry *geom);
-  void GetSurveyGeometry(const DGeometry *geom);
+  void GetSurveyGeometry(const DGeometry *geom,JCalibration *calib);
   DFCALGeometry(){};// force use of constructor with arguments.
 };
 

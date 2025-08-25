@@ -15,7 +15,7 @@ using namespace std;
 //---------------------------------
 // DFCALGeometry    (Constructor)
 //---------------------------------
-DFCALGeometry::DFCALGeometry(const DGeometry *geom){
+DFCALGeometry::DFCALGeometry(const DGeometry *geom,JCalibration *calib){
   // Find position of upstream face of FCAL
   geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
 
@@ -26,13 +26,13 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
   // Check for presence of PbWO4 insert
   if (geom->HaveInsert()){ // Geometry based on survey data for positions
     // Get the x-y positions of the crystals
-    GetSurveyGeometry(geom);
+    GetSurveyGeometry(geom,calib);
   }
 }
 
 // The following routine looks up the position of each row in the xml
 // specification for the geometry
-void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
+void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom,JCalibration *calib){
   // Initialize active block map
   for( int row = 0; row < kBlocksTall; row++ ){
     for( int col = 0; col < kBlocksWide; col++ ){
@@ -40,6 +40,17 @@ void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
     }
   }
 
+  // Get some small x and y offsets for individual blocks
+  vector<map<string,double>>xy_offsets;
+  vector<double>x_offsets,y_offsets;
+  if (calib->Get("/FCAL/position_alignment",xy_offsets)==false){
+    for (unsigned int i=0;i<xy_offsets.size();i++){
+      map<string,double> &row=xy_offsets[i];
+      x_offsets.push_back(row["dx"]);
+      y_offsets.push_back(row["dy"]);
+    }
+  }
+  
   // Extract block positions for each section of the lead glass from xml
   string section_names[4]={"LGLowerRow","LGUpperRow","LGNorthRow","LGSouthRow"};
   int num_rows=19;
@@ -63,8 +74,10 @@ void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
       //geom->Get(my_pos_string+"@rot",rot);
       //double phi=rot[2]*M_PI/180.;
       for (int col=col0;col<col0+ncopy;col++){
-	double x=m_FCALdX+x0+double(col-col0)*dx;
-	double y=m_FCALdY+pos[1];//+phi*x; //use small angle approximation
+	double offset_x=x_offsets[m_channelNumber[row][col]];
+	double offset_y=y_offsets[m_channelNumber[row][col]];
+	double x=m_FCALdX+x0+double(col-col0)*dx-offset_x;
+	double y=m_FCALdY+pos[1]-offset_y;
 	m_positionOnFace[row][col].Set(x,y);
 	m_activeBlock[row][col] = true;
       }

@@ -14,6 +14,7 @@
 #include "DFCALGeometry.h"
 #include <HDGEOMETRY/DGeometry.h>
 #include <DANA/DGeometryManager.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 
 //------------------
 // BeginRun
@@ -26,7 +27,8 @@ void DFCALGeometry_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 	auto app = event->GetJApplication();
 	auto geo_manager = app->GetService<DGeometryManager>();
 	auto dgeom = geo_manager->GetDGeometry(runnumber);
-	Insert(new DFCALGeometry(dgeom));
+	auto jcalib =  app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+	Insert(new DFCALGeometry(dgeom,jcalib));
 }
 
 //------------------
