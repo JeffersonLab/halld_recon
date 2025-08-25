@@ -110,15 +110,15 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   //Get pointer to DGeometry object
   const auto& event = gMYPROC->GetCurrentEvent();
   const DGeometry *dgeom = DEvent::GetDGeometry(event.shared_from_this());
+  auto app = event.GetJApplication();
+  auto runnumber = event.GetRunNumber();
+  auto jcalib =  app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
   
   tofgeom = new DTOFGeometry(dgeom);
-  fcalgeom= new DFCALGeometry(dgeom);
+  fcalgeom= new DFCALGeometry(dgeom,jcalib);
 
   // Figure out ECAL details
   if (dgeom->HaveInsert()) {
-    auto app = event.GetJApplication();
-    auto runnumber = event.GetRunNumber();
-    auto jcalib =  app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
     m_insert_size = dgeom->GetFCALInsertSize();
     ecalgeom = new DECALGeometry(dgeom,jcalib);
     m_insert_block_size = ecalgeom->blockSize();
