@@ -117,6 +117,9 @@ void DFDCPseudo_factory::Init()
 
   DEBUG_HISTS = false;
   app->SetDefaultParameter("FDC:DEBUG_HISTS",DEBUG_HISTS);
+
+  MATCH_TRUTH_HITS=false;
+  app->SetDefaultParameter("FDC:MATCH_TRUTH_HITS",MATCH_TRUTH_HITS);
 }
 
 
@@ -325,7 +328,9 @@ void DFDCPseudo_factory::Process(const std::shared_ptr<const JEvent>& event) {
 	// makes that difficult. Here we have the full wire definition so
 	// we make the connection here.
 	vector<const DMCTrackHit*> mctrackhits;
-	event->Get(mctrackhits);
+	if (MATCH_TRUTH_HITS){
+	  event->Get(mctrackhits);
+	}
 
 	vector<const DFDCCathodeCluster*>::iterator uIt = uClus.begin();
 	vector<const DFDCCathodeCluster*>::iterator vIt = vClus.begin();
@@ -478,14 +483,14 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
            for(xIt=x.begin();xIt!=x.end();xIt++){
               if ((*xIt)->element<=WIRES_PER_PLANE && (*xIt)->element>0){
                  const DFDCWire *wire=fdcwires[layer-1][(*xIt)->element-1];
-                 double x_from_wire=wire->u;
+                 //double x_from_wire=wire->u;
 
                  //printf("xs %f xw %f\n",x_from_strips,x_from_wire);
 
                  // Test radial value for checking whether or not the hit is within
                  // the fiducial region of the detector
-                 double r2test=x_from_wire*x_from_wire+y_from_strips*y_from_strips;
-                 double delta_x=x_from_wire-x_from_strips;
+                 double r2test=wire->u*wire->u+y_from_strips*y_from_strips;
+                 double delta_x=wire->u-x_from_strips;
 
                  if (DEBUG_HISTS){
                     if (upeaks[i].numstrips == 3 && vpeaks[j].numstrips == 3) x_dist_3->Fill(delta_x);
@@ -578,7 +583,7 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     newPseu->t_v = vpeaks[j].t;
                     newPseu->cluster_u = upeaks[i];
                     newPseu->cluster_v = vpeaks[j];
-                    newPseu->w      = x_from_wire+xshifts[ilay];
+                    newPseu->w      = wire->u+xshifts[ilay];
                     newPseu->dw     = 0.; // place holder
                     newPseu->w_c    = x_from_strips+xshifts[ilay];
                     newPseu->s      = y_from_strips+yshifts[ilay];
@@ -621,8 +626,10 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     newPseu->covxy=(sigy2-sigx2)*sinangle*cosangle;
 
                     // Try matching truth hit with this "real" hit.
-                    const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
-                    if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
+		    if (MATCH_TRUTH_HITS){
+		      const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
+		      if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
+		    }
 
                     Insert(newPseu);
 

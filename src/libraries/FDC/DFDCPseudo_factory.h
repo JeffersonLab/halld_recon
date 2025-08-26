@@ -122,8 +122,7 @@ class DFDCPseudo_factory : public JFactoryT<DFDCPseudo> {
 		double r2_out,r2_in;
 		double STRIP_ANODE_TIME_CUT;
 		unsigned int MAX_ALLOWED_FDC_HITS;
-//		bool DEBUG_HISTS,USE_FDC,MATCH_TRUTH_HITS;
-		bool DEBUG_HISTS,USE_FDC;
+  bool DEBUG_HISTS,USE_FDC, MATCH_TRUTH_HITS;
 		double MIDDLE_STRIP_THRESHOLD;
 		double FDC_RES_PAR1,FDC_RES_PAR2;
 		double CHARGE_THRESHOLD;
