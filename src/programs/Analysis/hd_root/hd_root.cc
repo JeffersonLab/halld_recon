@@ -41,9 +41,11 @@ int main(int narg, char *argv[])
 
 
 	// Terminating on no plugins
+	bool plugin_check = true;
 	std::string plugins;
+	app->SetDefaultParameter("PLUGIN_CHECK", plugin_check, "Check if plugins are set (default: true)");
 	app->GetParameter("PLUGINS", plugins);
-	if(plugins.empty()) {
+	if(plugins.empty() && plugin_check == true) {
 		printNoPluginsBanner();
 		return -1; // Exit early if no plugins are specified
 	}
@@ -197,14 +199,14 @@ void printNoPluginsBanner() {
         "                                                                              "
     };
 
-    const std::string YELLOW = "\033[1;33m";
+    const std::string RED = "\033[1;31m";
     const std::string RESET  = "\033[0m";
 
-    std::cout << YELLOW;
+    std::cout << RED;
     for (const auto& line : banner) {
         std::cout << line << std::endl;
     }
-    std::cout << "WARNING: No plugins specified. It will result in no data being processed." << std::endl;
+    std::cout << "ERROR: No plugins specified." << std::endl;
     std::cout << "         Use the -Pplugins=plugin1,plugin2,... command line option to specify plugins." << std::endl;
 	std::cout << "Terminating....." <<std::endl;
     std::cout << RESET << std::flush;
