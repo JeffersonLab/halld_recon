@@ -36,6 +36,7 @@ class DFCALCluster_factory:public JFactoryT<DFCALCluster>{
 		// where z = 0 is the center of the target
 
 		double fcalFaceZ_TargetIsZeq0;
+                double CORRECT_SIMU_HIT_ENERGY;
 };
 
 #endif // _DFCALCluster_factory_
