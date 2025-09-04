@@ -49,6 +49,7 @@ void DFCALCluster_factory::Init()
 	TIME_CUT = 15.0 ; //ns
 	MAX_HITS_FOR_CLUSTERING = 250;
 	REMOVE_BAD_BLOCK = 0;
+	CORRECT_SIMU_HIT_ENERGY = 0;
 	
 	auto app = GetApplication();
 	app->SetDefaultParameter("FCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
@@ -56,6 +57,7 @@ void DFCALCluster_factory::Init()
 	app->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
 	app->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
 	app->SetDefaultParameter("FCAL:REMOVE_BAD_BLOCK",REMOVE_BAD_BLOCK,"remove bad block");
+	app->SetDefaultParameter("FCAL:CORRECT_SIMU_HIT_ENERGY",CORRECT_SIMU_HIT_ENERGY,"correct the simu hit energy");
 }
 
 //------------------
@@ -128,7 +130,11 @@ void DFCALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	   hits->hit[nhits].ch = fcalGeom->channel( (**hit).row, (**hit).column );
            hits->hit[nhits].x = (**hit).x;
            hits->hit[nhits].y = (**hit).y;
-           hits->hit[nhits].E = (**hit).E; 
+	   if (CORRECT_SIMU_HIT_ENERGY > 0)
+	     hits->hit[nhits].E = (**hit).E * CORRECT_SIMU_HIT_ENERGY;
+	   else
+	     hits->hit[nhits].E = (**hit).E;
+           //hits->hit[nhits].E = (**hit).E; 
            hits->hit[nhits].t = (**hit).t;
 	   hits->hit[nhits].intOverPeak = (**hit).intOverPeak;
            nhits++;
