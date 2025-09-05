@@ -679,6 +679,7 @@ void DTrackCandidate_factory_FDCCathodes::DoHelicalFit(vector<const DFDCSegment 
     }
     if (p>10.){//... try alternate circle fit
       fit.FitCircle();
+      fit.FindSenseOfRotation();
     } 
     if (fit.r0<0.5*max_r && max_r<10.0){
       // ... we can also have issues near the beam line:
