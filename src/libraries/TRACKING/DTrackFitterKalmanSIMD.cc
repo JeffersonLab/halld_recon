@@ -12,6 +12,7 @@
 #include "HDGEOMETRY/DMaterialMap.h"
 #include "HDGEOMETRY/DRootGeom.h"
 #include "PID/DParticleID.h"
+#include "DANA/DEvent.h"
 
 #include <TH2F.h>
 #include <TH1I.h>
@@ -307,7 +308,14 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    }
    pthread_mutex_unlock(&print_mutex);
 
-  // Some useful values
+	// load information on which detectors are installed
+	map<string,string> trd_installed;
+	bool GEM_INSTALLED = false;
+	DEvent::GetCalib(event, "/TRD/install_status", trd_installed);
+	if(atoi(trd_installed["status"].data()) == 1)
+		GEM_INSTALLED = true;
+
+   // Some useful values
    two_m_e=2.*ELECTRON_MASS;
    m_e_sq=ELECTRON_MASS*ELECTRON_MASS;
 
@@ -357,8 +365,12 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
    dTOFz+=tof_face[2]+tof_plane[2];
    dTOFz*=0.5;  // mid plane between tof planes
+
    // TRD plane
-   geom->GetGEMTRDz(dGEMTRDz);
+   if(GEM_INSTALLED)
+      geom->GetGEMTRDz(dGEMTRDz);
+   else
+      dGEMTRDz = 9999.;
       
    // Get start counter geometry;
    if (geom->GetStartCounterGeom(sc_pos, sc_norm)){

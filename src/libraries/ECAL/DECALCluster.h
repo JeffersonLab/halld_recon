@@ -22,6 +22,7 @@ class DECALCluster:public JObject{
   };
 
   double E,Efit,t,x,y;
+  double E1E9,E9E25;
   int status,channel_Emax;
   int ndf;
   double chisq;
@@ -34,6 +35,8 @@ class DECALCluster:public JObject{
     summary.add(E, "E [GeV]", "%f");
     summary.add(Efit, "E(fit) [GeV]", "%f");
     summary.add(t, "t [ns]", "%f");
+    summary.add(E1E9,"E1/E9","%f");
+    summary.add(E9E25,"E9/E25","%f");
     summary.add(status,"status","%d");
     summary.add(chisq,"chi^2","%f");
     summary.add(ndf,"ndf","%d");

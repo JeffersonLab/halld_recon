@@ -160,6 +160,11 @@ DBeamHelicity *DBeamHelicity_factory::Make_DBeamHelicity(vector<const DHELIDigiH
 //------------------
 DBeamHelicity *DBeamHelicity_factory::Make_DBeamHelicity(const DHelicityData *locHelicityData)
 {
+	if(!checkPredictor(locHelicityData->last_helicity_state_pattern_sync)) {
+		jerr << "Consistency check of Helicity Decoder Board data failed!" << endl;
+		return nullptr;
+	}
+
 	DBeamHelicity *locBeamHelicity = new DBeamHelicity;
 	locBeamHelicity->pattern_sync  = locHelicityData->trigger_pattern_sync;
 	locBeamHelicity->t_settle      = locHelicityData->trigger_tstable;
@@ -194,6 +199,19 @@ uint32_t DBeamHelicity_factory::advanceSeed(uint32_t seed) const
         seed = advanceSeed(seed);
     return (seed ^ event_polarity) & 0x01;
 
+}
+
+//------------------
+// checkPredictor
+//------------------
+bool DBeamHelicity_factory::checkPredictor(uint32_t testval) const
+{
+	UInt_t rval = (testval)&0x3fffffff;
+	UInt_t lval = (testval>>2)&0x3fffffff;
+	lval = advanceSeed(lval);
+	lval = advanceSeed(lval);
+	
+	return (rval == lval);
 }
 
 

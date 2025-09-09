@@ -87,8 +87,16 @@
 
 		const int bin_number = 8;
 		const char *bin_label[bin_number] = {"Main (1)", "BCal (3)", "PS (4)", "FCal LED (3)", "ECal LED (5)", "ECal #alpha (6)", "Random (12)", "DIRC LED (15)"};
-		TH1I *locHist_Trigger_GTP = new TH1I("locHist_Trigger_GTP", "L1 Trigger Bits", bin_number, 0, bin_number);
-		TH1I *locHist_Trigger_FP = new TH1I("locHist_Trigger_FP", "", bin_number, 0, bin_number);
+		TH1I *locHist_Trigger_GTP = (TH1I*) gDirectory->Get("locHist_Trigger_GTP");
+                if (!locHist_Trigger_GTP)
+                  locHist_Trigger_GTP = new TH1I("locHist_Trigger_GTP", "L1 Trigger Bits", bin_number, 0, bin_number);
+                else
+                  locHist_Trigger_GTP->Reset();
+		TH1I *locHist_Trigger_FP = (TH1I*) gDirectory->Get("locHist_Trigger_FP");
+                if (!locHist_Trigger_FP)
+                  locHist_Trigger_FP = new TH1I("locHist_Trigger_FP", "", bin_number, 0, bin_number);
+                else
+                  locHist_Trigger_FP->Reset();
 		for (int i=1; i <= bin_number; i++)
 		  locHist_Trigger_GTP->GetXaxis()->SetBinLabel(i,bin_label[i-1]);
 

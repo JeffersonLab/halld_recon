@@ -323,7 +323,7 @@ bool DEventSourceREST::GetObjects(const std::shared_ptr<const JEvent> &event, JF
 			}
 
 			// tagger related configs for reverse mapping tagger energy to counter number
-			if( REST_JANA_CALIB_CONTEXT != "" ) {
+			if( REST_JANA_CALIB_CONTEXT != "" && REST_JANA_CALIB_CONTEXT != "default" ) {
 				JCalibration *jcalib_old = calib_generator->MakeJCalibration(jcalib->GetURL(), locRunNumber, REST_JANA_CALIB_CONTEXT );
 				dTAGHGeoms[locRunNumber] = new DTAGHGeometry(jcalib_old, locRunNumber);
 				dTAGMGeoms[locRunNumber] = new DTAGMGeometry(jcalib_old, locRunNumber);
@@ -384,7 +384,7 @@ bool DEventSourceREST::GetObjects(const std::shared_ptr<const JEvent> &event, JF
    }
    if (dataClassName =="DECALShower") {
       return (Extract_DECALShower(record,
-				  dynamic_cast<JFactoryT<DECALShower>*>(factory)));
+                     dynamic_cast<JFactoryT<DECALShower>*>(factory)));
    }
    if (dataClassName =="DFCALShower") {
       return (Extract_DFCALShower(record,
@@ -1046,7 +1046,7 @@ bool DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactoryT<DTrigger
 				locTrigger->Set_GTP_FCAL2Energy(locTriggerFcal2EnergySumIterator->getFCAL2EnergySum());
 			}
 		}
-		
+			
 		data.push_back(locTrigger);
 	}
 
@@ -1067,6 +1067,7 @@ bool DEventSourceREST::Extract_DBeamHelicity(hddm_r::HDDM *record, JFactoryT<DBe
 
 	if (factory==NULL)
 		return false; //OBJECT_NOT_AVAILABLE
+
 	string tag = factory->GetTag();
 
 	vector<DBeamHelicity*> data;
@@ -1093,10 +1094,16 @@ bool DEventSourceREST::Extract_DBeamHelicity(hddm_r::HDDM *record, JFactoryT<DBe
 	}
 
 	// Copy into factory
-	factory->Set(data);
+	if (data.size() == 0)
+    	return false; // OBJECT_NOT_AVAILABLE (iter->getJTag() != tag)
+	else {
+    	factory->Set(data);
+		return true; //NOERROR;
+	}
+	
 
-	return true; //NOERROR;
 }
+
 
 //-----------------------
 // Extract_DECALShower
@@ -1144,6 +1151,15 @@ bool DEventSourceREST::Extract_DECALShower(hddm_r::HDDM *record,
     shower->nBlocks = iter->getNumBlocks();
     shower->isNearBorder = iter->getIsNearBorder();
     
+    const hddm_r::EcalShowerPropertiesList& locEcalShowerPropertiesList = iter->getEcalShowerPropertiesList();
+    hddm_r::EcalShowerPropertiesList::iterator locEcalShowerPropertiesIterator = locEcalShowerPropertiesList.begin();
+    shower->E1E9=0.;
+    shower->E9E25=0.;
+    if(locEcalShowerPropertiesIterator != locEcalShowerPropertiesList.end()) {
+      shower->E1E9=locEcalShowerPropertiesIterator->getE1E9();
+      shower->E9E25=locEcalShowerPropertiesIterator->getE9E25();
+    }
+       
     data.push_back(shower);
   }
 
@@ -1152,6 +1168,7 @@ bool DEventSourceREST::Extract_DECALShower(hddm_r::HDDM *record,
   
   return true; //NOERROR;
 }
+
 
 //-----------------------
 // Extract_DFCALShower
@@ -1234,16 +1251,18 @@ bool DEventSourceREST::Extract_DFCALShower(hddm_r::HDDM *record,
       hddm_r::FcalShowerNBlocksList::iterator locFcalShowerNBlocksIterator = locFcalShowerNBlocksList.begin();
       if(locFcalShowerNBlocksIterator != locFcalShowerNBlocksList.end()) {
 		  shower->setNumBlocks(locFcalShowerNBlocksIterator->getNumBlocks());
-      }
+      }      
+      
       shower->setIsNearBorder(false);
       const hddm_r::FcalShowerIsNearBorderList& locFcalShowerIsNearBorderList = iter->getFcalShowerIsNearBorders();
       hddm_r::FcalShowerIsNearBorderList::iterator locFcalShowerIsNearBorderIterator = locFcalShowerIsNearBorderList.begin();
       if(locFcalShowerIsNearBorderIterator != locFcalShowerIsNearBorderList.end()) {
-	shower->setIsNearBorder(locFcalShowerIsNearBorderIterator->getIsNearBorder());
+         shower->setIsNearBorder(locFcalShowerIsNearBorderIterator->getIsNearBorder());
       }
-      
+     
       data.push_back(shower);
    }
+
 
    // Copy into factory
    factory->Set(data);
@@ -1770,6 +1789,9 @@ bool DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const JEve
    vector<const DBCALShower*> locBCALShowers;
    locEvent->Get(locBCALShowers);
 
+   vector<const DECALShower*> locECALShowers;
+   locEvent->Get(locECALShowers);
+
    vector<const DFCALShower*> locFCALShowers;
    locEvent->Get(locFCALShowers);
 
@@ -1907,6 +1929,42 @@ bool DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const JEve
          locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex],std::const_pointer_cast<const DFCALSingleHitMatchParams>(locSingleHitMatchParams));
       }
 
+      // Lead tungstate insert
+      const hddm_r::EcalMatchParamsList &ecalList = iter->getEcalMatchParamses();
+      hddm_r::EcalMatchParamsList::iterator ecalIter = ecalList.begin();
+      for(; ecalIter != ecalList.end(); ++ecalIter)
+      {
+         size_t locShowerIndex = ecalIter->getShower();
+         size_t locTrackIndex = ecalIter->getTrack();
+
+         auto locShowerMatchParams = std::make_shared<DECALShowerMatchParams>();
+         locShowerMatchParams->dECALShower = locECALShowers[locShowerIndex];
+         locShowerMatchParams->dx = ecalIter->getDx();
+         locShowerMatchParams->dFlightTime = ecalIter->getTflight();
+         locShowerMatchParams->dFlightTimeVariance = ecalIter->getTflightvar();
+         locShowerMatchParams->dPathLength = ecalIter->getPathlength();
+         locShowerMatchParams->dDOCAToShower = ecalIter->getDoca();
+
+         locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], locECALShowers[locShowerIndex], std::const_pointer_cast<const DECALShowerMatchParams>(locShowerMatchParams));
+      }
+
+      const hddm_r::EcalSingleHitMatchParamsList &ecalSingleHitList = iter->getEcalSingleHitMatchParamses();
+      hddm_r::EcalSingleHitMatchParamsList::iterator ecalSingleHitIter = ecalSingleHitList.begin();
+      for(; ecalSingleHitIter != ecalSingleHitList.end(); ++ecalSingleHitIter)
+      {
+         size_t locTrackIndex = ecalSingleHitIter->getTrack();
+
+         auto locSingleHitMatchParams = std::make_shared<DECALSingleHitMatchParams>();
+         locSingleHitMatchParams->dEHit = ecalSingleHitIter->getEhit();
+        locSingleHitMatchParams->dTHit = ecalSingleHitIter->getThit();
+         locSingleHitMatchParams->dx = ecalSingleHitIter->getDx();
+         locSingleHitMatchParams->dFlightTime = ecalSingleHitIter->getTflight();
+         locSingleHitMatchParams->dFlightTimeVariance = ecalSingleHitIter->getTflightvar();
+         locSingleHitMatchParams->dPathLength = ecalSingleHitIter->getPathlength();
+         locSingleHitMatchParams->dDOCAToHit = ecalSingleHitIter->getDoca();
+
+         locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex],std::const_pointer_cast<const DECALSingleHitMatchParams>(locSingleHitMatchParams));
+      }
 
       const hddm_r::ScMatchParamsList &scList = iter->getScMatchParamses();
       hddm_r::ScMatchParamsList::iterator scIter = scList.begin();

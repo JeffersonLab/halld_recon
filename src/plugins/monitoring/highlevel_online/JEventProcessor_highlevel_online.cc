@@ -169,26 +169,32 @@ void JEventProcessor_highlevel_online::Init()
 	//timing cuts
 	dTimingCutMap[Gamma][SYS_BCAL] = 3.0;
 	dTimingCutMap[Gamma][SYS_FCAL] = 5.0;
+	dTimingCutMap[Gamma][SYS_ECAL] = 3.0;
 	dTimingCutMap[Proton][SYS_NULL] = -1.0;
 	dTimingCutMap[Proton][SYS_TOF] = 2.5;
 	dTimingCutMap[Proton][SYS_BCAL] = 2.5;
 	dTimingCutMap[Proton][SYS_FCAL] = 3.0;
+	dTimingCutMap[Proton][SYS_ECAL] = 3.0;
 	dTimingCutMap[PiPlus][SYS_NULL] = -1.0;
 	dTimingCutMap[PiPlus][SYS_TOF] = 2.0;
 	dTimingCutMap[PiPlus][SYS_BCAL] = 2.5;
 	dTimingCutMap[PiPlus][SYS_FCAL] = 3.0;
+	dTimingCutMap[PiPlus][SYS_ECAL] = 3.0;
 	dTimingCutMap[PiMinus][SYS_NULL] = -1.0;
 	dTimingCutMap[PiMinus][SYS_TOF] = 2.0;
 	dTimingCutMap[PiMinus][SYS_BCAL] = 2.5;
 	dTimingCutMap[PiMinus][SYS_FCAL] = 3.0;
+	dTimingCutMap[PiMinus][SYS_ECAL] = 3.0;
 	dTimingCutMap[Electron][SYS_NULL] = -1.0;
 	dTimingCutMap[Electron][SYS_TOF] = 2.0;
 	dTimingCutMap[Electron][SYS_BCAL] = 2.5;
 	dTimingCutMap[Electron][SYS_FCAL] = 3.0;
+	dTimingCutMap[Electron][SYS_ECAL] = 3.0;
 	dTimingCutMap[Positron][SYS_NULL] = -1.0;
 	dTimingCutMap[Positron][SYS_TOF] = 2.0;
 	dTimingCutMap[Positron][SYS_BCAL] = 2.5;
 	dTimingCutMap[Positron][SYS_FCAL] = 3.0;
+	dTimingCutMap[Positron][SYS_ECAL] = 3.0;
 
 	// All histograms go in the "highlevel" directory
 	TDirectory *main = gDirectory;
@@ -264,6 +270,7 @@ void JEventProcessor_highlevel_online::Init()
 
 	// Beam Energy from tagger
 	dHist_BeamEnergy = new TH1I("BeamEnergy", "Reconstructed Tagger Beam Energy;Beam Energy (GeV)", 240, 0.0, 12.0);
+	dHist_BeamEnergy_amo = new TH1I("BeamEnergy_amo", "Saved Tagger Beam Energy for AMO run;Beam Energy (GeV)", 240, 0.0, 12.0);
 
 	// Beam Energy from PS
 	dHist_PSPairEnergy = new TH1I("PSPairEnergy", "Reconstructed PS Beam Energy;Beam Energy (GeV)", 450, 3., 12.);
@@ -277,10 +284,16 @@ void JEventProcessor_highlevel_online::Init()
 	/*************************************************************** VERTEX ***************************************************************/
 
 	// Event Vertex-Z
-	dEventVertexZ = new TH1I("EventVertexZ", "Reconstructed Event Vertex Z;Event Vertex-Z (cm)", 600, -100.0, 200.0);
+	dEventVertexZ = new TH1I("EventVertexZ", "Event Vertex (R < 1 cm);Event Vertex Z (cm)", 750, 0.0, 150.0);
 
 	// Event Vertex-Y Vs Vertex-X
-	dEventVertexYVsX = new TH2I("EventVertexYVsX", "Reconstructed Event Vertex X/Y;Event Vertex-X (cm);Event Vertex-Y (cm)", 400, -10.0, 10.0, 400, -10.0, 10.0);
+	dEventVertexYVsX = new TH2I("EventVertexYVsX", "Event Vertex in Target (50 < Z < 80);Event Vertex X (cm);Event Vertex Y (cm)", 400, -4.0, 4.0, 400, -4.0, 4.0);
+
+	// Event Vertex-X Vs Vertex-Z
+	dEventVertexXVsZ = new TH2I("EventVertexXVsZ", "Event Vertex in Target (|Y| < 2 cm);Event Vertex Z (cm);Event Vertex X (cm)", 200, 48, 88, 150, -1.5, 1.5);
+
+	// Event Vertex-Y Vs Vertex-Z
+	dEventVertexYVsZ = new TH2I("EventVertexYVsZ", "Event Vertex in Target (|X| < 2 cm);Event Vertex Z (cm);Event Vertex Y (cm)", 200, 48, 88, 150, -1.5, 1.5);
 
 	/*************************************************************** 2 gamma inv. mass ***************************************************************/
 	// 2-gamma inv. mass
@@ -382,6 +395,12 @@ void JEventProcessor_highlevel_online::BeginRun(const std::shared_ptr<const JEve
 	map<string, double> photon_beam_param;
 	if(DEvent::GetCalib(event, "/PHOTON_BEAM/coherent_energy", photon_beam_param) == false)
 		dCoherentPeakRange = pair<double, double>(photon_beam_param["cohmin_energy"], photon_beam_param["cohedge_energy"]);
+
+	vector<int> locAmoNorm;
+	GetCalib(event, "PHOTON_BEAM/amo_norm", locAmoNorm);
+	for(size_t loc_i = 0; loc_i < locAmoNorm.size(); ++loc_i){
+	  dHist_BeamEnergy_amo->SetBinContent(loc_i+1, locAmoNorm[loc_i]);
+	}
 
 	fcal_cell_thr  =  65;
 	bcal_cell_thr  =  20;
@@ -631,8 +650,8 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 	  
 	  if( ((int32_t)fcal_hit->pulse_peak-100) <= fcal_cell_thr) continue;
 	  
-	  uint32_t adc_time = (fcal_hit->pulse_time >> 6) & 0x1FF; // consider only course time
-	  //if((adc_time < 15) || (adc_time > 50)) continue; // changed from 20 and 70 based on run 30284  2/5/2017 DL
+	  // uint32_t adc_time = (fcal_hit->pulse_time >> 6) & 0x1FF; // consider only course time
+	  // if((adc_time < 15) || (adc_time > 50)) continue; // changed from 20 and 70 based on run 30284  2/5/2017 DL
 	  
 	  Int_t pulse_int = fcal_hit->pulse_integral - fcal_hit->nsamples_integral*100;
 	  if(pulse_int < 0) continue;
@@ -964,8 +983,17 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 	
 	if(locChargedTracks.size() >= 2)
 	{
-		dEventVertexZ->Fill(locVertex->dSpacetimeVertex.Z());
-		dEventVertexYVsX->Fill(locVertex->dSpacetimeVertex.X(), locVertex->dSpacetimeVertex.Y());
+		float vertX = locVertex->dSpacetimeVertex.X();
+		float vertY = locVertex->dSpacetimeVertex.Y();
+		float vertZ = locVertex->dSpacetimeVertex.Z();
+		if (sqrt(vertX*vertX + vertY*vertY) < 1)
+			dEventVertexZ->Fill(locVertex->dSpacetimeVertex.Z());
+		if (vertZ<80 && vertZ>50)
+			dEventVertexYVsX->Fill(vertX, vertY);
+		if (vertY<2 && vertY>-2)
+			dEventVertexXVsZ->Fill(vertZ, vertX);
+		if (vertX<2 && vertX>-2)
+			dEventVertexYVsZ->Fill(vertZ, vertY);
 	}
 	
 	/*************************************************************** 2 gamma inv. mass ***************************************************************/

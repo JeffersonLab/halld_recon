@@ -31,7 +31,10 @@
                 xycorr="float" xzcorr="float" yzcorr="float"
                 tzcorr="float" Ezcorr="float" isNearBorder="int"
 		numBlocks="int"
-                lunit="cm" tunit="ns" Eunit="GeV"/>
+                lunit="cm" tunit="ns" Eunit="GeV">
+      <ecalShowerProperties minOccurs="0" maxOccurs="1"
+                            E1E9="float" E9E25="float"/>
+    </ecalShower>  
     <fcalShower minOccurs="0" maxOccurs="unbounded" jtag="string"
                 x="float" y="float" z="float" t="float" E="float"
                 xerr="float" yerr="float" zerr="float" terr="float" Eerr="float"
@@ -142,6 +145,15 @@
       <bcalMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" shower="int"
                 dx="float" deltaphi="float" deltaz="float" pathlength="float" tflight="float" tflightvar="float"
+                tunit="ns" lunit="cm"/>
+      <ecalMatchParams maxOccurs="unbounded" minOccurs="0"
+                       track="int" shower="int"
+                       dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
+                       tunit="ns" lunit="cm"/>
+      <ecalSingleHitMatchParams maxOccurs="unbounded" minOccurs="0"
+                track="int" ehit="float" thit="float"
+                dx="float" doca="float" pathlength="float" tflight="float"
+		tflightvar="float"
                 tunit="ns" lunit="cm"/>
       <fcalMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" shower="int"

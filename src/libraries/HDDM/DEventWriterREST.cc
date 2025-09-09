@@ -278,6 +278,10 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	  ecal().setTzcorr(ecalshowers[i]->ZTcorr());
 	  ecal().setNumBlocks(ecalshowers[i]->nBlocks);
 	  ecal().setIsNearBorder(ecalshowers[i]->isNearBorder);
+
+	  hddm_r::EcalShowerPropertiesList locEcalShowerPropertiesList = ecal().addEcalShowerPropertiesList(1);
+	  locEcalShowerPropertiesList().setE1E9(ecalshowers[i]->E1E9);
+	  locEcalShowerPropertiesList().setE9E25(ecalshowers[i]->E9E25);
 	}
 	// push any DFCALShower objects to the output record
 	for (size_t i=0; i < fcalshowers.size(); i++)
@@ -706,7 +710,46 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 				bcalList().setTflight(locBCALShowerMatchParamsVector[loc_k]->dFlightTime);
 				bcalList().setTflightvar(locBCALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
 			}
+			
+			vector<shared_ptr<const DECALShowerMatchParams>> locECALShowerMatchParamsVector;
+			locDetectorMatches[loc_i]->Get_ECALMatchParams(tracks[loc_j], locECALShowerMatchParamsVector);
+			for (size_t loc_k = 0; loc_k < locECALShowerMatchParamsVector.size(); ++loc_k)
+			{
+			  hddm_r::EcalMatchParamsList ecalList = matches().addEcalMatchParamses(1);
+			  ecalList().setTrack(loc_j);
+			  
+			  const DECALShower* locECALShower = locECALShowerMatchParamsVector[loc_k]->dECALShower;
+			  size_t locECALindex = 0;
+			  for(; locECALindex < ecalshowers.size(); ++locECALindex)
+			    {
+			      if(ecalshowers[locECALindex] == locECALShower)
+				break;
+			    }
+			  ecalList().setShower(locECALindex);
 
+			  ecalList().setDoca(locECALShowerMatchParamsVector[loc_k]->dDOCAToShower);
+			  ecalList().setDx(locECALShowerMatchParamsVector[loc_k]->dx);
+			  ecalList().setPathlength(locECALShowerMatchParamsVector[loc_k]->dPathLength);
+			  ecalList().setTflight(locECALShowerMatchParamsVector[loc_k]->dFlightTime);
+			  ecalList().setTflightvar(locECALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
+			}
+
+			vector<shared_ptr<const DECALSingleHitMatchParams>> locECALSingleHitMatchParamsVector;
+			locDetectorMatches[loc_i]->Get_ECALSingleHitMatchParams(tracks[loc_j], locECALSingleHitMatchParamsVector);
+			for (size_t loc_k = 0; loc_k < locECALSingleHitMatchParamsVector.size(); ++loc_k)
+			{
+			  hddm_r::EcalSingleHitMatchParamsList ecalSingleHitList = matches().addEcalSingleHitMatchParamses(1);
+			  ecalSingleHitList().setTrack(loc_j);
+			  
+			  ecalSingleHitList().setEhit(locECALSingleHitMatchParamsVector[loc_k]->dEHit);
+			  ecalSingleHitList().setThit(locECALSingleHitMatchParamsVector[loc_k]->dTHit);
+			  ecalSingleHitList().setDoca(locECALSingleHitMatchParamsVector[loc_k]->dDOCAToHit);
+			  ecalSingleHitList().setDx(locECALSingleHitMatchParamsVector[loc_k]->dx);
+			  ecalSingleHitList().setPathlength(locECALSingleHitMatchParamsVector[loc_k]->dPathLength);
+			  ecalSingleHitList().setTflight(locECALSingleHitMatchParamsVector[loc_k]->dFlightTime);
+			  ecalSingleHitList().setTflightvar(locECALSingleHitMatchParamsVector[loc_k]->dFlightTimeVariance);
+			}
+			
 			vector<shared_ptr<const DFCALShowerMatchParams>> locFCALShowerMatchParamsVector;
 			locDetectorMatches[loc_i]->Get_FCALMatchParams(tracks[loc_j], locFCALShowerMatchParamsVector);
 			for (size_t loc_k = 0; loc_k < locFCALShowerMatchParamsVector.size(); ++loc_k)

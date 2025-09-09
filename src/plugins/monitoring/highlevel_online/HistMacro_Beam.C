@@ -1,6 +1,7 @@
 // hnamepath: /highlevel/RFBeamBunchPeriod
 // hnamepath: /highlevel/RFBeamBunchPeriod_DFT
 // hnamepath: /highlevel/BeamEnergy
+// hnamepath: /highlevel/BeamEnergy_amo
 //
 // e-mail: davidl@jlab.org
 // e-mail: staylor@jlab.org
@@ -11,14 +12,14 @@
 {
 //--------------------------------------------------------------------
 // This taken from the bin contents of: DBeamPhoton::E of a janaroot file
-// for run 132092, an amorphous target run.
+// for run 133141, an amorphous target run.
 // The data in the table below was created with a macro in:
 //   $HALLD_RECON_HOME/src/plugins/monitoring/highlevel_online/AmorphousNormalization
 //
 // The working directory used was:
 //     ~hdops/2018.10.05.amorphous_normalization
 //
-string amorphous_label = "Normalized to Amorphous run 132092";
+string amorphous_label = "Normalized to Amorphous run 133141";
 
 	Double_t amorphous_data[] = {
 		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
@@ -36,14 +37,14 @@ string amorphous_label = "Normalized to Amorphous run 132092";
 		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
 		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
 		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,    464474.0, 
-		   622401.0,    839691.0,    809285.0,    648394.0,    769155.0,    727631.0,    725271.0,    710409.0,    643961.0,    653758.0, 
-		   636479.0,    650026.0,    592399.0,    601925.0,    630094.0,    739303.0,    578530.0,    658359.0,    527869.0,    940075.0, 
-		  1789890.0,   1120777.0,   1119237.0,   1497883.0,   1530398.0,    512815.0,    899775.0,    950936.0,   1390616.0,   1426906.0, 
-		  1376973.0,   1329195.0,    840735.0,   1716268.0,   1227882.0,   1202793.0,   1002124.0,   1184727.0,   1193405.0,   1646712.0, 
-		  1005477.0,    975660.0,    968827.0,   1342201.0,   1232331.0,   1063538.0,   1141606.0,   1116701.0,   1076683.0,   1016664.0, 
-		  1039243.0,    965529.0,   1355734.0,    879464.0,   1514160.0,    596446.0,   1203261.0,   1131515.0,   1066331.0,   1505304.0, 
-		   912855.0,   1217827.0,    763920.0,    835881.0,    778122.0,   1002092.0,    870598.0,    889112.0,    669009.0,    380801.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,    603024.0, 
+		   715809.0,    876503.0,    768876.0,    832468.0,    968221.0,    887220.0,    966896.0,    819973.0,    817816.0,    794689.0, 
+		   760821.0,    799343.0,    964819.0,    983185.0,    875640.0,   1007130.0,    872138.0,   1094751.0,    945558.0,   1248558.0, 
+		  1786723.0,   1123570.0,   1114447.0,   1497953.0,   1530973.0,    512074.0,    898413.0,    947271.0,   1394707.0,   1433727.0, 
+		  1377625.0,   1336832.0,    848098.0,   1720764.0,   1236145.0,   1203198.0,   1009402.0,   1193600.0,   1200645.0,   1659380.0, 
+		   763676.0,    961762.0,    982407.0,   1361042.0,   1243086.0,   1078576.0,   1152846.0,   1124651.0,   1086944.0,   1028931.0, 
+		  1045761.0,    974301.0,   1372879.0,    890618.0,   1532175.0,    605489.0,   1222477.0,   1147639.0,   1081689.0,   1532456.0, 
+		   929855.0,   1242304.0,    773876.0,    852506.0,    796618.0,   1023501.0,    891699.0,    911777.0,    678945.0,    387017.0, 
 		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
 	0.0};
 //--------------------------------------------------------------------
@@ -58,6 +59,8 @@ string amorphous_label = "Normalized to Amorphous run 132092";
 	TH1* locHist_RFBeamBunchPeriod = (TH1*)gDirectory->Get("RFBeamBunchPeriod");
 	TH1* locHist_RFBeamBunchPeriod_DFT = (TH1*)gDirectory->Get("RFBeamBunchPeriod_DFT");
 	TH1* locHist_BeamEnergy = (TH1*)gDirectory->Get("BeamEnergy");
+	TH1* locHist_BeamEnergy_amo = (TH1*)gDirectory->Get("BeamEnergy_amo");
+	bool locUseCCDB = (locHist_BeamEnergy_amo != NULL && locHist_BeamEnergy_amo->GetEntries() > 0);
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -126,7 +129,13 @@ string amorphous_label = "Normalized to Amorphous run 132092";
 			// Normalize to amorphous baseline 
 			double scale = 0.0;
 			for(int ibin=1; ibin<=locHist_BeamEnergy_norm->GetNbinsX(); ibin++){
-				Double_t norm = amorphous_data[ibin-1];
+				Double_t norm;
+				if ( locUseCCDB ){
+				  amorphous_label = "Normalized to Amorphous run from CCDB";
+				  norm = locHist_BeamEnergy_amo->GetBinContent(ibin);
+				}
+				else
+				  norm = amorphous_data[ibin-1];
 				if( norm < 1000.0) continue;
 
 				Double_t v = (Double_t)locHist_BeamEnergy->GetBinContent(ibin);
@@ -141,7 +150,11 @@ string amorphous_label = "Normalized to Amorphous run 132092";
 			// Find leftmost non-zero bin 
 			double left_scale = 0.0;
 			for(int ibin=1; ibin<=locHist_BeamEnergy_norm->GetNbinsX(); ibin++){
-				if( amorphous_data[ibin-1] < 10000.0) continue;
+				if( locUseCCDB ){
+				  if (locHist_BeamEnergy_amo->GetBinContent(ibin) < 10000.0) continue;
+				}
+				else
+				  if (amorphous_data[ibin-1] < 10000.0) continue;
 				Double_t v = (Double_t)locHist_BeamEnergy_norm->GetBinContent(ibin);
 				if(v>0.1){
 					left_scale = v;
@@ -153,7 +166,7 @@ string amorphous_label = "Normalized to Amorphous run 132092";
 			double diff = 1.0 - left_scale;
 			double min = left_scale - diff*0.1;
 			double max = left_scale + diff*1.2;
-			if( (max-min) < 0.5 ){
+			if( (max-min) < 0.7 ){
 				min = 0.25;
 				if(max<1.50) max =1.5;
 			}
@@ -192,7 +205,7 @@ string amorphous_label = "Normalized to Amorphous run 132092";
 		}
 
 		TPad *beamenergypad = (TPad*)gDirectory->FindObjectAny("beamenergypad");
-		if(!beamenergypad) beamenergypad = new TPad("beamenergypad", "", 0.45, 0.65, 0.885, 0.895);
+		if(!beamenergypad) beamenergypad = new TPad("beamenergypad", "", 0.11, 0.65, 0.51, 0.895);
 		beamenergypad->SetTicks();
 		beamenergypad->Draw();
 		beamenergypad->cd();

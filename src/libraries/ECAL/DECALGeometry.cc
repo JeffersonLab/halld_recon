@@ -12,7 +12,7 @@ using namespace std;
 //---------------------------------
 // DFCALGeometry    (Constructor)
 //---------------------------------
-DECALGeometry::DECALGeometry(const DGeometry *geom){
+DECALGeometry::DECALGeometry(const DGeometry *geom, JCalibration *calib){
   // Find position of upstream face of FCAL
   double fcal_z_front=0.;
   geom->GetFCALPosition(m_FCALx,m_FCALy,fcal_z_front);
@@ -24,6 +24,17 @@ DECALGeometry::DECALGeometry(const DGeometry *geom){
   
   // Get the z-position of the upstream face of the insert
   geom->GetECALZ(m_insertFrontZ);
+
+  // Get some small x and y offsets for individual blocks
+  vector<map<string,double>>xy_offsets;
+  vector<double>x_offsets,y_offsets;
+  if (calib->Get("/ECAL/alignment",xy_offsets)==false){
+    for (unsigned int i=0;i<xy_offsets.size();i++){
+      map<string,double> &row=xy_offsets[i];
+      x_offsets.push_back(row["dx"]);
+      y_offsets.push_back(row["dy"]);
+    }
+  }
   
   // Initialize active block map
   int ch=0;
@@ -59,8 +70,10 @@ DECALGeometry::DECALGeometry(const DGeometry *geom){
       my_row=i-21;
     }
     for (int col=col0;col<col0+ncopy;col++){
-      double x=m_FCALx+x0+double(col-col0)*dx;
-      double y=m_FCALy+pos[1]+phi*x; //use small angle approximation
+      double offset_x=x_offsets[m_channelNumber[my_row][col]];
+      double offset_y=y_offsets[m_channelNumber[my_row][col]];
+      double x=m_FCALx+x0+double(col-col0)*dx-offset_x;
+      double y=m_FCALy+pos[1]+phi*x-offset_y; //use small angle approximation
 
       m_positionOnFace[my_row][col].Set(x,y);
       m_activeBlock[my_row][col] = true;

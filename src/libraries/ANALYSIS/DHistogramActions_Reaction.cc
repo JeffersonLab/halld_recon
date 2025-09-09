@@ -123,7 +123,7 @@ void DHistogramAction_PID::Initialize(const std::shared_ptr<const JEvent>& locEv
 				dHistMap_BetaVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DBetaBins, dMinBeta, dMaxBeta);
 
 				locHistName = "DeltaTVsShowerE_Photon";
-				locHistTitle = string("ECAL ") + locParticleROOTName + string(";p (GeV/c);#Deltat_{FCAL - RF}");
+				locHistTitle = string("ECAL ") + locParticleROOTName + string(";p (GeV/c);#Deltat_{ECAL - RF}");
 				dHistMap_DeltaTVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
 
 				locHistName = "TimePullVsShowerE_Photon";
@@ -299,7 +299,7 @@ void DHistogramAction_PID::Initialize(const std::shared_ptr<const JEvent>& locEv
 				dHistMap_BetaVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DBetaBins, dMinBeta, dMaxBeta);
 
 				locHistName = "DeltaBetaVsP";
-				locHistTitle = locParticleROOTName + string(" Candidates;p (GeV/c);FCAL #Delta#beta");
+				locHistTitle = locParticleROOTName + string(" Candidates;p (GeV/c);ECAL #Delta#beta");
 				dHistMap_DeltaBetaVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaBetaBins, dMinDeltaBeta, dMaxDeltaBeta);
 
 				locHistName = "DeltaTVsP";
@@ -307,11 +307,11 @@ void DHistogramAction_PID::Initialize(const std::shared_ptr<const JEvent>& locEv
 				dHistMap_DeltaTVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
 
 				locHistName = string("TimePullVsP_") + locParticleName;
-				locHistTitle = string("FCAL ") + locParticleROOTName + string(";p (GeV/c);#Deltat/#sigma_{#Deltat}");
+				locHistTitle = string("ECAL ") + locParticleROOTName + string(";p (GeV/c);#Deltat/#sigma_{#Deltat}");
 				dHistMap_TimePullVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DPullBins, dMinPull, dMaxPull);
 
 				locHistName = string("TimeFOMVsP_") + locParticleName;
-				locHistTitle = string("FCAL ") + locParticleROOTName + string(";p (GeV/c);Timing PID Confidence Level");
+				locHistTitle = string("ECAL ") + locParticleROOTName + string(";p (GeV/c);Timing PID Confidence Level");
 				dHistMap_TimeFOMVsP[locPID][SYS_ECAL] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DFOMBins, 0.0, 1.0);
 
 				locHistName = "EOverPVsP";

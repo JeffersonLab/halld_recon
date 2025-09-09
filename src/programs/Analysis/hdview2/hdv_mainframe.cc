@@ -116,11 +116,12 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
 
   // Figure out ECAL details
   if (dgeom->HaveInsert()) {
-    ecalgeom= new DECALGeometry(dgeom);
+    auto app = event.GetJApplication();
+    auto runnumber = event.GetRunNumber();
+    auto jcalib =  app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
     m_insert_size = dgeom->GetFCALInsertSize();
-    auto ecal = new DECALGeometry(dgeom);
-    m_insert_block_size = ecal->blockSize();
-    delete ecal;
+    ecalgeom = new DECALGeometry(dgeom,jcalib);
+    m_insert_block_size = ecalgeom->blockSize();
   }
 
   dgeom->GetFDCWires(fdcwires);
