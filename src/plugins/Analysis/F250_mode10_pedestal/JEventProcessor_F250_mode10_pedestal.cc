@@ -38,10 +38,6 @@ JEventProcessor_F250_mode10_pedestal::JEventProcessor_F250_mode10_pedestal()
 	NSA_NSB = 60;
 	debug=0;
 
-	auto app = GetApplication();
-	app->SetDefaultParameter("F250_m10_ped:NSA_NSB", NSA_NSB, "The number of samples integrated in the signal.");
-	app->SetDefaultParameter("F250_m10_ped:debug",   debug,   "Debug level");
-
 }
 
 //------------------
@@ -65,6 +61,10 @@ void JEventProcessor_F250_mode10_pedestal::Init()
 	//  ... fill historgrams or trees ...
 	// GetLockService(locEvent)->RootUnLock();
 	//
+
+	auto app = GetApplication();
+	app->SetDefaultParameter("F250_m10_ped:NSA_NSB", NSA_NSB, "The number of samples integrated in the signal.");
+	app->SetDefaultParameter("F250_m10_ped:debug",   debug,   "Debug level");
 
 	// lock all root operations
 	auto lockSvc = GetApplication()->GetService<JLockService>();
