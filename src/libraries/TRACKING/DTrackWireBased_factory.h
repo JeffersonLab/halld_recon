@@ -48,52 +48,40 @@ class DParticleID;
 ///////////////////////////////////////////////////////////////////////
 
 class DTrackWireBased_factory:public JFactoryT<DTrackWireBased>{
-	public:
-		DTrackWireBased_factory(){};
-		~DTrackWireBased_factory(){};
+public:
+  DTrackWireBased_factory(){};
+  ~DTrackWireBased_factory(){};
+  
+private:
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
+  
+  int DEBUG_LEVEL;
+  DTrackFitter *fitter;
+  DReferenceTrajectory *rt;
+  vector<double>sc_phi;
 
-	private:
-		void Init() override;
-		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
-		void Process(const std::shared_ptr<const JEvent>& event) override;
-		void EndRun() override;
-		void Finish() override;
-
-		int DEBUG_LEVEL;
-		DTrackFitter *fitter;
-		DReferenceTrajectory *rt;
-
-		vector<int> mass_hypotheses_positive;
-		vector<int> mass_hypotheses_negative;
-		size_t MAX_DReferenceTrajectoryPoolSize; 
-		int mNumHypPlus,mNumHypMinus;
-
-		void FilterDuplicates(void);
-		void DoFit(unsigned int c_id,const DTrackCandidate *candidate,
-			   DReferenceTrajectory *rt, const std::shared_ptr<const JEvent>& event,
-			   double mass);
-		void AddMissingTrackHypothesis(vector<DTrackWireBased*>&tracks_to_add,
-					       const DTrackWireBased *src_track,
-					       double my_mass,double q);
-		bool InsertMissingHypotheses(void);
-		void CorrectForELoss(DVector3 &position,DVector3 &momentum,
-				     double q, double mass); 
-		void AddMissingTrackHypotheses(unsigned int mass_bits,
-					       vector<DTrackWireBased*>&tracks_to_add,
-					       vector<DTrackWireBased *>&hypotheses,
-					       double q);
-
- 
-		const DGeometry *geom;
-
-		bool DEBUG_HISTS;
-		bool SKIP_MASS_HYPOTHESES_WIRE_BASED;
-		bool USE_HITS_FROM_CANDIDATE;
-		double MIN_FIT_P;
-		double PROTON_MOM_THRESH;
-		bool dIsNoFieldFlag;
-
-		const DParticleID* dPIDAlgorithm;
+  void FilterDuplicates(void);
+  void DoFit(unsigned int c_id,const DTrackCandidate *candidate,
+	     DReferenceTrajectory *rt,
+	     const std::shared_ptr<const JEvent>& event,
+	     double mass,double t0,DetectorSystem_t t0_detector);
+  void CorrectForELoss(DVector3 &position,DVector3 &momentum,
+		       double q, double mass); 
+  
+  const DGeometry *geom;
+  
+  bool DEBUG_HISTS;
+  bool USE_HITS_FROM_CANDIDATE;
+  double MIN_FIT_P;
+  double PROTON_MOM_THRESH,SC_DPHI_CUT,BCAL_CUT;
+  unsigned int MIN_BCAL_MATCHES;
+  bool dIsNoFieldFlag;
+  
+  const DParticleID* dPIDAlgorithm;
 };
 
 #endif // _DTrackWireBased_factory_
