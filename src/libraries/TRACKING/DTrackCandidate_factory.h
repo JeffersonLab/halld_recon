@@ -130,7 +130,7 @@ class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
 			  DVector3 &mom,DVector3 &pos) const;
   bool MatchStraySegments(vector<int> &forward_matches,
 			  int &num_fdc_cands_remaining);
-  bool MakeCandidateFromMethod1(double theta,
+  bool MakeCandidateFromMethod1(double t0,double theta,
 				vector<const DFDCSegment *>&segments,
 				const DTrackCandidate *cdccan);
  

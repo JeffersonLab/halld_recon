@@ -558,7 +558,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 		  continue;
 		}
 		
-		if (MakeCandidateFromMethod1(theta,segments,cdccan)){
+		if (MakeCandidateFromMethod1(fdccan->t0(),theta,segments,cdccan)){
 		  forward_matches[i]=1;
 		  num_fdc_cands_remaining--;
 		  cdc_backward_matches[j]=1;
@@ -1165,9 +1165,8 @@ bool DTrackCandidate_factory::MatchMethod1(const DTrackCandidate *fdccan,
     }
 
     unsigned int cdc_index=cdc_forward_ids[jmin];
-    if (MakeCandidateFromMethod1(mom.Theta(),segments,
+    if (MakeCandidateFromMethod1(fdccan->t0(),mom.Theta(),segments,
 				 cdctrackcandidates[cdc_index])){
-         
       if (DEBUG_LEVEL>0)
 	_DBG_ << ".. matched to CDC candidate #" << cdc_index <<endl;   
       
@@ -1184,7 +1183,7 @@ bool DTrackCandidate_factory::MatchMethod1(const DTrackCandidate *fdccan,
 
 // Create new candidate after using Match Method 1 to match cdc and fdc 
 // candidates
-bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const DFDCSegment *>&segments,const DTrackCandidate *cdccan){
+bool DTrackCandidate_factory::MakeCandidateFromMethod1(double t0,double theta,vector<const DFDCSegment *>&segments,const DTrackCandidate *cdccan){
   // JANA does not maintain the order that the segments were added
   // as associated objects. Therefore, we need to reorder them here
   // so segment[0] is the most upstream segment.
@@ -1237,7 +1236,16 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
     can->rc=fit.r0;
     can->xc=fit.x0;
     can->yc=fit.y0;
-    
+
+    if (cdccan->t0()<t0){
+      can->setTime(cdccan->t0());
+      can->setT0(cdccan->t0(),5.,SYS_CDC);
+    }
+    else{
+      can->setTime(t0);
+      can->setT0(t0,5.,SYS_FDC);
+    }
+    cout << "Method 1: "<< can->t0() << " " << can->t0_detector() << endl;
     // Add cdc and fdc hits to the track as associated objects
     for (unsigned int m=0;m<segments.size();m++){
       for (unsigned int n=0;n<segments[m]->hits.size();n++){

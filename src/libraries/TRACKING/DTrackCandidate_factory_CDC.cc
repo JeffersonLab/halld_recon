@@ -4526,70 +4526,68 @@ void DTrackCandidate_factory_CDC::Add_UnusedHits(vector<DCDCTrackCircle*>& locCD
 //-----------------------
 void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDCTrackCircle)
 {
-	DVector3 pos, mom;
-	if(!Calc_PositionAndMomentum(locCDCTrackCircle, pos, mom))
-	{
-		if(DEBUG_LEVEL > 5)
-			cout << "Track momentum not greater than zero (or NaN), DTrackCandidate object not created." << endl;
-		return; //don't create object!!
-	}
+  DVector3 pos, mom;
+  if(!Calc_PositionAndMomentum(locCDCTrackCircle, pos, mom)){
+    if(DEBUG_LEVEL > 5)
+      cout << "Track momentum not greater than zero (or NaN), DTrackCandidate object not created." << endl;
+    return; //don't create object!!
+  }
+  
+  DTrackCandidate *locTrackCandidate = new DTrackCandidate;
+  //circle fit parameters
+  locTrackCandidate->rc=locCDCTrackCircle->fit->r0;
+  locTrackCandidate->xc=locCDCTrackCircle->fit->x0;
+  locTrackCandidate->yc=locCDCTrackCircle->fit->y0;
+  Particle_t locPID = (locCDCTrackCircle->fit->h*dFactorForSenseOfRotation > 0.0) ? PiPlus : PiMinus;
+  locTrackCandidate->setPID(locPID);
+  locTrackCandidate->chisq = locCDCTrackCircle->fit->chisq;
+  locTrackCandidate->Ndof = locCDCTrackCircle->fit->ndof;
+  locTrackCandidate->setPosition(pos);
+  locTrackCandidate->setMomentum(mom);
+  
+  // Add axial hits (if any)
+  vector<DCDCTrkHit*> locHits;
+  double t0=1e9;
+  for(size_t loc_i = 0; loc_i < locCDCTrackCircle->dSuperLayerSeeds_Axial.size(); ++loc_i){
+    locCDCTrackCircle->dSuperLayerSeeds_Axial[loc_i]->Get_Hits(locHits);
+    for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j){
+      locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
+      locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
+      if (locHits[loc_j]->hit->tdrift<t0) t0=locHits[loc_j]->hit->tdrift;
+    }
+  }
 
-	DTrackCandidate *locTrackCandidate = new DTrackCandidate;
-	//circle fit parameters
-	locTrackCandidate->rc=locCDCTrackCircle->fit->r0;
-	locTrackCandidate->xc=locCDCTrackCircle->fit->x0;
-	locTrackCandidate->yc=locCDCTrackCircle->fit->y0;
-	Particle_t locPID = (locCDCTrackCircle->fit->h*dFactorForSenseOfRotation > 0.0) ? PiPlus : PiMinus;
-	locTrackCandidate->setPID(locPID);
-	locTrackCandidate->chisq = locCDCTrackCircle->fit->chisq;
-	locTrackCandidate->Ndof = locCDCTrackCircle->fit->ndof;
-	locTrackCandidate->setPosition(pos);
-	locTrackCandidate->setMomentum(mom);
+  // Add inner stereo hits (if any)
+  if(!locCDCTrackCircle->dSuperLayerSeeds_InnerStereo.empty()){
+    for(size_t loc_i = 0; loc_i < locCDCTrackCircle->dSuperLayerSeeds_InnerStereo[0].size(); ++loc_i){ //only one seed series: the "best" one 
+      locCDCTrackCircle->dSuperLayerSeeds_InnerStereo[0][loc_i]->Get_Hits(locHits);
+      for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j){
+	locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
+	locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
+	if (locHits[loc_j]->hit->tdrift<t0) t0=locHits[loc_j]->hit->tdrift;
+      }
+    }
+  }
+  
+  // Add outer stereo hits (if any)
+  if(!locCDCTrackCircle->dSuperLayerSeeds_OuterStereo.empty()){
+    for(size_t loc_i = 0; loc_i < locCDCTrackCircle->dSuperLayerSeeds_OuterStereo[0].size(); ++loc_i){ //only one seed series: the "best" one
+      locCDCTrackCircle->dSuperLayerSeeds_OuterStereo[0][loc_i]->Get_Hits(locHits);
+      for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j){
+	locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
+	locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
+	if (locHits[loc_j]->hit->tdrift<t0) t0=locHits[loc_j]->hit->tdrift;
+      }
+    }
+  }
+  
+  if(DEBUG_LEVEL>3)
+    cout<<"Final Candidate parameters: p="<<mom.Mag()<<" theta="<<mom.Theta()<<"  phi="<<mom.Phi()<<" z="<<pos.Z()<<endl;
 
-	// Add axial hits (if any)
-	vector<DCDCTrkHit*> locHits;
-	for(size_t loc_i = 0; loc_i < locCDCTrackCircle->dSuperLayerSeeds_Axial.size(); ++loc_i)
-	{
-		locCDCTrackCircle->dSuperLayerSeeds_Axial[loc_i]->Get_Hits(locHits);
-		for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j)
-		{
-			locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
-			locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
-		}
-	}
-
-	// Add inner stereo hits (if any)
-	if(!locCDCTrackCircle->dSuperLayerSeeds_InnerStereo.empty())
-	{
-		for(size_t loc_i = 0; loc_i < locCDCTrackCircle->dSuperLayerSeeds_InnerStereo[0].size(); ++loc_i) //only one seed series: the "best" one
-		{
-			locCDCTrackCircle->dSuperLayerSeeds_InnerStereo[0][loc_i]->Get_Hits(locHits);
-			for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j)
-			{
-				locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
-				locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
-			}
-		}
-	}
-
-	// Add outer stereo hits (if any)
-	if(!locCDCTrackCircle->dSuperLayerSeeds_OuterStereo.empty())
-	{
-		for(size_t loc_i = 0; loc_i < locCDCTrackCircle->dSuperLayerSeeds_OuterStereo[0].size(); ++loc_i) //only one seed series: the "best" one
-		{
-			locCDCTrackCircle->dSuperLayerSeeds_OuterStereo[0][loc_i]->Get_Hits(locHits);
-			for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j)
-			{
-				locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
-				locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
-			}
-		}
-	}
-
-	if(DEBUG_LEVEL>3)
-		cout<<"Final Candidate parameters: p="<<mom.Mag()<<" theta="<<mom.Theta()<<"  phi="<<mom.Phi()<<" z="<<pos.Z()<<endl;
-	
-	Insert(locTrackCandidate);
+  locTrackCandidate->setTime(t0);
+  locTrackCandidate->setT0(t0,5.,SYS_CDC);
+  
+  Insert(locTrackCandidate);
 }
 
 //-------------------------

@@ -319,6 +319,12 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	track->chisq=segment->chisq;
       
 	track->AddAssociatedObject(segment);
+	double t0=1e9;
+	for (unsigned int k=0;k<segment->hits.size();k++){
+	  if (segment->hits[k]->time<t0) t0=segment->hits[k]->time;
+	}
+	track->setTime(t0);
+	track->setT0(t0,5.,SYS_FDC);
 	
 	Insert(track);
       }
@@ -573,6 +579,20 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	if (got_match){
 	  // Add the segment as an associated object to mData[i]
 	  mData[i]->AddAssociatedObject(segment);
+
+	  // Modify t0 if necessary
+	  double t0=mData[i]->t0();
+	  boold got_lower_t0=false;
+	  for (unsigned int k=0;k<segment->hits.size();k++){
+	    if (segment->hit[k]->time<t0){
+	      t0=segment->hit[k]->time;
+	      got_lower_t0=true;
+	    }
+	  }
+	  if (got_lower_t0){
+	    mData[i]->setTime(t0);
+	    mData[i]->setT0(t0,5.,SYS_FDC);
+	  }
 	  
 	  // Add the new segment and sort by z
 	  segments.push_back(segment);
@@ -632,10 +652,16 @@ void DTrackCandidate_factory_FDCCathodes::MakeCandidate(vector<const DFDCSegment
   track->setPID((q > 0.0) ? PiPlus : PiMinus);
   track->setPosition(pos);
   track->setMomentum(mom);
-  
+
+  double t0=1e9;
   for (unsigned int m=0;m<mytrack.size();m++){
     track->AddAssociatedObject(mytrack[m]);
+    for (unsigned int k=0;k<mytrack[m]->hits.size();k++){
+      if (mytrack[m]->hits[k]->time<t0) t0=mytrack[m]->hits[k]->time;
+    }
   }
+  track->setTime(t0);
+  track->setT0(t0,5.,SYS_FDC);
   
   Insert(track); 
 }
