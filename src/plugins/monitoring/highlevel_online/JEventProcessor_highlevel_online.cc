@@ -270,6 +270,7 @@ void JEventProcessor_highlevel_online::Init()
 
 	// Beam Energy from tagger
 	dHist_BeamEnergy = new TH1I("BeamEnergy", "Reconstructed Tagger Beam Energy;Beam Energy (GeV)", 240, 0.0, 12.0);
+	dHist_BeamEnergy_amo = new TH1I("BeamEnergy_amo", "Saved Tagger Beam Energy for AMO run;Beam Energy (GeV)", 240, 0.0, 12.0);
 
 	// Beam Energy from PS
 	dHist_PSPairEnergy = new TH1I("PSPairEnergy", "Reconstructed PS Beam Energy;Beam Energy (GeV)", 450, 3., 12.);
@@ -394,6 +395,12 @@ void JEventProcessor_highlevel_online::BeginRun(const std::shared_ptr<const JEve
 	map<string, double> photon_beam_param;
 	if(DEvent::GetCalib(event, "/PHOTON_BEAM/coherent_energy", photon_beam_param) == false)
 		dCoherentPeakRange = pair<double, double>(photon_beam_param["cohmin_energy"], photon_beam_param["cohedge_energy"]);
+
+	vector<int> locAmoNorm;
+	GetCalib(event, "PHOTON_BEAM/amo_norm", locAmoNorm);
+	for(size_t loc_i = 0; loc_i < locAmoNorm.size(); ++loc_i){
+	  dHist_BeamEnergy_amo->SetBinContent(loc_i+1, locAmoNorm[loc_i]);
+	}
 
 	fcal_cell_thr  =  65;
 	bcal_cell_thr  =  20;
