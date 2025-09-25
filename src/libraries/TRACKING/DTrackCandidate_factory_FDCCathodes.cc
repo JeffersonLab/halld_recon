@@ -582,10 +582,10 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 
 	  // Modify t0 if necessary
 	  double t0=mData[i]->t0();
-	  boold got_lower_t0=false;
+	  bool got_lower_t0=false;
 	  for (unsigned int k=0;k<segment->hits.size();k++){
-	    if (segment->hit[k]->time<t0){
-	      t0=segment->hit[k]->time;
+	    if (segment->hits[k]->time<t0){
+	      t0=segment->hits[k]->time;
 	      got_lower_t0=true;
 	    }
 	  }
