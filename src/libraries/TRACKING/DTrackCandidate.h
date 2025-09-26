@@ -28,37 +28,45 @@ class DReferenceTrajectory;
 /// these and then merging them. For the default, see
 /// DTrackCandidate_factory .
 
-class DTrackCandidate:public DTrackingData{
-	public:
-		JOBJECT_PUBLIC(DTrackCandidate);
+class DTrackCandidate : public JObject {
+public:
+  JOBJECT_PUBLIC(DTrackCandidate);
+  
+  DTrackCandidate():chisq(0),Ndof(0){}
+  
+  float chisq;			///< Chi-squared for the track (not chisq/dof!)
+  int Ndof;				///< Number of degrees of freedom in the fit
 		
-		DTrackCandidate():chisq(0),Ndof(0),rt(0),IsSmoothed(0){}
+  vector<int>used_cdc_indexes;
+  vector<int>used_fdc_indexes;
+  
+  // Circle fit data
+  double xc,yc,rc;
 
-		float chisq;			///< Chi-squared for the track (not chisq/dof!)
-		int Ndof;				///< Number of degrees of freedom in the fit
+  // charge
+  double dCharge;
 
-		const DReferenceTrajectory *rt; ///< pointer to reference trjectory representing this track (if any)
-		
-		vector<DTrackFitter::pull_t> pulls; // vector of residuals and other track-related quantities 
-		
-		vector<int>used_cdc_indexes;
-		vector<int>used_fdc_indexes;
-
-		// Circle fit data
-		double xc,yc,rc;
-
-		// Hit CDC Rings & FDC Planes
-		// use the DParticleID Get_CDCRings & Get_FDCPlanes functions to extract the information from these
-		unsigned int dCDCRings; //CDC rings where the track has an associated DCDCTrackHit //rings correspond to bits (1 -> 28)
-		unsigned int dFDCPlanes; //FDC planes where the track has an associated DFDCPseudoHit //planes correspond to bits (1 -> 24)
-
-      bool IsSmoothed; // Boolean value to indicate whether the smoother was run succesfully over this track.
-
-		void Summarize(JObjectSummary& summary) const override {
-			DKinematicData::Summarize(summary);
-			summary.add(chisq, "chisq", "%f");
-			summary.add(Ndof, "Ndof", "%d");
-		}
+  // Kinematic data
+  DVector3 dPosition;
+  DVector3 dMomentum;
+  
+  // Rough timing information
+  double dMinimumDriftTime;
+  DetectorSystem_t dDetector;
+  
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(SystemName(dDetector), "Detector", "%s");
+    summary.add(dCharge, "Charge", "%f");
+    summary.add(dMomentum.x(), "px [GeV/c]", "%f");
+    summary.add(dMomentum.y(), "py [GeV/c]", "%f");
+    summary.add(dMomentum.z(), "pz [GeV/c]", "%f");
+    summary.add(dPosition.x(), "x [cm]", "%f");
+    summary.add(dPosition.y(), "y [cm]", "%f");
+    summary.add(dPosition.z(), "z [cm]", "%f");
+    summary.add(dMinimumDriftTime, "t [ns]", "%f");
+    summary.add(chisq, "chisq", "%f");
+    summary.add(Ndof, "Ndof", "%d");
+  }
 };
 
 #endif // _DTrackCandidate_
