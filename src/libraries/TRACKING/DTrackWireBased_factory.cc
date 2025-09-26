@@ -102,10 +102,6 @@ void DTrackWireBased_factory::Init()
 
   MIN_BCAL_MATCHES=1;
   app->SetDefaultParameter("TRKFIT:MIN_BCAL_MATCHES",MIN_BCAL_MATCHES);
-
-  USE_HITS_FROM_CANDIDATE=false;
-  app->SetDefaultParameter("TRKFIT:USE_HITS_FROM_CANDIDATE",
-			   USE_HITS_FROM_CANDIDATE);
   
   MIN_FIT_P = 0.050; // GeV
   app->SetDefaultParameter("TRKFIT:MIN_FIT_P", MIN_FIT_P, "Minimum fit momentum in GeV/c for fit to be considered successful");
@@ -143,10 +139,6 @@ void DTrackWireBased_factory::BeginRun(const std::shared_ptr<const JEvent>& even
    else{
      ClearFactoryFlag(NOT_OBJECT_OWNER); //This factory will create it's own obje
    }
-
-   // set up reference trajectory
-   rt = new DReferenceTrajectory(bfield);
-   rt->SetDGeometry(geom);
 
    // Get pointer to DTrackFitter object that actually fits a track
    vector<const DTrackFitter *> fitters;
@@ -218,14 +210,14 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
     const DTrackCandidate *candidate = candidates[i];
 
     // Skip candidates with momentum below some cutoff
-    if (candidate->momentum().Mag()<MIN_FIT_P){
+    if (candidate->dMomentum.Mag()<MIN_FIT_P){
       continue;
     }
 
     // Get crude t0 estimate
     double min_dphi=1e9;
-    double phi=candidate->position().Phi();
-    double t0=candidate->t0();
+    double phi=candidate->dPosition.Phi();
+    double t0=candidate->dMinimumDriftTime;
     unsigned int sc_hit_index=0;
     for (unsigned int j=0;j<schits.size();j++){
       double dphi=sc_phi[schits[j]->sector-1]-phi;
@@ -236,7 +228,7 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
 	sc_hit_index=j;
       }
     }
-    DetectorSystem_t t0_detector=candidate->t0_detector();
+    DetectorSystem_t t0_detector=candidate->dDetector;
     if (min_dphi<SC_DPHI_CUT){
       t0_detector=SYS_START;
       t0=schits[sc_hit_index]->t;
@@ -285,16 +277,10 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
       }
     }
       
-    // Reset reference trajectory, used to select hits belonging to the track
-    // that may have been missed by the candidate factory
-    rt->Reset();
-    rt->q = candidate->charge();
-      
-    DoFit(i,candidate,rt,event,ParticleMass(PiPlus),t0,t0_detector);
+    DoFit(i,candidate,ParticleMass(PiPlus),t0,t0_detector);
     // Only do fit for proton mass hypothesis for low momentum particles
-    if (candidate->momentum().Mag()<PROTON_MOM_THRESH){
-      rt->Reset();
-      DoFit(i,candidate,rt,event,ParticleMass(Proton),t0,t0_detector);
+    if (candidate->dMomentum.Mag()<PROTON_MOM_THRESH){
+      DoFit(i,candidate,ParticleMass(Proton),t0,t0_detector);
     }
   }
   
@@ -310,7 +296,6 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
 //------------------
 void DTrackWireBased_factory::EndRun()
 {
-  if (rt) delete rt;
 }
 
 //------------------
@@ -395,11 +380,9 @@ void DTrackWireBased_factory::FilterDuplicates(void)
    mData = newmData;
 }
 
-// Routine to find the hits, do the fit, and fill the list of wire-based tracks
+// Routine to do the fit and fill the list of wire-based tracks
 void DTrackWireBased_factory::DoFit(unsigned int c_id,
 				    const DTrackCandidate *candidate,
-				    DReferenceTrajectory *rt,
-				    const std::shared_ptr<const JEvent>& event,
 				    double mass,
 				    double t0,DetectorSystem_t t0_detector){
    // Get the hits from the candidate
@@ -407,107 +390,46 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
   candidate->GetT(myfdchits);
   vector<const DCDCTrackHit *>mycdchits;
   candidate->GetT(mycdchits);
+  
+  // Do the fit
+  fitter->Reset();
+  fitter->SetFitType(DTrackFitter::kWireBased);	
+  
+  fitter->AddHits(myfdchits);
+  fitter->AddHits(mycdchits);
+  
+  fitter->FitTrack(candidate->dPosition,candidate->dMomentum,candidate->dCharge,
+		   mass,t0,t0_detector);
+  if (fitter->GetChisq()>0){
+    // Make a new wire-based track
+    DTrackWireBased *track = new DTrackWireBased();
+    *static_cast<DTrackingData*>(track) = fitter->GetFitParameters();
+    
+    track->chisq = fitter->GetChisq();
+    track->Ndof = fitter->GetNdof();
+    track->FOM = TMath::Prob(track->chisq, track->Ndof);
+    track->pulls =std::move(fitter->GetPulls()); 
+    track->extrapolations=std::move(fitter->GetExtrapolations());
+    track->candidateid = c_id+1;
 
-   // Do the fit
-   DTrackFitter::fit_status_t status = DTrackFitter::kFitNotDone;
-   if (USE_HITS_FROM_CANDIDATE) {
-      fitter->Reset();
-      fitter->SetFitType(DTrackFitter::kWireBased);	
-
-      fitter->AddHits(myfdchits);
-      fitter->AddHits(mycdchits);
-
-      status=fitter->FitTrack(candidate->position(),candidate->momentum(),
-			      candidate->charge(),mass,t0,t0_detector);
-   }
-   else{
-     fitter->Reset();
-      fitter->SetFitType(DTrackFitter::kWireBased);
-      // Swim a reference trajectory using the candidate starting momentum
-      // and position
-      rt->SetMass(mass);
-      //rt->Swim(candidate->position(),candidate->momentum(),candidate->charge());
-      rt->FastSwimForHitSelection(candidate->position(),candidate->momentum(),candidate->charge());
-
-      status=fitter->FindHitsAndFitTrack(*candidate,rt,event,mass,
-					 mycdchits.size()+2*myfdchits.size(),
-					 t0,t0_detector);
-      if (/*false && */status==DTrackFitter::kFitNotDone){
-         if (DEBUG_LEVEL>1)_DBG_ << "Using hits from candidate..." << endl;
-         fitter->Reset();
-        
-         fitter->AddHits(myfdchits);
-         fitter->AddHits(mycdchits);
-
-         status=fitter->FitTrack(candidate->position(),candidate->momentum(),
-				 candidate->charge(),mass,t0,t0_detector);
-      }
-   }
-
-   // if the fit returns chisq=-1, something went terribly wrong... 
-   if (fitter->GetChisq()<0){
-     status=DTrackFitter::kFitFailed;
-   }
-
-   // Check the status of the fit
-   switch(status){
-      case DTrackFitter::kFitNotDone:
-         //_DBG_<<"Fitter returned kFitNotDone. This should never happen!!"<<endl;
-      case DTrackFitter::kFitFailed:
-         break;
-      case DTrackFitter::kFitNoImprovement:	
-      case DTrackFitter::kFitSuccess:
-         if(!isfinite(fitter->GetFitParameters().position().X())) break;
-         {    
-            // Make a new wire-based track
-             DTrackWireBased *track = new DTrackWireBased();
-             *static_cast<DTrackingData*>(track) = fitter->GetFitParameters();
-
-            track->chisq = fitter->GetChisq();
-            track->Ndof = fitter->GetNdof();
-            track->FOM = TMath::Prob(track->chisq, track->Ndof);
-            track->pulls =std::move(fitter->GetPulls()); 
-	    track->extrapolations=std::move(fitter->GetExtrapolations());
-            track->candidateid = c_id+1;
-
-            // Add hits used as associated objects
-            vector<const DCDCTrackHit*> cdchits = fitter->GetCDCFitHits();
-            vector<const DFDCPseudo*> fdchits = fitter->GetFDCFitHits();
-            sort(cdchits.begin(), cdchits.end(), CDCSortByRincreasing);
-            sort(fdchits.begin(), fdchits.end(), FDCSortByZincreasing);
-            for(unsigned int m=0; m<cdchits.size(); m++)track->AddAssociatedObject(cdchits[m]);
-            for(unsigned int m=0; m<fdchits.size(); m++)track->AddAssociatedObject(fdchits[m]);
-
-	    // Set CDC ring & FDC plane hit patterns before candidate tracks are associated
-	    vector<const DCDCTrackHit*> tempCDCTrackHits = track->Get<DCDCTrackHit>();
-	    vector<const DFDCPseudo*> tempFDCPseudos = track->Get<DFDCPseudo>();
-
-	    track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
-	    track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
-
-            // Add DTrackCandidate as associated object
-            track->AddAssociatedObject(candidate);
-
-            Insert(track);
-            break;
-         }
-      default:
-         break;
-   }
-}
-
-// Use the FastSwim method in DReferenceTrajectory to propagate back to the 
-// POCA to the beam line, adding a bit of energy at each step that would have 
-// been lost had the particle emerged from the target.
-void DTrackWireBased_factory::CorrectForELoss(DVector3 &position,DVector3 &momentum,double q,double my_mass){  
-  rt->Reset();
-  rt->q = q;
-  rt->SetMass(my_mass);
-  rt->SetPLossDirection(DReferenceTrajectory::kBackward);
-  DVector3 last_pos,last_mom;
-  DVector3 origin(0.,0.,65.);
-  DVector3 dir(0.,0.,1.);
-  rt->FastSwim(position,momentum,last_pos,last_mom,rt->q,origin,dir,300.);   
-  position=last_pos;
-  momentum=last_mom;   
+    // Add hits used as associated objects
+    vector<const DCDCTrackHit*> cdchits = fitter->GetCDCFitHits();
+    vector<const DFDCPseudo*> fdchits = fitter->GetFDCFitHits();
+    sort(cdchits.begin(), cdchits.end(), CDCSortByRincreasing);
+    sort(fdchits.begin(), fdchits.end(), FDCSortByZincreasing);
+    for(unsigned int m=0; m<cdchits.size(); m++)track->AddAssociatedObject(cdchits[m]);
+    for(unsigned int m=0; m<fdchits.size(); m++)track->AddAssociatedObject(fdchits[m]);
+    
+    // Set CDC ring & FDC plane hit patterns before candidate tracks are associated
+    vector<const DCDCTrackHit*> tempCDCTrackHits = track->Get<DCDCTrackHit>();
+    vector<const DFDCPseudo*> tempFDCPseudos = track->Get<DFDCPseudo>();
+    
+    track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
+    track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
+    
+    // Add DTrackCandidate as associated object
+    track->AddAssociatedObject(candidate);
+    
+    Insert(track);
+  }
 }

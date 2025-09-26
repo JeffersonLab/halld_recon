@@ -61,21 +61,15 @@ private:
   
   int DEBUG_LEVEL;
   DTrackFitter *fitter;
-  DReferenceTrajectory *rt;
   vector<double>sc_phi;
 
   void FilterDuplicates(void);
   void DoFit(unsigned int c_id,const DTrackCandidate *candidate,
-	     DReferenceTrajectory *rt,
-	     const std::shared_ptr<const JEvent>& event,
 	     double mass,double t0,DetectorSystem_t t0_detector);
-  void CorrectForELoss(DVector3 &position,DVector3 &momentum,
-		       double q, double mass); 
   
   const DGeometry *geom;
   
   bool DEBUG_HISTS;
-  bool USE_HITS_FROM_CANDIDATE;
   double MIN_FIT_P;
   double PROTON_MOM_THRESH,SC_DPHI_CUT,BCAL_CUT;
   unsigned int MIN_BCAL_MATCHES;
