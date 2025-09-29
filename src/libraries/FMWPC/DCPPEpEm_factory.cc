@@ -31,7 +31,20 @@ void DCPPEpEm_factory::Init()
   dEPIClassifierMinus = new ReadMLPMinus( varsMinus );
   vector< string > varsPlus( inputVarsPlus, inputVarsPlus + sizeof( inputVarsPlus )/sizeof( char* ) );
   dEPIClassifierPlus = new ReadMLPPlus( varsPlus );
-  
+
+
+  TARGET_OPTION = "pb208"; // allow these tools to be used on a GlueX data set
+
+  app->SetDefaultParameter("CPPAnalysis:TARGET_OPTION", TARGET_OPTION,
+			   "Target nucleus (p, d, He4, C12, Pb208)");
+  for (auto& c: TARGET_OPTION) c = std::tolower(c);
+  if      (TARGET_OPTION == "p"     || TARGET_OPTION == "proton")   m_target = Particle_t::Proton;
+  else if (TARGET_OPTION == "d"     || TARGET_OPTION == "deuteron") m_target = Particle_t::Deuteron;
+  else if (TARGET_OPTION == "he4"   || TARGET_OPTION == "alpha")    m_target = Particle_t::Helium;
+  else if (TARGET_OPTION == "c12"   || TARGET_OPTION == "carbon")   m_target = Particle_t::C12;
+  else if (TARGET_OPTION == "pb208" || TARGET_OPTION == "lead" || TARGET_OPTION == "pb") m_target = Particle_t::Pb208;
+  else throw JException("Unknown kinfit:target='%s'", TARGET_OPTION.c_str());
+    
   SPLIT_CUT=0.5;
   app->SetDefaultParameter("CPPAnalysis:SPLIT_CUT",SPLIT_CUT); 
   FCAL_THRESHOLD=0.1;
@@ -348,7 +361,9 @@ void DCPPEpEm_factory::DoKinematicFit(const DBeamPhoton *beamphoton,
   set<shared_ptr<DKinFitParticle>> InitialParticles, FinalParticles;
   
   shared_ptr<DKinFitParticle>myBeam=dKinFitUtils->Make_BeamParticle(beamphoton);
-  shared_ptr<DKinFitParticle>myTarget=dKinFitUtils->Make_TargetParticle(Pb208);
+  shared_ptr<DKinFitParticle>myTarget=dKinFitUtils->Make_TargetParticle(m_target);
+  
+  
   
   InitialParticles.insert(myBeam);  
   InitialParticles.insert(myTarget);
@@ -357,7 +372,7 @@ void DCPPEpEm_factory::DoKinematicFit(const DBeamPhoton *beamphoton,
   FinalParticles.insert(myNegativeParticle);
   shared_ptr<DKinFitParticle>myPositiveParticle=dKinFitUtils->Make_DetectedParticle(positive);
   FinalParticles.insert(myPositiveParticle);
-  shared_ptr<DKinFitParticle>myRecoil=dKinFitUtils->Make_MissingParticle(Pb208);
+  shared_ptr<DKinFitParticle>myRecoil=dKinFitUtils->Make_MissingParticle(m_target);
   FinalParticles.insert(myRecoil);    
   
   // make energy-momentum constraint
