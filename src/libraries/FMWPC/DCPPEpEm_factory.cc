@@ -54,7 +54,7 @@ void DCPPEpEm_factory::Init()
   GAMMA_DT_CUT=2.; 
 
   // TODO: The following needs to be replaced by a JANA resource!
-  PIMU_MODEL_FILE = "/gapps/tensorflow/example_model.tflite";
+  PIMU_MODEL_FILE = "/group/halld/www/halldweb/html/resources/AI/CPP/2022_05_07_MLP_Base_matched_background.tflite";
   app->SetDefaultParameter("CPPAnalysis:PIMU_MODEL_FILE",PIMU_MODEL_FILE, "TFLite model file for pi/mu classification");
   
   VERBOSE=1;
