@@ -12,7 +12,7 @@
 #include "DANA/DEvent.h"
 #include "TRIGGER/DTrigger.h"
 #include "HistogramTools.h"
-
+#include <CDC/DCDCTrackHit.h>
 
 // Routine used to create our JEventProcessor
 extern "C"{
@@ -428,8 +428,12 @@ void JEventProcessor_CDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 
       // Require hits on at least 2 axial layers and at least 2 stereo layers:
       // necessary to trust reconstructed phi & theta: respectable projection
+      vector<const DCDCTrackHit *>locCDCTrackHits;
+      thisTimeBasedTrack->GetT(locCDCTrackHits);
+      unsigned int locCDCRingPattern=pid_algorithm->Get_CDCRingBitPattern(locCDCTrackHits);
+      
       set<int> locCDCRings;
-      locParticleID->Get_CDCRings(thisTimeBasedTrack->dCDCRings, locCDCRings);
+      locParticleID->Get_CDCRings(locCDCRingPattern, locCDCRings);
 
       map<int, int> locNumHitRingsPerSuperlayer; //key: superlayer (1 -> 7) //axial: 1, 4, 7
       locParticleID->Get_CDCNumHitRingsPerSuperlayer(locCDCRings, locNumHitRingsPerSuperlayer);

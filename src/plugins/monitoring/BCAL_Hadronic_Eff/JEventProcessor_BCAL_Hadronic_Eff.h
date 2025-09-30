@@ -25,6 +25,8 @@
 #include "PID/DDetectorMatches.h"
 #include "ANALYSIS/DCutActions.h"
 #include "ANALYSIS/DTreeInterface.h"
+#include <FDC/DFDCPseudo.h>
+#include <CDC/DCDCTrackHit.h>
 
 #include <vector>
 #include <string>

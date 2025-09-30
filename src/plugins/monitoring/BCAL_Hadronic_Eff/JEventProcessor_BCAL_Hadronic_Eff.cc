@@ -505,8 +505,17 @@ void JEventProcessor_BCAL_Hadronic_Eff::Process(const std::shared_ptr<const JEve
 		DVector3 locDP3 = locChargedTrackHypothesis->momentum();
 		TVector3 locP3(locDP3.X(), locDP3.Y(), locDP3.Z());
 		dTreeFillData.Fill_Single<TVector3>("TrackP3", locP3);
-		dTreeFillData.Fill_Single<UInt_t>("TrackCDCRings", locTrackTimeBased->dCDCRings);
-		dTreeFillData.Fill_Single<UInt_t>("TrackFDCPlanes", locTrackTimeBased->dFDCPlanes);
+
+		vector<const DFDCPseudo*>locFDCPseudos;
+		locTrackTimeBased->GetT(locFDCPseudos);
+		vector<const DCDCTrackHit *>locCDCTrackHits;
+		locTrackTimeBased->GetT(locCDCTrackHits);
+		
+		unsigned int locCDCRings=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+		unsigned int locFDCPlanes=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+		
+		dTreeFillData.Fill_Single<UInt_t>("TrackCDCRings", locCDCRings);
+		dTreeFillData.Fill_Single<UInt_t>("TrackFDCPlanes", locFDCPlanes);
 
 		//SHOWER
 		dTreeFillData.Fill_Single<Float_t>("ShowerEnergy", locBCALShowerMatchParams->dBCALShower->E);

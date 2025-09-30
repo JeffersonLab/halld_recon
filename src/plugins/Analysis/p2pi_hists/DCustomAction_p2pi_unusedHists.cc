@@ -6,7 +6,8 @@
 //
 
 #include "DCustomAction_p2pi_unusedHists.h"
-
+#include <FDC/DFDCPseudo.h>
+#include <CDC/DCDCTrackHit.h>
 
 void DCustomAction_p2pi_unusedHists::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
@@ -486,11 +487,19 @@ void DCustomAction_p2pi_unusedHists::FillTrack(const std::shared_ptr<const JEven
 	double nHits = locTrackTimeBased->Ndof + 5.;
 	double locTheta = locTrackTimeBased->momentum().Theta()*180/TMath::Pi();
 
+	vector<const DFDCPseudo*>locFDCPseudos;
+	locTrackTimeBased->GetT(locFDCPseudos);
+	vector<const DCDCTrackHit *>locCDCTrackHits;
+	locTrackTimeBased->GetT(locCDCTrackHits);
+	
+	unsigned int locCDCRingPattern=dParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+	unsigned int locFDCPlanePattern=dParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+	
 	set<int> locCDCRings;
-	dParticleID->Get_CDCRings(locTrackTimeBased->dCDCRings, locCDCRings);
+	dParticleID->Get_CDCRings(locCDCRingPattern, locCDCRings);
 	
 	set<int> locFDCPlanes;
-	dParticleID->Get_FDCPlanes(locTrackTimeBased->dFDCPlanes, locFDCPlanes);
+	dParticleID->Get_FDCPlanes(locFDCPlanePattern, locFDCPlanes);
 
 	double locHitFraction = locTrackTimeBased->dNumHitsMatchedToThrown/nHits;
 	double locMomentumRes = -999;

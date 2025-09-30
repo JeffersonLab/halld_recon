@@ -7,6 +7,9 @@
 
 #include "DCustomAction_TrackingEfficiency.h"
 #include "TObjString.h"
+#include <FDC/DFDCPseudo.h>
+#include <CDC/DCDCTrackHit.h>
+#include <PID/DParticleID.h>
 
 void DCustomAction_TrackingEfficiency::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
@@ -106,6 +109,9 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(const std::shared_ptr<cons
 
 	const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
 	const DKinFitResults* locKinFitResults = locParticleCombo->Get_KinFitResults();
+
+	const DParticleID *locParticleID=NULL;
+	locEvent->GetSingle(locParticleID);
 
 	/*********************************************** MISSING PARTICLE INFO ***********************************************/
 
@@ -280,8 +286,18 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(const std::shared_ptr<cons
 
 		DLorentzVector locTotalMeasuredMissingP4 = locMeasuredMissingP4 - locTimeBasedTrack->lorentzMomentum();
 		dTreeFillData.Fill_Array<Float_t>("MeasuredMissingE", locTotalMeasuredMissingP4.E(), locNumTimeBasedTracks);
-		dTreeFillData.Fill_Array<UInt_t>("TrackCDCRings", locTimeBasedTrack->dCDCRings, locNumTimeBasedTracks);
-		dTreeFillData.Fill_Array<UInt_t>("TrackFDCPlanes", locTimeBasedTrack->dFDCPlanes, locNumTimeBasedTracks);
+		
+		
+		vector<const DFDCPseudo*>locFDCPseudos;
+		locTimeBasedTrack->GetT(locFDCPseudos);
+		vector<const DCDCTrackHit *>locCDCTrackHits;
+		locTimeBasedTrack->GetT(locCDCTrackHits);
+		
+		unsigned int locCDCRings=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+		unsigned int locFDCPlanes=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+		
+		dTreeFillData.Fill_Array<UInt_t>("TrackCDCRings", locCDCRings, locNumTimeBasedTracks);
+		dTreeFillData.Fill_Array<UInt_t>("TrackFDCPlanes", locFDCPlanes, locNumTimeBasedTracks);
 
 		//RECON P3 ERROR MATRIX
 		dTreeFillData.Fill_Array<Float_t>("ReconP3_CovPxPx", locCovarianceMatrix(0, 0), locNumTimeBasedTracks);

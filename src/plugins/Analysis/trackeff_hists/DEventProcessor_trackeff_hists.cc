@@ -105,7 +105,6 @@ void DEventProcessor_trackeff_hists::Process(const std::shared_ptr<const JEvent>
 {
 	vector<const DCDCTrackHit*> cdctrackhits;
 	vector<const DFDCPseudo*> fdcpseudos;
-	vector<const DTrackCandidate*> trackcandidates;
 	vector<const DTrackWireBased*> trackWBs;
 	vector<const DChargedTrack*> trackTBs;
 	vector<const DTrackTimeBased*> throwns;
@@ -114,7 +113,6 @@ void DEventProcessor_trackeff_hists::Process(const std::shared_ptr<const JEvent>
 	
 	event->Get(cdctrackhits);
 	event->Get(fdcpseudos);
-	event->Get(trackcandidates);
 	event->Get(trackWBs);
 	event->Get(trackTBs);
 	event->Get(throwns, "THROWN");
@@ -125,10 +123,8 @@ void DEventProcessor_trackeff_hists::Process(const std::shared_ptr<const JEvent>
 	// 3. Get number of DKinematicData objects of same type associated with each track number
 	
 	// Get track info and track number for each reconstructed track
-	vector<track_info> ti_can(MAX_TRACKS);
 	vector<track_info> ti_trkwb(MAX_TRACKS);
 	vector<track_info> ti_trktb(MAX_TRACKS);
-	for(unsigned int i=0; i<trackcandidates.size(); i++)FillTrackInfo(trackcandidates[i], ti_can);
 	for(unsigned int i=0; i<trackWBs.size(); i++)FillTrackInfo(trackWBs[i], ti_trkwb);
 	for(unsigned int i=0; i<trackTBs.size(); i++){
 		auto locTrackTimeBased = trackTBs[i]->dChargedTrackHypotheses[0]->Get_TrackTimeBased();
@@ -172,7 +168,6 @@ void DEventProcessor_trackeff_hists::Process(const std::shared_ptr<const JEvent>
 		if(trk.track<=0 || trk.track>=MAX_TRACKS)continue;
 
 		// Copy best reconstructed track info
-		trk.can   = ti_can[trk.track];
 		trk.trkwb = ti_trkwb[trk.track];
 		trk.trktb = ti_trktb[trk.track];
 

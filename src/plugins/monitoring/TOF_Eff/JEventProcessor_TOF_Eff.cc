@@ -4,6 +4,8 @@
 //
 
 #include "JEventProcessor_TOF_Eff.h"
+#include <FDC/DFDCPseudo.h>
+#include <CDC/DCDCTrackHit.h>
 
 // Routine used to create our JEventProcessor
 extern "C"
@@ -338,8 +340,17 @@ void JEventProcessor_TOF_Eff::Process(const std::shared_ptr<const JEvent> &locEv
 		Particle_t locPID = (locChargedTrackHypothesis->Get_FCALShowerMatchParams() != NULL) ? locChargedTrackHypothesis->PID() : UnknownParticle;
 		dTreeFillData.Fill_Single<Int_t>("PID_PDG", PDGtype(locPID));
 		dTreeFillData.Fill_Single<Float_t>("TrackVertexZ", locChargedTrackHypothesis->position().Z());
-		dTreeFillData.Fill_Single<UInt_t>("TrackCDCRings", locTrackTimeBased->dCDCRings);
-		dTreeFillData.Fill_Single<UInt_t>("TrackFDCPlanes", locTrackTimeBased->dFDCPlanes);
+
+		vector<const DFDCPseudo*>locFDCPseudos;
+		locTrackTimeBased->GetT(locFDCPseudos);
+		vector<const DCDCTrackHit *>locCDCTrackHits;
+		locTrackTimeBased->GetT(locCDCTrackHits);
+		
+		unsigned int locCDCRings=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+		unsigned int locFDCPlanes=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+		
+		dTreeFillData.Fill_Single<UInt_t>("TrackCDCRings", locCDCRings);
+		dTreeFillData.Fill_Single<UInt_t>("TrackFDCPlanes", locFDCPlanes);
 		DVector3 locDP3 = locChargedTrackHypothesis->momentum();
 		TVector3 locP3(locDP3.X(), locDP3.Y(), locDP3.Z());
 		dTreeFillData.Fill_Single<TVector3>("TrackP3", locP3);
