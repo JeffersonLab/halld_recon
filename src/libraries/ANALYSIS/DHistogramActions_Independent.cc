@@ -671,18 +671,27 @@ bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const
 		//TRACK CANDIDATES
 		for(size_t loc_i = 0; loc_i < locTrackCandidates.size(); ++loc_i)
 		{
-			int locCharge = (locTrackCandidates[loc_i]->charge() > 0.0) ? 1 : -1;
-			double locTheta = locTrackCandidates[loc_i]->momentum().Theta()*180.0/TMath::Pi();
-			double locP = locTrackCandidates[loc_i]->momentum().Mag();
+			int locCharge = (locTrackCandidates[loc_i]->dCharge > 0.0) ? 1 : -1;
+			double locTheta = locTrackCandidates[loc_i]->dMomentum.Theta()*180.0/TMath::Pi();
+			double locP = locTrackCandidates[loc_i]->dMomentum.Mag();
 			dHistMap_PVsTheta_Candidates[locCharge]->Fill(locTheta, locP);
 
+			// Get the hits from the candidate
+			vector<const DFDCPseudo*>locFDCPseudos;
+			locTrackCandidates[loc_i]->GetT(locFDCPseudos);
+			vector<const DCDCTrackHit *>locCDCTrackHits;
+			locTrackCandidates[loc_i]->GetT(locCDCTrackHits);
+			
+			unsigned int locCDCRingPattern=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+			unsigned int locFDCPlanePattern=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+			
 			set<int> locCDCRings;
-			locParticleID->Get_CDCRings(locTrackCandidates[loc_i]->dCDCRings, locCDCRings);
+			locParticleID->Get_CDCRings(locCDCRingPattern, locCDCRings);
 			for(set<int>::iterator locIterator = locCDCRings.begin(); locIterator != locCDCRings.end(); ++locIterator)
 				dHist_CDCRingVsTheta_Candidates->Fill(locTheta, *locIterator);
 
 			set<int> locFDCPlanes;
-			locParticleID->Get_FDCPlanes(locTrackCandidates[loc_i]->dFDCPlanes, locFDCPlanes);
+			locParticleID->Get_FDCPlanes(locFDCPlanePattern, locFDCPlanes);
 			for(set<int>::iterator locIterator = locFDCPlanes.begin(); locIterator != locFDCPlanes.end(); ++locIterator)
 				dHist_FDCPlaneVsTheta_Candidates->Fill(locTheta, *locIterator);
 		}
@@ -696,14 +705,21 @@ bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const
 			double locTheta = locTrackWireBased->momentum().Theta()*180.0/TMath::Pi();
 			double locP = locTrackWireBased->momentum().Mag();
 			dHistMap_PVsTheta_WireBased[locCharge]->Fill(locTheta, locP);
+			vector<const DFDCPseudo*>locFDCPseudos;
+			locTrackWireBased->GetT(locFDCPseudos);
+			vector<const DCDCTrackHit *>locCDCTrackHits;
+			locTrackWireBased->GetT(locCDCTrackHits);
+			
+			unsigned int locCDCRingPattern=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+			unsigned int locFDCPlanePattern=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
 
 			set<int> locCDCRings;
-			locParticleID->Get_CDCRings(locTrackWireBased->dCDCRings, locCDCRings);
+			locParticleID->Get_CDCRings(locCDCRingPattern, locCDCRings);
 			for(set<int>::iterator locIterator = locCDCRings.begin(); locIterator != locCDCRings.end(); ++locIterator)
 				dHist_CDCRingVsTheta_WireBased->Fill(locTheta, *locIterator);
 
 			set<int> locFDCPlanes;
-			locParticleID->Get_FDCPlanes(locTrackWireBased->dFDCPlanes, locFDCPlanes);
+			locParticleID->Get_FDCPlanes(locFDCPlanePattern, locFDCPlanes);
 			for(set<int>::iterator locIterator = locFDCPlanes.begin(); locIterator != locFDCPlanes.end(); ++locIterator)
 				dHist_FDCPlaneVsTheta_WireBased->Fill(locTheta, *locIterator);
 
@@ -733,10 +749,18 @@ bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const
 			dHist_TrackingFOMVsTheta->Fill(locTheta, locTrackTimeBased->FOM);
 			dHist_TrackingFOMVsP->Fill(locP, locTrackTimeBased->FOM);
 			dHist_TrackingFOMVsNumHits->Fill(locTrackTimeBased->Ndof + 5, locTrackTimeBased->FOM);
-
+			
+			vector<const DFDCPseudo*>locFDCPseudos;
+			locTrackTimeBased->GetT(locFDCPseudos);
+			vector<const DCDCTrackHit *>locCDCTrackHits;
+			locTrackTimeBased->GetT(locCDCTrackHits);
+			
+			unsigned int locCDCRingPattern=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+			unsigned int locFDCPlanePattern=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+			
 			//CDC
 			set<int> locCDCRings;
-			locParticleID->Get_CDCRings(locTrackTimeBased->dCDCRings, locCDCRings);
+			locParticleID->Get_CDCRings(locCDCRingPattern, locCDCRings);
 			for(set<int>::iterator locIterator = locCDCRings.begin(); locIterator != locCDCRings.end(); ++locIterator)
 			{
 				dHist_CDCRingVsTheta_TimeBased->Fill(locTheta, *locIterator);
@@ -746,7 +770,7 @@ bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const
 			
 			//FDC
 			set<int> locFDCPlanes;
-			locParticleID->Get_FDCPlanes(locTrackTimeBased->dFDCPlanes, locFDCPlanes);
+			locParticleID->Get_FDCPlanes(locFDCPlanePattern, locFDCPlanes);
 			for(set<int>::iterator locIterator = locFDCPlanes.begin(); locIterator != locFDCPlanes.end(); ++locIterator)
 			{
 				dHist_FDCPlaneVsTheta_TimeBased->Fill(locTheta, *locIterator);
@@ -4019,7 +4043,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates.size(); ++loc_i)
 			{
-				if(locTrackCandidates[loc_i]->charge() > 0.0)
+				if(locTrackCandidates[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
@@ -4032,7 +4056,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates_CDC.size(); ++loc_i)
 			{
-				if(locTrackCandidates_CDC[loc_i]->charge() > 0.0)
+				if(locTrackCandidates_CDC[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
@@ -4044,7 +4068,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates_FDC.size(); ++loc_i)
 			{
-				if(locTrackCandidates_FDC[loc_i]->charge() > 0.0)
+				if(locTrackCandidates_FDC[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
