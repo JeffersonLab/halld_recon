@@ -380,7 +380,7 @@ void hdv_debugerframe::SetUpMid1Frame(){
       
       double myphi = trk->momentum().Phi();
       if(myphi<0.0)myphi+=2.0*M_PI;
-      phi<<setprecision(2)<<fixed<<myphi;
+      phi<<setprecision(2)<<fixed<<myphi*TMath::RadToDeg();
       wblabs["phi"][row]->SetText(phi.str().c_str());
       
       z<<setprecision(2)<<fixed<<trk->position().Z();
@@ -508,7 +508,7 @@ void hdv_debugerframe::SetUpMid2Frame(){
       
       double myphi = trk->momentum().Phi();
       if(myphi<0.0)myphi+=2.0*M_PI;
-      phi<<setprecision(2)<<fixed<<myphi;
+      phi<<setprecision(2)<<fixed<<myphi*TMath::RadToDeg();
       tblabs["phi"][row]->SetText(phi.str().c_str());
       
       z<<setprecision(2)<<fixed<<trk->position().Z();
