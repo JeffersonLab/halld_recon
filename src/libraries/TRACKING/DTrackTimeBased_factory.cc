@@ -1042,13 +1042,6 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
       timebased_track->ddx_CDC_amp= locdx_CDC_amp;
       timebased_track->dNumHitsUsedFordEdx_CDC = locNumHitsUsedFordEdx_CDC;
 
-      // Set CDC ring & FDC plane hit patterns before candidate and wirebased tracks are associated
-      vector<const DCDCTrackHit*> tempCDCTrackHits = timebased_track->Get<DCDCTrackHit>();
-      vector<const DFDCPseudo*> tempFDCPseudos = timebased_track->Get<DFDCPseudo>();
-
-      timebased_track->dCDCRings = pid_algorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
-      timebased_track->dFDCPlanes = pid_algorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
-
       // Add DTrack object as associate object
       timebased_track->AddAssociatedObject(track);
     
@@ -1291,13 +1284,6 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
     }
   }
 
-  // Set CDC ring & FDC plane hit patterns before candidate and wirebased tracks are associated
-  vector<const DCDCTrackHit*> tempCDCTrackHits = timebased_track->Get<DCDCTrackHit>();
-  vector<const DFDCPseudo*> tempFDCPseudos = timebased_track->Get<DFDCPseudo>();
-
-  timebased_track->dCDCRings = pid_algorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
-  timebased_track->dFDCPlanes = pid_algorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
-  
   tracks_to_add.push_back(timebased_track);
 }
 

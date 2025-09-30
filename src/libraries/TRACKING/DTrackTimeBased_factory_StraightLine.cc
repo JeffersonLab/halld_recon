@@ -214,8 +214,6 @@ void DTrackTimeBased_factory_StraightLine::Process(const std::shared_ptr<const J
       timebased_track->measured_fdc_hits_on_track = fdchits_on_track.size();
       
       timebased_track->AddAssociatedObject(track);
-      timebased_track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(cdchits_on_track);
-      timebased_track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(fdchits_on_track);
       
       // TODO: figure out the potential hits on straight line tracks
       timebased_track->potential_cdc_hits_on_track = 0;

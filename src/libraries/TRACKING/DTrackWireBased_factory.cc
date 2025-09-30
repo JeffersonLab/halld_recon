@@ -478,13 +478,6 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
             for(unsigned int m=0; m<cdchits.size(); m++)track->AddAssociatedObject(cdchits[m]);
             for(unsigned int m=0; m<fdchits.size(); m++)track->AddAssociatedObject(fdchits[m]);
 
-	    // Set CDC ring & FDC plane hit patterns before candidate tracks are associated
-	    vector<const DCDCTrackHit*> tempCDCTrackHits = track->Get<DCDCTrackHit>();
-	    vector<const DFDCPseudo*> tempFDCPseudos = track->Get<DFDCPseudo>();
-
-	    track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
-	    track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
-
             // Add DTrackCandidate as associated object
             track->AddAssociatedObject(candidate);
 
@@ -573,9 +566,7 @@ void DTrackWireBased_factory::AddMissingTrackHypothesis(vector<DTrackWireBased*>
   wirebased_track->candidateid=src_track->candidateid;
   wirebased_track->FOM=src_track->FOM;
   wirebased_track->IsSmoothed=src_track->IsSmoothed;
-  wirebased_track->dCDCRings=src_track->dCDCRings;
-  wirebased_track->dFDCPlanes=src_track->dFDCPlanes;
-
+ 
   // (Partially) compensate for the difference in energy loss between the 
   // source track and a particle of mass my_mass 
   DVector3 position,momentum;

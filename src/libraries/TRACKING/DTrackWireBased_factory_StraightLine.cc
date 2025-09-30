@@ -137,9 +137,6 @@ void DTrackWireBased_factory_StraightLine::Process(const std::shared_ptr<const J
        }
        track->setT0(tmin,10.0,detector);
        
-       track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(cdchits_on_track);
-       track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(fdchits_on_track);
-
        Insert(track);
      }
    }

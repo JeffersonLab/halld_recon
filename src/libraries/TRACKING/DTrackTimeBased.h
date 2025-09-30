@@ -78,11 +78,6 @@ class DTrackTimeBased:public DTrackingData{
 		std::vector<double> ddx_CDC_amp_trunc;  
 		std::vector<double> ddEdx_CDC_amp_trunc;  
 
-		// Hit CDC Rings & FDC Planes
-		// use the DParticleID Get_CDCRings & Get_FDCPlanes functions to extract the information from these
-		unsigned int dCDCRings; //CDC rings where the track has an associated DCDCTrackHit //rings correspond to bits (1 -> 28)
-		unsigned int dFDCPlanes; //FDC planes where the track has an associated DFDCPseudoHit //planes correspond to bits (1 -> 24)
-
 		// Matching to MC: Highest % of track hits matched to a thrown
 		int dMCThrownMatchMyID; //MC track match myid (-1 if somehow no match)
 		int dNumHitsMatchedToThrown;

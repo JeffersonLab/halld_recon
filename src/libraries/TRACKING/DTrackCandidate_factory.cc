@@ -795,22 +795,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	    delete mData[loc_i];
 	  mData.clear();
   	}
-
-
-  // Set CDC ring & FDC plane hit patterns
-  for(size_t loc_i = 0; loc_i < mData.size(); ++loc_i)
-  {
-    vector<const DCDCTrackHit*> locCDCTrackHits;
-    mData[loc_i]->Get(locCDCTrackHits);
-
-    vector<const DFDCPseudo*> locFDCPseudos;
-    mData[loc_i]->Get(locFDCPseudos);
-
-    mData[loc_i]->dCDCRings = dParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
-    mData[loc_i]->dFDCPlanes = dParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
-  }
 }
-
 
 // Obtain position and momentum at the exit of a given package using the 
 // helical track model.

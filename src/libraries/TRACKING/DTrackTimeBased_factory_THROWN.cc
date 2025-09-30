@@ -182,18 +182,5 @@ void DTrackTimeBased_factory_THROWN::Process(const std::shared_ptr<const JEvent>
 
 		Insert(track);
 	}
-
-	// Set CDC ring & FDC plane hit patterns
-	for(size_t loc_i = 0; loc_i < mData.size(); ++loc_i)
-	{
-		vector<const DCDCTrackHit*> locCDCTrackHits;
-		mData[loc_i]->Get(locCDCTrackHits);
-
-		vector<const DFDCPseudo*> locFDCPseudos;
-		mData[loc_i]->Get(locFDCPseudos);
-
-		mData[loc_i]->dCDCRings = dParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
-		mData[loc_i]->dFDCPlanes = dParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
-	}
 }
 
