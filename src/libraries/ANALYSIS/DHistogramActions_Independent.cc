@@ -675,16 +675,26 @@ bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const
 			double locTheta = locTrackCandidates[loc_i]->momentum().Theta()*180.0/TMath::Pi();
 			double locP = locTrackCandidates[loc_i]->momentum().Mag();
 			dHistMap_PVsTheta_Candidates[locCharge]->Fill(locTheta, locP);
-
+			
+			// Get the hits from the candidate
+			vector<const DFDCPseudo*>locFDCPseudos;
+			locTrackCandidates[loc_i]->GetT(locFDCPseudos);
+			vector<const DCDCTrackHit *>locCDCTrackHits;
+			locTrackCandidates[loc_i]->GetT(locCDCTrackHits);
+			
+			unsigned int locCDCRingPattern=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+			unsigned int locFDCPlanePattern=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+			
 			set<int> locCDCRings;
-			locParticleID->Get_CDCRings(locTrackCandidates[loc_i]->dCDCRings, locCDCRings);
+			locParticleID->Get_CDCRings(locCDCRingPattern, locCDCRings);
 			for(set<int>::iterator locIterator = locCDCRings.begin(); locIterator != locCDCRings.end(); ++locIterator)
 				dHist_CDCRingVsTheta_Candidates->Fill(locTheta, *locIterator);
 
 			set<int> locFDCPlanes;
-			locParticleID->Get_FDCPlanes(locTrackCandidates[loc_i]->dFDCPlanes, locFDCPlanes);
+			locParticleID->Get_FDCPlanes(locFDCPlanePattern, locFDCPlanes);
 			for(set<int>::iterator locIterator = locFDCPlanes.begin(); locIterator != locFDCPlanes.end(); ++locIterator)
 				dHist_FDCPlaneVsTheta_Candidates->Fill(locTheta, *locIterator);
+			
 		}
 
 		//WIRE-BASED TRACKS

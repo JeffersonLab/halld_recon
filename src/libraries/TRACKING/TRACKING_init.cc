@@ -5,12 +5,8 @@
 #include "DTrackWireBased_factory_StraightLine.h"
 #include "DTrackTimeBased_factory_StraightLine.h"
 #include "DTrackCandidate_factory.h"
-#include "DTrackCandidate_factory_THROWN.h"
 #include "DTrackCandidate_factory_CDC.h"
-#include "DTrackCandidate_factory_FDC.h"
 #include "DTrackCandidate_factory_FDCCathodes.h"
-#include "DTrackCandidate_factory_FDCpseudo.h"
-#include "DTrackCandidate_factory_CDC_or_FDCpseudo.h"
 #include "DTrackCandidate_factory_StraightLine.h"
 #include "DTrackWireBased_factory_THROWN.h"
 #include "DTrackTimeBased_factory_THROWN.h"
@@ -40,11 +36,7 @@ void TRACKING_init(JFactorySet *factorySet)
    factorySet->Add(new DTrackTimeBased_factory());
    factorySet->Add(new DTrackCandidate_factory());
    factorySet->Add(new DTrackCandidate_factory_CDC());
-   factorySet->Add(new DTrackCandidate_factory_FDC());
    factorySet->Add(new DTrackCandidate_factory_FDCCathodes());
-   factorySet->Add(new DTrackCandidate_factory_FDCpseudo());
-   factorySet->Add(new DTrackCandidate_factory_CDC_or_FDCpseudo());
-   factorySet->Add(new DTrackCandidate_factory_THROWN());
    factorySet->Add(new DTrackCandidate_factory_StraightLine());
    factorySet->Add(new DTrackWireBased_factory_THROWN());
    factorySet->Add(new DTrackTimeBased_factory_THROWN()); 
