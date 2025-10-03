@@ -87,9 +87,18 @@ void JEventProcessor_cal_cal::Init()
     h_fcal_time[i]->Sumw2();
     h_ecal_v_ecal_time[i]->Sumw2();
     h_fcal_v_fcal_time[i]->Sumw2();
+    h_ecal_ctime[i] = new TH2F(Form("ecal_ctime_%d", i), ";#font[42]{Block #};#font[42]{t_{RF} - t_{ECAL} [ns]};#font[42]{Events #}", 1600, -0.5, 1599.5, 5000, -250., 250.);
+    h_fcal_ctime[i] = new TH2F(Form("fcal_ctime_%d", i), ";#font[42]{Block #};#font[42]{t_{RF} - t_{FCAL} [ns]};#font[42]{Events #}", 2800, -0.5, 2799.5, 5000, -250., 250.);
+    h_ecal_v_ecal_ctime[i] = new TH2F(Form("ecal_v_ecal_ctime_%d", i), ";#font[42]{Block #};#font[42]{t_{ECAL}^{1} - t_{ECAL}^{2} [ns]};#font[42]{Events #}", 1600, -0.5, 1599.5, 5000, -250., 250.);
+    h_fcal_v_fcal_ctime[i] = new TH2F(Form("fcal_v_fcal_ctime_%d", i), ";#font[42]{Block #};#font[42]{t_{FCAL}^{1} - t_{FCAL}^{2} [ns]};#font[42]{Events #}", 2800, -0.5, 2799.5, 5000, -250., 250.);
+    h_ecal_ctime[i]->Sumw2();
+    h_fcal_ctime[i]->Sumw2();
+    h_ecal_v_ecal_ctime[i]->Sumw2();
+    h_fcal_v_fcal_ctime[i]->Sumw2();
   }
   for (int i = 0; i < 6; i ++) {
     h_fcal_time_v_bit[i] = new TH2F(Form("fcal_time_v_bit_%d", i), ";#font[42]{Block #};#font[42]{t_{RF} - t_{FCAL} [ns]};#font[42]{Events #}", 2800, -0.5, 2799.5, 1000, -50., 50.);
+    h_fcal_ctime_v_bit[i] = new TH2F(Form("fcal_tcime_v_bit_%d", i), ";#font[42]{Block #};#font[42]{t_{RF} - t_{FCAL} [ns]};#font[42]{Events #}", 2800, -0.5, 2799.5, 1000, -50., 50.);
   }
   for (int i = 0; i < 7; i ++) {
     h_ecal_mgg_v_blk[i] = new TH2F(Form("ecal_mgg_v_blk_%d", i), ";#font[42]{Block #};#font[42]{m_{#gamma#gamma} [GeV/c^{2}]};#font[42]{Events #}", 1600, -0.5, 1599.5, 1200, 0., 1.2);
@@ -312,7 +321,12 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     if (ecalHit1.size() < 2) continue;
     double ce1 = ecalCluster1->E;
     double ce1_max = 0;
-    for (int j = 0; j < (int) ecalHit1.size(); j ++) if (ce1_max < ecalHit1[j]->E) ce1_max = ecalHit1[j]->E;
+    double ct1_max = -100;
+    for (int j = 0; j < (int) ecalHit1.size(); j ++) if (ce1_max < ecalHit1[j]->E) {
+	ce1_max = ecalHit1[j]->E;
+	ct1_max = ecalHit1[j]->t - (r1 / TMath::C() * 1e7);
+      }
+    double diff_ct1 = locRFTime - ct1_max;
     int ch1 = ecalCluster1->channel_Emax;
     h_ecal_e_v_ce->Fill(ce1, ce1 / e1);
     h_ecal_e_ratio->Fill(ce1, ce1_max / ce1);
@@ -358,7 +372,7 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       }
     }
     h_ecal_time[0]->Fill(ch1, diff_t1);
-    
+    h_ecal_ctime[0]->Fill(ch1, diff_ct1);
     for (unsigned int j = i + 1; j < locECALShowers.size(); j++) {
       double e2 = locECALShowers[j]->E;
       DVector3 position2(0, 0, 0);
@@ -379,7 +393,12 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       if (ecalHit2.size() < 2) continue;
       //double ce2 = ecalCluster2->E;
       double ce2_max = 0;
-      for (int k = 0; k < (int) ecalHit2.size(); k ++) if (ce2_max < ecalHit2[k]->E) ce2_max = ecalHit2[k]->E;
+      double ct2_max = -100;
+      for (int k = 0; k < (int) ecalHit2.size(); k ++) if (ce2_max < ecalHit2[k]->E) {
+	  ce2_max = ecalHit2[k]->E;
+	  ct2_max = ecalHit2[k]->t - (r2 / TMath::C() * 1e7);
+	}
+      double diff_ct2 = locRFTime - ct2_max;
       //const vector< DECALCluster::DECALClusterHit_t > ECALhitVector2 = ecalCluster2->HitInfo();
       //if (ECALhitVector2.size() < 1) continue;
       int ch2 = ecalCluster2->channel_Emax;
@@ -416,32 +435,48 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       
       h_ecal_time[1]->Fill(ch1, diff_t1);
       h_ecal_time[1]->Fill(ch2, diff_t2);
+      h_ecal_ctime[1]->Fill(ch1, diff_ct1);
+      h_ecal_ctime[1]->Fill(ch2, diff_ct2);
       
       if (e1 > 0.5 && e2 > 0.5 && locECALShowers.size() < 10) {
 	h_ecal_time[2]->Fill(ch1, diff_t1);
-	h_ecal_time[2]->Fill(ch2, diff_t2);	
+	h_ecal_time[2]->Fill(ch2, diff_t2);
+	h_ecal_ctime[2]->Fill(ch1, diff_ct1);
+	h_ecal_ctime[2]->Fill(ch2, diff_ct2);	
 	if (tof_match1 == 0 && tof_match2 == 0) {
 	  h_ecal_time[3]->Fill(ch1, diff_t1);
 	  h_ecal_time[3]->Fill(ch2, diff_t2);
+	  h_ecal_ctime[3]->Fill(ch1, diff_ct1);
+	  h_ecal_ctime[3]->Fill(ch2, diff_ct2);
 	  if (0.11 <= pi0P4.M() && pi0P4.M() <= 0.16) {
 	    h_ecal_time[4]->Fill(ch1, diff_t1);
 	    h_ecal_time[4]->Fill(ch2, diff_t2);
+	    h_ecal_ctime[4]->Fill(ch1, diff_ct1);
+	    h_ecal_ctime[4]->Fill(ch2, diff_ct2);
 	  }
 	}
       }
       
       h_ecal_v_ecal_time[0]->Fill(ch1, diff_t1 - diff_t2);
       h_ecal_v_ecal_time[0]->Fill(ch2, diff_t2 - diff_t1);
+      h_ecal_v_ecal_ctime[0]->Fill(ch1, diff_ct1 - diff_ct2);
+      h_ecal_v_ecal_ctime[0]->Fill(ch2, diff_ct2 - diff_ct1);
       if (e1 > 0.5 && e2 > 0.5) {
 	h_ecal_v_ecal_time[1]->Fill(ch1, diff_t1 - diff_t2);
 	h_ecal_v_ecal_time[1]->Fill(ch2, diff_t2 - diff_t1);
+	h_ecal_v_ecal_ctime[1]->Fill(ch1, diff_ct1 - diff_ct2);
+	h_ecal_v_ecal_ctime[1]->Fill(ch2, diff_ct2 - diff_ct1);
       }
       if (0.11 <= pi0P4.M() && pi0P4.M() <= 0.16) {
 	h_ecal_v_ecal_time[2]->Fill(ch1, diff_t1 - diff_t2);
 	h_ecal_v_ecal_time[2]->Fill(ch2, diff_t2 - diff_t1);
+	h_ecal_v_ecal_ctime[2]->Fill(ch1, diff_ct1 - diff_ct2);
+	h_ecal_v_ecal_ctime[2]->Fill(ch2, diff_ct2 - diff_ct1);
 	if (e1 > 0.5 && e2 > 0.5) {
 	  h_ecal_v_ecal_time[3]->Fill(ch1, diff_t1 - diff_t2);
 	  h_ecal_v_ecal_time[3]->Fill(ch2, diff_t2 - diff_t1);
+	  h_ecal_v_ecal_ctime[3]->Fill(ch1, diff_ct1 - diff_ct2);
+	  h_ecal_v_ecal_ctime[3]->Fill(ch2, diff_ct2 - diff_ct1);
 	}
       }
       
@@ -530,6 +565,11 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       locFCALShowers[j]->GetSingle(fcalCluster2);
       const vector< DFCALCluster::DFCALClusterHit_t > FCALhitVector2 = fcalCluster2->GetHits();
       if (FCALhitVector2.size() < 2) continue;
+
+      //DFCALCluster::DFCALClusterHit_t FCALhit2 = FCALhitVector2[0];
+      //double ct2_max = FCALhit2.t - (r2 / TMath::C() * 1e7);
+      //double diff_ct2 = locRFTime - ct2_max + m_time_rf_offset;
+      
       int ch2 = fcalCluster2->getChannelEmax();
       //int col2 = fcalGeom->column(ch2);
       //int row2 = fcalGeom->row(ch2);
@@ -652,6 +692,9 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     locFCALShowers[i]->GetSingle(fcalCluster1);
     const vector< DFCALCluster::DFCALClusterHit_t > FCALhitVector1 = fcalCluster1->GetHits();
     if (FCALhitVector1.size() < 2) continue;
+    DFCALCluster::DFCALClusterHit_t FCALhit1 = FCALhitVector1[0];
+    double ct1_max = FCALhit1.t - (r1 / TMath::C() * 1e7);
+    double diff_ct1 = locRFTime - ct1_max + m_time_rf_offset;
     int ch1 = fcalCluster1->getChannelEmax();
     int col1 = fcalGeom->column(ch1);
     int row1 = fcalGeom->row(ch1);
@@ -705,12 +748,19 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       }
     }
     h_fcal_time[0]->Fill(ch1, diff_t1);
+    h_fcal_ctime[0]->Fill(ch1, diff_ct1);
     if (trig_bit[0] == 1) h_fcal_time_v_bit[0]->Fill(ch1, diff_t1);
     if (trig_bit[1] == 1 && trig_bit[3] == 0) h_fcal_time_v_bit[1]->Fill(ch1, diff_t1);
     if (trig_bit[2] == 1) h_fcal_time_v_bit[2]->Fill(ch1, diff_t1);
     if (trig_bit[3] == 1 && trig_bit[1] == 0) h_fcal_time_v_bit[3]->Fill(ch1, diff_t1);
     if (trig_bit[4] == 1) h_fcal_time_v_bit[4]->Fill(ch1, diff_t1);
     if (trig_bit[1] == 1 && trig_bit[3] == 1) h_fcal_time_v_bit[5]->Fill(ch1, diff_t1);
+    if (trig_bit[0] == 1) h_fcal_ctime_v_bit[0]->Fill(ch1, diff_ct1);
+    if (trig_bit[1] == 1 && trig_bit[3] == 0) h_fcal_ctime_v_bit[1]->Fill(ch1, diff_ct1);
+    if (trig_bit[2] == 1) h_fcal_ctime_v_bit[2]->Fill(ch1, diff_ct1);
+    if (trig_bit[3] == 1 && trig_bit[1] == 0) h_fcal_ctime_v_bit[3]->Fill(ch1, diff_ct1);
+    if (trig_bit[4] == 1) h_fcal_ctime_v_bit[4]->Fill(ch1, diff_ct1);
+    if (trig_bit[1] == 1 && trig_bit[3] == 1) h_fcal_ctime_v_bit[5]->Fill(ch1, diff_ct1);
 
     for (unsigned int j = i + 1; j < locFCALShowers.size(); j++) {
       double e2 = locFCALShowers[j]->getEnergy();
@@ -735,6 +785,9 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       locFCALShowers[j]->GetSingle(fcalCluster2);
       const vector< DFCALCluster::DFCALClusterHit_t > FCALhitVector2 = fcalCluster2->GetHits();
       if (FCALhitVector2.size() < 2) continue;
+      DFCALCluster::DFCALClusterHit_t FCALhit2 = FCALhitVector2[0];
+      double ct2_max = FCALhit2.t - (r2 / TMath::C() * 1e7);
+      double diff_ct2 = locRFTime - ct2_max + m_time_rf_offset;
       int ch2 = fcalCluster2->getChannelEmax();
       int col2 = fcalGeom->column(ch2);
       int row2 = fcalGeom->row(ch2);
@@ -777,31 +830,47 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
 
       h_fcal_time[1]->Fill(ch1, diff_t1);
       h_fcal_time[1]->Fill(ch2, diff_t2);
+      h_fcal_ctime[1]->Fill(ch1, diff_ct1);
+      h_fcal_ctime[1]->Fill(ch2, diff_ct2);
 
       if (e1 > 0.5 && e2 > 0.5 && locFCALShowers.size() < 10) {
 	h_fcal_time[2]->Fill(ch1, diff_t1);
 	h_fcal_time[2]->Fill(ch2, diff_t2);
+	h_fcal_ctime[2]->Fill(ch1, diff_ct1);
+	h_fcal_ctime[2]->Fill(ch2, diff_ct2);
 	if (tof_match1 == 0 && tof_match2 == 0) {
 	  h_fcal_time[3]->Fill(ch1, diff_t1);
 	  h_fcal_time[3]->Fill(ch2, diff_t2);
+	  h_fcal_ctime[3]->Fill(ch1, diff_ct1);
+	  h_fcal_ctime[3]->Fill(ch2, diff_ct2);
 	  if (0.11 <= pi0P4.M() && pi0P4.M() <= 0.16) {
 	    h_fcal_time[4]->Fill(ch1, diff_t1);
 	    h_fcal_time[4]->Fill(ch2, diff_t2);
+	    h_fcal_ctime[4]->Fill(ch1, diff_ct1);
+	    h_fcal_ctime[4]->Fill(ch2, diff_ct2);
 	  }
 	}
       }
       h_fcal_v_fcal_time[0]->Fill(ch1, diff_t1 - diff_t2);
       h_fcal_v_fcal_time[0]->Fill(ch2, diff_t2 - diff_t1);
+      h_fcal_v_fcal_ctime[0]->Fill(ch1, diff_ct1 - diff_ct2);
+      h_fcal_v_fcal_ctime[0]->Fill(ch2, diff_ct2 - diff_ct1);
       if (e1 > 0.5 && e2 > 0.5) {
 	h_fcal_v_fcal_time[1]->Fill(ch1, diff_t1 - diff_t2);
 	h_fcal_v_fcal_time[1]->Fill(ch2, diff_t2 - diff_t1);
+	h_fcal_v_fcal_ctime[1]->Fill(ch1, diff_ct1 - diff_ct2);
+	h_fcal_v_fcal_ctime[1]->Fill(ch2, diff_ct2 - diff_ct1);
       }
       if (0.11 <= pi0P4.M() && pi0P4.M() <= 0.16) {
 	h_fcal_v_fcal_time[2]->Fill(ch1, diff_t1 - diff_t2);
 	h_fcal_v_fcal_time[2]->Fill(ch2, diff_t2 - diff_t1);
+	h_fcal_v_fcal_ctime[2]->Fill(ch1, diff_ct1 - diff_ct2);
+	h_fcal_v_fcal_ctime[2]->Fill(ch2, diff_ct2 - diff_ct1);
 	if (e1 > 0.5 && e2 > 0.5) {
 	  h_fcal_v_fcal_time[3]->Fill(ch1, diff_t1 - diff_t2);
 	  h_fcal_v_fcal_time[3]->Fill(ch2, diff_t2 - diff_t1);
+	  h_fcal_v_fcal_ctime[3]->Fill(ch1, diff_ct1 - diff_ct2);
+	  h_fcal_v_fcal_ctime[3]->Fill(ch2, diff_ct2 - diff_ct1);
 	}
       }
       

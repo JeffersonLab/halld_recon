@@ -139,7 +139,9 @@ private:
   TH2F * h_fcal_xy[14];
   TH2F * h_fcal_cr[14];
   TH2F * h_fcal_time[5];
+  TH2F * h_fcal_ctime[5];
   TH2F * h_fcal_time_v_bit[6];
+  TH2F * h_fcal_ctime_v_bit[6];
   TH2F * h_fcal_mgg_v_blk[7];
   TH2F * h_fcal_fdc_mgg_v_blk[7];
   TH2F * h_fecal_mgg_v_blk[7];
@@ -157,6 +159,11 @@ private:
   TH2F * h_ecal_time[5];
   TH2F * h_ecal_v_ecal_time[5];
   TH2F * h_fcal_v_fcal_time[5];
+
+  TH2F * h_ecal_ctime[5];
+  TH2F * h_ecal_v_ecal_ctime[5];
+  TH2F * h_fcal_v_fcal_ctime[5];
+  
   TH2F * h_ecal_mgg_v_blk[7];
   TH2F * h_efcal_mgg_v_blk[7];
   TH2F * h_fecal_fdc_mgg_v_blk[7];
