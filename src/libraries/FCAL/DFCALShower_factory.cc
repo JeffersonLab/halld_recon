@@ -83,16 +83,16 @@ void DFCALShower_factory::Init()
   if (USE_NONLINEAR_CORRECTION_TYPE == 0) {
   } else if (USE_NONLINEAR_CORRECTION_TYPE == 1) {
     expfit_param1 = 2;
-    expfit_param1 = 0;
-    expfit_param1 = 0;
+    expfit_param2 = 0;
+    expfit_param3 = 0;
     SHOWER_POSITION_LOG = true;
     USE_RING_E_CORRECTION_V1 = true;
     USE_RING_E_CORRECTION_V2 = false;
     USE_CPP_E_CORRECTION = false;
   } else if (USE_NONLINEAR_CORRECTION_TYPE == 2) {
     expfit_param1 = 2;
-    expfit_param1 = 0;
-    expfit_param1 = 0;
+    expfit_param2 = 0;
+    expfit_param3 = 0;
     SHOWER_POSITION_LOG = true;
     USE_RING_E_CORRECTION_V1 = false;
     USE_RING_E_CORRECTION_V2 = true;
@@ -103,7 +103,7 @@ void DFCALShower_factory::Init()
     USE_RING_E_CORRECTION_V2 = false;
     USE_CPP_E_CORRECTION = true;
   }
-
+  
   app->SetDefaultParameter("FCAL:P0", timeConst0);
   app->SetDefaultParameter("FCAL:P1", timeConst1);
   app->SetDefaultParameter("FCAL:P2", timeConst2);
@@ -192,8 +192,8 @@ void DFCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     } else if (nonlinear_correction_type[0] == 1) {
       LOAD_NONLIN_CCDB = true;
       expfit_param1 = 2;
-      expfit_param1 = 0;
-      expfit_param1 = 0;
+      expfit_param2 = 0;
+      expfit_param3 = 0;
       SHOWER_POSITION_LOG = true;
       USE_RING_E_CORRECTION_V1 = true;	
       USE_RING_E_CORRECTION_V2 = false;
@@ -201,8 +201,8 @@ void DFCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     } else if (nonlinear_correction_type[0] == 2) {
       LOAD_NONLIN_CCDB = true;
       expfit_param1 = 2;
-      expfit_param1 = 0;
-      expfit_param1 = 0;
+      expfit_param2 = 0;
+      expfit_param3 = 0;
       SHOWER_POSITION_LOG = true;
       USE_RING_E_CORRECTION_V1 = false;
       USE_RING_E_CORRECTION_V2 = true;
@@ -545,7 +545,8 @@ void DFCALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
   double shower_offset=FCAL_SHOWER_OFFSET;
   double critical_energy=FCAL_CRITICAL_ENERGY;
   double zfront=m_FCALfront;
-
+  // if (nonlinear_correction_type.size() > 0) cout << "type " << nonlinear_correction_type[0] << endl;
+  //if (SHOWER_POSITION_LOG) cout << "SHOWER_POSITION_LOG1 " << SHOWER_POSITION_LOG << " USE_NONLINEAR_CORRECTION_TYPE " << USE_NONLINEAR_CORRECTION_TYPE << " Egamma " << Egamma << endl;
   // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
   if (USE_RING_E_CORRECTION_V1 && energy_dependence_correction_vs_ring.size() > 0) {
     // Method II: PRIMEXD way, correction per ring
@@ -656,7 +657,7 @@ void DFCALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
   //End energy dependence correction
   
   if (Egamma <= 0 && Eclust > 0) Egamma = Eclust; 
-  
+  //if (SHOWER_POSITION_LOG) cout << "SHOWER_POSITION_LOG2 " << SHOWER_POSITION_LOG << " USE_NONLINEAR_CORRECTION_TYPE " << USE_NONLINEAR_CORRECTION_TYPE << " Egamma " << Egamma << endl;
   // then depth corrections 
   if ( Egamma > 0 ) { 
     float dxV = x0-vertex->X();
