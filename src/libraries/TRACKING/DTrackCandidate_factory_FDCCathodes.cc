@@ -258,6 +258,7 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	    mData[index]->AddAssociatedObject(mytracks[j][0]);
 	    mData[index]->AddAssociatedObject(mytracks[j][1]);
 	    
+	    // Update minimimum drift time if necessary
 	    double minimum_drift_time=mData[index]->dMinimumDriftTime;
 	    bool got_lower_t=false;
 	    for (auto& hit:mytracks[j][0]->hits){
@@ -336,6 +337,9 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	track->chisq=segment->chisq;
       
 	track->AddAssociatedObject(segment);
+	track->FirstPackage=track->LastPackage=segment->package;
+
+	// find the minimum drift time
 	double minimum_drift_time=1e9;
 	for (unsigned int k=0;k<segment->hits.size();k++){
 	  if (segment->hits[k]->time<minimum_drift_time)
@@ -568,8 +572,7 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
     bool got_segment_in_package=false;
 
     // Get the segments already associated with this track 
-    vector<const DFDCSegment*>segments;
-    mData[i]->GetT(segments);
+    vector<const DFDCSegment*>segments=mData[i]->Get<DFDCSegment>();
     // Flag if segment is in a package that has already been used for this 
     // candidate
     for (unsigned int j=0;j<segments.size();j++){
@@ -595,7 +598,7 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	  if (dx*dx+dy*dy<CENTER_MATCH_CUT) got_match=true;
 	}
 	if (got_match){
-	  // Add the segment as an associated object to mData[i]
+	  // Add the segment to mData[i]
 	  mData[i]->AddAssociatedObject(segment);
 
 	  // Modify t0 if necessary
@@ -675,6 +678,8 @@ void DTrackCandidate_factory_FDCCathodes::MakeCandidate(vector<const DFDCSegment
       if (mytrack[m]->hits[k]->time<minimum_drift_time) minimum_drift_time=mytrack[m]->hits[k]->time;
     }
   }
+  track->FirstPackage=mytrack[0]->package;
+  track->LastPackage=mytrack[mytrack.size()-1]->package;
   track->dMinimumDriftTime=minimum_drift_time;
   track->dDetector=SYS_FDC;
   

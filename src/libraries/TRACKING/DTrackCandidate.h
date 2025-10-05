@@ -13,10 +13,6 @@
 #include <TRACKING/DTrackingData.h>
 #include <TRACKING/DTrackFitter.h>
 
-class DReferenceTrajectory;
-
-#define MAX_IHITS 256
-
 /// \htmlonly
 /// <A href="index.html#legend">
 ///	<IMG src="CORE.png" width="100">
@@ -53,6 +49,9 @@ public:
   // Rough timing information
   double dMinimumDriftTime;
   DetectorSystem_t dDetector;
+
+  // Range of packages used in candidate in FDC
+  unsigned FirstPackage,LastPackage;
   
   void Summarize(JObjectSummary& summary) const override {
     summary.add(SystemName(dDetector), "Detector", "%s");
