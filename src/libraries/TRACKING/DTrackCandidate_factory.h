@@ -62,16 +62,10 @@ class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
   void EndRun() override;
   void Finish() override;
 
-  double DocaToHelix(const DCDCTrackHit *hit,double q,const DVector3 &pos,
-		     const DVector3 &mom);
-  double GetSenseOfRotation(DHelicalFit &fit,const DFDCPseudo *fdchit,const DVector3 &pos);
   jerror_t DoRefit(DHelicalFit &fit,
 		   vector<const DFDCSegment *>segments,
 		   vector<const DCDCTrackHit *>cdchits,
 		   double &Bz);
-  void ProjectHelixToZ(const double z,const double q,const DVector3 &mom,
-		       DVector3 &pos);
-
   void GetPositionAndMomentum(const DFDCSegment *segment,DVector3 &pos,
 			      DVector3 &mom) const;
   jerror_t GetPositionAndMomentum(DHelicalFit &fit,double Bz,
@@ -84,56 +78,7 @@ class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
   void UpdatePositionAndMomentum(DHelicalFit &fit,double Bz,
 				 const DVector3 &origin,DVector3 &pos,
 				 DVector3 &mom) const;
-  bool CheckZPosition(const DTrackCandidate *fdccan) const;
- 
-  // Various methods for matching CDC and FDC candidates
-  bool MatchMethod1(const DTrackCandidate *fdccan,
-		    vector<unsigned int> &cdc_forward_ids,
-		    vector<DVector3>&cdc_endplate_projections,
-		    vector<int>&cdc_forward_matches
-		    );
-  bool MatchMethod2(const DTrackCandidate *fdccan,const DTrackCandidate *cdccan
-		    );
-  bool MatchMethod3(const DTrackCandidate *cdccan,vector<int> &forward_matches
-		    );  
-  bool MatchMethod4(const DTrackCandidate *srccan,vector<int> &forward_matches,
-		    int &num_fdc_cands_remaining);
-  bool MatchMethod5(DTrackCandidate *can,  
-		    vector<const DCDCTrackHit *>&cdchits,
-		    vector<int> &forward_matches);
-  void MatchMethod6(DTrackCandidate *can, 
-		    vector<const DFDCPseudo *>&fdchits,
-		    vector<unsigned int>&used_cdc_hits,  
-		    unsigned int &num_unmatched_cdcs
-		    );
-  bool MatchMethod7(DTrackCandidate *srccan,vector<int> &forward_matches,
-		    int &num_fdc_cands_remaining);
-  bool MatchMethod8(const DTrackCandidate *cdccan,vector<int> &forward_matches);
-  bool MatchMethod9(unsigned int src_index,const DTrackCandidate *srccan, 
-		    const DFDCSegment *segment,
-		    vector<const DTrackCandidate*>&cands,
-		    vector<int> &forward_matches);
-  bool MatchMethod10(unsigned int src_index,const DTrackCandidate *srccan, 
-		     const DFDCSegment *segment,
-		     vector<const DTrackCandidate*>&cands,
-		     vector<int> &forward_matches);
-  bool MatchMethod11(double q,DVector3 &mypos,DVector3 &mymom,
-		     DHelicalFit &fit2,const DFDCSegment *segment1,
-		     const DFDCSegment *segment2);
-  bool MatchMethod12(DTrackCandidate *srccan,vector<int> &forward_matches,
-		     int &num_fdc_cands_remaining);  
-  bool MatchMethod13(unsigned int src_index,const DTrackCandidate *srccan, 
-		     const DFDCSegment *segment,
-		     vector<const DTrackCandidate*>&cands,
-		     vector<int> &forward_matches);
-  bool TryToFlipDirection(vector<const DSCHit *>&scihits,
-			  DVector3 &mom,DVector3 &pos) const;
-  bool MatchStraySegments(vector<int> &forward_matches,
-			  int &num_fdc_cands_remaining);
-  bool MakeCandidateFromMethod1(double t0,double theta,
-				vector<const DFDCSegment *>&segments,
-				const DTrackCandidate *cdccan);
- 
+  
  private:
   const DMagneticFieldMap *bfield;
   bool dIsNoFieldFlag;
