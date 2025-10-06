@@ -78,6 +78,8 @@ class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
   void UpdatePositionAndMomentum(DHelicalFit &fit,double Bz,
 				 const DVector3 &origin,DVector3 &pos,
 				 DVector3 &mom) const;
+  void DoRefit(const DTrackCandidate *fdccan,vector<const DCDCTrackHit*>&cdchits,
+	       vector<pair<unsigned int,DVector3>>&cdcXYZ);
   
  private:
   const DMagneticFieldMap *bfield;
