@@ -47,11 +47,6 @@ class DTrackCandidate:public DTrackingData{
 		// Circle fit data
 		double xc,yc,rc;
 
-		// Hit CDC Rings & FDC Planes
-		// use the DParticleID Get_CDCRings & Get_FDCPlanes functions to extract the information from these
-		unsigned int dCDCRings; //CDC rings where the track has an associated DCDCTrackHit //rings correspond to bits (1 -> 28)
-		unsigned int dFDCPlanes; //FDC planes where the track has an associated DFDCPseudoHit //planes correspond to bits (1 -> 24)
-
       bool IsSmoothed; // Boolean value to indicate whether the smoother was run succesfully over this track.
 
 		void Summarize(JObjectSummary& summary) const override {
