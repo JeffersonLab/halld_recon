@@ -305,33 +305,19 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       // the helix into the cdc
       for (unsigned int m=0;m<cdchits.size();m++){
 	double variance=1.6*1.6/12.;
+	if (cdchits[m]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
 
-	DVector3 wirepos=cdchits[m]->wire->origin;	
-	if (cdchits[m]->is_stereo){
-	  DVector3 dir=(1./cdchits[m]->wire->udir.z())*cdchits[m]->wire->udir;
-	  double x0_minus_xc=wirepos.x()-cdccan->xc;
-	  double y0_minus_yc=wirepos.y()-cdccan->yc;
-	  double a=sqrt(cdccan->rc*cdccan->rc*dir.Perp2()
-			-pow(x0_minus_xc*dir.y()-y0_minus_yc*dir.x(),2));
-	  double b= -x0_minus_xc*dir.x()-y0_minus_yc*dir.y();
-	  double c=1./dir.Perp2();
-	  double dz1=c*(b-a);
-	  double dz2=c*(b+a);
-	  if (fabs(dz1)<fabs(dz2)){
-	    wirepos+=dz1*dir;
-	  }
-	  else {
-	    wirepos+=dz2*dir;
-	  }
-	}
-	
-	// Look for a match
-	if (wirepos.z()>167.) break;
+	DVector3 wirepos=cdchits[m]->wire->origin;
 	double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 		       +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
 	double prob=TMath::Prob(dr*dr/variance,1);
-	
-	if (prob>0.01) cdcXYZ.push_back(make_pair(m,wirepos));
+	if (prob>0.01){	
+	  if (cdchits[m]->is_stereo){
+	    GetCDCIntersection(fdccan,cdchits[m],wirepos);
+	    if (wirepos.z()>167.) break;
+	  }
+	  cdcXYZ.push_back(make_pair(m,wirepos));
+	}
       }
       if (cdcXYZ.size()>=3){
 	DoRefit(fdccan,cdchits,cdcXYZ);
@@ -360,6 +346,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 
 	// Look for a match
 	double variance=1.6*1.6/12.;
+	if (mycdchits[k]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
 	DVector3 wirepos=mycdchits[k]->wire->origin;
 	double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 		       +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
@@ -432,6 +419,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       if (fdccan->FirstPackage==mData[i]->LastPackage+1){
 	cout << "Packages " << mData[i]->LastPackage << " "
 	     << fdccan->FirstPackage << endl;
+	
+	
       }
     }
   }
@@ -466,7 +455,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 
     Insert(can);
   }
-for (unsigned int i=0;i<cdctrackcandidates.size();i++){
+  for (unsigned int i=0;i<cdctrackcandidates.size();i++){
     if (cdc_matches[i]) continue;
 
     // Create new track candidate object 
@@ -584,71 +573,57 @@ jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
   double xc2=xc*xc;
   double yc2=yc*yc;
   double xc2_plus_yc2=xc2+yc2;
-  double a=(r2-xc2_plus_yc2-rc2)/tworc;
-  double b=xc2_plus_yc2-a*a;
-  if (b<0){
-    // We did not find an intersection between the two circles, so return 
-    // an error.  The values of mom and pos are not changed. 
-    return VALUE_OUT_OF_RANGE;
-  }
-
-  double temp1=yc*sqrt(b);
-  double temp2=xc*a;
-  double cosphi_plus=(temp2+temp1)/xc2_plus_yc2;
-  double cosphi_minus=(temp2-temp1)/xc2_plus_yc2;
+  double A=r2+xc2_plus_yc2-rc2;
+  double B=4*r2*xc2_plus_yc2-A*A;
+  if (B<0) return VALUE_OUT_OF_RANGE;
+	
+  double sqrtB=sqrt(B);
+  double scale=1./(2.*xc2_plus_yc2);
+  double xplus=(xc*A+yc*sqrtB)*scale;
+  double xminus=(xc*A-yc*sqrtB)*scale;
+  double yplus=(yc*A-xc*sqrtB)*scale;
+  double yminus=(yc*A+xc*sqrtB)*scale;
 
   // Direction tangent and transverse momentum
   double tanl=fit.tanl;
   double pt=0.003*Bz*rc;
 
-  double phi_plus=acos(cosphi_plus);
-  double phi_minus=acos(cosphi_minus);
-  double x_plus=xc+rc*cosphi_plus;
-  double x_minus=xc+rc*cosphi_minus;
-  double y_plus=yc+rc*sin(phi_plus);
-  double y_minus=yc+rc*sin(phi_minus);
-
-  // if the resulting radial position on the circle from the fit does not agree
-  // with the radius to which we are matching, we have the wrong sign for phi+ 
-  // or phi-
-  double r2_plus=x_plus*x_plus+y_plus*y_plus;
-  double r2_minus=x_minus*x_minus+y_minus*y_minus;  
-  if (fabs(r2-r2_plus)>EPS){
-    phi_plus*=-1.;
-    y_plus=yc+rc*sin(phi_plus);
-  }
-  if (fabs(r2-r2_minus)>EPS){
-    phi_minus*=-1.;
-    y_minus=yc+rc*sin(phi_minus);
-  }
-
-  // Choose phi- or phi+ depending on proximity to one of the cdc hits
+  // Choose the solution depending on proximity to one of the cdc hits
   double xwire=origin.x();
   double ywire=origin.y();
-  double dx=x_minus-xwire;
-  double dy=y_minus-ywire;
+  double dx=xminus-xwire;
+  double dy=yminus-ywire;
   double d2_minus=dx*dx+dy*dy;
-  dx=x_plus-xwire;
-  dy=y_plus-ywire;
+  cout << d2_minus << " ";
+  dx=xplus-xwire;
+  dy=yplus-ywire;
   double d2_plus=dx*dx+dy*dy;
- 
+  cout << d2_plus <<endl;
+  
   DVector3 pos0(pos); // save the input position, for use in finding z
+  double Phi1=atan2(pos0.y()-yc,pos0.x()-xc);
   if (d2_plus>d2_minus){
-    fit.h=-1.;
-    phi_minus=M_PI-phi_minus;
-    pos.SetXYZ(x_minus,y_minus,0.); // z will be filled later
-    mom.SetXYZ(pt*sin(phi_minus),pt*cos(phi_minus),pt*tanl);
+    pos.SetXYZ(xminus,yminus,0.); // z will be filled later
   }
-  else{
-    fit.h=1.;
-    phi_plus*=-1.;   
-    pos.SetXYZ(x_plus,y_plus,0.); // z will be filled later
-    mom.SetXYZ(pt*sin(phi_plus),pt*cos(phi_plus),pt*tanl);
+  else {   
+    pos.SetXYZ(xplus,yplus,0.); // z will be filled later
   }
   // Next find the z-position corresponding to the new (x,y) position
   double ratio=(pos0-pos).Perp()/tworc;
-  double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-  pos.SetZ(pos0.z()-sperp*tanl);
+  double phi_s=(ratio<1.)?2.*asin(ratio):M_PI;
+  pos.SetZ(pos0.z()-phi_s*rc*tanl);
+
+  double twokappa=fit.h/rc;
+  phi_s*=FactorForSenseOfRotation*fit.h;
+  double sin2ks=sin(phi_s);
+  double cos2ks=cos(phi_s);
+  double phi0=mom.Phi();
+  double sinp=sin(phi0);
+  double cosp=cos(phi0);
+  double cosphi=cosp*cos2ks-sinp*sin2ks;
+  double sinphi=sinp*cos2ks+cosp*sin2ks;
+
+  mom.SetXYZ(pt*cosphi,pt*sinphi,pt*tanl);
   
   return NOERROR;
 }
@@ -732,7 +707,7 @@ void DTrackCandidate_factory::DoRefit(const DTrackCandidate *fdccan,
     DVector3 pos=fdccan->dPosition;
     double Bz=fabs(bfield->GetBz(pos.x(),pos.y(),pos.z()));
     // Update position and momentum with new fit results
-    DVector3 mom;
+    DVector3 mom=fdccan->dMomentum;
     UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
     
     // Create new track candidate object 
@@ -765,4 +740,24 @@ void DTrackCandidate_factory::DoRefit(const DTrackCandidate *fdccan,
   }
 }
 
-
+// Find intersection between CDC stereo wire and fit circle
+void DTrackCandidate_factory::GetCDCIntersection(const DTrackCandidate *can,
+						 const DCDCTrackHit *cdchit,
+						 DVector3 &wirepos) const {
+  DVector3 dir=(1./cdchit->wire->udir.z())*cdchit->wire->udir;
+  double x0_minus_xc=wirepos.x()-can->xc;
+  double y0_minus_yc=wirepos.y()-can->yc;
+  double a=sqrt(can->rc*can->rc*dir.Perp2()
+		-pow(x0_minus_xc*dir.y()-y0_minus_yc*dir.x(),2));
+  double b= -x0_minus_xc*dir.x()-y0_minus_yc*dir.y();
+  double c=1./dir.Perp2();
+  double dz1=c*(b-a);
+  double dz2=c*(b+a);
+  if (fabs(dz1)<fabs(dz2)){
+    wirepos+=dz1*dir;
+  }
+  else {
+    wirepos+=dz2*dir;
+  }
+}
+					    

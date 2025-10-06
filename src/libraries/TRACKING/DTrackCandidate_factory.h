@@ -80,6 +80,8 @@ class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
 				 DVector3 &mom) const;
   void DoRefit(const DTrackCandidate *fdccan,vector<const DCDCTrackHit*>&cdchits,
 	       vector<pair<unsigned int,DVector3>>&cdcXYZ);
+  void GetCDCIntersection(const DTrackCandidate *can,const DCDCTrackHit *cdchit,
+			  DVector3 &wirepos) const;
   
  private:
   const DMagneticFieldMap *bfield;
