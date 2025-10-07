@@ -67,6 +67,8 @@ public:
     summary.add(dPosition.y(), "y [cm]", "%f");
     summary.add(dPosition.z(), "z [cm]", "%f");
     summary.add(dMinimumDriftTime, "t [ns]", "%f");
+    summary.add(cdchits.size(),"nCDC","%d");
+    summary.add(fdchits.size(),"nFDC","%d");
     summary.add(chisq, "chisq", "%f");
     summary.add(Ndof, "Ndof", "%d");
   }
