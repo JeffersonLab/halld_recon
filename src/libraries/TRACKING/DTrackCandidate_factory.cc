@@ -299,7 +299,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       if (fdccan->dPosition.y()*cdccan->dPosition.y()<0) continue;
       if (fdccan->dPosition.Perp2()<cdccan->dPosition.Perp2()) continue;
       
-      vector<const DCDCTrackHit*>cdchits=cdccan->Get<DCDCTrackHit>();
+      vector<const DCDCTrackHit*>cdchits=cdccan->cdchits;
       vector<pair<unsigned int,DVector3>>cdcXYZ;
       // loop over the cdc hits and count hits that agree with a projection of 
       // the helix into the cdc
@@ -312,16 +312,51 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 		       +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
 	double prob=TMath::Prob(dr*dr/variance,1);
 	if (prob>0.01){	
-	  if (cdchits[m]->is_stereo){
-	    GetCDCIntersection(fdccan,cdchits[m],wirepos);
-	    if (wirepos.z()>167.) break;
-	  }
 	  cdcXYZ.push_back(make_pair(m,wirepos));
 	}
       }
       if (cdcXYZ.size()>=3){
-	DoRefit(fdccan,cdchits,cdcXYZ);
+	// List of FDC hits attached to track candidate
+	vector<const DFDCPseudo*>fdchits=fdccan->fdchits;
+	
+	DVector3 pos=fdccan->dPosition;
+	DVector3 mom=fdccan->dMomentum;
+	// Create a new DHelicalFit object for fitting combined data
+	DHelicalFit fit;
+	DoRefit(fit,fdccan,fdchits,cdchits,cdcXYZ,mom,pos);
 
+	// Create new track candidate object 
+	DTrackCandidate *can = new DTrackCandidate;
+	
+	// circle parameters
+	can->rc=fit.r0;
+	can->xc=fit.x0;
+	can->yc=fit.y0;
+
+	// Add cdc and fdc hits to the track as associated objects
+	can->fdchits=std::move(fdccan->fdchits);
+	can->LastPackage=fdccan->LastPackage;
+
+	double minDriftTime=fdccan->dMinimumDriftTime;
+	can->dDetector=SYS_FDC;
+	for (unsigned int n=0;n<cdcXYZ.size();n++){
+	  can->cdchits.push_back(mycdchits[cdcXYZ[n].first]);
+	  if (mycdchits[cdcXYZ[n].first]->tdrift){
+	    minDriftTime=mycdchits[cdcXYZ[n].first]->tdrift;
+	    can->dDetector=SYS_CDC;
+	  }
+	}
+	can->dMinimumDriftTime=minDriftTime;
+	
+	can->chisq=fit.chisq;
+	can->Ndof=fit.ndof;
+
+	can->dCharge=FactorForSenseOfRotation*fit.h;
+	can->dMomentum=mom;
+	can->dPosition=pos;
+	
+	Insert(can);
+	
 	fdc_matches[i]=1;
 	cdc_matches[j]=1;
       }
@@ -386,16 +421,19 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	can->yc=fit.y0;
 	
 	// Add cdc and fdc hits to the track as associated objects
-	vector<const DFDCSegment *>segments=fdccan->Get<DFDCSegment>();
-	for (unsigned int m=0;m<segments.size();m++){
-	  for (unsigned int n=0;n<segments[m]->hits.size();n++){
-	    can->AddAssociatedObject(segments[m]->hits[n]);
+	can->fdchits=std::move(fdccan->fdchits);
+	can->LastPackage=fdccan->LastPackage;
+
+	double minDriftTime=fdccan->dMinimumDriftTime;
+	can->dDetector=SYS_FDC;
+	for (unsigned int n=0;n<cdcXYZ.size();n++){
+	  can->cdchits.push_back(mycdchits[cdcXYZ[n].first]);
+	  if (mycdchits[cdcXYZ[n].first]->tdrift){
+	    minDriftTime=mycdchits[cdcXYZ[n].first]->tdrift;
+	    can->dDetector=SYS_CDC;
 	  }
 	}
-	can->LastPackage=fdccan->LastPackage;
-	for (unsigned int n=0;n<cdcXYZ.size();n++){
-	  can->AddAssociatedObject(mycdchits[cdcXYZ[n].first]); 
-	}
+	can->dMinimumDriftTime=minDriftTime;
 	
 	can->chisq=fdccan->chisq;
 	can->Ndof=fdccan->Ndof;
@@ -410,8 +448,12 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
   }
 
 
-
+  if (false)
   for (unsigned int i=0;i<mData.size();i++){
+    // Get the associated hits
+    vector<const DFDCPseudo*>fdchits=mData[i]->fdchits;
+    vector<const DCDCTrackHit*>cdchits=mData[i]->cdchits;
+    cout << "CDC hits " << cdchits.size() << endl;
     for (unsigned int j=0;j<fdctrackcandidates.size();j++){
       if (fdc_matches[j]) continue;
 
@@ -419,8 +461,74 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       if (fdccan->FirstPackage==mData[i]->LastPackage+1){
 	cout << "Packages " << mData[i]->LastPackage << " "
 	     << fdccan->FirstPackage << endl;
-	
-	
+	// Find matches to CDC hits
+	vector<pair<unsigned int,DVector3>>cdcXYZ;
+	/*
+	for (unsigned int k=0;i<cdchits.size();k++){
+	  // Look for a match
+	  double variance=1.6*1.6/12.;
+	  cout << cdchits[k] << endl;
+	  if (cdchits[k]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
+	  DVector3 wirepos=cdchits[k]->wire->origin;
+	  double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
+			 +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
+	  double prob=TMath::Prob(dr*dr/variance,1);
+	  
+	  if (prob>0.01){
+	    cdcXYZ.push_back(make_pair(k,wirepos));
+	  }
+	}
+	*/
+	// Find matches to FDC hits
+	vector<const DFDCPseudo*>used_fdchits;
+	for (unsigned int k=0;i<fdchits.size();k++){
+	  // Look for a match
+	  double variance=1./12.;
+
+	  cout << " fdchit " << fdchits[k] << endl;
+	  double dr=sqrt(pow(fdchits[k]->xy.X()-fdccan->xc,2)
+			 +pow(fdchits[k]->xy.Y()-fdccan->yc,2))-fdccan->rc;
+	  double prob=TMath::Prob(dr*dr/variance,1);
+	  
+	  if (prob>0.01){
+	    used_fdchits.push_back(fdchits[k]);
+	  }
+	}
+	// If we got a match, redo the helical fit with the extra hits
+	if (cdcXYZ.size()+used_fdchits.size()>3){
+	  // List of FDC hits attached to track candidate
+	  vector<const DFDCPseudo*>fdchits=fdccan->fdchits;
+	  
+	  DVector3 pos=fdccan->dPosition;
+	  DVector3 mom=fdccan->dMomentum;
+	  // Create a new DHelicalFit object for fitting combined data
+	  DHelicalFit fit;
+	  DoRefit(fit,fdccan,fdchits,cdchits,cdcXYZ,mom,pos);
+
+	  cout << "Refitting " << endl;
+	  mData[i]->rc=fit.r0;
+	  mData[i]->xc=fit.x0;
+	  mData[i]->yc=fit.y0;
+	  
+	  // Add cdc and fdc hits to the track as associated objects
+	  cout << "fdcs " << mData[i]->fdchits.size();
+	  mData[i]->fdchits.insert(mData[i]->fdchits.end(),fdchits.begin(),
+				   fdchits.end());
+	  cout << mData[i]->fdchits.size() << endl;
+	  mData[i]->LastPackage=fdccan->LastPackage;
+	  for (unsigned int n=0;n<cdcXYZ.size();n++){
+	    mData[i]->AddAssociatedObject(cdchits[cdcXYZ[n].first]); 
+	  }
+	  
+	  mData[i]->chisq=fit.chisq;
+	  mData[i]->Ndof=fit.ndof;
+	  
+	  mData[i]->dCharge=FactorForSenseOfRotation*fit.h;
+	  mData[i]->dMomentum=mom;
+	  mData[i]->dPosition=pos;
+
+	  fdc_matches[j]=1;
+	}
       }
     }
   }
@@ -445,13 +553,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
     can->chisq=fdccan->chisq;
     can->Ndof=fdccan->Ndof;
 
-    vector<const DFDCSegment*>segments=fdccan->Get<DFDCSegment>();
-    for (unsigned int m=0;m<segments.size();m++){		  
-      for (unsigned int n=0;n<segments[m]->hits.size();n++){
-	const DFDCPseudo *fdchit=segments[m]->hits[n];
-	can->AddAssociatedObject(fdchit);
-      }
-    }
+    can->dDetector=SYS_FDC;
+    can->fdchits=std::move(fdccan->fdchits);
 
     Insert(can);
   }
@@ -473,7 +576,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
     
     can->chisq=cdccan->chisq;
     can->Ndof=cdccan->Ndof;
-
+    
+    can->dDetector=SYS_CDC;
     vector<const DCDCTrackHit *>cdchits=cdccan->Get<DCDCTrackHit>();
     for (unsigned int n=0;n<cdchits.size();n++){
       can->AddAssociatedObject(cdchits[n]); 
@@ -594,14 +698,11 @@ jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
   double dx=xminus-xwire;
   double dy=yminus-ywire;
   double d2_minus=dx*dx+dy*dy;
-  cout << d2_minus << " ";
   dx=xplus-xwire;
   dy=yplus-ywire;
   double d2_plus=dx*dx+dy*dy;
-  cout << d2_plus <<endl;
   
   DVector3 pos0(pos); // save the input position, for use in finding z
-  double Phi1=atan2(pos0.y()-yc,pos0.x()-xc);
   if (d2_plus>d2_minus){
     pos.SetXYZ(xminus,yminus,0.); // z will be filled later
   }
@@ -612,8 +713,8 @@ jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
   double ratio=(pos0-pos).Perp()/tworc;
   double phi_s=(ratio<1.)?2.*asin(ratio):M_PI;
   pos.SetZ(pos0.z()-phi_s*rc*tanl);
-
-  double twokappa=fit.h/rc;
+  
+  // Get the momentum at the new position
   phi_s*=FactorForSenseOfRotation*fit.h;
   double sin2ks=sin(phi_s);
   double cos2ks=cos(phi_s);
@@ -622,7 +723,6 @@ jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
   double cosp=cos(phi0);
   double cosphi=cosp*cos2ks-sinp*sin2ks;
   double sinphi=sinp*cos2ks+cosp*sin2ks;
-
   mom.SetXYZ(pt*cosphi,pt*sinphi,pt*tanl);
   
   return NOERROR;
@@ -681,12 +781,13 @@ void DTrackCandidate_factory::UpdatePositionAndMomentum(DHelicalFit &fit,
 }
 
 // Redo the helical fit with additional hits
-void DTrackCandidate_factory::DoRefit(const DTrackCandidate *fdccan,
+void DTrackCandidate_factory::DoRefit(DHelicalFit &fit,
+				      const DTrackCandidate *fdccan,
+				      vector<const DFDCPseudo*>&fdchits,
 				      vector<const DCDCTrackHit*>&cdchits,
-				      vector<pair<unsigned int,DVector3>>&cdcXYZ
-				      ){
-  // Create a new DHelicalFit object for fitting combined data
-  DHelicalFit fit;	
+				      vector<pair<unsigned int,DVector3>>&cdcXYZ,
+				      DVector3 &mom,DVector3 &pos
+				      ){	
   // Add the cdc hits to use in the fit 
   for (unsigned int k=0;k<cdcXYZ.size();k++){	
     double cov=0.213;  //guess
@@ -695,48 +796,15 @@ void DTrackCandidate_factory::DoRefit(const DTrackCandidate *fdccan,
 		  !cdchits[cdcXYZ[k].first]->is_stereo);
   }
   // Add the FDC hits
-  vector<const DFDCSegment *>segments=fdccan->Get<DFDCSegment>();
-  for (unsigned int k=0;k<segments.size();k++){
-    for (unsigned int n=0;n<segments[k]->hits.size();n++){
-      const DFDCPseudo *fdchit=segments[k]->hits[n];
-      fit.AddHit(fdchit);
-    }
+  for (unsigned int k=0;k<fdchits.size();k++){
+    const DFDCPseudo *fdchit=fdchits[k];
+    fit.AddHit(fdchit);
   }
   if (fit.FitTrackRiemann(fdccan->rc)==NOERROR){
     // Estimate Bz
-    DVector3 pos=fdccan->dPosition;
     double Bz=fabs(bfield->GetBz(pos.x(),pos.y(),pos.z()));
     // Update position and momentum with new fit results
-    DVector3 mom=fdccan->dMomentum;
-    UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
-    
-    // Create new track candidate object 
-    DTrackCandidate *can = new DTrackCandidate;
-
-    // circle parameters
-    can->rc=fit.r0;
-    can->xc=fit.x0;
-    can->yc=fit.y0;
-    
-    // Add cdc and fdc hits to the track as associated objects
-    for (unsigned int m=0;m<segments.size();m++){
-      for (unsigned int n=0;n<segments[m]->hits.size();n++){
-	can->AddAssociatedObject(segments[m]->hits[n]);
-      }
-    }
-    can->LastPackage=fdccan->LastPackage;
-    for (unsigned int n=0;n<cdcXYZ.size();n++){
-      can->AddAssociatedObject(cdchits[cdcXYZ[n].first]); 
-    }
-    
-    can->chisq=fit.chisq;
-    can->Ndof=fit.ndof;
-    
-    can->dCharge=FactorForSenseOfRotation*fit.h;
-    can->dMomentum=mom;
-    can->dPosition=pos;
-    
-    Insert(can);
+    UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);   
   }
 }
 

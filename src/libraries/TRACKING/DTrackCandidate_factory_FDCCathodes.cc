@@ -262,12 +262,14 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	    double minimum_drift_time=mData[index]->dMinimumDriftTime;
 	    bool got_lower_t=false;
 	    for (auto& hit:mytracks[j][0]->hits){
+	      mData[index]->fdchits.push_back(hit);
 	      if (hit->time<minimum_drift_time){
 		minimum_drift_time=hit->time;
 		got_lower_t=true;
 	      }
 	    }
 	    for (auto& hit:mytracks[j][1]->hits){
+	      mData[index]->fdchits.push_back(hit);
 	      if (hit->time<minimum_drift_time){
 		minimum_drift_time=hit->time;
 		got_lower_t=true;
@@ -342,6 +344,7 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	// find the minimum drift time
 	double minimum_drift_time=1e9;
 	for (unsigned int k=0;k<segment->hits.size();k++){
+	  track->fdchits.push_back(segment->hits[k]);
 	  if (segment->hits[k]->time<minimum_drift_time)
 	    minimum_drift_time=segment->hits[k]->time;
 	}
@@ -605,6 +608,7 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	  double minimum_drift_time=mData[i]->dMinimumDriftTime;
 	  bool got_lower_t=false;
 	  for (unsigned int k=0;k<segment->hits.size();k++){
+	    mData[i]->fdchits.push_back(segment->hits[k]);
 	    if (segment->hits[k]->time<minimum_drift_time){
 	      minimum_drift_time=segment->hits[k]->time;
 	      got_lower_t=true;
@@ -675,6 +679,7 @@ void DTrackCandidate_factory_FDCCathodes::MakeCandidate(vector<const DFDCSegment
   for (unsigned int m=0;m<mytrack.size();m++){
     track->AddAssociatedObject(mytrack[m]);
     for (unsigned int k=0;k<mytrack[m]->hits.size();k++){
+      track->fdchits.push_back(mytrack[m]->hits[k]);
       if (mytrack[m]->hits[k]->time<minimum_drift_time) minimum_drift_time=mytrack[m]->hits[k]->time;
     }
   }

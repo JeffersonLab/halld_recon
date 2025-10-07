@@ -52,6 +52,10 @@ public:
 
   // Range of packages used in candidate in FDC
   unsigned FirstPackage,LastPackage;
+
+  // Hits used in track
+  vector<const DFDCPseudo*>fdchits;
+  vector<const DCDCTrackHit*>cdchits;
   
   void Summarize(JObjectSummary& summary) const override {
     summary.add(SystemName(dDetector), "Detector", "%s");
