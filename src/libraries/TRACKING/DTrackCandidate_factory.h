@@ -82,8 +82,7 @@ class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
 	       const DTrackCandidate *fdccan,
 	       vector<const DFDCPseudo *>&fdchits,
 	       vector<const DCDCTrackHit*>&cdchits,
-	       vector<pair<unsigned int,DVector3>>&cdcXYZ,DVector3 &mom,
-	       DVector3 &pos
+	       DVector3 &mom,DVector3 &pos
 	       );
   void GetCDCIntersection(const DTrackCandidate *can,const DCDCTrackHit *cdchit,
 			  DVector3 &wirepos) const;
@@ -96,7 +95,7 @@ class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
 
   vector<const DTrackCandidate*>cdctrackcandidates;
   vector<const DTrackCandidate*>fdctrackcandidates; 
-  vector<const DCDCTrackHit*>mycdchits;
+  vector<const DCDCTrackHit*>allcdchits;
   vector<DTrackCandidate *>trackcandidates;
 
   int DEBUG_LEVEL,MIN_NUM_HITS;

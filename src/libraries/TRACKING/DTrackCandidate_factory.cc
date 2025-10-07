@@ -250,14 +250,14 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
   cdctrackcandidates.clear();
   fdctrackcandidates.clear();
   trackcandidates.clear();
-  mycdchits.clear();
+  allcdchits.clear();
 
   // Get the track candidates from the CDC and FDC candidate finders
   event->Get(cdctrackcandidates, "CDC");
   event->Get(fdctrackcandidates, "FDCCathodes");
 
   // List of cdc hits
-  event->Get(mycdchits);
+  event->Get(allcdchits);
 
   // Vectors for keeping track of cdc matches and projections to the endplate
   vector<unsigned int> cdc_forward_ids;
@@ -265,7 +265,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
   vector<DVector3> cdc_endplate_projections;
  
   // Vector to keep track of cdc hits used in candidates
-  vector<unsigned int>used_cdc_hits(mycdchits.size());
+  vector<unsigned int>used_cdc_hits(allcdchits.size());
   for(unsigned int i=0; i<cdctrackcandidates.size(); i++){ 
     const DTrackCandidate *srccan = cdctrackcandidates[i];
     for (unsigned int n=0;n<srccan->used_cdc_indexes.size();n++){
@@ -299,10 +299,10 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       if (fdccan->dPosition.y()*cdccan->dPosition.y()<0) continue;
       if (fdccan->dPosition.Perp2()<cdccan->dPosition.Perp2()) continue;
       
-      vector<const DCDCTrackHit*>cdchits=cdccan->cdchits;
-      vector<pair<unsigned int,DVector3>>cdcXYZ;
       // loop over the cdc hits and count hits that agree with a projection of 
       // the helix into the cdc
+      vector<const DCDCTrackHit*>cdchits=cdccan->cdchits;
+      unsigned int num_matches=0;
       for (unsigned int m=0;m<cdchits.size();m++){
 	double variance=1.6*1.6/12.;
 	if (cdchits[m]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
@@ -311,11 +311,9 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 		       +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
 	double prob=TMath::Prob(dr*dr/variance,1);
-	if (prob>0.01){	
-	  cdcXYZ.push_back(make_pair(m,wirepos));
-	}
+	if (prob>0.01) num_matches++;
       }
-      if (cdcXYZ.size()>=3){
+      if (num_matches>=3){
 	// List of FDC hits attached to track candidate
 	vector<const DFDCPseudo*>fdchits=fdccan->fdchits;
 	
@@ -323,7 +321,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	DVector3 mom=fdccan->dMomentum;
 	// Create a new DHelicalFit object for fitting combined data
 	DHelicalFit fit;
-	DoRefit(fit,fdccan,fdchits,cdchits,cdcXYZ,mom,pos);
+	DoRefit(fit,fdccan,fdchits,cdchits,mom,pos);
 
 	// Create new track candidate object 
 	DTrackCandidate *can = new DTrackCandidate;
@@ -336,17 +334,14 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	// Add cdc and fdc hits to the track as associated objects
 	can->fdchits=std::move(fdccan->fdchits);
 	can->LastPackage=fdccan->LastPackage;
+	can->cdchits=std::move(cdccan->cdchits);
 
-	double minDriftTime=fdccan->dMinimumDriftTime;
+	can->dMinimumDriftTime=fdccan->dMinimumDriftTime;
 	can->dDetector=SYS_FDC;
-	for (unsigned int n=0;n<cdcXYZ.size();n++){
-	  can->cdchits.push_back(mycdchits[cdcXYZ[n].first]);
-	  if (mycdchits[cdcXYZ[n].first]->tdrift){
-	    minDriftTime=mycdchits[cdcXYZ[n].first]->tdrift;
-	    can->dDetector=SYS_CDC;
-	  }
+	if (cdccan->dMinimumDriftTime<fdccan->dMinimumDriftTime){
+	  can->dDetector=SYS_CDC;
+	  can->dMinimumDriftTime=cdccan->dMinimumDriftTime;
 	}
-	can->dMinimumDriftTime=minDriftTime;
 	
 	can->chisq=fit.chisq;
 	can->Ndof=fit.ndof;
@@ -375,14 +370,14 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       const DTrackCandidate *fdccan=fdctrackcandidates[i];
       if (fdccan->FirstPackage>0) continue;
       
-      vector<pair<unsigned int,DVector3>>cdcXYZ;
+      vector<const DCDCTrackHit*>cdchits;
       for (unsigned int k=0;k<used_cdc_hits.size();k++){
 	if (used_cdc_hits[k]) continue;
 
 	// Look for a match
 	double variance=1.6*1.6/12.;
-	if (mycdchits[k]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
-	DVector3 wirepos=mycdchits[k]->wire->origin;
+	if (allcdchits[k]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
+	DVector3 wirepos=allcdchits[k]->wire->origin;
 	double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 		       +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
 	double prob=TMath::Prob(dr*dr/variance,1);
@@ -391,10 +386,10 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	  num_unmatched_cdcs--;
 	  used_cdc_hits[k]=1;
 
-	  cdcXYZ.push_back(make_pair(k,wirepos));
+	  cdchits.push_back(allcdchits[k]);
 	}
       }
-      if (cdcXYZ.size()>0){
+      if (cdchits.size()>0){
 	fdc_matches[i]=1;
 
 	// Position and momentum
@@ -409,8 +404,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	fit.h=fdccan->dCharge*FactorForSenseOfRotation;
 	// Get the magnetic field at pos
 	double Bz=fabs(bfield->GetBz(pos.x(),pos.y(),pos.z()));
-	// Update position and momnentum at the start counter barrel radius
-	UpdatePositionAndMomentum(fit,Bz,cdcXYZ[0].second,pos,mom);
+	// Update position and momentum at the start counter barrel radius
+	UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
 	
 	// Create new track candidate object 
 	DTrackCandidate *can = new DTrackCandidate;
@@ -426,10 +421,10 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 
 	double minDriftTime=fdccan->dMinimumDriftTime;
 	can->dDetector=SYS_FDC;
-	for (unsigned int n=0;n<cdcXYZ.size();n++){
-	  can->cdchits.push_back(mycdchits[cdcXYZ[n].first]);
-	  if (mycdchits[cdcXYZ[n].first]->tdrift){
-	    minDriftTime=mycdchits[cdcXYZ[n].first]->tdrift;
+	for (unsigned int n=0;n<cdchits.size();n++){
+	  can->cdchits.push_back(cdchits[n]);
+	  if (cdchits[n]->tdrift){
+	    minDriftTime=cdchits[n]->tdrift;
 	    can->dDetector=SYS_CDC;
 	  }
 	}
@@ -447,78 +442,62 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
     }
   }
 
-
-  if (false)
+  // Do a final pass to match unmatched FDC candidates to other candidates 
   for (unsigned int i=0;i<mData.size();i++){
     // Get the associated hits
     vector<const DFDCPseudo*>fdchits=mData[i]->fdchits;
     vector<const DCDCTrackHit*>cdchits=mData[i]->cdchits;
-    cout << "CDC hits " << cdchits.size() << endl;
+   
     for (unsigned int j=0;j<fdctrackcandidates.size();j++){
       if (fdc_matches[j]) continue;
 
       const DTrackCandidate *fdccan=fdctrackcandidates[j];
       if (fdccan->FirstPackage==mData[i]->LastPackage+1){
-	cout << "Packages " << mData[i]->LastPackage << " "
-	     << fdccan->FirstPackage << endl;
 	// Find matches to CDC hits
-	vector<pair<unsigned int,DVector3>>cdcXYZ;
-	/*
-	for (unsigned int k=0;i<cdchits.size();k++){
+	unsigned int num_matches=0;
+	for (unsigned int k=0;k<cdchits.size();k++){
 	  // Look for a match
 	  double variance=1.6*1.6/12.;
-	  cout << cdchits[k] << endl;
 	  if (cdchits[k]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
 	  DVector3 wirepos=cdchits[k]->wire->origin;
 	  double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 			 +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
 	  double prob=TMath::Prob(dr*dr/variance,1);
 	  
-	  if (prob>0.01){
-	    cdcXYZ.push_back(make_pair(k,wirepos));
-	  }
+	  if (prob>0.01) num_matches++;
 	}
-	*/
 	// Find matches to FDC hits
-	vector<const DFDCPseudo*>used_fdchits;
-	for (unsigned int k=0;i<fdchits.size();k++){
+	for (unsigned int k=0;k<fdchits.size();k++){
 	  // Look for a match
 	  double variance=1./12.;
-
-	  cout << " fdchit " << fdchits[k] << endl;
 	  double dr=sqrt(pow(fdchits[k]->xy.X()-fdccan->xc,2)
 			 +pow(fdchits[k]->xy.Y()-fdccan->yc,2))-fdccan->rc;
 	  double prob=TMath::Prob(dr*dr/variance,1);
 	  
-	  if (prob>0.01){
-	    used_fdchits.push_back(fdchits[k]);
-	  }
+	  if (prob>0.01) num_matches++;
 	}
 	// If we got a match, redo the helical fit with the extra hits
-	if (cdcXYZ.size()+used_fdchits.size()>3){
+	if (num_matches>=3){
 	  // List of FDC hits attached to track candidate
-	  vector<const DFDCPseudo*>fdchits=fdccan->fdchits;
+	  vector<const DFDCPseudo*>allfdchits=fdccan->fdchits;
+	  allfdchits.insert(allfdchits.end(),fdchits.begin(),fdchits.end());
 	  
 	  DVector3 pos=fdccan->dPosition;
 	  DVector3 mom=fdccan->dMomentum;
 	  // Create a new DHelicalFit object for fitting combined data
 	  DHelicalFit fit;
-	  DoRefit(fit,fdccan,fdchits,cdchits,cdcXYZ,mom,pos);
+	  DoRefit(fit,fdccan,allfdchits,cdchits,mom,pos);
 
-	  cout << "Refitting " << endl;
 	  mData[i]->rc=fit.r0;
 	  mData[i]->xc=fit.x0;
 	  mData[i]->yc=fit.y0;
 	  
 	  // Add cdc and fdc hits to the track as associated objects
-	  cout << "fdcs " << mData[i]->fdchits.size();
-	  mData[i]->fdchits.insert(mData[i]->fdchits.end(),fdchits.begin(),
-				   fdchits.end());
-	  cout << mData[i]->fdchits.size() << endl;
+	  mData[i]->fdchits.insert(mData[i]->fdchits.end(),
+				   fdccan->fdchits.begin(),
+				   fdccan->fdchits.end());
 	  mData[i]->LastPackage=fdccan->LastPackage;
-	  for (unsigned int n=0;n<cdcXYZ.size();n++){
-	    mData[i]->AddAssociatedObject(cdchits[cdcXYZ[n].first]); 
-	  }
+	  mData[i]->cdchits=std::move(cdchits);
 	  
 	  mData[i]->chisq=fit.chisq;
 	  mData[i]->Ndof=fit.ndof;
@@ -555,7 +534,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 
     can->dDetector=SYS_FDC;
     can->fdchits=std::move(fdccan->fdchits);
-
+    can->dMinimumDriftTime=fdccan->dMinimumDriftTime;
+    
     Insert(can);
   }
   for (unsigned int i=0;i<cdctrackcandidates.size();i++){
@@ -578,10 +558,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
     can->Ndof=cdccan->Ndof;
     
     can->dDetector=SYS_CDC;
-    vector<const DCDCTrackHit *>cdchits=cdccan->Get<DCDCTrackHit>();
-    for (unsigned int n=0;n<cdchits.size();n++){
-      can->AddAssociatedObject(cdchits[n]); 
-    }
+    can->cdchits=std::move(cdccan->cdchits);
+    can->dMinimumDriftTime=cdccan->dMinimumDriftTime;
 
     Insert(can);
   }
@@ -785,15 +763,13 @@ void DTrackCandidate_factory::DoRefit(DHelicalFit &fit,
 				      const DTrackCandidate *fdccan,
 				      vector<const DFDCPseudo*>&fdchits,
 				      vector<const DCDCTrackHit*>&cdchits,
-				      vector<pair<unsigned int,DVector3>>&cdcXYZ,
 				      DVector3 &mom,DVector3 &pos
 				      ){	
-  // Add the cdc hits to use in the fit 
-  for (unsigned int k=0;k<cdcXYZ.size();k++){	
+  // Add the cdc hits to use in the fit
+  for (unsigned int k=0;k<cdchits.size();k++){	
     double cov=0.213;  //guess
-    fit.AddHitXYZ(cdcXYZ[k].second.x(),cdcXYZ[k].second.y(),
-		  cdcXYZ[k].second.z(),cov,cov,0.,
-		  !cdchits[cdcXYZ[k].first]->is_stereo);
+    DVector3 pos=cdchits[k]->wire->origin;
+    fit.AddHitXYZ(pos.x(),pos.y(),pos.z(),cov,cov,0.,!cdchits[k]->is_stereo);
   }
   // Add the FDC hits
   for (unsigned int k=0;k<fdchits.size();k++){
@@ -804,7 +780,9 @@ void DTrackCandidate_factory::DoRefit(DHelicalFit &fit,
     // Estimate Bz
     double Bz=fabs(bfield->GetBz(pos.x(),pos.y(),pos.z()));
     // Update position and momentum with new fit results
-    UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);   
+    DVector3 ref_pos=fdccan->dPosition;
+    if (cdchits.size()>0) ref_pos=cdchits[0]->wire->origin;
+    UpdatePositionAndMomentum(fit,Bz,ref_pos,pos,mom);   
   }
 }
 
