@@ -386,10 +386,8 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
 				    double mass,
 				    double t0,DetectorSystem_t t0_detector){
    // Get the hits from the candidate
-  vector<const DFDCPseudo*>myfdchits;
-  candidate->GetT(myfdchits);
-  vector<const DCDCTrackHit *>mycdchits;
-  candidate->GetT(mycdchits);
+  vector<const DFDCPseudo*>myfdchits=candidate->fdchits;
+  vector<const DCDCTrackHit *>mycdchits=candidate->cdchits;
   
   // Do the fit
   fitter->Reset();
