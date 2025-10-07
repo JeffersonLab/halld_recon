@@ -1164,8 +1164,7 @@ void EventViewer::FillGraphics(void)
 	    kd.setPID(trCand[n]->dCharge>0?PiPlus:PiMinus);
 	    AddKinematicDataTrack(&kd, color, 1.5);
 
-	    vector<const DCDCTrackHit*> cdctrackhits;
-	    trCand[n]->Get(cdctrackhits,"",1);
+	    vector<const DCDCTrackHit*> cdctrackhits=trCand[n]->cdchits;
 	    for(unsigned int i=0; i<cdctrackhits.size(); i++){
 	      const DCDCWire *wire = cdctrackhits[i]->wire;
 	      DGraphicSet gset(color, kLine, 1.0);
@@ -1178,8 +1177,7 @@ void EventViewer::FillGraphics(void)
 	      graphics.push_back(gset);
 	      
 	    } // end loop of cdc hits of track candidate
-	    vector<const DFDCPseudo*> fdcpseudos;
-	    trCand[n]->Get(fdcpseudos,"",1);
+	    vector<const DFDCPseudo*> fdcpseudos=trCand[n]->fdchits;
 	    DGraphicSet gsetp(color, kMarker, 0.5);
 	    
 	    for(unsigned int i=0; i<fdcpseudos.size(); i++){
