@@ -17,6 +17,7 @@ void DTrigger_factory::Init()
 	EMULATE_BCAL_LED_TRIGGER = false;
 
     EMULATE_CAL_ENERGY_SUMS = true;
+	USE_CPP_TRIGGER = false;
 	
 	BCAL_LED_NHITS_THRESHOLD = 200;
 	FCAL_LED_NHITS_THRESHOLD = 200;
@@ -27,6 +28,8 @@ void DTrigger_factory::Init()
 	app->SetDefaultParameter("TRIGGER:EMULATE_FCAL_LED_TRIGGER", EMULATE_FCAL_LED_TRIGGER, locUsageString);
 	locUsageString = "Calculate calorimter energy sums using emulated triggers (1/0, off by default)";
 	app->SetDefaultParameter("TRIGGER:EMULATE_CAL_ENERGY_SUMS", EMULATE_CAL_ENERGY_SUMS, locUsageString);
+	locUsageString = "Use CPP-specific trigger factory for Charged Pion Polarizability experiment (1/0, off by default)";
+	app->SetDefaultParameter("TRIGGER:USE_CPP_TRIGGER", USE_CPP_TRIGGER, locUsageString);
 
 }
 
@@ -114,7 +117,11 @@ void DTrigger_factory::Process(const std::shared_ptr<const JEvent>& event)
 
         // realistic trigger simulation
         vector<const DL1MCTrigger*> locMCTriggers;
-        event->Get(locMCTriggers);
+        if(USE_CPP_TRIGGER) {
+            event->Get(locMCTriggers, "CPP");
+        } else {
+            event->Get(locMCTriggers);
+        }
         const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
 	
         if(locMCTrigger != NULL)

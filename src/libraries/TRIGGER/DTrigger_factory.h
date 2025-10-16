@@ -26,6 +26,7 @@ class DTrigger_factory : public JFactoryT<DTrigger>
 		bool EMULATE_FCAL_LED_TRIGGER;
 
         bool EMULATE_CAL_ENERGY_SUMS;
+		bool USE_CPP_TRIGGER;
 		
 		unsigned int BCAL_LED_NHITS_THRESHOLD;
 		unsigned int FCAL_LED_NHITS_THRESHOLD;
