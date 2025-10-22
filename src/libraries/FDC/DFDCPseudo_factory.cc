@@ -731,7 +731,7 @@ jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
 
    // time from greater amplitude
    (amp2 > amp1) ? temp.t=t2 : temp.t=t1;
-   temp.t_rms=0.;
+   temp.cluster=0; // will be filled in later
 
    //CalcMeanTime(peak,temp.t,temp.t_rms);
    centroids.push_back(temp);
@@ -791,9 +791,9 @@ jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
 
    temp.q=sum;
    temp.q_from_pulse_height = q_from_pulse_height;
-   temp.numstrips=10;
+   temp.numstrips=3;
    temp.t=t;
-   temp.t_rms=0.;
+   temp.cluster=0; // will be filled in later
 
    //CalcMeanTime(peak,temp.t,temp.t_rms);
    centroids.push_back(temp);
@@ -848,7 +848,7 @@ jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
       temp.numstrips=3;
       temp.q_from_pulse_height=q_ph;
       temp.t=(*peak)->t;
-      temp.t_rms=0.;
+      temp.cluster=0; // will be filled in later
       
       // Find estimate for anode charge
       double sum=0;
