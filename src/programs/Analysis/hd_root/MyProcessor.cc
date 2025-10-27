@@ -152,6 +152,13 @@ void MyProcessor::BeginRun(const std::shared_ptr<const JEvent>& event)
 //------------------------------------------------------------------
 void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 {
+	// Manually set gDirectory to ROOTfile because its value is not propagated
+	// from the other threads (::Init/BeginRun) to the thread that runs ::Process.
+	// All JEventProcessors for an event run in the same thread, so setting this value here
+	// ensures that subsequent plugins see the correct gDirectory when their ::Process methods are called.
+	// This issue appeared after upgrading from ROOT 6.24.04 to 6.32.08.
+	gDirectory = ROOTfile;
+
 	// Loop over factories explicitly mentioned on command line
 	for(unsigned int i=0;i<toprint.size();i++){
 		string name =fac_info[i].dataClassName;
