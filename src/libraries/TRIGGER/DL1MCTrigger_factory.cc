@@ -208,10 +208,12 @@ void DL1MCTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 
   int status   = 0;
 
-  fcal_trig_mask.clear();
-  bcal_trig_mask.clear();
+  if(!RCDB_LOADED) {
+    fcal_trig_mask.clear();
+    bcal_trig_mask.clear();
 
-  triggers_enabled.clear();
+    triggers_enabled.clear();
+  }
 
   // Only print messages for one thread whenever run number change
 
@@ -921,7 +923,6 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
 	  if((triggerTypes[jj].size() >= 14) && (triggerTypes[jj][13].size() > 0)){
 	    trigger_tmp.gtp.tagh_pattern   =  stoi(triggerTypes[jj][13],nullptr,0);
 	  }
-
 	  trig_found++;
 	}  else if(triggerTypes[jj][1] == "TOF"){        //  TOF
 	  trigger_tmp.type     =  0x20;
