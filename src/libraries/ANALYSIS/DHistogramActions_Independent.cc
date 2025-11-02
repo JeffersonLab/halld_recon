@@ -671,9 +671,9 @@ bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const
 		//TRACK CANDIDATES
 		for(size_t loc_i = 0; loc_i < locTrackCandidates.size(); ++loc_i)
 		{
-			int locCharge = (locTrackCandidates[loc_i]->charge() > 0.0) ? 1 : -1;
-			double locTheta = locTrackCandidates[loc_i]->momentum().Theta()*180.0/TMath::Pi();
-			double locP = locTrackCandidates[loc_i]->momentum().Mag();
+			int locCharge = (locTrackCandidates[loc_i]->dCharge > 0.0) ? 1 : -1;
+			double locTheta = locTrackCandidates[loc_i]->dMomentum.Theta()*180.0/TMath::Pi();
+			double locP = locTrackCandidates[loc_i]->dMomentum.Mag();
 			dHistMap_PVsTheta_Candidates[locCharge]->Fill(locTheta, locP);
 			
 			// Get the hits from the candidate
@@ -4029,7 +4029,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates.size(); ++loc_i)
 			{
-				if(locTrackCandidates[loc_i]->charge() > 0.0)
+				if(locTrackCandidates[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
@@ -4042,7 +4042,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates_CDC.size(); ++loc_i)
 			{
-				if(locTrackCandidates_CDC[loc_i]->charge() > 0.0)
+				if(locTrackCandidates_CDC[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
@@ -4054,7 +4054,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates_FDC.size(); ++loc_i)
 			{
-				if(locTrackCandidates_FDC[loc_i]->charge() > 0.0)
+				if(locTrackCandidates_FDC[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
