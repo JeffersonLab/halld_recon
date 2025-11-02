@@ -308,8 +308,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
   // the FDC.
   for(unsigned int i=0; i<cdctrackcandidates.size(); i++){	
     const DTrackCandidate *srccan = cdctrackcandidates[i];
-    DVector3 mom=srccan->momentum();
-    DVector3 pos=srccan->position();
+    DVector3 mom=srccan->dMomentum;
+    DVector3 pos=srccan->dPosition;
     
     // Propagate track to CDC endplate
     bool isForward=false;
@@ -318,13 +318,13 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	// First do a quick projection using a helical model to see if it is 
 	// worth adding this cdc candidate to the list of forward-going tracks
 	// that could pass into the FDC...
-	ProjectHelixToZ(cdc_endplate.z(),srccan->charge(),mom,pos);
+	ProjectHelixToZ(cdc_endplate.z(),srccan->dCharge,mom,pos);
 	
 	if (pos.Perp()<60.){
 	  // do an actual swim to the cdc endplate
-	  mom=srccan->momentum();
-	  pos=srccan->position();
-	  stepper->SetCharge(srccan->charge());
+	  mom=srccan->dMomentum;
+	  pos=srccan->dPosition;
+	  stepper->SetCharge(srccan->dCharge);
 	  stepper->SwimToPlane(pos,mom,cdc_endplate,norm,NULL);
 	  if (pos.Perp()<60.){
 	    cdc_endplate_projections.push_back(pos);
@@ -480,12 +480,12 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	can->xc=cdccan->xc;
 	can->yc=cdccan->yc;
 	
-	DVector3 mom=cdccan->momentum();
-	DVector3 pos=cdccan->position();
+	DVector3 mom=cdccan->dMomentum;
+	DVector3 pos=cdccan->dPosition;
 	
-	can->setMomentum(mom);
-	can->setPosition(pos);
-	can->setPID(cdccan->PID());
+	can->dMomentum=mom;
+	can->dPosition=pos;
+	can->dCharge=cdccan->dCharge;
 	
 	for (unsigned int n=0;n<cdchits.size();n++){
 	  used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
@@ -511,8 +511,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       cdc_backward_matches[j]=1;
     }
     else{
-      DVector3 mom=cdccan->momentum();
-      DVector3 pos=cdccan->position();
+      DVector3 mom=cdccan->dMomentum;
+      DVector3 pos=cdccan->dPosition;
 
       // Check for candidates that appear to go backwards but are actually 
       // going forwards and try to match these to remaining fdc candidates
@@ -523,7 +523,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	  }
 	  DVector3 norm(0.,0.,1.);
 	  double p_cdc=mom.Mag();
-	  stepper->SetCharge(cdccan->charge());
+	  stepper->SetCharge(cdccan->dCharge);
 	  stepper->SwimToPlane(pos,mom,cdc_endplate,norm,NULL);
 
 	  for (unsigned int i=0;i<fdctrackcandidates.size();i++){
@@ -541,10 +541,10 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	      }
 
 	      // Use MatchMethod1 if the previous method did not work
-	      DVector3 fdcpos=fdccan->position();
-	      DVector3 fdcmom=fdccan->momentum();
+	      DVector3 fdcpos=fdccan->dPosition;
+	      DVector3 fdcmom=fdccan->dMomentum;
 	      double p_fdc=fdcmom.Mag();
-	      ProjectHelixToZ(cdc_endplate.z(),fdccan->charge(),fdcmom,fdcpos);
+	      ProjectHelixToZ(cdc_endplate.z(),fdccan->dCharge,fdcmom,fdcpos);
 	      double diff=(pos-fdcpos).Mag(); 
 	      if (cdc_fdc_match(p_fdc,p_cdc,diff)){
 		// Get the segment data
@@ -585,9 +585,9 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       stable_sort(cdchits.begin(), cdchits.end(), CDCHitSortByLayerincreasing);
      
       DTrackCandidate *can = new DTrackCandidate;
-      can->setMomentum(cdccan->momentum());
-      can->setPosition(cdccan->position());
-      can->setPID(cdccan->PID());
+      can->dMomentum=cdccan->dMomentum;
+      can->dPosition=cdccan->dPosition;
+      can->dCharge=cdccan->dCharge;
       
       // circle parameters
       can->rc=cdccan->rc;
@@ -640,9 +640,9 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	  can->xc=fdccan->xc;
 	  can->yc=fdccan->yc;
 	  
-	  can->setMomentum(fdccan->momentum());
-	  can->setPosition(fdccan->position());
-	  can->setPID(fdccan->PID());
+	  can->dMomentum=fdccan->dMomentum;
+	  can->dPosition=fdccan->dPosition;
+	  can->dCharge=fdccan->dCharge;
 	  can->chisq=fdccan->chisq;
 	  can->Ndof=fdccan->Ndof; 
 	  for (unsigned int m=0;m<segments.size();m++){		  
@@ -669,7 +669,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       
       DTrackCandidate *can=trackcandidates[i];      
       if (MatchMethod7(can,forward_matches,num_fdc_cands_remaining)==false){
-	if (can->momentum().Mag()<0.5){
+	if (can->dMomentum.Mag()<0.5){
 	  if (MatchMethod12(can,forward_matches,num_fdc_cands_remaining)){
 	    candidate_updated[i]=1;
 	  }
@@ -683,7 +683,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	if (candidate_updated[i]==1){
 	  DTrackCandidate *can=trackcandidates[i];   
 	  if (MatchMethod7(can,forward_matches,num_fdc_cands_remaining)==false){
-	    if (can->momentum().Mag()<0.5){
+	    if (can->dMomentum.Mag()<0.5){
 	      MatchMethod12(can,forward_matches,num_fdc_cands_remaining);
 	    }
 	  }
@@ -705,7 +705,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	
 	DTrackCandidate *can=trackcandidates[i];      
 	if (MatchMethod7(can,forward_matches,num_fdc_cands_remaining)==false){
-	  if (can->momentum().Mag()<0.5){
+	  if (can->dMomentum.Mag()<0.5){
 	    MatchMethod12(can,forward_matches,num_fdc_cands_remaining);
 	  }
 	}
@@ -730,9 +730,9 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 
 	  can->Ndof=srccan->Ndof;
 	  can->chisq=srccan->chisq;
-	  can->setPID(srccan->PID());
-	  can->setMomentum(srccan->momentum());
-	  can->setPosition(srccan->position());
+	  can->dCharge=srccan->dCharge;
+	  can->dMomentum=srccan->dMomentum;
+	  can->dPosition=srccan->dPosition;
 	  for (unsigned int n=0;n<segment->hits.size();n++){
 	    const DFDCPseudo *fdchit=segment->hits[n];
 	    can->AddAssociatedObject(fdchit);
@@ -1112,10 +1112,10 @@ bool DTrackCandidate_factory::MatchMethod1(const DTrackCandidate *fdccan,
 					   vector<int>&cdc_forward_matches
 					   ){
   // Momentum and position vectors for the FDC candidate
-  DVector3 mom=fdccan->momentum();
-  DVector3 pos=fdccan->position();
+  DVector3 mom=fdccan->dMomentum;
+  DVector3 pos=fdccan->dPosition;
   double p_fdc=mom.Mag();
-  ProjectHelixToZ(cdc_endplate.z(),fdccan->charge(),mom,pos); 
+  ProjectHelixToZ(cdc_endplate.z(),fdccan->dCharge,mom,pos); 
 
   // loop over the cdc candidates looking for the smallest distance
   // between the cdc and fdc projections to the end plate
@@ -1136,7 +1136,7 @@ bool DTrackCandidate_factory::MatchMethod1(const DTrackCandidate *fdccan,
   }
 
   // Magnitude of the momentum of the potential cdc match
-  double p_cdc=cdctrackcandidates[cdc_forward_ids[jmin]]->momentum().Mag();
+  double p_cdc=cdctrackcandidates[cdc_forward_ids[jmin]]->dMomentum.Mag();
   if (cdc_fdc_match(p_fdc,p_cdc,diff_min)){
     // Get the segment data
     vector<const DFDCSegment *>segments;
@@ -1200,7 +1200,7 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
   DHelicalFit fit;
   if (DoRefit(fit,segments,cdchits,Bz_avg)==NOERROR){
     // Determine the polar angle
-    double theta_cdc=cdccan->momentum().Theta();
+    double theta_cdc=cdccan->dMomentum.Theta();
     if (segments.size()==1 && theta_cdc<M_PI_4){
       double numcdc=double(cdchits.size());
       double numfdc=segments[0]->hits.size();
@@ -1235,10 +1235,10 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 
     can->chisq=fit.chisq;
     can->Ndof=fit.ndof;
-    Particle_t locPID = (FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus;
-    can->setPID(locPID);
-    can->setMomentum(mom);
-    can->setPosition(pos);
+
+    can->dCharge=FactorForSenseOfRotation*fit.h;
+    can->dMomentum=mom;
+    can->dPosition=pos;
     
     trackcandidates.push_back(can);	      
     
@@ -1264,9 +1264,9 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
    unsigned int num_cdc=0;
    
      // Get the track parameters from the fdc candidate
-   DVector3 pos=fdccan->position();
-   DVector3 mom=fdccan->momentum();
-   double q=fdccan->charge();
+   DVector3 pos=fdccan->dPosition;
+   DVector3 mom=fdccan->dMomentum;
+   double q=fdccan->dCharge;
 
    // Check to see if the outer hit in the CDC does not exceed the radius of  
    // the FDC position to try to avoid false matches...
@@ -1323,7 +1323,7 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
      
      // Put the fdc candidate in the combined list
      DTrackCandidate *can = new DTrackCandidate;
-     can->setPID((q > 0.0) ? PiPlus : PiMinus);
+     can->dCharge=q;
      
      // copy the list of cdc indices over from the cdc candidate
      can->used_cdc_indexes=cdccan->used_cdc_indexes;
@@ -1347,8 +1347,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
      // Redo circle fit with additional hits
      DHelicalFit fit;
      //...first add the tangent to the dip angle to the fit class...
-     double theta=fdccan->momentum().Theta();
-     double theta_cdc=cdccan->momentum().Theta();
+     double theta=fdccan->dMomentum.Theta();
+     double theta_cdc=cdccan->dMomentum.Theta();
      if (segments.size()==1&& theta_cdc<M_PI_4){
        double numcdc=double(cdchits.size());
        double numfdc=segments[0]->hits.size();
@@ -1357,8 +1357,7 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
      fit.tanl=tan(M_PI_2-theta);
      if (DoRefit(fit,segments,cdchits,Bz_avg)==NOERROR){
        fit.FindSenseOfRotation();
-       Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
-       can->setPID(locPID);
+       can->dCharge=FactorForSenseOfRotation*fit.h;
 
        // FDC hit
        const DFDCPseudo *fdchit=segments[0]->hits[0];
@@ -1373,8 +1372,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
        
        can->chisq=fit.chisq;
        can->Ndof=fit.ndof;
-       can->setMomentum(mom);
-       can->setPosition(pos);
+       can->dMomentum=mom;
+       can->dPosition=pos;
      }
      else{
        //_DBG_ << endl;
@@ -1384,8 +1383,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
        can->yc=fdccan->yc;
        can->Ndof=fdccan->Ndof;
        can->chisq=fdccan->chisq;
-       can->setMomentum(fdccan->momentum());
-       can->setPosition(fdccan->position());	    
+       can->dMomentum=fdccan->dMomentum;
+       can->dPosition=fdccan->dPosition;	    
      }
      
      trackcandidates.push_back(can);
@@ -1411,8 +1410,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
      if (forward_matches[k]==0){
        const DTrackCandidate *fdccan = fdctrackcandidates[k];
        // fdc and cdc candidate momenta
-       double p_fdc=fdccan->momentum().Mag();
-       double p_cdc=cdccan->momentum().Mag();
+       double p_fdc=fdccan->dMomentum.Mag();
+       double p_cdc=cdccan->dMomentum.Mag();
        if (p_fdc/p_cdc>0.5){       
 	 // Get the segment data
 	 vector<const DFDCSegment *>segments;
@@ -1436,9 +1435,9 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 	 }
        
 	 // Momentum and position vectors for the CDC candidate
-	 DVector3 mom=cdccan->momentum();
-	 DVector3 pos=cdccan->position();
-	 double q=cdccan->charge();
+	 DVector3 mom=cdccan->dMomentum;
+	 DVector3 pos=cdccan->dPosition;
+	 double q=cdccan->dCharge;
 
 	 // Try to match unmatched fdc candidates
 	 int num_match=0;
@@ -1468,7 +1467,7 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 	       || (num_match>0 && double(num_match)/double(num_hits)>0.33)){
 	     DTrackCandidate *can = new DTrackCandidate;
 	     
-	     can->setPID(cdccan->PID());
+	     can->dCharge=cdccan->dCharge;
 	     can->used_cdc_indexes=cdccan->used_cdc_indexes;
 	     
 	     // mark the fdc track candidate as matched
@@ -1493,8 +1492,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 	     DHelicalFit fit; 
 	     if (DoRefit(fit,segments,cdchits,Bz_avg)==NOERROR){
 	       // Determine the polar angle
-	       double theta=fdccan->momentum().Theta();
-	       double theta_cdc=cdccan->momentum().Theta();
+	       double theta=fdccan->dMomentum.Theta();
+	       double theta_cdc=cdccan->dMomentum.Theta();
 	       if (segments.size()==1 && theta_cdc<M_PI_4){
 		 double numcdc=double(cdchits.size());
 		 double numfdc=segments[0]->hits.size();
@@ -1507,8 +1506,7 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 	       
 	       // Set the charge
 	       fit.FindSenseOfRotation();   
-	       Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
-	       can->setPID(locPID);
+	       can->dCharge=FactorForSenseOfRotation*fit.h;
 	       // FDC hit
 	       const DFDCPseudo *fdchit=segments[0]->hits[0];
 	       double zhit=fdchit->wire->origin.z();
@@ -1523,8 +1521,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 
 	       can->chisq=fit.chisq;
 	       can->Ndof=fit.ndof;
-	       can->setMomentum(mom);
-	       can->setPosition(pos);
+	       can->dMomentum=mom;
+	       can->dPosition=pos;
 	     }
 	     else{
 	       //_DBG_ << endl;
@@ -1534,8 +1532,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 	       can->yc=cdccan->yc;
 	       can->Ndof=cdccan->Ndof;
 	       can->chisq=cdccan->chisq;
-	       can->setMomentum(cdccan->momentum());
-	       can->setPosition(cdccan->position());
+	       can->dMomentum=cdccan->dMomentum;
+	       can->dPosition=cdccan->dPosition;
 	     }
 	   
 	     trackcandidates.push_back(can);
@@ -1585,9 +1583,9 @@ bool DTrackCandidate_factory::MatchMethod4(const DTrackCandidate *srccan,
       // if (pack2_first>pack1_last || pack2_last<pack1_first){
       if (pack2_first-pack1_last==1 || pack1_first-pack2_last==1){
 	// Momentum and position vectors for the input candidate
-	DVector3 mom=srccan->momentum();
-	DVector3 pos=srccan->position();
-	double q=srccan->charge();
+	DVector3 mom=srccan->dMomentum;
+	DVector3 pos=srccan->dPosition;
+	double q=srccan->dCharge;
 	DVector3 norm(0.,0.,1.);
 
 	if (pack2_last<pack1_first){
@@ -1675,9 +1673,9 @@ bool DTrackCandidate_factory::MatchMethod4(const DTrackCandidate *srccan,
 	    Bz_avg=fabs(Bz_avg)/double(num_hits);
 	      
 	    // Guess for theta and z from input candidates
-	    double theta=fdccan->momentum().Theta();  
+	    double theta=fdccan->dMomentum.Theta();  
 	    fit.tanl=tan(M_PI_2-theta);
-	    fit.z_vertex=srccan->position().Z();
+	    fit.z_vertex=srccan->dPosition.Z();
 	    
 	    // Redo line fit
 	    fit.FitLineRiemann();
@@ -1688,9 +1686,8 @@ bool DTrackCandidate_factory::MatchMethod4(const DTrackCandidate *srccan,
 	      fit.FitCircle();
 	    }
 	    // Guess charge from fit
-	    fit.h=GetSenseOfRotation(fit,firsthit,srccan->position());
-	    Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
-		can->setPID(locPID);
+	    fit.h=GetSenseOfRotation(fit,firsthit,srccan->dPosition);
+	    can->dCharge=FactorForSenseOfRotation*fit.h;
 
 	    // put z position just upstream of the first hit in z
 	    const DHFHit_t *myhit=fit.GetHits()[0];
@@ -1702,8 +1699,8 @@ bool DTrackCandidate_factory::MatchMethod4(const DTrackCandidate *srccan,
 	    can->xc=fit.x0;
 	    can->yc=fit.y0;
 	    
-	    can->setPosition(pos);
-	    can->setMomentum(mom);
+	    can->dPosition=pos;
+	    can->dMomentum=mom;
 	    can->chisq=fit.chisq;
 	    can->Ndof=fit.ndof;
 	    trackcandidates.push_back(can);
@@ -1737,9 +1734,9 @@ bool DTrackCandidate_factory::MatchMethod5(DTrackCandidate *can,
       unsigned int num_match=0;
       unsigned int num_cdc=0;
       
-      DVector3 pos=fdccan->position();
-      DVector3 mom=fdccan->momentum();
-      double q=fdccan->charge();
+      DVector3 pos=fdccan->dPosition;
+      DVector3 mom=fdccan->dMomentum;
+      double q=fdccan->dCharge;
 
       for (unsigned int m=0;m<cdchits.size();m++){
 	double variance=1.0;
@@ -1801,11 +1798,10 @@ bool DTrackCandidate_factory::MatchMethod5(DTrackCandidate *can,
 	  can->yc=fit.y0;
 	  
 	  // Determine the polar angle
-	  double theta=fdccan->momentum().Theta();
+	  double theta=fdccan->dMomentum.Theta();
 	  fit.tanl=tan(M_PI_2-theta);
 	  
-	  Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
-	  can->setPID(locPID);
+	  can->dCharge=FactorForSenseOfRotation*fit.h;
 
 	  // FDC hit
 	  const DFDCPseudo *fdchit=segments[0]->hits[0];
@@ -1816,8 +1812,8 @@ bool DTrackCandidate_factory::MatchMethod5(DTrackCandidate *can,
 
 	  can->chisq=fit.chisq;
 	  can->Ndof=fit.ndof;
-	  can->setMomentum(mom);
-	  can->setPosition(pos);
+	  can->dMomentum=mom;
+	  can->dPosition=pos;
 	}
 	return true;
       } // check for match
@@ -1835,9 +1831,9 @@ void DTrackCandidate_factory::MatchMethod6(DTrackCandidate *can,
 					   unsigned int &num_unmatched_cdcs
 					   ){
   // Input candidate parameters
-  DVector3 pos=can->position();
-  DVector3 mom=can->momentum();
-  double q=can->charge();
+  DVector3 pos=can->dPosition;
+  DVector3 mom=can->dMomentum;
+  double q=can->dCharge;
 
  // Variables to keep track of cdc hits 
   bool got_inner_index=false;
@@ -1931,8 +1927,8 @@ void DTrackCandidate_factory::MatchMethod6(DTrackCandidate *can,
 			      pos,mom);
 
     // update the track parameters
-    can->setMomentum(mom);
-    can->setPosition(pos);
+    can->dMomentum=mom;
+    can->dPosition=pos;
     
     if (DEBUG_LEVEL>0) _DBG_ << "... matched stray CDC hits ..." << endl;
   } // match at least one cdc hit
@@ -1968,9 +1964,9 @@ bool DTrackCandidate_factory::MatchMethod7(DTrackCandidate *srccan,
       
       if (pack2_first-pack1_last==1){ // match in adjacent packages
 	// Momentum and position vectors for the input candidate
-	DVector3 mom=srccan->momentum();
-	DVector3 pos=srccan->position();
-	double q=srccan->charge();
+	DVector3 mom=srccan->dMomentum;
+	DVector3 pos=srccan->dPosition;
+	double q=srccan->dCharge;
 	DVector3 norm(0.,0.,1.);
 
 	// Swim to the first hit in the candidate to which we wish to match
@@ -2059,7 +2055,7 @@ bool DTrackCandidate_factory::MatchMethod7(DTrackCandidate *srccan,
 	  // Redo the circle fit with the extra hits
 	  if (fit.FitCircleRiemann(srccan->rc)==NOERROR){
 	    // Determine the polar angle
-	    double theta=srccan->momentum().Theta();
+	    double theta=srccan->dMomentum.Theta();
 	    fit.tanl=tan(M_PI_2-theta);
 
 	    double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
@@ -2087,8 +2083,8 @@ bool DTrackCandidate_factory::MatchMethod7(DTrackCandidate *srccan,
 	    
 	    srccan->chisq=fit.chisq;
 	    srccan->Ndof=fit.ndof;
-	    srccan->setMomentum(mom);
-	    srccan->setPosition(pos);
+	    srccan->dMomentum=mom;
+	    srccan->dPosition=pos;
 	  }
 	    
 	  if (DEBUG_LEVEL>0) _DBG_ << "Found a match using method #7" <<endl;
@@ -2250,8 +2246,8 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 	  // Fit the points to a circle
 	  if (fit.FitCircleRiemann(segments[0]->rc)==NOERROR){
 	    // Use the fdc track candidate to get tanl
-	    double theta=fdccan->momentum().Theta();
-	    double theta_cdc=cdccan->momentum().Theta();
+	    double theta=fdccan->dMomentum.Theta();
+	    double theta_cdc=cdccan->dMomentum.Theta();
 	    if (segments.size()==1 && theta_cdc<M_PI_4){
 	      double numcdc=double(cdchits.size());
 	      double numfdc=segments[0]->hits.size();
@@ -2279,9 +2275,9 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 	    can->xc=fit.x0;
 	    can->yc=fit.y0;
 	    
-	    can->setPID((q > 0.0) ? PiPlus : PiMinus);
-	    can->setMomentum(my_mom);
-	    can->setPosition(my_pos);
+	    can->dCharge=q;
+	    can->dMomentum=my_mom;
+	    can->dPosition=my_pos;
 	    can->chisq=fit.chisq;
 	    can->Ndof=fit.ndof;
 	    
@@ -2321,7 +2317,7 @@ bool DTrackCandidate_factory::MatchMethod9(unsigned int src_index,
   if (DEBUG_LEVEL>0){
     _DBG_ << "Attempting Match method #9..." << endl;
   }
-  double q=srccan->charge();
+  double q=srccan->dCharge;
   int pack1=segment->package;
 
   // Get hits from segment and redo fit forcing the circle to go through (0,0)
@@ -2336,7 +2332,7 @@ bool DTrackCandidate_factory::MatchMethod9(unsigned int src_index,
   fit1.h=q*FactorForSenseOfRotation;
   
   // Use the fdc track candidate to get tanl
-  double theta=srccan->momentum().Theta();
+  double theta=srccan->dMomentum.Theta();
   fit1.tanl=tan(M_PI_2-theta);
 
   // Find the magnetic field at the first hit in the first segment
@@ -2378,11 +2374,11 @@ bool DTrackCandidate_factory::MatchMethod9(unsigned int src_index,
 	// try another matching method here if got_match==false 
 	else{  	
 	  // Sense of rotation
-	  double q2=can2->charge();
+	  double q2=can2->dCharge;
 	  fit2.h=q2*FactorForSenseOfRotation;
 	  
 	  // Use the fdc track candidate to get tanl
-	  theta=can2->momentum().Theta();
+	  theta=can2->dMomentum.Theta();
 	  fit2.tanl=tan(M_PI_2-theta);
 
 	  // Try to match segments by swimming through the field
@@ -2425,8 +2421,8 @@ bool DTrackCandidate_factory::MatchMethod9(unsigned int src_index,
 	  Bz=fabs(Bz)/double(num_hits);
 	  
 	  // Initialize variables needed for output
-	  DVector3 mom=srccan->momentum();
-	  DVector3 pos=srccan->position();
+	  DVector3 mom=srccan->dMomentum;
+	  DVector3 pos=srccan->dPosition;
 
 	  can->Ndof=srccan->Ndof;
 	  can->chisq=srccan->chisq;
@@ -2446,7 +2442,7 @@ bool DTrackCandidate_factory::MatchMethod9(unsigned int src_index,
 
 	    // Guess charge from fit
 	    fit1.h=GetSenseOfRotation(fit1,segments2[0]->hits[0],
-				      srccan->position());
+				      srccan->dPosition);
 	    q=FactorForSenseOfRotation*fit1.h;
 	    
 	    // put z position just upstream of the first hit in z
@@ -2459,9 +2455,9 @@ bool DTrackCandidate_factory::MatchMethod9(unsigned int src_index,
 	  can->xc=fit1.x0;
 	  can->yc=fit1.y0;
 	  
-	  can->setPID((q > 0.0) ? PiPlus : PiMinus);
-	  can->setPosition(pos);
-	  can->setMomentum(mom);
+	  can->dCharge=q;
+	  can->dPosition=pos;
+	  can->dMomentum=mom;
 	  
 	  trackcandidates.push_back(can);
 	 
@@ -2489,7 +2485,7 @@ bool DTrackCandidate_factory::MatchMethod10(unsigned int src_index,
   if (DEBUG_LEVEL>0){
     _DBG_ << "Attempting Match method #10..." << endl;
   }
-  double q=srccan->charge();
+  double q=srccan->dCharge;
   int pack1=segment->package;
 
   // Get hits from segment and redo fit
@@ -2504,7 +2500,7 @@ bool DTrackCandidate_factory::MatchMethod10(unsigned int src_index,
   fit1.h=q*FactorForSenseOfRotation;
   
   // Use the fdc track candidate to get tanl
-  double theta=srccan->momentum().Theta();
+  double theta=srccan->dMomentum.Theta();
   fit1.tanl=tan(M_PI_2-theta);
 
   // Find the magnetic field at the first hit in the first segment
@@ -2537,11 +2533,11 @@ bool DTrackCandidate_factory::MatchMethod10(unsigned int src_index,
 	fit2.FitCircleStraightTrack();
 	
 	// Sense of rotation
-	double q2=can2->charge();
+	double q2=can2->dCharge;
 	fit2.h=q2*FactorForSenseOfRotation;
 	
 	// Use the fdc track candidate to get tanl
-	theta=can2->momentum().Theta();
+	theta=can2->dMomentum.Theta();
 	fit2.tanl=tan(M_PI_2-theta);
 
 	// Try to match segments by swimming through the field
@@ -2581,9 +2577,9 @@ bool DTrackCandidate_factory::MatchMethod10(unsigned int src_index,
 	  Bz=fabs(Bz)/double(num_hits);
 	  
 	  // Initialize variables needed for output
-	  DVector3 mom=srccan->momentum();
-	  DVector3 pos=srccan->position();
-	  double q=srccan->charge(); 
+	  DVector3 mom=srccan->dMomentum;
+	  DVector3 pos=srccan->dPosition;
+	  double q=srccan->dCharge; 
 	  can->Ndof=srccan->Ndof;
 	  can->chisq=srccan->chisq;
 	  
@@ -2602,7 +2598,7 @@ bool DTrackCandidate_factory::MatchMethod10(unsigned int src_index,
 	    
 	    // Guess charge from fit
 	    fit1.h=GetSenseOfRotation(fit1,segments2[0]->hits[0],
-				      srccan->position());
+				      srccan->dPosition);
 	    q=FactorForSenseOfRotation*fit1.h;
 	    
 	    // put z position just upstream of the first hit in z
@@ -2615,9 +2611,9 @@ bool DTrackCandidate_factory::MatchMethod10(unsigned int src_index,
 	  can->xc=fit1.x0;
 	  can->yc=fit1.y0;
 
-	  can->setPID((q > 0.0) ? PiPlus : PiMinus);
-	  can->setPosition(pos);
-	  can->setMomentum(mom);
+	  can->dCharge=q;
+	  can->dPosition=pos;
+	  can->dMomentum=mom;
 	  
 	  trackcandidates.push_back(can);
 
@@ -2770,7 +2766,7 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
     if (forward_matches[i]) continue;
 
     const DTrackCandidate *fdccan = fdctrackcandidates[i];
-    if (fdccan->momentum().Mag()>0.5) continue;
+    if (fdccan->dMomentum.Mag()>0.5) continue;
 
     // Find how close the circle centers are to each other
     double dx=can->xc-fdccan->xc;
@@ -2778,7 +2774,7 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
     double dr2=dx*dx+dy*dy;
     // Require circle centers, radii and angles to agree at a reasonable level
     if (dr2<4.0 && fabs((can->rc-fdccan->rc)/can->rc)<0.5
-	&& fabs(can->momentum().Theta()-fdccan->momentum().Theta())<0.35 // 20 degrees
+	&& fabs(can->dMomentum.Theta()-fdccan->dMomentum.Theta())<0.35 // 20 degrees
 	){  
       // Get the segments belonging to the fdc candidate
       vector<const DFDCSegment *>segments;
@@ -2836,8 +2832,8 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	  // Do the circle fit with all of the matched FDC hits
 	  if (fit.FitCircleRiemann(segments[0]->rc)==NOERROR){
 	    // Determine the polar angle
-	    double theta=fdccan->momentum().Theta();
-	    double theta_cdc=can->momentum().Theta();
+	    double theta=fdccan->dMomentum.Theta();
+	    double theta_cdc=can->dMomentum.Theta();
 	    if (segments.size()==1 && theta_cdc<M_PI_4){
 	      double numcdc=double(cdchits.size());
 	      double numfdc=segments[0]->hits.size();
@@ -2852,7 +2848,7 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 						  myfdchits[0]->xy.Y(),
 						  myfdchits[0]->wire->origin.z());
 	    if (cdchits.size()) myorigin=cdchits[0]->wire->origin;
-	    DVector3 pos=fdccan->position(),mom;
+	    DVector3 pos=fdccan->dPosition,mom;
 	    UpdatePositionAndMomentum(fit,Bz,myorigin,pos,mom);
 
 	    // circle parameters
@@ -2868,10 +2864,10 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	    }
 	    can->chisq=fit.chisq;
 	    can->Ndof=fit.ndof;
-	    Particle_t locPID = (FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus;
-	    can->setPID(locPID);
-	    can->setMomentum(mom);
-	    can->setPosition(pos);
+
+	    can->dCharge=FactorForSenseOfRotation*fit.h;
+	    can->dMomentum=mom;
+	    can->dPosition=pos;
 	    
 	    forward_matches[i]=1;
 	    num_fdc_cands_remaining--;
@@ -2920,8 +2916,8 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	// Do the circle fit with all of the matched FDC hits
 	if (fit.FitCircleRiemann(segments[0]->rc)==NOERROR){
 	  // Determine the polar angle
-	  double theta=fdccan->momentum().Theta();
-	  double theta_cdc=can->momentum().Theta();
+	  double theta=fdccan->dMomentum.Theta();
+	  double theta_cdc=can->dMomentum.Theta();
 	  if (segments.size()==1 && theta_cdc<M_PI_4){
 	    double numcdc=double(cdchits.size());
 	      double numfdc=segments[0]->hits.size();
@@ -2930,7 +2926,7 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	  // recompute position and momentum
 	  fit.tanl=tan(M_PI_2-theta);
 	  DVector3 myorigin=cdchits[0]->wire->origin;
-	  DVector3 pos=fdccan->position(),mom;
+	  DVector3 pos=fdccan->dPosition,mom;
 	  UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
 
 	  // circle parameters
@@ -2945,12 +2941,12 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	    }
 	  }
 	   
-	  can->setPosition(pos);
+	  can->dPosition=pos;
 	  can->chisq=fit.chisq;
 	  can->Ndof=fit.ndof;
-	  Particle_t locPID = (FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus;
-	  can->setPID(locPID);
-	  can->setMomentum(mom);
+
+	  can->dCharge=FactorForSenseOfRotation*fit.h;
+	  can->dMomentum=mom;
 	  
 	  forward_matches[i]=1;
 	  num_fdc_cands_remaining--;
@@ -2979,7 +2975,7 @@ bool DTrackCandidate_factory::MatchMethod13(unsigned int src_index,
   if (DEBUG_LEVEL>0){
     _DBG_ << "Attempting Match method #13..." << endl;
   }
-  double q=srccan->charge();
+  double q=srccan->dCharge;
   int pack1=segment->package;
   
   // Get hits from segment and redo fit
@@ -2992,9 +2988,9 @@ bool DTrackCandidate_factory::MatchMethod13(unsigned int src_index,
   if (fit1.FitCircleRiemann(srccan->rc)!=NOERROR) return false;
 
   // Guess for theta and z from input candidates
-  double theta=srccan->momentum().Theta();  
+  double theta=srccan->dMomentum.Theta();  
   fit1.tanl=tan(M_PI_2-theta);
-  fit1.z_vertex=srccan->position().Z();
+  fit1.z_vertex=srccan->dPosition.Z();
   
   // Redo line fit
   if (fit1.FitLineRiemann()!=NOERROR) return false;
@@ -3030,9 +3026,9 @@ bool DTrackCandidate_factory::MatchMethod13(unsigned int src_index,
 	if (fit2.FitCircleRiemann(segments2[0]->rc)!=NOERROR) continue;
 
 	// Guess for theta and z from input candidates
-	theta=can2->momentum().Theta();  
+	theta=can2->dMomentum.Theta();  
 	fit2.tanl=tan(M_PI_2-theta);
-	fit2.z_vertex=srccan->position().Z();
+	fit2.z_vertex=srccan->dPosition.Z();
 
 	// Redo line fit
 	if (fit2.FitLineRiemann()!=NOERROR) continue;
@@ -3074,9 +3070,9 @@ bool DTrackCandidate_factory::MatchMethod13(unsigned int src_index,
 	  Bz=fabs(Bz)/double(num_hits);
 	  
 	  // Initialize variables needed for output
-	  DVector3 mom=srccan->momentum();
-	  DVector3 pos=srccan->position();
-	  double q=srccan->charge(); 
+	  DVector3 mom=srccan->dMomentum;
+	  DVector3 pos=srccan->dPosition;
+	  double q=srccan->dCharge; 
 	  can->Ndof=srccan->Ndof;
 	  can->chisq=srccan->chisq;
 	  
@@ -3089,7 +3085,7 @@ bool DTrackCandidate_factory::MatchMethod13(unsigned int src_index,
 	    
 	    // Guess charge from fit
 	    fit1.h=GetSenseOfRotation(fit1,segments2[0]->hits[0],
-				      srccan->position());
+				      srccan->dPosition);
 	    q=FactorForSenseOfRotation*fit1.h;
 	    
 	    // put z position just upstream of the first hit in z
@@ -3102,9 +3098,9 @@ bool DTrackCandidate_factory::MatchMethod13(unsigned int src_index,
 	  can->xc=fit1.x0;
 	  can->yc=fit1.y0;
 
-	  can->setPID((q > 0.0) ? PiPlus : PiMinus);
-	  can->setPosition(pos);
-	  can->setMomentum(mom);
+	  can->dCharge=q;
+	  can->dPosition=pos;
+	  can->dMomentum=mom;
 	  
 	  trackcandidates.push_back(can);
 
@@ -3266,7 +3262,7 @@ void DTrackCandidate_factory::UpdatePositionAndMomentum(DHelicalFit &fit,
 bool DTrackCandidate_factory::CheckZPosition(const DTrackCandidate *fdccan) 
   const{
   double phi0=atan2(-fdccan->xc,fdccan->yc);  
-  double q=fdccan->charge();
+  double q=fdccan->dCharge;
   if (FactorForSenseOfRotation*q<0) phi0+=M_PI;
   double sinphi0=sin(phi0);
   double sign=(sinphi0>0)?1.:-1.;
@@ -3274,12 +3270,12 @@ bool DTrackCandidate_factory::CheckZPosition(const DTrackCandidate *fdccan)
   double D=q*fdccan->rc-fdccan->xc/sinphi0;
   double x=-D*sinphi0;
   double y=D*cos(phi0);
-  DVector3 pos=fdccan->position();
+  DVector3 pos=fdccan->dPosition;
   double dx=pos.x()-x;
   double dy=pos.y()-y;
   double ratio=sqrt(dx*dx+dy*dy)/(2.*fdccan->rc);
   double phi_s=(ratio<1.)?2.*asin(ratio):M_PI;
-  double newz=pos.z()-phi_s*tan(M_PI_2-fdccan->momentum().Theta())*fdccan->rc;
+  double newz=pos.z()-phi_s*tan(M_PI_2-fdccan->dMomentum.Theta())*fdccan->rc;
 
   return (newz>0);
 }

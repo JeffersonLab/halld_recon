@@ -277,9 +277,9 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	    mData[index]->chisq=fit.chisq;
 	    mData[index]->Ndof=fit.ndof;
 	    double q=FactorForSenseOfRotation*fit.h;
-	    mData[i]->setPID((q > 0.0) ? PiPlus : PiMinus);
-	    mData[i]->setPosition(pos);
-	    mData[i]->setMomentum(mom); 
+	    mData[i]->dCharge=q;
+	    mData[i]->dPosition=pos;
+	    mData[i]->dMomentum=mom; 
 	  }
 	}
       }
@@ -314,12 +314,23 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	
 	track->chisq=segment->chisq;
 	track->Ndof=segment->Ndof;
-	track->setPID((segment->q > 0.0) ? PiPlus : PiMinus);
-	track->setPosition(pos);
-	track->setMomentum(mom);
+
+	track->dCharge=segment->q;
+	track->Ndof=segment->Ndof;
+	track->chisq=segment->chisq;
       
 	track->AddAssociatedObject(segment);
-	
+	track->FirstPackage=track->LastPackage=segment->package;
+
+	// find the minimum drift time
+	double minimum_drift_time=1e9;
+	for (unsigned int k=0;k<segment->hits.size();k++){
+	  track->fdchits.push_back(segment->hits[k]);
+	  if (segment->hits[k]->time<minimum_drift_time)
+	    minimum_drift_time=segment->hits[k]->time;
+	}
+	track->dMinimumDriftTime=minimum_drift_time;
+
 	Insert(track);
       }
     }
@@ -347,14 +358,14 @@ double DTrackCandidate_factory_FDCCathodes::DocaSqToHelix(const DFDCSegment *seg
 // Project track candidate to a hit in a segment and compute the square of the 
 // doca between the projection and the hit
 double DTrackCandidate_factory_FDCCathodes::DocaSqToHelix(const DTrackCandidate *candidate,const DFDCPseudo *hit) const {
-  DVector3 pos=candidate->position();
-  DVector3 mom=candidate->momentum();
+  DVector3 pos=candidate->dPosition;
+  DVector3 mom=candidate->dMomentum;
   double z2=hit->wire->origin.z();
   double x2=hit->xy.X();
   double y2=hit->xy.Y();
   double Phi1=atan2(pos.y()-candidate->yc,pos.x()-candidate->xc);
   double mytanl=tan(M_PI_2-mom.Theta());
-  double phi=Phi1+(pos.z()-z2)*candidate->charge()/(candidate->rc*mytanl);
+  double phi=Phi1+(pos.z()-z2)*candidate->dCharge/(candidate->rc*mytanl);
   double dx=candidate->xc+candidate->rc*cos(phi)-x2;
   double dy=candidate->yc+candidate->rc*sin(phi)-y2;
 
@@ -573,9 +584,26 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	  // Add the segment to mData[i]
 	  mData[i]->AddAssociatedObject(segment);
 
+	  // Modify t0 if necessary
+	  double minimum_drift_time=mData[i]->dMinimumDriftTime;
+	  bool got_lower_t=false;
+	  for (unsigned int k=0;k<segment->hits.size();k++){
+	    mData[i]->fdchits.push_back(segment->hits[k]);
+	    if (segment->hits[k]->time<minimum_drift_time){
+	      minimum_drift_time=segment->hits[k]->time;
+	      got_lower_t=true;
+	    }
+	  }
+	  if (got_lower_t){
+	    mData[i]->dMinimumDriftTime=minimum_drift_time;
+	  }
+	  
 	  // Add the new segment and sort by z
 	  segments.push_back(segment);
 	  stable_sort(segments.begin(),segments.end(),DTrackCandidate_segment_cmp_by_z);
+	  // First and last packages
+	  mData[i]->FirstPackage=segments[0]->package;
+	  mData[i]->LastPackage=segments[segments.size()-1]->package;
 	  
 	  // Create fit object and perform helical fit
 	  DHelicalFit fit;
@@ -592,10 +620,10 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	  
 	  mData[i]->chisq=fit.chisq;
 	  mData[i]->Ndof=fit.ndof;
-	  double q=FactorForSenseOfRotation*fit.h;
-	  mData[i]->setPID((q > 0.0) ? PiPlus : PiMinus);
-	  mData[i]->setPosition(pos);
-	  mData[i]->setMomentum(mom); 
+
+	  mData[i]->dCharge=FactorForSenseOfRotation*fit.h;
+	  mData[i]->dPosition=pos;
+	  mData[i]->dMomentum=mom; 
 	
 	  return true;
 	} // got a match to a stray segment
@@ -627,14 +655,27 @@ void DTrackCandidate_factory_FDCCathodes::MakeCandidate(vector<const DFDCSegment
 
   track->chisq=fit.chisq;
   track->Ndof=fit.ndof;
-  double q=FactorForSenseOfRotation*fit.h;
-  track->setPID((q > 0.0) ? PiPlus : PiMinus);
-  track->setPosition(pos);
-  track->setMomentum(mom);   
 
+  track->dPosition=pos;
+  track->dMomentum=mom;
+  track->dCharge=FactorForSenseOfRotation*fit.h;
+  
   for (unsigned int m=0;m<mytrack.size();m++){
     track->AddAssociatedObject(mytrack[m]);
   }
+
+  double minimum_drift_time=1e9;
+  for (unsigned int m=0;m<mytrack.size();m++){
+    track->AddAssociatedObject(mytrack[m]);
+    for (unsigned int k=0;k<mytrack[m]->hits.size();k++){
+      track->fdchits.push_back(mytrack[m]->hits[k]);
+      if (mytrack[m]->hits[k]->time<minimum_drift_time) minimum_drift_time=mytrack[m]->hits[k]->time;
+    }
+  }
+  track->FirstPackage=mytrack[0]->package;
+  track->LastPackage=mytrack[mytrack.size()-1]->package;
+  track->dMinimumDriftTime=minimum_drift_time;
+  track->dDetector=SYS_FDC;
   
   Insert(track); 
 }

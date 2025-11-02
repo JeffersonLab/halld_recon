@@ -4539,15 +4539,16 @@ void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDC
 	locTrackCandidate->rc=locCDCTrackCircle->fit->r0;
 	locTrackCandidate->xc=locCDCTrackCircle->fit->x0;
 	locTrackCandidate->yc=locCDCTrackCircle->fit->y0;
-	Particle_t locPID = (locCDCTrackCircle->fit->h*dFactorForSenseOfRotation > 0.0) ? PiPlus : PiMinus;
-	locTrackCandidate->setPID(locPID);
 	locTrackCandidate->chisq = locCDCTrackCircle->fit->chisq;
 	locTrackCandidate->Ndof = locCDCTrackCircle->fit->ndof;
-	locTrackCandidate->setPosition(pos);
-	locTrackCandidate->setMomentum(mom);
+	// position, momentum, charge
+	locTrackCandidate->dPosition=pos;
+	locTrackCandidate->dMomentum=mom;
+	locTrackCandidate->dCharge=locCDCTrackCircle->fit->h*dFactorForSenseOfRotation;
 
 	// Add axial hits (if any)
 	vector<DCDCTrkHit*> locHits;
+	double minimum_drift_time=1e9;
 	for(size_t loc_i = 0; loc_i < locCDCTrackCircle->dSuperLayerSeeds_Axial.size(); ++loc_i)
 	{
 		locCDCTrackCircle->dSuperLayerSeeds_Axial[loc_i]->Get_Hits(locHits);
@@ -4555,6 +4556,7 @@ void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDC
 		{
 			locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
 			locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
+			if (locHits[loc_j]->hit->tdrift<minimum_drift_time) minimum_drift_time=locHits[loc_j]->hit->tdrift;
 		}
 	}
 
@@ -4568,6 +4570,7 @@ void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDC
 			{
 				locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
 				locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
+				if (locHits[loc_j]->hit->tdrift<minimum_drift_time) minimum_drift_time=locHits[loc_j]->hit->tdrift;
 			}
 		}
 	}
@@ -4582,12 +4585,16 @@ void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDC
 			{
 				locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
 				locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
+				if (locHits[loc_j]->hit->tdrift<minimum_drift_time) minimum_drift_time=locHits[loc_j]->hit->tdrift;	
 			}
 		}
 	}
 
 	if(DEBUG_LEVEL>3)
 		cout<<"Final Candidate parameters: p="<<mom.Mag()<<" theta="<<mom.Theta()<<"  phi="<<mom.Phi()<<" z="<<pos.Z()<<endl;
+
+	locTrackCandidate->dMinimumDriftTime=minimum_drift_time;
+	locTrackCandidate->dDetector=SYS_CDC;
 	
 	Insert(locTrackCandidate);
 }

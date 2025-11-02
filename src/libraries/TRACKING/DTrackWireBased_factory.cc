@@ -257,17 +257,17 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
       const DTrackCandidate *candidate = candidates[i];
 
       // Skip candidates with momentum below some cutoff
-      if (candidate->momentum().Mag()<MIN_FIT_P){
+      if (candidate->dMomentum.Mag()<MIN_FIT_P){
          continue;
       }
 
       if (SKIP_MASS_HYPOTHESES_WIRE_BASED){
 	rt->Reset();
-	rt->q = candidate->charge();
+	rt->q = candidate->dCharge;
 
 	DoFit(i,candidate,rt,event,ParticleMass(PiPlus));
 	// Only do fit for proton mass hypothesis for low momentum particles
-	if (candidate->momentum().Mag()<PROTON_MOM_THRESH){
+	if (candidate->dMomentum.Mag()<PROTON_MOM_THRESH){
 	  rt->Reset();
 	  DoFit(i,candidate,rt,event,ParticleMass(Proton));
 	}
@@ -275,13 +275,13 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
       else{
          // Choose list of mass hypotheses based on charge of candidate
          vector<int> mass_hypotheses;
-         if(candidate->charge()<0.0){
+         if(candidate->dCharge<0.0){
             mass_hypotheses = mass_hypotheses_negative;
          }else{
             mass_hypotheses = mass_hypotheses_positive;
          }
 
-         if ((!isfinite(candidate->momentum().Mag())) || (!isfinite(candidate->position().Mag())))
+         if ((!isfinite(candidate->dMomentum.Mag())) || (!isfinite(candidate->dPosition.Mag())))
             _DBG_ << "Invalid seed data for event "<< event->GetEventNumber() <<"..."<<endl;
 
          // Loop over potential particle masses
@@ -289,7 +289,7 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
             if(DEBUG_LEVEL>1){_DBG__;_DBG_<<"---- Starting wire based fit with id: "<<mass_hypotheses[j]<<endl;}
 
 	    rt->Reset();
-            rt->q = candidate->charge();
+            rt->q = candidate->dCharge;
             DoFit(i,candidate,rt,event,ParticleMass(Particle_t(mass_hypotheses[j])));
          }
 
@@ -409,41 +409,17 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
   vector<const DCDCTrackHit *>mycdchits;
   candidate->GetT(mycdchits);
 
-   // Do the fit
-   DTrackFitter::fit_status_t status = DTrackFitter::kFitNotDone;
-   if (USE_HITS_FROM_CANDIDATE) {
-      fitter->Reset();
-      fitter->SetFitType(DTrackFitter::kWireBased);	
-
-      fitter->AddHits(myfdchits);
-      fitter->AddHits(mycdchits);
-
-      status=fitter->FitTrack(candidate->position(),candidate->momentum(),
-            candidate->charge(),mass,0.);
-   }
-   else{
-     fitter->Reset();
-      fitter->SetFitType(DTrackFitter::kWireBased);
-      // Swim a reference trajectory using the candidate starting momentum
-      // and position
-      rt->SetMass(mass);
-      //rt->Swim(candidate->position(),candidate->momentum(),candidate->charge());
-      rt->FastSwimForHitSelection(candidate->position(),candidate->momentum(),candidate->charge());
-
-      status=fitter->FindHitsAndFitTrack(*candidate,rt,event,mass,
-					 mycdchits.size()+2*myfdchits.size());
-      if (/*false && */status==DTrackFitter::kFitNotDone){
-         if (DEBUG_LEVEL>1)_DBG_ << "Using hits from candidate..." << endl;
-         fitter->Reset();
-        
-         fitter->AddHits(myfdchits);
-         fitter->AddHits(mycdchits);
-
-         status=fitter->FitTrack(candidate->position(),candidate->momentum(),
-               candidate->charge(),mass,0.);
-      }
-   }
-
+  // Do the fit
+  DTrackFitter::fit_status_t status = DTrackFitter::kFitNotDone;
+  fitter->Reset();
+  fitter->SetFitType(DTrackFitter::kWireBased);	
+  
+  fitter->AddHits(myfdchits);
+  fitter->AddHits(mycdchits);
+  
+  status=fitter->FitTrack(candidate->dPosition,candidate->dMomentum,
+			  candidate->dCharge,mass,0.);
+  
    // if the fit returns chisq=-1, something went terribly wrong... 
    if (fitter->GetChisq()<0){
      status=DTrackFitter::kFitFailed;
