@@ -13,10 +13,6 @@
 #include <TRACKING/DTrackingData.h>
 #include <TRACKING/DTrackFitter.h>
 
-class DReferenceTrajectory;
-
-#define MAX_IHITS 256
-
 /// \htmlonly
 /// <A href="index.html#legend">
 ///	<IMG src="CORE.png" width="100">
@@ -28,32 +24,54 @@ class DReferenceTrajectory;
 /// these and then merging them. For the default, see
 /// DTrackCandidate_factory .
 
-class DTrackCandidate:public DTrackingData{
-	public:
-		JOBJECT_PUBLIC(DTrackCandidate);
+class DTrackCandidate : public JObject {
+public:
+  JOBJECT_PUBLIC(DTrackCandidate);
+  
+  DTrackCandidate():chisq(0),Ndof(0){}
+  
+  float chisq;			///< Chi-squared for the track (not chisq/dof!)
+  int Ndof;				///< Number of degrees of freedom in the fit
 		
-		DTrackCandidate():chisq(0),Ndof(0),rt(0),IsSmoothed(0){}
+  vector<int>used_cdc_indexes;
+  vector<int>used_fdc_indexes;
+  
+  // Circle fit data
+  double xc,yc,rc;
 
-		float chisq;			///< Chi-squared for the track (not chisq/dof!)
-		int Ndof;				///< Number of degrees of freedom in the fit
+  // charge
+  double dCharge;
 
-		const DReferenceTrajectory *rt; ///< pointer to reference trjectory representing this track (if any)
-		
-		vector<DTrackFitter::pull_t> pulls; // vector of residuals and other track-related quantities 
-		
-		vector<int>used_cdc_indexes;
-		vector<int>used_fdc_indexes;
+  // Kinematic data
+  DVector3 dPosition;
+  DVector3 dMomentum;
+  
+  // Rough timing information
+  double dMinimumDriftTime;
+  DetectorSystem_t dDetector;
 
-		// Circle fit data
-		double xc,yc,rc;
+  // Range of packages used in candidate in FDC
+  unsigned FirstPackage,LastPackage;
 
-      bool IsSmoothed; // Boolean value to indicate whether the smoother was run succesfully over this track.
-
-		void Summarize(JObjectSummary& summary) const override {
-			DKinematicData::Summarize(summary);
-			summary.add(chisq, "chisq", "%f");
-			summary.add(Ndof, "Ndof", "%d");
-		}
+  // Hits used in track
+  vector<const DFDCPseudo*>fdchits;
+  vector<const DCDCTrackHit*>cdchits;
+  
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(SystemName(dDetector), "Detector", "%s");
+    summary.add(dCharge, "Charge", "%f");
+    summary.add(dMomentum.x(), "px [GeV/c]", "%f");
+    summary.add(dMomentum.y(), "py [GeV/c]", "%f");
+    summary.add(dMomentum.z(), "pz [GeV/c]", "%f");
+    summary.add(dPosition.x(), "x [cm]", "%f");
+    summary.add(dPosition.y(), "y [cm]", "%f");
+    summary.add(dPosition.z(), "z [cm]", "%f");
+    summary.add(dMinimumDriftTime, "t [ns]", "%f");
+    summary.add(cdchits.size(),"nCDC","%d");
+    summary.add(fdchits.size(),"nFDC","%d");
+    summary.add(chisq, "chisq", "%f");
+    summary.add(Ndof, "Ndof", "%d");
+  }
 };
 
 #endif // _DTrackCandidate_
