@@ -3599,59 +3599,6 @@ jerror_t DTrackFitterKalmanSIMD::BrentsAlgorithm(double ds1,double ds2,
       double tol2=2.0*tol1;
 
       if (fabs(x-xm)<=(tol2-0.5*(b-a))){
-         if (Sc(state_z)<=cdc_origin[2]){
-            unsigned int iter2=0;
-            double ds_temp=0.;
-            while (fabs(Sc(state_z)-cdc_origin[2])>EPS2 && iter2<20){
-               u=x-(cdc_origin[2]-Sc(state_z))*sin(atan(Sc(state_tanl)));
-               x=u;
-               ds_temp+=u_old-u;
-               // Bail if the transverse momentum has dropped below some minimum
-               if (fabs(Sc(state_q_over_pt))>Q_OVER_PT_MAX){
-                  if (DEBUG_LEVEL>2)
-                  {
-                     _DBG_ << "Bailing: PT = " << 1./fabs(Sc(state_q_over_pt))
-                        << endl;
-                  }
-                  return VALUE_OUT_OF_RANGE;
-               }
-
-               // Function evaluation
-               Step(pos,u_old-u,Sc,dedx);
-               u_old=u;
-               iter2++;
-            }
-            //printf("new z %f ds %f \n",pos.z(),x);	
-            ds_out=ds_temp;
-            return NOERROR;
-         }
-         else if (Sc(state_z)>=endplate_z){
-            unsigned int iter2=0;
-            double ds_temp=0.;
-            while (fabs(Sc(state_z)-endplate_z)>EPS2 && iter2<20){
-               u=x-(endplate_z-Sc(state_z))*sin(atan(Sc(state_tanl)));
-               x=u;
-               ds_temp+=u_old-u;
-
-               // Bail if the transverse momentum has dropped below some minimum
-               if (fabs(Sc(state_q_over_pt))>Q_OVER_PT_MAX){
-                  if (DEBUG_LEVEL>2)
-                  {
-                     _DBG_ << "Bailing: PT = " << 1./fabs(Sc(state_q_over_pt))
-                        << endl;
-                  }
-                  return VALUE_OUT_OF_RANGE;
-               }
-
-               // Function evaluation
-               Step(pos,u_old-u,Sc,dedx);
-               u_old=u;
-               iter2++;
-            }
-            //printf("new z %f ds %f \n",pos.z(),x);
-            ds_out=ds_temp;
-            return NOERROR;	
-         }
          ds_out=cx-x;
          return NOERROR;
       }
@@ -3777,24 +3724,6 @@ jerror_t DTrackFitterKalmanSIMD::BrentsAlgorithm(double z,double dz,
       double tol1=EPS2*fabs(x)+ZEPS;
       double tol2=2.0*tol1;
       if (fabs(x-xm)<=(tol2-0.5*(b-a))){
-         if (z_new>=endplate_z){
-            x=endplate_z-z_new;
-
-            // Bail if the momentum has dropped below some minimum
-            if (fabs(S(state_q_over_p))>Q_OVER_P_MAX){
-               if (DEBUG_LEVEL>2)
-               {
-                  _DBG_ << "Bailing: P = " << 1./fabs(S(state_q_over_p))
-                     << endl;
-               }   
-               return VALUE_OUT_OF_RANGE;
-            }
-            if (!isfinite(S(state_x)) || !isfinite(S(state_y))){
-               _DBG_ <<endl;
-               return VALUE_OUT_OF_RANGE;    
-            }
-            Step(z_new,endplate_z,dedx,S);
-         }
          dz_out=x;
          return NOERROR;
       }
