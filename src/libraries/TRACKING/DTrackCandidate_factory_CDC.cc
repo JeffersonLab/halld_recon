@@ -4554,7 +4554,7 @@ void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDC
 		locCDCTrackCircle->dSuperLayerSeeds_Axial[loc_i]->Get_Hits(locHits);
 		for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j)
 		{
-			locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
+		  locTrackCandidate->cdchits.push_back(locHits[loc_j]->hit);
 			locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
 			if (locHits[loc_j]->hit->tdrift<minimum_drift_time) minimum_drift_time=locHits[loc_j]->hit->tdrift;
 		}
@@ -4568,7 +4568,7 @@ void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDC
 			locCDCTrackCircle->dSuperLayerSeeds_InnerStereo[0][loc_i]->Get_Hits(locHits);
 			for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j)
 			{
-				locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
+			  locTrackCandidate->cdchits.push_back(locHits[loc_j]->hit);
 				locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
 				if (locHits[loc_j]->hit->tdrift<minimum_drift_time) minimum_drift_time=locHits[loc_j]->hit->tdrift;
 			}
@@ -4583,7 +4583,7 @@ void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDC
 			locCDCTrackCircle->dSuperLayerSeeds_OuterStereo[0][loc_i]->Get_Hits(locHits);
 			for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j)
 			{
-				locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
+			  locTrackCandidate->cdchits.push_back(locHits[loc_j]->hit);
 				locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
 				if (locHits[loc_j]->hit->tdrift<minimum_drift_time) minimum_drift_time=locHits[loc_j]->hit->tdrift;	
 			}
