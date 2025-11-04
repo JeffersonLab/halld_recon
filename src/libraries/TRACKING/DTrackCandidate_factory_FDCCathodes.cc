@@ -316,8 +316,8 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	track->Ndof=segment->Ndof;
 
 	track->dCharge=segment->q;
-	track->Ndof=segment->Ndof;
-	track->chisq=segment->chisq;
+	track->dPosition=pos;
+	track->dMomentum=mom;
       
 	track->AddAssociatedObject(segment);
 	track->FirstPackage=track->LastPackage=segment->package;
