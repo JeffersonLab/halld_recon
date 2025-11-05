@@ -304,7 +304,7 @@ void DTAGMHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
         double c3 = tw_c3[row][column];
         double t0 = ref[row][column];
         //pp_0 = TH*pow((pp_0-c0)/c1,1/c2);
-        if (P > 0) {
+        if (P+c3 > 0) {
            //T -= c1*(pow(P/TH,c2)-pow(pp_0/TH,c2));
            T -= c1*pow(1/(P+c3),c2) - (t0 - c0);
         }
