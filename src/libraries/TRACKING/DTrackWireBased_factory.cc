@@ -396,9 +396,11 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
   fitter->AddHits(myfdchits);
   fitter->AddHits(mycdchits);
   
-  fitter->FitTrack(candidate->dPosition,candidate->dMomentum,candidate->dCharge,
-		   mass,t0,t0_detector);
-  if (fitter->GetChisq()>0){
+  DTrackFitter::fit_status_t status=fitter->FitTrack(candidate->dPosition,
+						     candidate->dMomentum,
+						     candidate->dCharge,
+						     mass,t0,t0_detector);
+  if (status==DTrackFitter::fit_status_t::kFitSuccess && fitter->GetChisq()>0){
     // Make a new wire-based track
     DTrackWireBased *track = new DTrackWireBased();
     *static_cast<DTrackingData*>(track) = fitter->GetFitParameters();
