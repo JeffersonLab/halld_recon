@@ -107,8 +107,8 @@ env.Replace(COMPILER = compiler)
 # Add libraries and libraries/include to include search path
 env.PrependUnique(CPPPATH = ['#', '#libraries', '#libraries/include'])
 
-# Use C++11
-env.PrependUnique(    CXXFLAGS = ['-std=c++11'])
+# Use C++20
+env.PrependUnique(    CXXFLAGS = ['-std=c++20'])
 
 # Standard flags (optimization level and warnings)
 env.PrependUnique(      CFLAGS = ['-O%s' % OPTIMIZATION, '-fPIC', '-Wall'])
