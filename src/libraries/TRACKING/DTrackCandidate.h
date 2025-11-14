@@ -72,7 +72,7 @@ public:
     summary.add(chisq, "chisq", "%f");
     summary.add(Ndof, "Ndof", "%d");
   }
-}
+};
 
 #endif // _DTrackCandidate_
 
