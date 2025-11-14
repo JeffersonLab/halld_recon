@@ -79,8 +79,8 @@ void DTrackWireBased_factory_StraightLine::Process(const std::shared_ptr<const J
      fitter->Reset();
 
      const DTrackCandidate *cand=candidates[i];
-     DVector3 pos=cand->position();
-     DVector3 dir=cand->momentum();
+     DVector3 pos=cand->dPosition;
+     DVector3 dir=cand->dMomentum;
      // Select hits that belong to the track
      for (unsigned int j=0;j<cdchits.size();j++){
        double d=finder->FindDoca(pos,dir,cdchits[j]->wire->origin,
