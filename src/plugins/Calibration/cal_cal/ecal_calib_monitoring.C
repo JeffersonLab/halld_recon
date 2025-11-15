@@ -1,4 +1,5 @@
 // hnamepath:  /cal_cal/ecal_time_1
+// hnamepath:  /cal_cal/ecal_ctime_1
 // hnamepath:  /cal_cal/ecal_mgg_v_blk_2
 
 {
@@ -29,7 +30,13 @@
   gStyle->SetFrameLineWidth(2);
   gStyle->SetTitleFontSize(0.1);
   gStyle->SetTitleBorderSize(0);
-
+  gStyle->SetLabelSize(0.04, "XYZ");
+  gStyle->SetLabelFont(42, "XYZ");
+  gStyle->SetTitleSize(0.05, "XYZ");
+  gStyle->SetNdivisions(505, "XYZ");
+  gStyle->SetTitleOffset(1.0, "X");
+  gStyle->SetTitleOffset(1.2, "Y");
+  
   const int kBlocksWide = 59;
   const int kBlocksTall = 59;
   int kMaxChannels = kBlocksWide * kBlocksTall;
@@ -47,10 +54,12 @@
   double insertBlockSize = 2.09;
   int insert_row_size = 40;
   int m_insertMidBlock=(insert_row_size-1)/2;
-  
-  TH2I* ecal_time2D = (TH2I*)gDirectory->FindObjectAny("ecal_ctime_1");
+
+  TH2I* ecal_time2D = (TH2I*)gDirectory->FindObjectAny("ecal_time_1");
+  TH2I* ecal_ctime2D = (TH2I*)gDirectory->FindObjectAny("ecal_ctime_1");
   TH2I* ecal_mass2D = (TH2I*)gDirectory->FindObjectAny("ecal_mgg_v_blk_2");
   TH1I* ecal_time = (TH1I*) ecal_time2D->ProjectionY("ecal_time");
+  TH1I* ecal_ctime = (TH1I*) ecal_ctime2D->ProjectionY("ecal_ctime");
   TH1I* ecal_mass = (TH1I*) ecal_mass2D->ProjectionY("ecal_mass");
   
   TH2F * time_map = new TH2F("time_map", ";#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 40, -20, 20, 40, -20, 20);
@@ -68,7 +77,7 @@
       if( fabs(m_positionOnFace[row_index][col_index].X())>insertBlockSize
 	  || fabs(m_positionOnFace[row_index][col_index].Y())>insertBlockSize
 	  ){
-	double co = ecal_time2D->Integral(m_numActiveBlocks + 1, m_numActiveBlocks + 1, ecal_time2D->GetYaxis()->FindBin(-2.004), ecal_time2D->GetYaxis()->FindBin(2.004));
+	double co = ecal_ctime2D->Integral(m_numActiveBlocks + 1, m_numActiveBlocks + 1, ecal_ctime2D->GetYaxis()->FindBin(-2.004), ecal_ctime2D->GetYaxis()->FindBin(2.004));
 	time_map->Fill(row - 20, col - 20, co);
 	co = ecal_mass2D->Integral(m_numActiveBlocks + 1, m_numActiveBlocks + 1, ecal_mass2D->GetYaxis()->FindBin(0.11), ecal_mass2D->GetYaxis()->FindBin(0.16));
 	mass_map->Fill(row - 20, col - 20, co);
@@ -106,6 +115,8 @@
     gPad->SetBottomMargin(smallBetween4);
     ecal_time->GetXaxis()->SetRangeUser(-9.99, 9.99);
     ecal_time->Draw();
+    ecal_time->SetLineColor(2);
+    ecal_ctime->Draw("same");
     //gPad->SetLogy();
   }
 
