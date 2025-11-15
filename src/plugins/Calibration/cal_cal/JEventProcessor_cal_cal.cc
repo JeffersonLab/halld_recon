@@ -695,7 +695,14 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     DFCALCluster::DFCALClusterHit_t FCALhit1 = FCALhitVector1[0];
     double ct1_max = FCALhit1.t - (r1 / TMath::C() * 1e7);
     double diff_ct1 = locRFTime - ct1_max + m_time_rf_offset;
-    int ch1 = fcalCluster1->getChannelEmax();
+    int ch1 = FCALhit1.ch;
+    double cpx1 = FCALhit1.x - vertex.X() + m_fcalX;
+    double cpy1 = FCALhit1.y - vertex.Y() + m_fcalY;
+    double cpz1 = position1.Z();
+    double cr1 = sqrt(pow(cpx1, 2) + pow(cpy1, 2) + pow(cpz1, 2));
+    double t1_corr = (m_fcalZ + DFCALGeometry::blockLength() - locFCALShowers[i]->getPosition().Z()) / FCAL_C_EFFECTIVE;
+    diff_ct1 = locRFTime - (FCALhit1.t - t1_corr - (cr1 / c));
+    
     int col1 = fcalGeom->column(ch1);
     int row1 = fcalGeom->row(ch1);
     //int lay1 = get_fcal_layer(row1, col1);
@@ -718,6 +725,21 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     if (21 <= ring1_nb && ring1_nb <= 25) thres_frac1 = 0.25;
     h_fcal_e_v_ce->Fill(ce1, ce1 / e1);
     h_fcal_e_ratio->Fill(ce1, emax1 / ce1);    
+    /*
+    int ChannelNumber =  fcalHit.ch;
+    double chanx      =  fcalHit.x       - vertex.X()  +  fcalX;
+    double chany      =  fcalHit.y       - vertex.Y()  +  fcalY;
+    double chanz      =  pos_corrected_z - vertex.Z();
+    double hitTime    =  fcalHit.t;
+    double dR = sqrt( chanx*chanx  +  chany*chany  +  chanz*chanz );
+    // propagate hit time to the interaction vertex:                                                                                                                                                                                  
+    double tCorr   = ( fcalZ + DFCALGeometry::blockLength() - pos_corrected_z )
+      / FCAL_C_EFFECTIVE;
+    hitTime = hitTime  -  tCorr  -  (dR/c);
+    double fcal_rf_dt = hitTime - rfTime;
+    */
+
+
     //h_fcal_blk_v_layer->Fill(lay1 - 10, ch1);
     //h_fcal_ring->Fill(ring1_nb);
     //h_fcal_cr_ring[lay1 - laymin]->Fill(col1 - 29, row1 - 29);
@@ -788,7 +810,14 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       DFCALCluster::DFCALClusterHit_t FCALhit2 = FCALhitVector2[0];
       double ct2_max = FCALhit2.t - (r2 / TMath::C() * 1e7);
       double diff_ct2 = locRFTime - ct2_max + m_time_rf_offset;
-      int ch2 = fcalCluster2->getChannelEmax();
+      //int ch2 = fcalCluster2->getChannelEmax();
+      int ch2 = FCALhit2.ch;
+      double cpx2 = FCALhit2.x - vertex.X() + m_fcalX;
+      double cpy2 = FCALhit2.y - vertex.Y() + m_fcalY;
+      double cpz2 = position2.Z();
+      double cr2 = sqrt(pow(cpx2, 2) + pow(cpy2, 2) + pow(cpz2, 2));
+      double t2_corr = (m_fcalZ + DFCALGeometry::blockLength() - locFCALShowers[i]->getPosition().Z()) / FCAL_C_EFFECTIVE;
+      diff_ct2 = locRFTime - (FCALhit2.t - t2_corr - (cr2 / c));
       int col2 = fcalGeom->column(ch2);
       int row2 = fcalGeom->row(ch2);
       //int lay2 = get_fcal_layer(row2, col2);

@@ -109,7 +109,9 @@ private:
   vector<vector<DVector3> >sc_norm;
   Particle_t TargetA;
   Particle_t TargetN;
-
+  const double c = 29.9792458;
+  const double FCAL_C_EFFECTIVE = 15.0;
+  
   const DECALGeometry * ecalGeom = NULL;
   const DFCALGeometry * fcalGeom = NULL;
   double TargetMass;
