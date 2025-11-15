@@ -16,6 +16,7 @@
 #include "BCAL/DBCALPoint.h"
 #include "BCAL/DBCALHit.h"
 #include "FCAL/DFCALCluster.h"
+#include "FCAL/DFCALShower.h"
 #include "ANALYSIS/DAnalysisUtilities.h"
 #include "PID/DVertex.h"
 
@@ -179,12 +180,12 @@ void JEventProcessor_BCAL_inv_mass::Process(const std::shared_ptr<const JEvent> 
 	const DTrackFitter *fitter = fitters[0];
 
 	vector<const DBCALShower*> locBCALShowers;
-	vector<const DFCALCluster*> locFCALClusters;
+	vector<const DFCALShower*> locFCALShowers;
 	vector<const DVertex*> kinfitVertex;
 	//const DDetectorMatches* locDetectorMatches = NULL;
 	//locEvent->GetSingle(locDetectorMatches);
 	locEvent->Get(locBCALShowers);
-	locEvent->Get(locFCALClusters);
+	locEvent->Get(locFCALShowers);
 	locEvent->Get(kinfitVertex);
 
 	if(locBCALShowers.size() > 15) return;
@@ -193,7 +194,7 @@ void JEventProcessor_BCAL_inv_mass::Process(const std::shared_ptr<const JEvent> 
 	locEvent->Get(locTrackTimeBased);
 
 	vector <const DBCALShower*> matchedShowers;
-	vector <const DFCALCluster*> matchedFCALClusters;
+	vector <const DFCALShower*> matchedFCALShowers;
 	vector <const DTrackTimeBased*> matchedTracks;
 	DVector3 mypos(0.0,0.0,0.0);
 
@@ -223,17 +224,17 @@ void JEventProcessor_BCAL_inv_mass::Process(const std::shared_ptr<const JEvent> 
 	    }
 	  }
 	}
-
+	
    for(unsigned int i = 0 ; i < locTrackTimeBased.size(); ++i)
         {
 	  vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased[i]->extrapolations.at(SYS_FCAL);
 	  if (extrapolations.size()>0){  
-	    for(unsigned int j = 0 ; j < locFCALClusters.size(); ++j)
+	    for(unsigned int j = 0 ; j < locFCALShowers.size(); ++j)
                 {
-		  const DFCALCluster *c1 = locFCALClusters[j];
-		  double x = c1->getCentroid().X();
-		  double y = c1->getCentroid().Y();
-		  double z = c1->getCentroid().Z();
+		  const DFCALShower *c1 = locFCALShowers[j];
+		  double x = c1->getPosition().X();
+		  double y = c1->getPosition().Y();
+		  double z = c1->getPosition().Z();
 		  DVector3 fcalpos(x,y,z);
 		  //cout << " x = " << x << " y = " << y << endl;
 		  DVector3 pos=extrapolations[0].position;
@@ -242,7 +243,7 @@ void JEventProcessor_BCAL_inv_mass::Process(const std::shared_ptr<const JEvent> 
 		  double diffY = TMath::Abs(y - pos.Y());
 		  if(diffX < 3.0 && diffY < 3.0)
 		    {
-		      matchedFCALClusters.push_back(locFCALClusters[j]);
+		      matchedFCALShowers.push_back(locFCALShowers[j]);
 		    }
 		}
 	  }
@@ -304,12 +305,12 @@ void JEventProcessor_BCAL_inv_mass::Process(const std::shared_ptr<const JEvent> 
 				if(fabs(z1-z2)<100. && E1_raw>.3 && E2_raw>.3 && E1_raw<.5 && E2_raw<.5) bcal_diphoton_mass_v_z_lowE->Fill(z_avg,inv_mass_raw);
 				if(fabs(z1-z2)<100. && E1_raw>.5 && E2_raw>.5 && E1_raw<.7 && E2_raw<.7) bcal_diphoton_mass_v_z_highE->Fill(z_avg,inv_mass_raw); 
 			}		
-			for(unsigned int j=0; j<locFCALClusters.size(); j++){
-				if (find(matchedFCALClusters.begin(), matchedFCALClusters.end(),locFCALClusters[j]) != matchedFCALClusters.end()) continue;
-				const DFCALCluster *cl2 = locFCALClusters[j];
-				double dx2 = cl2->getCentroid().X()-kinfitVertexX;
-	                        double dy2 = cl2->getCentroid().Y()-kinfitVertexY;
-                                double dz2 = cl2->getCentroid().Z()-kinfitVertexZ;
+			for(unsigned int j=0; j<locFCALShowers.size(); j++){
+				if (find(matchedFCALShowers.begin(), matchedFCALShowers.end(),locFCALShowers[j]) != matchedFCALShowers.end()) continue;
+				const DFCALShower *cl2 = locFCALShowers[j];
+				double dx2 = cl2->getPosition().X()-kinfitVertexX;
+	                        double dy2 = cl2->getPosition().Y()-kinfitVertexY;
+                                double dz2 = cl2->getPosition().Z()-kinfitVertexZ;
 				double fcal_E = cl2->getEnergy();
 				double R2 = sqrt(dx2*dx2 + dy2*dy2 + dz2*dz2);
 				TLorentzVector cl2_p(fcal_E*dx2/R2, fcal_E*dy2/R2, fcal_E*dz2/R2, fcal_E);
