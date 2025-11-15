@@ -258,6 +258,27 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	    mData[index]->AddAssociatedObject(mytracks[j][0]);
 	    mData[index]->AddAssociatedObject(mytracks[j][1]);
 	    
+	    // Update minimimum drift time if necessary
+	    double minimum_drift_time=mData[index]->dMinimumDriftTime;
+	    bool got_lower_t=false;
+	    for (auto& hit:mytracks[j][0]->hits){
+	      mData[index]->fdchits.push_back(hit);
+	      if (hit->time<minimum_drift_time){
+		minimum_drift_time=hit->time;
+		got_lower_t=true;
+	      }
+	    }
+	    for (auto& hit:mytracks[j][1]->hits){
+	      mData[index]->fdchits.push_back(hit);
+	      if (hit->time<minimum_drift_time){
+		minimum_drift_time=hit->time;
+		got_lower_t=true;
+	      }
+	    }
+	    if (got_lower_t){
+	      mData[index]->dMinimumDriftTime=minimum_drift_time;
+	    }
+	    
 	    vector<const DFDCSegment*>segments=mytracks[i];
 	    segments.insert(segments.end(),mytracks[j].begin(),mytracks[j].end());
 
@@ -276,10 +297,9 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	    
 	    mData[index]->chisq=fit.chisq;
 	    mData[index]->Ndof=fit.ndof;
-	    double q=FactorForSenseOfRotation*fit.h;
-	    mData[i]->dCharge=q;
-	    mData[i]->dPosition=pos;
-	    mData[i]->dMomentum=mom; 
+	    mData[index]->dCharge=FactorForSenseOfRotation*fit.h;
+	    mData[index]->dPosition=pos;
+	    mData[index]->dMomentum=mom;
 	  }
 	}
       }
@@ -312,12 +332,11 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	track->xc=segment->xc;
 	track->yc=segment->yc;
 	
-	track->chisq=segment->chisq;
-	track->Ndof=segment->Ndof;
-
-	track->dCharge=segment->q;
 	track->dPosition=pos;
 	track->dMomentum=mom;
+	track->dCharge=segment->q;
+	track->Ndof=segment->Ndof;
+	track->chisq=segment->chisq;
       
 	track->AddAssociatedObject(segment);
 	track->FirstPackage=track->LastPackage=segment->package;
@@ -330,7 +349,8 @@ void DTrackCandidate_factory_FDCCathodes::Process(const std::shared_ptr<const JE
 	    minimum_drift_time=segment->hits[k]->time;
 	}
 	track->dMinimumDriftTime=minimum_drift_time;
-
+	track->dDetector=SYS_FDC;
+	
 	Insert(track);
       }
     }
@@ -601,9 +621,6 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	  // Add the new segment and sort by z
 	  segments.push_back(segment);
 	  stable_sort(segments.begin(),segments.end(),DTrackCandidate_segment_cmp_by_z);
-	  // First and last packages
-	  mData[i]->FirstPackage=segments[0]->package;
-	  mData[i]->LastPackage=segments[segments.size()-1]->package;
 	  
 	  // Create fit object and perform helical fit
 	  DHelicalFit fit;
@@ -620,7 +637,6 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	  
 	  mData[i]->chisq=fit.chisq;
 	  mData[i]->Ndof=fit.ndof;
-
 	  mData[i]->dCharge=FactorForSenseOfRotation*fit.h;
 	  mData[i]->dPosition=pos;
 	  mData[i]->dMomentum=mom; 
@@ -652,17 +668,12 @@ void DTrackCandidate_factory_FDCCathodes::MakeCandidate(vector<const DFDCSegment
   // Get the momentum and position just upstream of first hit
   DVector3 mom,pos;
   GetPositionAndMomentum(fit,mytrack[0],pos,mom);
-
+    
   track->chisq=fit.chisq;
   track->Ndof=fit.ndof;
-
+  track->dCharge=FactorForSenseOfRotation*fit.h;
   track->dPosition=pos;
   track->dMomentum=mom;
-  track->dCharge=FactorForSenseOfRotation*fit.h;
-  
-  for (unsigned int m=0;m<mytrack.size();m++){
-    track->AddAssociatedObject(mytrack[m]);
-  }
 
   double minimum_drift_time=1e9;
   for (unsigned int m=0;m<mytrack.size();m++){

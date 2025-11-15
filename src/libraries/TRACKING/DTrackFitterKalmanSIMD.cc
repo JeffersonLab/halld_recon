@@ -897,7 +897,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    }
 
    // start time and variance
-   if (fit_type==kTimeBased){
+   if (fit_type==kTimeBased || USE_PASS1_TIME_MODE){
       mT0=input_params.t0();
       switch(input_params.t0_detector()){
       case SYS_TOF:

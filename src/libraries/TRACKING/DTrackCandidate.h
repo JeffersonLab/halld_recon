@@ -27,9 +27,9 @@
 class DTrackCandidate : public JObject {
 public:
   JOBJECT_PUBLIC(DTrackCandidate);
-  
+
   DTrackCandidate():chisq(0),Ndof(0){}
-  
+
   float chisq;			///< Chi-squared for the track (not chisq/dof!)
   int Ndof;				///< Number of degrees of freedom in the fit
 		
@@ -45,7 +45,7 @@ public:
   // Kinematic data
   DVector3 dPosition;
   DVector3 dMomentum;
-  
+
   // Rough timing information
   double dMinimumDriftTime;
   DetectorSystem_t dDetector;
@@ -56,7 +56,7 @@ public:
   // Hits used in track
   vector<const DFDCPseudo*>fdchits;
   vector<const DCDCTrackHit*>cdchits;
-  
+
   void Summarize(JObjectSummary& summary) const override {
     summary.add(SystemName(dDetector), "Detector", "%s");
     summary.add(dCharge, "Charge", "%f");

@@ -677,10 +677,8 @@ bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const
 			dHistMap_PVsTheta_Candidates[locCharge]->Fill(locTheta, locP);
 			
 			// Get the hits from the candidate
-			vector<const DFDCPseudo*>locFDCPseudos;
-			locTrackCandidates[loc_i]->GetT(locFDCPseudos);
-			vector<const DCDCTrackHit *>locCDCTrackHits;
-			locTrackCandidates[loc_i]->GetT(locCDCTrackHits);
+			vector<const DFDCPseudo*>locFDCPseudos=locTrackCandidates[loc_i]->fdchits;
+			vector<const DCDCTrackHit *>locCDCTrackHits=locTrackCandidates[loc_i]->cdchits;
 			
 			unsigned int locCDCRingPattern=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
 			unsigned int locFDCPlanePattern=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
