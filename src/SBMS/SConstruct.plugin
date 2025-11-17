@@ -125,7 +125,7 @@ env.PrependUnique(      CFLAGS = ['-g', '-fPIC', '-Wall'])
 env.PrependUnique(    CXXFLAGS = ['-g', '-fPIC', '-Wall'])
 env.PrependUnique(FORTRANFLAGS = ['-g', '-fPIC', '-Wall'])
 
-env.PrependUnique(    CXXFLAGS = ['-std=c++11'])
+env.PrependUnique(    CXXFLAGS = ['-std=c++20'])
 
 # Apply any platform/architecture specific settings
 sbms.ApplyPlatformSpecificSettings(env, arch)
