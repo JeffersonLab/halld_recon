@@ -115,7 +115,7 @@
     gPad->SetBottomMargin(smallBetween4);
     ecal_time->GetXaxis()->SetRangeUser(-9.99, 9.99);
     ecal_time->Draw();
-    ecal_time->SetLineColor(2);
+    ecal_ctime->SetLineColor(2);
     ecal_ctime->Draw("same");
     //gPad->SetLogy();
     TLegend * legend=new TLegend(0.7, 0.755, 0.8, 0.885);
