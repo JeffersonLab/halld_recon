@@ -62,8 +62,8 @@
   TH1I* ecal_ctime = (TH1I*) ecal_ctime2D->ProjectionY("ecal_ctime");
   TH1I* ecal_mass = (TH1I*) ecal_mass2D->ProjectionY("ecal_mass");
   
-  TH2F * time_map = new TH2F("time_map", ";#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 40, -20, 20, 40, -20, 20);
-  TH2F * mass_map = new TH2F("mass_map", ";#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 40, -20, 20, 40, -20, 20);
+  TH2F * time_map = new TH2F("time_map", "#font[42]{Events within |t_{ECAL} - t_{REF}| #leq 2.004ns};#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 40, -20, 20, 40, -20, 20);
+  TH2F * mass_map = new TH2F("mass_map", "#font[42]{Events within 110 #leq m_{#gamma#gamma} #leq 160 MeV};#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 40, -20, 20, 40, -20, 20);
   int m_numActiveBlocks = 0;
   for( int row = 0; row < insert_row_size; row++ ){
     for( int col = 0; col < insert_row_size; col++ ){
@@ -118,6 +118,14 @@
     ecal_time->SetLineColor(2);
     ecal_ctime->Draw("same");
     //gPad->SetLogy();
+    TLegend * legend=new TLegend(0.7, 0.755, 0.8, 0.885);
+    legend->AddEntry(ecal_time,  "#font[42]{t^{Shower}_{ECAL} - t_{RF}}","l");
+    legend->AddEntry(ecal_ctime, "#font[42]{t^{Hit}_{ECAL} - t_{RF}}","l");
+    legend->SetFillColor(0);
+    legend->SetTextFont(22);
+    legend->SetTextSize(.04);
+    legend->SetLineColor(0);
+    legend->Draw("same");
   }
 
   if( time_map ){
@@ -125,6 +133,7 @@
     time_map->SetStats(0);
     c1->cd(2);
     smallBetween2 = .15;
+    smallBetween3 = .175;
     gPad->SetLeftMargin(smallBetween1);
     gPad->SetRightMargin(smallBetween2);
     gPad->SetTopMargin(smallBetween3);
@@ -152,6 +161,7 @@
     mass_map->SetStats(0);
     c1->cd(4);
     smallBetween2 = .15;
+    smallBetween3 = .175;
     gPad->SetLeftMargin(smallBetween1);
     gPad->SetRightMargin(smallBetween2);
     gPad->SetTopMargin(smallBetween3);

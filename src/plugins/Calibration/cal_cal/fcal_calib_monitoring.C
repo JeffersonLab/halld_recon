@@ -5,7 +5,7 @@
   
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("cal_cal");
   if(dir) dir->cd();
-
+  /*
   Double_t smallBetween1 = .1;
   Double_t smallBetween2 = .1;
   Double_t smallBetween3 = .1;
@@ -35,7 +35,32 @@
   gStyle->SetNdivisions(505, "XYZ");
   gStyle->SetTitleOffset(1.0, "X");
   gStyle->SetTitleOffset(1.2, "Y");
-  
+  */
+    gROOT->SetStyle("Bold");
+  gStyle->SetCanvasColor(0);
+  gStyle->SetLabelColor(1,"X");
+  gStyle->SetLabelColor(1,"Y");
+  gStyle->SetLabelSize(0.4,"X");
+  gStyle->SetLabelSize(0.4,"Y");
+  gStyle->SetLabelFont(42,"X");
+  gStyle->SetLabelFont(42,"Y");
+  gStyle->SetHistLineColor(1); 
+  gStyle->SetHistLineWidth(2); 
+  gStyle->SetNdivisions(504,"X");
+  gStyle->SetNdivisions(504,"Y");
+  //gROOT->Macro("setcolor2.c");
+  gStyle->SetHistFillColor(999);
+  gROOT->SetStyle("Plain");  // white as bg
+  gStyle->SetOptStat("111111");
+  gStyle->SetFrameLineWidth(2);
+  gStyle->SetTitleFontSize(0.1);
+  gStyle->SetTitleBorderSize(0);
+  gStyle->SetLabelSize(0.04, "XYZ");
+  gStyle->SetLabelFont(42, "XYZ");
+  gStyle->SetTitleSize(0.05, "XYZ");
+  gStyle->SetNdivisions(505, "XYZ");
+  gStyle->SetTitleOffset(1.0, "X");
+  gStyle->SetTitleOffset(1.2, "Y");
   const int kBlocksWide = 59;
   const int kBlocksTall = 59;
   int kMaxChannels = kBlocksWide * kBlocksTall;
@@ -58,8 +83,8 @@
   TH1I* fcal_ctime = (TH1I*) fcal_ctime2D->ProjectionY("fcal_ctime");
   TH1I* fcal_mass = (TH1I*) fcal_mass2D->ProjectionY("fcal_mass");
   
-  TH2F * time_map = new TH2F("time_map", ";#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 59, -30, 30, 59, -30, 30);
-  TH2F * mass_map = new TH2F("mass_map", ";#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 59, -30, 30, 59, -30, 30);
+  TH2F * time_map = new TH2F("time_map", "#font[42]{Events within |t_{FCAL} - t_{REF}| #leq 3.004ns};#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 59, -30, 30, 59, -30, 30);
+  TH2F * mass_map = new TH2F("mass_map", "#font[42]{Events within 110 #leq m_{#gamma#gamma} #leq 160 MeV};#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 59, -30, 30, 59, -30, 30);
   int m_numActiveBlocks = 0;
   std::vector <int> bad_blk, real_bad_blk;
   for (int row = 0; row < kBlocksTall; row ++) {
@@ -67,7 +92,7 @@
       m_positionOnFace[row][col] =TVector2(  ( col - kMidBlock ) * blockSize,( row - kMidBlock ) * blockSize );
       double thisRadius = m_positionOnFace[row][col].Mod();
       if (innerRadius < thisRadius && thisRadius < radius) {
-	double co = fcal_time2D->Integral(m_numActiveBlocks + 1, m_numActiveBlocks + 1, fcal_time2D->GetYaxis()->FindBin(-2.004), fcal_time2D->GetYaxis()->FindBin(2.004));
+	double co = fcal_time2D->Integral(m_numActiveBlocks + 1, m_numActiveBlocks + 1, fcal_time2D->GetYaxis()->FindBin(-3.004), fcal_time2D->GetYaxis()->FindBin(3.004));
 	time_map->Fill(row - 29, col - 29, co);
 	if (co == 0) {
 	  bad_blk.push_back(m_numActiveBlocks);
@@ -111,6 +136,15 @@
     fcal_time->Draw();
     fcal_ctime->SetLineColor(2);
     fcal_ctime->Draw("same");
+    TLegend * legend=new TLegend(0.7, 0.755, 0.8, 0.885);
+    legend->AddEntry(fcal_time,  "#font[42]{t^{Shower}_{FCAL} - t_{RF}}","l");
+    legend->AddEntry(fcal_ctime, "#font[42]{t^{Hit}_{FCAL} - t_{RF}}","l");
+    legend->SetFillColor(0);
+    legend->SetTextFont(22);
+    legend->SetTextSize(.04);
+    legend->SetLineColor(0);
+    legend->Draw("same");
+
     //gPad->SetLogy();
   }
 
@@ -119,6 +153,7 @@
     time_map->SetStats(0);
     c1->cd(2);
     smallBetween2 = .15;
+    smallBetween3 = .175;
     gPad->SetLeftMargin(smallBetween1);
     gPad->SetRightMargin(smallBetween2);
     gPad->SetTopMargin(smallBetween3);
@@ -146,6 +181,7 @@
     mass_map->SetStats(0);
     c1->cd(4);
     smallBetween2 = .15;
+    smallBetween3 = .175;
     gPad->SetLeftMargin(smallBetween1);
     gPad->SetRightMargin(smallBetween2);
     gPad->SetTopMargin(smallBetween3);
