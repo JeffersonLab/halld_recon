@@ -83,7 +83,7 @@
   TH1I* fcal_ctime = (TH1I*) fcal_ctime2D->ProjectionY("fcal_ctime");
   TH1I* fcal_mass = (TH1I*) fcal_mass2D->ProjectionY("fcal_mass");
   
-  TH2F * time_map = new TH2F("time_map", "#font[42]{Events within |t_{FCAL} - t_{REF}| #leq 3.004ns};#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 59, -30, 30, 59, -30, 30);
+  TH2F * time_map = new TH2F("time_map", "#font[42]{Events within |t_{RF} - t_{FCAL}| #leq 3.004ns};#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 59, -30, 30, 59, -30, 30);
   TH2F * mass_map = new TH2F("mass_map", "#font[42]{Events within 110 #leq m_{#gamma#gamma} #leq 160 MeV};#font[42]{Row #};#font[42]{Column #};#font[42]{Events #}", 59, -30, 30, 59, -30, 30);
   int m_numActiveBlocks = 0;
   std::vector <int> bad_blk, real_bad_blk;
@@ -137,8 +137,8 @@
     fcal_ctime->SetLineColor(2);
     fcal_ctime->Draw("same");
     TLegend * legend=new TLegend(0.7, 0.755, 0.8, 0.885);
-    legend->AddEntry(fcal_time,  "#font[42]{t^{Shower}_{FCAL} - t_{RF}}","l");
-    legend->AddEntry(fcal_ctime, "#font[42]{t^{Hit}_{FCAL} - t_{RF}}","l");
+    legend->AddEntry(fcal_time,  "#font[42]{t_{RF}-t^{Shower}_{FCAL}}","l");
+    legend->AddEntry(fcal_ctime, "#font[42]{t_{RF}-t^{Hit}_{FCAL}}","l");
     legend->SetFillColor(0);
     legend->SetTextFont(22);
     legend->SetTextSize(.04);
