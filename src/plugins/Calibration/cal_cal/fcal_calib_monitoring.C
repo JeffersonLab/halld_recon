@@ -115,10 +115,10 @@
       c1 = gPad->GetCanvas();
   }
 
-  smallBetween1 = .15;
-  smallBetween2 = .05;
-  smallBetween3 = .05;
-  smallBetween4 = .15;
+  Double_t smallBetween1 = .15;
+  Double_t smallBetween2 = .05;
+  Double_t smallBetween3 = .05;
+  Double_t smallBetween4 = .15;
   
   if( !gPad ) return;
   c1->Divide(2,2);
