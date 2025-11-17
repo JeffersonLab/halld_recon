@@ -4554,7 +4554,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	  
 	  // The next measurement
 	  double dm=0.39,tdrift=0.,tcorr=0.,dDdt0=0.;
-	  if (fit_type==kTimeBased){
+	  if (fit_type==kTimeBased || USE_PASS1_TIME_MODE){
 	    // Find offset of wire with respect to the center of the
 	    // straw at this z position
 	    double delta=0,dphi=0.;
