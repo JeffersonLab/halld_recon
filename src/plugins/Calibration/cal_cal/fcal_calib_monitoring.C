@@ -189,8 +189,10 @@
     mass_map->Draw("colz");
     gPad->SetLogz();
   }
+  /*
   std::cout << " bad blk " << bad_blk.size()
 	    << " real bad blk " << real_bad_blk.size()
 	    << std::endl;
   for (int i = 0; i < (int) bad_blk.size(); i ++) std::cout << bad_blk[i] << std::endl;
+  */
 }
