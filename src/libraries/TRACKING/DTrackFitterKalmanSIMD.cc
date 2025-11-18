@@ -456,7 +456,11 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    app->SetDefaultParameter("TRKFIT:USE_MULS_COVARIANCE",
          USE_MULS_COVARIANCE);  
 
+   FAST_TRACKING_MODE=false;
+   app->SetDefaultParameter("TRKFIT:FAST_TRACKING_MODE",FAST_TRACKING_MODE);
+   
    USE_PASS1_TIME_MODE=false;
+   if (FAST_TRACKING_MODE) USE_PASS1_TIME_MODE=true;
    app->SetDefaultParameter("KALMAN:USE_PASS1_TIME_MODE",USE_PASS1_TIME_MODE); 
 
    USE_FDC_DRIFT_TIMES=true;
@@ -3212,7 +3216,11 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
    double x0=x_=input_params.position().x();
    double y0=y_=input_params.position().y();
    double z0=z_=input_params.position().z();
-
+   
+   // Use a helical model to find a position on the circle at a large radius
+   // so that we can partially compensate for the energy loss that was not
+   // taken into account by the candidate by swimming back toward the target
+   // further down in the code.
    if (fit_type==kWireBased && theta_deg>10.){
      double Bz=fabs(bfield->GetBz(x0,y0,z0));
      double sperp=25.; // empirical guess
@@ -3228,7 +3236,7 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
      double one_over_2k=1./twokappa;
      if (my_fdchits.size()==0){
        for (unsigned int i=my_cdchits.size()-1;i>1;i--){
-	 // Use outermost axial straw to estimate a resonable arc length
+	 // Use outermost axial straw to estimate a reasonable arc length
 	 if (my_cdchits[i]->hit->is_stereo==false){
 	   double tworc=2.*fabs(one_over_2k);
 	   double ratio=(my_cdchits[i]->hit->wire->origin
@@ -3300,9 +3308,7 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
 	mCDCInternalStepSize=0.25;
       }
 
-      // The position from the track candidate is reported just outside the 
-      // start counter for tracks containing cdc hits. Propagate to the distance
-      // of closest approach to the beam line
+      // Propagate to the distance of closest approach to the beam line
       if (fit_type==kWireBased) ExtrapolateToVertex(S0);
 
       kalman_error_t error=ForwardFit(S0,C0); 
@@ -3373,9 +3379,7 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
 
          //C0*=1.+1./tsquare;
 
-         // The position from the track candidate is reported just outside the 
-         // start counter for tracks containing cdc hits. Propagate to the 
-         // distance of closest approach to the beam line   
+         // Propagate to the distance of closest approach to the beam line   
          if (fit_type==kWireBased) ExtrapolateToVertex(S0);
 
          error=ForwardCDCFit(S0,C0);
@@ -3468,9 +3472,7 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
       mCentralStepSize=0.4;
       mCDCInternalStepSize=0.2;
 
-      // The position from the track candidate is reported just outside the 
-      // start counter for tracks containing cdc hits. Propagate to the 
-      // distance of closest approach to the beam line     
+      // Propagate to the distance of closest approach to the beam line     
       DVector2 xy(x0,y0);  
       if (fit_type==kWireBased){  
 	ExtrapolateToVertex(xy,S0);
@@ -5759,7 +5761,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
 // Propagate track to point of distance of closest approach to origin
 jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
       DMatrix5x1 &Sc){
-  // Save un-extroplated quantities
+  // Save un-extrapolated quantities
   DMatrix5x1 S0(Sc);
   DVector2 xy0(xy);
   
