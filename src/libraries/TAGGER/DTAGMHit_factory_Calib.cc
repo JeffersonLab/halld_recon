@@ -159,6 +159,8 @@ void DTAGMHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
     /// Note that this code does NOT get called for simulated
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
+    
+    vector<DTAGMHit *> results, filtered_results;
 
     // extract the TAGM geometry
     vector<const DTAGMGeometry*> tagmGeomVect;
@@ -240,7 +242,7 @@ void DTAGMHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
            hit->has_fADC=true;
 
         hit->AddAssociatedObject(digihit);
-        Insert(hit);
+        results.push_back(hit);
     }
 
     // Next, loop over TDC hits, matching them to the existing fADC hits
@@ -264,12 +266,12 @@ void DTAGMHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
         // Look for existing hits to see if there is a match
         // or create new one if there is no match
         DTAGMHit *hit = nullptr;
-        for (unsigned int j=0; j < mData.size(); ++j) {
-            if (mData[j]->row == row && mData[j]->column == column &&
-                mData[j]->time_fadc != 0 && mData[j]->integral != 0 &&
-                fabs(T - mData[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
+        for (unsigned int j=0; j < results.size(); ++j) {
+            if (results[j]->row == row && results[j]->column == column &&
+                results[j]->time_fadc != 0 && results[j]->integral != 0 &&
+                fabs(T - results[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
             {
-                hit = mData[j];
+                hit = results[j];
             }
         }
         if (hit == nullptr) {
@@ -284,7 +286,8 @@ void DTAGMHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
             hit->integral = 0;
             hit->pulse_peak = 0;
             hit->has_fADC=false;
-            Insert(hit);
+            
+        	results.push_back(hit);
         }
         // Interpret a negative value on the integral cut to require
         // an associated tdc hit in place of an the pulse integral cut.
@@ -315,6 +318,12 @@ void DTAGMHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
         
         hit->AddAssociatedObject(digihit);
     }
+    
+    for(auto hit : results)
+    	if(hit->has_fADC==true || hit->has_TDC==true)
+    		filtered_results.push_back(hit);
+
+	Set(filtered_results);
 
     return;
 }
