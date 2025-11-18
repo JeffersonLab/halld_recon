@@ -355,9 +355,18 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(const std::shared_ptr<const JEv
 {
 	japp->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
 	japp->SetDefaultParameter("COMBO:PRINT_CUTS", dPrintCutFlag);
+	japp->SetDefaultParameter("TRKFIT:FAST_TRACKING_MODE", dFastTrackingMode);
 
 	//Setup cuts
 	Define_DefaultCuts();
+	if (dFastTrackingMode){ // overwrite defaults for pion/proton
+	  dPIDTimingCuts_TF1Params[PiPlus][SYS_BCAL] = {2.0};
+	  dPIDTimingCuts_TF1Params[PiPlus][SYS_TOF] = {2.0};
+	  dPIDTimingCuts_TF1Params[PiMinus][SYS_BCAL] = {2.0};
+	  dPIDTimingCuts_TF1Params[PiMinus][SYS_TOF] = {2.0};
+	  dPIDTimingCuts_TF1Params[Proton][SYS_BCAL] = {2.0};
+	  dPIDTimingCuts_TF1Params[Proton][SYS_TOF] = {2.0};
+	}
 	Get_CommandLineCuts();
 	Create_CutFunctions();
 
