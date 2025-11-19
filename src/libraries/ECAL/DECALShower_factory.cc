@@ -46,7 +46,7 @@ void DECALShower_factory::Init()
   app->SetDefaultParameter("ECAL:E_CORRECTION_PAR3",E_CORRECTION_PAR3);
   app->SetDefaultParameter("ECAL:E_CORRECTION_PAR4",E_CORRECTION_PAR4);
 
-  bool ENABLE_ENERGY_CORRECTION=true;
+  ENABLE_ENERGY_CORRECTION=true;
   app->SetDefaultParameter("ECAL:ENABLE_ENERGY_CORRECTION",ENABLE_ENERGY_CORRECTION);
 }
 
