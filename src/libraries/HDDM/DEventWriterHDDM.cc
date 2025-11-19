@@ -52,10 +52,10 @@ DEventWriterHDDM::DEventWriterHDDM(const std::shared_ptr<const JEvent>& locEvent
     FDC_TAG = "";
     app->SetDefaultParameter("HDDMOUT:FDCTAG", FDC_TAG, "Tag (string) to use when selecting FDC hits to read out.");
     
-    TAGM_TAG = "Calib";
+    TAGM_TAG = "";
     app->SetDefaultParameter("HDDMOUT:TAGMTAG", TAGM_TAG, "Tag (string) to use when selecting TAGM hits to read out.");
 
-    TAGH_TAG = "Calib";
+    TAGH_TAG = "";
     app->SetDefaultParameter("HDDMOUT:TAGHTAG", TAGH_TAG, "Tag (string) to use when selecting TAGH hits to read out.");
 }
 
