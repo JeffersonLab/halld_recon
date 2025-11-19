@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -90,12 +89,12 @@ hdv_debugerframe::hdv_debugerframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt
   }
   
   // Track Candidate Info
-  TGGroupFrame *trackinfo = new TGGroupFrame(topframe, "     trk:     type:     p:     theta:   phi:       z:  ", kHorizontalFrame);
+  TGGroupFrame *trackinfo = new TGGroupFrame(topframe, "     trk:     charge:     p:     theta:   phi:       z:  ", kHorizontalFrame);
   topframe->AddFrame(trackinfo, hints);
   // Column names
   vector<string> colnames;
   colnames.push_back("trk");
-  colnames.push_back("type");
+  colnames.push_back("charge");
   colnames.push_back("p");
   colnames.push_back("theta");
   colnames.push_back("phi");
@@ -121,41 +120,32 @@ hdv_debugerframe::hdv_debugerframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt
 
   for (int k=0;k<10;k++){
     if (k<(int)TrackCandidates.size()){ 
-      const DKinematicData *trk = TrackCandidates[k];
-      stringstream trkno, type, p, theta, phi, z;
+      const DTrackCandidate *trk = TrackCandidates[k];
+      stringstream trkno, charge, p, theta, phi, z;
       trkno<<setprecision(4)<<k+1;
       candlabs["trk"][k]->SetText(trkno.str().c_str());
- 
-      double mass = trk->mass();
-      if(fabs(mass-0.13957)<1.0E-4)type<<"pi";
-      else if(fabs(mass-0.93827)<1.0E-4)type<<"proton";
-      else if(fabs(mass-0.493677)<1.0E-4)type<<"K";
-      else if(fabs(mass-0.000511)<1.0E-4)type<<"e";
-      else if (fabs(mass)<1.e-4 && fabs(trk->charge())<1.e-4) type << "gamma";
-      else type<<"q=";
-      if (fabs(trk->charge())>1.e-4){
-	type<<(trk->charge()>0 ? "+":"-");
-      }
+      
       int row = k;
-      candlabs["type"][row]->SetText(type.str().c_str());
-
-      p<<setprecision(3)<<fixed<<trk->momentum().Mag();
+      charge<<(trk->dCharge>0 ? "+1":"-1");
+      candlabs["charge"][row]->SetText(charge.str().c_str());
+      
+      p<<setprecision(3)<<fixed<<trk->dMomentum.Mag();
       candlabs["p"][row]->SetText(p.str().c_str());
       
-      theta<<setprecision(2)<<fixed<<trk->momentum().Theta()*TMath::RadToDeg();
+      theta<<setprecision(2)<<fixed<<trk->dMomentum.Theta()*TMath::RadToDeg();
       candlabs["theta"][row]->SetText(theta.str().c_str());
       
-      double myphi = trk->momentum().Phi();
+      double myphi = trk->dMomentum.Phi();
       if(myphi<0.0)myphi+=2.0*M_PI;
-      phi<<setprecision(2)<<fixed<<myphi;
+      phi<<setprecision(2)<<fixed<<myphi*TMath::RadToDeg();
       candlabs["phi"][row]->SetText(phi.str().c_str());
       
-      z<<setprecision(2)<<fixed<<trk->position().Z();
+      z<<setprecision(2)<<fixed<<trk->dPosition.Z();
       candlabs["z"][row]->SetText(z.str().c_str());
     } else {
       int row = k;
       candlabs["trk"][row]->SetText("------");
-      candlabs["type"][row]->SetText("------");
+      candlabs["charge"][row]->SetText("------");
       candlabs["p"][row]->SetText("------");
       candlabs["theta"][row]->SetText("------");
       candlabs["phi"][row]->SetText("------");
@@ -245,41 +235,32 @@ void hdv_debugerframe::UpdateTrackLabels()
   for (int k=0;k<10;k++){
 
     if (k<(int)TrackCandidates.size()){ 
-      const DKinematicData *trk = TrackCandidates[k];
-      stringstream trkno, type, p, theta, phi, z;
+      const DTrackCandidate *trk = TrackCandidates[k];
+      stringstream trkno, charge, p, theta, phi, z;
       trkno<<setprecision(4)<<k+1;
       int row = k;
       candlabs["trk"][row]->SetText(trkno.str().c_str());
  
-      double mass = trk->mass();
-      if(fabs(mass-0.13957)<1.0E-4)type<<"pi";
-      else if(fabs(mass-0.93827)<1.0E-4)type<<"proton";
-      else if(fabs(mass-0.493677)<1.0E-4)type<<"K";
-      else if(fabs(mass-0.000511)<1.0E-4)type<<"e";
-      else if (fabs(mass)<1.e-4 && fabs(trk->charge())<1.e-4) type << "gamma";
-      else type<<"q=";
-      if (fabs(trk->charge())>1.e-4){
-	type<<(trk->charge()>0 ? "+":"-");
-      }
-      candlabs["type"][row]->SetText(type.str().c_str());
+      charge<<(trk->dCharge>0 ? "+1":"-1");
+      candlabs["charge"][row]->SetText(charge.str().c_str());
 
-      p<<setprecision(3)<<fixed<<trk->momentum().Mag();
+      p<<setprecision(3)<<fixed<<trk->dMomentum.Mag();
       candlabs["p"][row]->SetText(p.str().c_str());
       
-      theta<<setprecision(2)<<fixed<<trk->momentum().Theta()*TMath::RadToDeg();
+      theta<<setprecision(2)<<fixed<<trk->dMomentum.Theta()*TMath::RadToDeg();
       candlabs["theta"][row]->SetText(theta.str().c_str());
       
-      double myphi = trk->momentum().Phi();
+      double myphi = trk->dMomentum.Phi();
       if(myphi<0.0)myphi+=2.0*M_PI;
-      phi<<setprecision(2)<<fixed<<myphi;
+      phi<<setprecision(2)<<fixed<<myphi*TMath::RadToDeg();
       candlabs["phi"][row]->SetText(phi.str().c_str());
       
-      z<<setprecision(2)<<fixed<<trk->position().Z();
+      z<<setprecision(2)<<fixed<<trk->dPosition.Z();
       candlabs["z"][row]->SetText(z.str().c_str());
     } else {
       int row = k;  
       candlabs["trk"][row]->SetText("------");
-      candlabs["type"][row]->SetText("------");
+      candlabs["charge"][row]->SetText("------");
       candlabs["p"][row]->SetText("------");
       candlabs["theta"][row]->SetText("------");
       candlabs["phi"][row]->SetText("------");
@@ -398,7 +379,7 @@ void hdv_debugerframe::SetUpMid1Frame(){
       
       double myphi = trk->momentum().Phi();
       if(myphi<0.0)myphi+=2.0*M_PI;
-      phi<<setprecision(2)<<fixed<<myphi;
+      phi<<setprecision(2)<<fixed<<myphi*TMath::RadToDeg();
       wblabs["phi"][row]->SetText(phi.str().c_str());
       
       z<<setprecision(2)<<fixed<<trk->position().Z();
@@ -526,7 +507,7 @@ void hdv_debugerframe::SetUpMid2Frame(){
       
       double myphi = trk->momentum().Phi();
       if(myphi<0.0)myphi+=2.0*M_PI;
-      phi<<setprecision(2)<<fixed<<myphi;
+      phi<<setprecision(2)<<fixed<<myphi*TMath::RadToDeg();
       tblabs["phi"][row]->SetText(phi.str().c_str());
       
       z<<setprecision(2)<<fixed<<trk->position().Z();
