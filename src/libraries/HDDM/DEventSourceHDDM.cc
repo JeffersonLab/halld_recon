@@ -2492,6 +2492,7 @@ bool DEventSourceHDDM::Extract_DTAGMHit(hddm_s::HDDM *record,
             DTAGMHit *taghit = new DTAGMHit();
             taghit->E = hiter->getE();
             taghit->t = hiter->getT();
+            taghit->time_tdc = hiter->getT();
             taghit->npix_fadc = hiter->getNpe();
             taghit->time_fadc = hiter->getTADC();
             taghit->column = hiter->getColumn();
@@ -2508,6 +2509,7 @@ bool DEventSourceHDDM::Extract_DTAGMHit(hddm_s::HDDM *record,
             DTAGMHit *taghit = new DTAGMHit();
             taghit->E = hiter->getE();
             taghit->t = hiter->getT();
+            taghit->time_tdc = hiter->getT();
             taghit->npix_fadc = hiter->getDE() * 1e5; // ~1e5 pixels/GeV
             taghit->time_fadc = hiter->getT();
             taghit->column = hiter->getColumn();
@@ -2561,6 +2563,7 @@ bool DEventSourceHDDM::Extract_DTAGHHit( hddm_s::HDDM *record,
             DTAGHHit *taghit = new DTAGHHit();
             taghit->E = hiter->getE();
             taghit->t = hiter->getT();
+            taghit->time_tdc = hiter->getT();
             taghit->npe_fadc = hiter->getNpe();
             taghit->time_fadc = hiter->getTADC();
             taghit->counter_id = hiter->getCounterId();
@@ -2576,6 +2579,7 @@ bool DEventSourceHDDM::Extract_DTAGHHit( hddm_s::HDDM *record,
             DTAGHHit *taghit = new DTAGHHit();
             taghit->E = hiter->getE();
             taghit->t = hiter->getT();
+            taghit->time_tdc = hiter->getT();
             taghit->npe_fadc = hiter->getDE() * 5e5; // ~5e5 pe/GeV
             taghit->time_fadc = hiter->getT();
             taghit->counter_id = hiter->getCounterId();
