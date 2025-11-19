@@ -45,6 +45,9 @@ void DECALShower_factory::Init()
   app->SetDefaultParameter("ECAL:E_CORRECTION_PAR2",E_CORRECTION_PAR2);
   app->SetDefaultParameter("ECAL:E_CORRECTION_PAR3",E_CORRECTION_PAR3);
   app->SetDefaultParameter("ECAL:E_CORRECTION_PAR4",E_CORRECTION_PAR4);
+
+  ENABLE_ENERGY_CORRECTION=true;
+  app->SetDefaultParameter("ECAL:ENABLE_ENERGY_CORRECTION",ENABLE_ENERGY_CORRECTION);
 }
 
 //------------------
@@ -70,7 +73,10 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
   for (size_t i=0;i<clusters.size();i++){
     const DECALCluster *cluster=clusters[i];
 
-    double E=GetCorrectedEnergy(cluster->E);
+    double E=cluster->E;
+    if (ENABLE_ENERGY_CORRECTION){
+      E=GetCorrectedEnergy(cluster->E);
+    }
     if (E>SHOWER_ENERGY_THRESHOLD){
       DECALShower *shower=new DECALShower;
       shower->nBlocks=cluster->nBlocks;
