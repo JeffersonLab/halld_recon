@@ -767,9 +767,6 @@ void DTrackHitSelectorALT2::GetFDCHits(fit_type_t fit_type, const DReferenceTraj
     // Include uncertainty in phi due to uncertainty in the center of 
     // the circle
     var_phi+=var_phi_radial;
-
-    var_phi=0.;
-    var_lambda=0.;
     
     // Variance in position due to multiple scattering
     double var_pos_ms=last_step->itheta02s2/3.;
@@ -940,7 +937,7 @@ void DTrackHitSelectorALT2::GetFDCHits(double Bz,double q,
       if (fabs(pos.z()-hit->wire->origin.z())<0.5){
 	// Variance in dip angle due to multiple scattering
 	var_lambda = extrapolations[k].theta2ms_sum/3.;
-	// the above expression seems to lead to overestimation of  the uncertainty in the dip angle after the wire-based pass..
+	// the above expression seems to lead to overestimation of the uncertainty in the dip angle after the wire-based pass..
 	var_lambda*=0.01;
 	// Variance in phi due to multiple scattering
 	var_phi=var_lambda*(1.+tanl2); 
