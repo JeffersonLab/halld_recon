@@ -181,11 +181,22 @@ def mk_setenv_csh(env):
 		str += 'setenv ETROOT %s\n' % etroot
 		str += 'setenv %s ${ETROOT}/lib:${%s}\n' % (LDLPV, LDLPV)
 	
-	# SQLITECPP
+	# SQLITE
+	sqlite = os.getenv('SQLITE_HOME')
+	sqliteversion = os.getenv('SQLITE_VERSION')
+	if sqlite != None:
+		str += '# SQLITE\n'
+		str += 'setenv SQLITE_HOME %s\n' % sqlite
+		str += 'setenv SQLITE_VERSION %s\n' % sqliteversion
+		str += '\n'
+
+        # SQLITECPP
 	sqlitecpp = os.getenv('SQLITECPP_HOME')
+	sqlitecppversion = os.getenv('SQLITECPP_VERSION')
 	if sqlitecpp != None:
 		str += '# SQLITECPP\n'
 		str += 'setenv SQLITECPP_HOME %s\n' % sqlitecpp
+		str += 'setenv SQLITECPP_VERSION %s\n' % sqlitecppversion
 
 	# Make sure output directory exists
 	try:
@@ -361,11 +372,22 @@ def mk_setenv_bash(env):
 		str += 'export ETROOT=%s\n' % etroot
 		str += 'export %s=${ETROOT}/lib:${%s}\n' % (LDLPV, LDLPV)
 
+	# SQLITE
+	sqlite = os.getenv('SQLITE_HOME')
+	sqliteversion = os.getenv('SQLITE_VERSION')
+	if sqlite != None:
+		str += '# SQLITE\n'
+		str += 'export SQLITE_HOME=%s\n' % sqlite
+		str += 'export SQLITE_VERSION=%s\n' % sqliteversion
+		str += '\n'
+
 	# SQLITECPP
 	sqlitecpp = os.getenv('SQLITECPP_HOME')
+	sqlitecppversion = os.getenv('SQLITECPP_VERSION')
 	if sqlitecpp != None:
 		str += '# SQLITECPP\n'
 		str += 'export SQLITECPP_HOME=%s\n' % sqlitecpp
+		str += 'export SQLITECPP_VERSION=%s\n' % sqlitecppversion
 
 	# Make sure output directory exists
 	try:

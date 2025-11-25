@@ -134,6 +134,8 @@ void DTAGHHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
 
+    vector<DTAGHHit *> results, filtered_results;
+
     // extract the TAGH geometry
     vector<const DTAGHGeometry*> taghGeomVect;
     event->Get( taghGeomVect );
@@ -208,7 +210,7 @@ void DTAGHHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
         hit->is_double = false;
 
         hit->AddAssociatedObject(digihit);
-        Insert(hit);
+        results.push_back(hit);
     }
 
     // Next, loop over TDC hits, matching them to the existing fADC hits
@@ -231,11 +233,11 @@ void DTAGHHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
         // Look for existing hits to see if there is a match
         // or create new one if there is no match
         DTAGHHit *hit = nullptr;
-        for (unsigned int j=0; j < mData.size(); ++j) {
-            if (mData[j]->counter_id == counter &&
-                fabs(T - mData[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
+        for (unsigned int j=0; j < results.size(); ++j) {
+            if (results[j]->counter_id == counter &&
+                fabs(T - results[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
                 {
-                    hit = mData[j];
+                    hit = results[j];
                 }
         }
         if (hit == nullptr) {
@@ -250,7 +252,7 @@ void DTAGHHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
             hit->npe_fadc = numeric_limits<double>::quiet_NaN();
             hit->has_fADC = false;
             hit->is_double = false;
-            Insert(hit);
+        	results.push_back(hit);
         }
         hit->time_tdc = T;
         hit->has_TDC = true;
@@ -264,6 +266,13 @@ void DTAGHHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
         hit->t = T;
         hit->AddAssociatedObject(digihit);
     }
+    
+
+    for(auto hit : results)
+    	if(hit->has_fADC==true || hit->has_TDC==true)
+    		filtered_results.push_back(hit);
+
+	Set(filtered_results);
 }
 
 //------------------

@@ -8,7 +8,7 @@ env = env.Clone()
 
 env.AppendUnique(LIBS=['expat','dl','pthread'])
 
-env.AppendUnique(CXXFLAGS=['-std=c++0x'])
+env.AppendUnique(CXXFLAGS=['-std=c++20'])
 
 sbms.AddEVIO(env)
 sbms.AddDANA(env)
