@@ -107,18 +107,18 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       // Create a new DECALCluster object and add it to the mData list
       DECALCluster *myCluster= new DECALCluster;
    
-      double Etot=0.,t=0,x=0,y=0;
+      double Etot=0.,x=0,y=0;
       double Emax=0;
       int ch_Emax=0;
       for (unsigned int k=0;k<num_hits;k++){
 	double E=clusterHits[k].E;
  	Etot+=E;
-	t+=E*clusterHits[k].t;
 	x+=E*clusterHits[k].x;
 	y+=E*clusterHits[k].y;
 
 	if (E>Emax){
 	  Emax=E;
+	  myCluster->t=clusterHits[k].t;
 	  ch_Emax=dECALGeom->channel(clusterHits[k].row,clusterHits[k].column);
 	}
 	
@@ -127,11 +127,9 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       }
       x/=Etot;
       y/=Etot;
-      t/=Etot;
 
       myCluster->E=Etot;
       myCluster->Efit=Etot;
-      myCluster->t=t;
       myCluster->x=x;
       myCluster->y=y;
       myCluster->channel_Emax=ch_Emax;
@@ -323,6 +321,7 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	ndf_old=ndf;
 	bool good_fit=FitPeaks(W,b,clusterHits,peaks,myPeak,chisq,ndf);
 	if (good_fit){
+	  myPeak.status=DECALCluster::SHOWER_FIT;
 	  if (peaks.size()>0) myPeak.status=DECALCluster::EXTRA_PEAK;
 	  peaks.push_back(myPeak);
 	}
@@ -461,15 +460,16 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       // time.  Find the 3x3 and 5x5 energy sums.
       GetRowColRanges(2,num_rows,num_cols,ir_peak_max,ic_peak_max,lo_row,hi_row,
 		      lo_col,hi_col);
-      double E1=ecal_hits[clusterHits[imap[ic_peak_max][ir_peak_max]-1].id]->E;
-      double E5x5=0.,E3x3=0.,t=0.;
+      int Emax_index=clusterHits[imap[ic_peak_max][ir_peak_max]-1].id;
+      double E1=ecal_hits[Emax_index]->E;
+      myCluster->t=ecal_hits[Emax_index]->t;
+      double E5x5=0.,E3x3=0.;
       for (int my_ir=lo_row;my_ir<=hi_row;my_ir++){
 	for (int my_ic=lo_col;my_ic<=hi_col;my_ic++){
 	  int index=imap[my_ic][my_ir];
 	  if (index>0){
 	    const DECALHit *myHit=ecal_hits[clusterHits[index-1].id];
 	    E5x5+=myHit->E;
-	    t+=myHit->t*myHit->E;
 	    if (abs(my_ic-ic_peak_max)<=1 && abs(my_ir-ir_peak_max)<=1){
 	      E3x3+=myHit->E;
 	    }
@@ -477,7 +477,6 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	  }
 	}
       }
-      myCluster->t=t/E5x5;
       myCluster->E1E9=E1/E3x3;
       myCluster->E9E25=E3x3/E5x5;
 
