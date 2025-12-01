@@ -38,13 +38,6 @@ void DECALShower_factory::Init()
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   app->SetDefaultParameter("ECAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
-  E_CORRECTION_PAR1=1.005;
-  E_CORRECTION_PAR2=0.095;
-  E_CORRECTION_PAR3=-0.0475;
-  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR1",E_CORRECTION_PAR1);
-  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR2",E_CORRECTION_PAR2);
-  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR3",E_CORRECTION_PAR3);
-
   ENABLE_ENERGY_CORRECTION=true;
   app->SetDefaultParameter("ECAL:ENABLE_ENERGY_CORRECTION",ENABLE_ENERGY_CORRECTION);
 }
@@ -69,6 +62,11 @@ void DECALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     ECAL_C_EFFECTIVE = ecal_parms["ECAL_C_EFFECTIVE"];
     //jout<<"ECAL_C_EFFECTIVE = "<<ECAL_C_EFFECTIVE<<endl;
   }
+  map<string,double>ecal_E_correction_parms;
+  jcalib->Get("ECAL/E_correction_parms",ecal_E_correction_parms);
+  E_CORRECTION_PAR1=ecal_E_correction_parms["p1"];
+  E_CORRECTION_PAR2=ecal_E_correction_parms["p2"];
+  E_CORRECTION_PAR3=ecal_E_correction_parms["p3"];
 }
 
 //------------------
