@@ -39,8 +39,18 @@ void DECALCluster_factory::Init()
   app->SetDefaultParameter("ECAL:SPLIT_PEAKS",SPLIT_PEAKS);
 
   // Shower shape parameters
+  SHOWER_WIDTH_PAR0=0.31;
+  SHOWER_WIDTH_PAR1=0.0;
   app->SetDefaultParameter("ECAL:SHOWER_WIDTH_PAR0",SHOWER_WIDTH_PAR0);
   app->SetDefaultParameter("ECAL:SHOWER_WIDTH_PAR1",SHOWER_WIDTH_PAR1);
+
+  // Hit resolution parameters
+  VAR_E_PAR0=7.7e-5;
+  VAR_E_PAR1=-6.9e-5;
+  VAR_E_PAR2=2.3e-5;
+  app->SetDefaultParameter("ECAL:VAR_E_PAR0",VAR_E_PAR0);
+  app->SetDefaultParameter("ECAL:VAR_E_PAR1",VAR_E_PAR1);
+  app->SetDefaultParameter("ECAL:VAR_E_PAR2",VAR_E_PAR2);
 }
 
 //------------------
@@ -66,7 +76,7 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
   event->Get(ecal_hits);
  
   unsigned int nhits=ecal_hits.size();
-  if (nhits==0) return;
+  if (nhits<2) return;
 
   // LED events will have hits in nearly every channel. Do NOT
   // try clusterizing if more than 250 hits in ECAL
@@ -79,7 +89,7 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
     DVector2 pos=dECALGeom->positionOnFace(myhit->row,myhit->column);
     hits.push_back(HitInfo(i,myhit->row,myhit->column,myhit->E,pos.X(),pos.Y(),myhit->t));
   }
-
+  
   // Sort the hits according to energy.
   stable_sort(hits.begin(),hits.end(),
 	      [&](const HitInfo a,const HitInfo b){return a.E>b.E;});
