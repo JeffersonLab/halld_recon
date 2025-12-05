@@ -41,10 +41,16 @@ void DL1MCTrigger_factory_CPP::Init()
     BCAL_WINDOW = 20;
     app->SetDefaultParameter("TRIG:BCAL_WINDOW", BCAL_WINDOW, "BCAL GTP integration window");
 
-    FCAL_BCAL_EN  = 45000; 
-    app->SetDefaultParameter("TRIG:FCAL_BCAL_EN", FCAL_BCAL_EN, "Energy threshold for the FCAL & BCAL trigger");
     BCAL_OFFSET = 2;
     app->SetDefaultParameter("TRIG:BCAL_OFFSET", BCAL_OFFSET, "Timing offset between BCAL and FCAL energies at GTP (samples)");
+
+    NSAMPLES_INTEGRAL_FCAL = 16;
+    app->SetDefaultParameter("TRIG:NSAMPLES_INTEGRAL_FCAL", NSAMPLES_INTEGRAL_FCAL, "Number of samples to integrate for FCAL normalization");
+    NSAMPLES_INTEGRAL_BCAL = 27;
+    app->SetDefaultParameter("TRIG:NSAMPLES_INTEGRAL_BCAL", NSAMPLES_INTEGRAL_BCAL, "Number of samples to integrate for BCAL normalization");
+
+    USE_RAW_SAMPLES = false;
+    app->SetDefaultParameter("TRIG:USE_RAW_SAMPLES", USE_RAW_SAMPLES, "Use raw waveform samples instead of emulated hits");
 
     PEDESTAL_SIGMA = 1.2;
     app->SetDefaultParameter("TRIG:PEDESTAL_SIGMA", PEDESTAL_SIGMA, "Pedestal sigma to emulate spread");
@@ -84,6 +90,39 @@ void DL1MCTrigger_factory_CPP::BeginRun(const shared_ptr<const JEvent> &event) {
     fcal_pedestals.resize(DFCALGeometry::kBlocksTall, vector<double>(DFCALGeometry::kBlocksWide, TRIG_BASELINE));
     for(int ch = 0; ch < fcalGeom.numChannels(); ++ch)
         fcal_pedestals[fcalGeom.row(ch)][fcalGeom.column(ch)] = fcal_pedestals_ch[ch];
+
+    // Load timing offsets and ADC offsets
+    vector<double> fcal_timing_offsets_ch;
+    if(calibration->Get("/FCAL/timing_offsets", fcal_timing_offsets_ch))
+        throw JException("L1MCTrigger_CPP: failed to load calibration path '/FCAL/timing_offsets'");
+    fcal_timing_offsets.resize(DFCALGeometry::kBlocksTall, vector<double>(DFCALGeometry::kBlocksWide, 0.0));
+    for(int ch = 0; ch < fcalGeom.numChannels(); ++ch)
+        fcal_timing_offsets[fcalGeom.row(ch)][fcalGeom.column(ch)] = fcal_timing_offsets_ch[ch];
+
+    vector<double> fcal_ADC_Offsets_ch;
+    if(calibration->Get("/FCAL/ADC_Offsets", fcal_ADC_Offsets_ch))
+        throw JException("L1MCTrigger_CPP: failed to load calibration path '/FCAL/ADC_Offsets'");
+    fcal_ADC_Offsets.resize(DFCALGeometry::kBlocksTall, vector<double>(DFCALGeometry::kBlocksWide, 0.0));
+    for(int ch = 0; ch < fcalGeom.numChannels(); ++ch)
+        fcal_ADC_Offsets[fcalGeom.row(ch)][fcalGeom.column(ch)] = fcal_ADC_Offsets_ch[ch];
+
+    // Load base time offsets
+    map<string,double> fcal_base_time;
+    if(calibration->Get("/FCAL/base_time_offset", fcal_base_time))
+        throw JException("L1MCTrigger_CPP: failed to load calibration path '/FCAL/base_time_offset'");
+    fcal_t_base = fcal_base_time["t_base"];
+
+    map<string,double> bcal_base_time;
+    if(calibration->Get("/BCAL/base_time_offset", bcal_base_time))
+        throw JException("L1MCTrigger_CPP: failed to load calibration path '/BCAL/base_time_offset'");
+    bcal_t_base = bcal_base_time["t_base"];
+
+    // Load digitization scales
+    map<string,double> fcal_digi_scales;
+    if(calibration->Get("/FCAL/digi_scales", fcal_digi_scales))
+        throw JException("L1MCTrigger_CPP: failed to load calibration path '/FCAL/digi_scales'");
+    fcal_a_scale = fcal_digi_scales["a_scale"];
+    fcal_t_scale = fcal_digi_scales["t_scale"];
 }
 
 //------------------
@@ -101,8 +140,12 @@ void DL1MCTrigger_factory_CPP::Process(const shared_ptr<const JEvent> &event) {
     vector<const DBCALHit*>  bcal_hits;
     event->Get(bcal_hits);
 
+    // LED event filtering - skip events with too many hits
+    if(fcal_hits.size() > 150 || bcal_hits.size() > 500) {
+        return;
+    }
+
     //  FCAL Part
-    double FCAL_HIT_EN_SUM = 0;
     for(unsigned int i = 0; i < fcal_hits.size(); ++i) {
         int row  = fcal_hits[i]->row;
         int col  = fcal_hits[i]->column;
@@ -118,14 +161,14 @@ void DL1MCTrigger_factory_CPP::Process(const shared_ptr<const JEvent> &event) {
         bool masked = any_of(fcal_trig_mask.begin(),fcal_trig_mask.end(), [row, col](const fcal_mod& mask) {
             return mask.row == row && mask.col == col;});
 
-        if(masked) continue; // skip masked channels from the sum
+        if(masked) continue; // skip masked channels
 
-        FCAL_HIT_EN_SUM += e;
-        FCAL_SIGNAL fcal_signal(row,col,e,t);
+        FCAL_SIGNAL fcal_signal(row,col);
 
-        double E  = e * FCAL_ADC_PER_MEV * 1.e3 / fcal_gains[row][col];  //  energy in counts
-        SignalPulse(E, t, fcal_signal.adc_en, 1);
+        double gain = fcal_gains[row][col];
+        double E  = e / fcal_a_scale / gain;  //  energy in ADC counts
 
+        Emulate_Waveform(E, t, fcal_signal);
         fcal_signal_hits.push_back(fcal_signal);
     }
 
@@ -134,28 +177,26 @@ void DL1MCTrigger_factory_CPP::Process(const shared_ptr<const JEvent> &event) {
         auto& base_hit = fcal_signal_hits[i];
         if(base_hit.merged) continue;
 
-        FCAL_SIGNAL merged_hit(base_hit.row, base_hit.column,0.0,0.0);
-        merged_hit.adc_en = base_hit.adc_en;
+        FCAL_SIGNAL merged_hit(base_hit.row, base_hit.column);
+        merged_hit.adc = base_hit.adc;
 
         for(size_t j = i+1; j < fcal_signal_hits.size(); ++j) {
             auto& compare_hit = fcal_signal_hits[j];
             if(compare_hit.row == base_hit.row && compare_hit.column == base_hit.column) {
                 compare_hit.merged = true;
-                for(size_t k = 0; k < merged_hit.adc_en.size(); ++k)
-                    merged_hit.adc_en[k] += compare_hit.adc_en[k];
+                for(size_t k = 0; k < merged_hit.adc.size(); ++k)
+                    merged_hit.adc[k] += compare_hit.adc[k];
             }
         }
         fcal_merged_hits.push_back(merged_hit);
     }
 
-    int fcal_total_en = 0;
-    Digitize(fcal_merged_hits, fcal_total_en);
+    Digitize(fcal_merged_hits);
 
     FADC_SSP(fcal_merged_hits, fcal_ssp, 1);
-    GTP(fcal_ssp, fcal_gtp, 1);
+    GTP(fcal_ssp, fcal_gtp, FCAL_WINDOW);
 
     //  BCAL Part
-    double BCAL_HIT_EN_SUM = 0;
     for(unsigned int i = 0; i < bcal_hits.size(); ++i) {
         double t    = bcal_hits[i]->t;
         double e    = bcal_hits[i]->E;
@@ -170,11 +211,10 @@ void DL1MCTrigger_factory_CPP::Process(const shared_ptr<const JEvent> &event) {
 
         if(masked) continue; // skip masked channel
 
-        BCAL_HIT_EN_SUM += e;
-        BCAL_SIGNAL bcal_signal(module,layer,sector,end,e,t);
+        BCAL_SIGNAL bcal_signal(module,layer,sector,end);
 
         double E  = e * BCAL_ADC_PER_MEV * 1.e3;
-        SignalPulse(E, t, bcal_signal.adc_en, 2);
+        Emulate_Waveform(E, t, bcal_signal);
 
         bcal_signal_hits.push_back(bcal_signal);
     }
@@ -184,33 +224,30 @@ void DL1MCTrigger_factory_CPP::Process(const shared_ptr<const JEvent> &event) {
         auto& base_hit = bcal_signal_hits[i];
         if(base_hit.merged) continue;
 
-        BCAL_SIGNAL merged_hit(base_hit.module, base_hit.layer, base_hit.sector, base_hit.end, 0.0,0.0);
-        merged_hit.adc_en = base_hit.adc_en;
+        BCAL_SIGNAL merged_hit(base_hit.module, base_hit.layer, base_hit.sector, base_hit.end);
+        merged_hit.adc = base_hit.adc;
 
         for(size_t j = i+1; j < bcal_signal_hits.size(); ++j) {
             auto& compare_hit = bcal_signal_hits[j];
             if(compare_hit.module == base_hit.module && compare_hit.layer == base_hit.layer &&
                compare_hit.sector == base_hit.sector && compare_hit.end   == base_hit.end) {
                 compare_hit.merged = true;
-                for(size_t k = 0; k < merged_hit.adc_en.size(); ++k)
-                    merged_hit.adc_en[k] += compare_hit.adc_en[k];
+                for(size_t k = 0; k < merged_hit.adc.size(); ++k)
+                    merged_hit.adc[k] += compare_hit.adc[k];
             }
         }
         bcal_merged_hits.push_back(merged_hit);
     }
 
-    int bcal_total_en;
-    Digitize(bcal_merged_hits, bcal_total_en);
+    Digitize(bcal_merged_hits);
     FADC_SSP(bcal_merged_hits, bcal_ssp, 2);
-    GTP(bcal_ssp, bcal_gtp, 2);
+    GTP(bcal_ssp, bcal_gtp, BCAL_WINDOW);
 
-    DL1MCTrigger *trigger = new DL1MCTrigger;
+    DL1MCTrigger trigger;
     int ntriggers_found = FindTriggers(trigger, fcal_gtp, bcal_gtp);
     
     if(ntriggers_found > 0) {
-        Insert(trigger);
-    } else {
-        delete trigger;
+        Insert(new DL1MCTrigger(trigger));
     }
 }
 
@@ -410,16 +447,23 @@ void DL1MCTrigger_factory_CPP::Read_RCDB(const shared_ptr<const JEvent>& event, 
 //------------------
 // Creates a pulse shape array from the given energy and time
 //------------------
-void DL1MCTrigger_factory_CPP::SignalPulse(double energy, double time, vector<double>& adc_en, int det) {
+void DL1MCTrigger_factory_CPP::Emulate_Waveform(double energy, double time, FCAL_SIGNAL& hit) {
 
     // Parameters for pulse shaping (exponential decay)
-    float decay_constant = (det == 2) ? 0.18 : 0.358;  // BCAL uses a slower pulse
+    const float decay_constant = 0.358;
 
     // Length (in data_samples) of the digitized pulse
     const int pulse_window = 20;
 
+    int row = hit.row;
+    int col = hit.column;
+
+    // Apply timing offset
+    double t_offset = fcal_timing_offsets[row][col] + fcal_t_base;
+    double t = time * fcal_t_scale - t_offset;
+
     // Calculate starting data_sample index based on input time
-    int first_data_sample_index = static_cast<int>(floor(time / data_time_bin));
+    int first_data_sample_index = static_cast<int>(floor(t / data_time_bin));
     int start_index = first_data_sample_index + 1;
     int   end_index = start_index + pulse_window;
 
@@ -429,18 +473,62 @@ void DL1MCTrigger_factory_CPP::SignalPulse(double energy, double time, vector<do
     if(start_index < 0)  start_index = 0;
     if(end_index >= int(data_sample)) end_index = data_sample - 1;
 
-    // Add shaped pulse to adc_en
+    // Add shaped pulse to adc
     vector<double> waveform(data_sample, 0.0);
     for(int i = start_index; i <= end_index; ++i) {
-        double adc_time     = i * data_time_bin - time;  // Time since signal peak
+        double adc_time     = i * data_time_bin - t;  // Time since signal peak
         double pulse_value  = decay_constant * decay_constant * exp(-adc_time * decay_constant) * adc_time * data_time_bin;
         waveform[i]         = pulse_value;
     }
 
-    double sum = accumulate(waveform.begin(), waveform.end(), 0.0);
+    // Normalize to NSAMPLES_INTEGRAL_FCAL
+    double sum = 0.0;
+    for(int i = start_index; i <= min<int>(start_index + NSAMPLES_INTEGRAL_FCAL - 1, end_index); ++i)
+        sum += waveform[i];
+
     if(sum>0.0)
         for(int i = start_index; i <= end_index; ++i)
-            adc_en[i]  += waveform[i] * energy / sum;  // add normalized signal to the existing amplitudes
+            hit.adc[i]  += waveform[i] * energy / sum;  // add normalized signal to the existing amplitudes
+}
+
+void DL1MCTrigger_factory_CPP::Emulate_Waveform(double energy, double time, BCAL_SIGNAL& hit) {
+
+    // Parameters for pulse shaping (exponential decay)
+    const float decay_constant = 0.18;  // BCAL uses a slower pulse
+
+    // Length (in data_samples) of the digitized pulse
+    const int pulse_window = 20;
+
+    // Apply timing offset
+    double t = time - bcal_t_base;
+
+    // Calculate starting data_sample index based on input time
+    int first_data_sample_index = static_cast<int>(floor(t / data_time_bin));
+    int start_index = first_data_sample_index + 1;
+    int   end_index = start_index + pulse_window;
+
+    // Check if time is out of ADC digitization range
+    if(start_index >= int(data_sample)) return;
+
+    if(start_index < 0)  start_index = 0;
+    if(end_index >= int(data_sample)) end_index = data_sample - 1;
+
+    // Add shaped pulse to adc
+    vector<double> waveform(data_sample, 0.0);
+    for(int i = start_index; i <= end_index; ++i) {
+        double adc_time     = i * data_time_bin - t;  // Time since signal peak
+        double pulse_value  = decay_constant * decay_constant * exp(-adc_time * decay_constant) * adc_time * data_time_bin;
+        waveform[i]         = pulse_value;
+    }
+
+    // Normalize to NSAMPLES_INTEGRAL_BCAL
+    double sum = 0.0;
+    for(int i = start_index; i <= min<int>(start_index + NSAMPLES_INTEGRAL_BCAL - 1, end_index); ++i)
+        sum += waveform[i];
+
+    if(sum>0.0)
+        for(int i = start_index; i <= end_index; ++i)
+            hit.adc[i]  += waveform[i] * energy / sum;  // add normalized signal to the existing amplitudes
 }
 
 void DL1MCTrigger_factory_CPP::PrintTriggers() {
@@ -502,9 +590,19 @@ void DL1MCTrigger_factory_CPP::PrintTriggers() {
     cout << "\n" << endl;
 }
 
-int DL1MCTrigger_factory_CPP::FindTriggers(DL1MCTrigger *trigger, const vector<int>& fcal_gtp, const vector<int>& bcal_gtp) {
+int DL1MCTrigger_factory_CPP::FindTriggers(DL1MCTrigger &trigger, const vector<int>& fcal_gtp, const vector<int>& bcal_gtp) {
 
     int ntriggers_found = 0;
+
+    // Find max BCAL sample for timing window check
+    int max_bcal_samp = 0;
+    int max_bcal_energy = 0;
+    for(size_t i = 0; i < bcal_gtp.size(); ++i) {
+        if(bcal_gtp[i] > max_bcal_energy) {
+            max_bcal_energy = bcal_gtp[i];
+            max_bcal_samp = i;
+        }
+    }
 
     for(size_t i = 0; i < triggers_enabled.size(); ++i) {
         const auto& trigger_config = triggers_enabled[i];
@@ -523,19 +621,22 @@ int DL1MCTrigger_factory_CPP::FindTriggers(DL1MCTrigger *trigger, const vector<i
                 if(fcal_gtp[samp] <= trigger_config.gtp.fcal_min) continue;
                 gtp_energy += trigger_config.gtp.fcal * fcal_gtp[samp];
                 trig_time_ind = 0;              // 0 == FCAL slot
+            } else if(trigger_config.type == 2) {
+                // BCAL-only trigger: check timing window
+                if(max_bcal_samp < 30 || max_bcal_samp > 70) continue;
             }
 
             if(gtp_energy<trigger_config.gtp.en_thr)  continue;
 
-            trigger->trig_mask |= (1 << en_bit);
+            trigger.trig_mask |= (1 << en_bit);
 
-            fill_n(trigger->trig_time, 32, -1);
-            trigger->trig_time[trig_time_ind] = static_cast<int>(samp) - 25;
+            fill_n(trigger.trig_time, 32, -1);
+            trigger.trig_time[trig_time_ind] = static_cast<int>(samp) - 25;
 
-            trigger->fcal_gtp     = fcal_gtp[samp];                           //  FCAL GTP E(cnt)
-            trigger->fcal_gtp_en  = fcal_gtp[samp]  / FCAL_ADC_PER_MEV;       //  FCAL GTP E(GeV)
-            trigger->bcal_gtp     = bcal_gtp[bcal_samp];                      //  BCAL GTP E(cnt)
-            trigger->bcal_gtp_en  = bcal_gtp[bcal_samp] / BCAL_ADC_PER_MEV;   //  BCAL GTP E(GeV)
+            trigger.fcal_gtp     = fcal_gtp[samp];                           //  FCAL GTP E(cnt)
+            trigger.fcal_gtp_en  = fcal_gtp[samp]  / FCAL_ADC_PER_MEV;       //  FCAL GTP E(GeV)
+            trigger.bcal_gtp     = bcal_gtp[bcal_samp];                      //  BCAL GTP E(cnt)
+            trigger.bcal_gtp_en  = bcal_gtp[bcal_samp] / BCAL_ADC_PER_MEV;   //  BCAL GTP E(GeV)
 
             ++ntriggers_found;
             break; // Stop after first trigger condition met for this config
@@ -545,49 +646,37 @@ int DL1MCTrigger_factory_CPP::FindTriggers(DL1MCTrigger *trigger, const vector<i
     return ntriggers_found;
 }
 
-void DL1MCTrigger_factory_CPP::Digitize(vector<FCAL_SIGNAL>& hits, int &etot) {
-    etot = 0;
+void DL1MCTrigger_factory_CPP::Digitize(vector<FCAL_SIGNAL>& hits) {
     for(auto& hit : hits) {
         double pedestal = fcal_pedestals[hit.row][hit.column];
-        for(size_t samp = 0; samp < hit.adc_en.size(); ++samp) {
-            hit.adc_en[samp] += pedestal - TRIG_BASELINE + gRandom->Gaus(0.0, PEDESTAL_SIGMA);
-            hit.adc_count[samp] += static_cast<int>(hit.adc_en[samp] + TRIG_BASELINE + 0.5);
-            if(hit.adc_count[samp] > max_fadc) hit.adc_count[samp] = max_fadc;
-            if(hit.adc_count[samp] > TRIG_BASELINE) etot += hit.adc_count[samp] - TRIG_BASELINE;
+        double adc_offset = fcal_ADC_Offsets[hit.row][hit.column];
+        for(size_t samp = 0; samp < hit.adc.size(); ++samp) {
+            hit.adc[samp] += adc_offset + pedestal - TRIG_BASELINE + gRandom->Gaus(0.0, PEDESTAL_SIGMA);
+            int adc_int = static_cast<int>(hit.adc[samp] + TRIG_BASELINE + 0.5);
+            if(adc_int > max_fadc) adc_int = max_fadc;
+            hit.adc[samp] = adc_int;
         }
     }
 }
 
-void DL1MCTrigger_factory_CPP::Digitize(vector<BCAL_SIGNAL>& hits, int &etot) {
-    etot = 0;
+void DL1MCTrigger_factory_CPP::Digitize(vector<BCAL_SIGNAL>& hits) {
     for(auto& hit : hits) {
-        for(size_t samp = 0; samp < hit.adc_en.size(); ++samp) {
-            hit.adc_en[samp] += gRandom->Gaus(0.0, PEDESTAL_SIGMA);
-            hit.adc_count[samp] += static_cast<int>(hit.adc_en[samp] + TRIG_BASELINE + 0.5);
-            if(hit.adc_count[samp] > max_fadc) hit.adc_count[samp] = max_fadc;
-            if(hit.adc_count[samp] > TRIG_BASELINE) etot += hit.adc_count[samp] - TRIG_BASELINE;
+        for(size_t samp = 0; samp < hit.adc.size(); ++samp) {
+            hit.adc[samp] += gRandom->Gaus(0.0, PEDESTAL_SIGMA);
+            int adc_int = static_cast<int>(hit.adc[samp] + TRIG_BASELINE + 0.5);
+            if(adc_int > max_fadc) adc_int = max_fadc;
+            hit.adc[samp] = adc_int;
         }
     }
 }
 
 //------------------
-//  GTP function computes a running sum over a sliding window of size integration_window on the input vector SSP, storing results in GTP
+//  GTP function computes a running sum over a sliding window on the input vector SSP, storing results in GTP
 //------------------
-void DL1MCTrigger_factory_CPP::GTP(const vector<int>& ssp, vector<int>& gtp, int det) {
+void DL1MCTrigger_factory_CPP::GTP(const vector<int>& ssp, vector<int>& gtp, int window) {
 
     gtp.assign(data_sample, 0);
-    size_t integration_window;
-
-    switch(det) {
-        case 1:
-                integration_window  = size_t(FCAL_WINDOW);
-                break;
-        case 2:
-                integration_window  = size_t(BCAL_WINDOW);
-                break;
-        default:
-                throw JException("GTP: Unknown detector type");
-    }
+    size_t integration_window = size_t(window);
 
     for (size_t sample_index = 0; sample_index < data_sample; ++sample_index) {
         size_t index_max = sample_index;
@@ -600,7 +689,7 @@ void DL1MCTrigger_factory_CPP::GTP(const vector<int>& ssp, vector<int>& gtp, int
 }
 
 template <typename T>
-void DL1MCTrigger_factory_CPP::FADC_SSP(const vector<T>& merged_hits, vector<int>& ssp, int det) {
+void DL1MCTrigger_factory_CPP::FADC_SSP(vector<T>& merged_hits, vector<int>& ssp, int det) {
 
     int EN_THR, NSA, NSB;
     switch(det) {
@@ -619,8 +708,8 @@ void DL1MCTrigger_factory_CPP::FADC_SSP(const vector<T>& merged_hits, vector<int
     }
 
     ssp.assign(data_sample,0);
-    for(const auto& hit : merged_hits) {
-        const vector<int>& adc = hit.adc_count;
+    for(auto& hit : merged_hits) {
+        vector<double>& adc = hit.adc;
         int sample_size = adc.size();
         int index_max = -1;
         
@@ -638,7 +727,7 @@ void DL1MCTrigger_factory_CPP::FADC_SSP(const vector<T>& merged_hits, vector<int
         
         for(int i = start_index; i <= end_index; ++i) {
             if(adc[i] > TRIG_BASELINE) {
-                ssp[i] += adc[i] - TRIG_BASELINE;
+                ssp[i] += static_cast<int>(adc[i]) - TRIG_BASELINE;
             }
         }
     }

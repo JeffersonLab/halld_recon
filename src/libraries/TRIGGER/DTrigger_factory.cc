@@ -28,7 +28,7 @@ void DTrigger_factory::Init()
 	app->SetDefaultParameter("TRIGGER:EMULATE_FCAL_LED_TRIGGER", EMULATE_FCAL_LED_TRIGGER, locUsageString);
 	locUsageString = "Calculate calorimter energy sums using emulated triggers (1/0, off by default)";
 	app->SetDefaultParameter("TRIGGER:EMULATE_CAL_ENERGY_SUMS", EMULATE_CAL_ENERGY_SUMS, locUsageString);
-	locUsageString = "Use modified CPP/NPP trigger (1/0, off by default)";
+	locUsageString = "Use CPP/NPP FCAL trigger factory (1/0, off by default)";
 	app->SetDefaultParameter("TRIGGER:USE_CPP_TRIGGER", USE_CPP_TRIGGER, locUsageString);
 
 }
