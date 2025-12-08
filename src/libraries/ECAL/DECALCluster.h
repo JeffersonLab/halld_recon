@@ -17,6 +17,7 @@ class DECALCluster:public JObject{
 
   enum cluster_status_t{
     SHOWER_FOUND,  // Normal clusterization result
+    SHOWER_FIT, // fitted result
     EXTRA_PEAK, // extra peak found in set of hits
     SPLIT_CLUSTER, // Additional shower candidate added 
   };
