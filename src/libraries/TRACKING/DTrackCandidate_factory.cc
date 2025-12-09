@@ -282,7 +282,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	vector<const DCDCTrackHit*>cdchits=cdccan->cdchits;
 	unsigned int num_matches=0;
 	for (unsigned int m=0;m<cdchits.size();m++){
-	  double variance=1.6*1.6/12.;
+	  double variance=0.8*0.8/12.;
 	  DVector3 wirepos=cdchits[m]->wire->origin;
 	  if (cdchits[m]->is_stereo){
 	    GetCDCIntersection(cdccan,cdchits[m],wirepos);
@@ -297,7 +297,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	if (num_matches<3){
 	  // Try using the cdc candidate to match to fdc hits
 	  num_matches=0;
-	  double variance=1./12.;
+	  double variance=0.5*0.5/12.;
 	  for (unsigned int m=0;m<fdchits.size();m++){
 	    const DFDCPseudo *hit=fdchits[m];
 	    double dr=sqrt(pow(hit->xy.X()-fdccan->xc,2)
@@ -366,8 +366,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	if (used_cdc_hits[k]) continue;
 
 	// Look for a match
-	double variance=1.6*1.6/12.;
-	if (allcdchits[k]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
+	double variance=0.8*0.8/12.;
+	if (allcdchits[k]->is_stereo) variance=7.8*7.8/12.;  // we don't know the z position...
 	DVector3 wirepos=allcdchits[k]->wire->origin;
 	// Skip hits on the other side the target
 	if (fdccan->dPosition.x()*wirepos.x()<0) continue;
@@ -455,8 +455,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	unsigned int num_matches=0;
 	for (unsigned int k=0;k<cdchits.size();k++){
 	  // Look for a match
-	  double variance=1.6*1.6/12.;
-	  if (cdchits[k]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
+	  double variance=0.8*0.8/12.;
+	  if (cdchits[k]->is_stereo) variance=7.8*7.8/12.;  // we don't know the z position...
 	  DVector3 wirepos=cdchits[k]->wire->origin;
 	  double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 			 +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
@@ -467,7 +467,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	// Find matches to FDC hits
 	for (unsigned int k=0;k<fdchits.size();k++){
 	  // Look for a match
-	  double variance=1./12.;
+	  double variance=0.5*0.5/12.;
 	  double dr=sqrt(pow(fdchits[k]->xy.X()-fdccan->xc,2)
 			 +pow(fdchits[k]->xy.Y()-fdccan->yc,2))-fdccan->rc;
 	  double prob=TMath::Prob(dr*dr/variance,1);
@@ -776,9 +776,11 @@ void DTrackCandidate_factory::DoRefit(DHelicalFit &fit,
     }
   }
   // Add the FDC hits
+  double max_r=0.;
   for (unsigned int k=0;k<fdchits.size();k++){
     const DFDCPseudo *fdchit=fdchits[k];
     fit.AddHit(fdchit);
+    if (fdchit->xy.Mod()>max_r) max_r=fdchit->xy.Mod();
   }
   if (fit.FitCircleRiemann(fdccan->rc)==NOERROR){
     for (unsigned int k=0;k<cdchits.size();k++){	
@@ -789,20 +791,24 @@ void DTrackCandidate_factory::DoRefit(DHelicalFit &fit,
     // Initialize fit.tanl in case new line fit does not work
     fit.tanl=M_PI_2-atan(fdccan->dMomentum.Theta());
     fit.FitLineRiemann();
-    fit.FindSenseOfRotation();
     
     // Estimate Bz
     double Bz=fabs(bfield->GetBz(pos.x(),pos.y(),pos.z()));
     
     // Check for extremely stiff tracks, some of which will have unphysical
     // momenta... try alternate circle fit
+    bool tight_circle=fit.r0<0.5*max_r && max_r<10.0;
     double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
-    if ((cdchits.size())>0?(p>3.):(p>10.)){
+    if ((cdchits.size())>0?(p>3.):(p>10.||tight_circle)){
       if (ADD_VERTEX_POINT){
 	fit.PruneHit(0); // prune fake point at center of target
       }
       fit.FitCircle();
+      if (tight_circle){
+	fit.FitLineRiemann();
+      }
     }
+    fit.FindSenseOfRotation();
     
     // Update position and momentum with new fit results
     DVector3 ref_pos=fdccan->dPosition;
