@@ -722,22 +722,15 @@ void DTrackCandidate_factory_FDCCathodes::DoHelicalFit(vector<const DFDCSegment 
     const DFDCPseudo *myhit=mytrack[0]->hits[0];
     double Bz=fabs(bfield->GetBz(myhit->xy.X(),myhit->xy.Y(),myhit->wire->origin.z()));
     double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
-    
-    // Prune the fake hit at the origin in case we need to use an alternate
-    // fit
-    if (ADD_VERTEX_POINT){
-      fit.PruneHit(0);
-    }
-    if (p>10.){//... try alternate circle fit
+    bool tight_circle=fit.r0<0.5*max_r && max_r<10.0;
+    if (p>10. || tight_circle){//... try alternate circle fit
+      if (ADD_VERTEX_POINT){
+	fit.PruneHit(0);
+      }
       fit.FitCircle();
-      fit.FindSenseOfRotation();
-    } 
-    if (fit.r0<0.5*max_r && max_r<10.0){
-      // ... we can also have issues near the beam line:
-      // Try to fix relatively high momentum tracks in the very forward 
-      // direction that look like low momentum tracks due to small pt.
-      // Assume that the particle came from the center of the target.
-      fit.FitTrack_FixedZvertex(TARGET_Z);
+      if (tight_circle){
+	fit.FitLineRiemann();
+      }
       fit.FindSenseOfRotation();
     }
   }
