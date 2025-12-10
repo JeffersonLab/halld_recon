@@ -46,7 +46,7 @@
 	if(tagm_tdc_occ){
 		tagm_tdc_occ->SetBarWidth(0.5);
 		tagm_tdc_occ->SetBarOffset(0);
-		tagm_tdc_occ->SetFillColor(kBlack);
+		tagm_tdc_occ->SetFillColor(kMagenta);
 		tagm_tdc_occ->SetStats(0);
 		tagm_tdc_occ->SetTitle("TAGM column occupancy");
 		tagm_tdc_occ->SetXTitle("Column number");
@@ -60,7 +60,7 @@
 	if(tagm_adc_occ){
 		tagm_adc_occ->SetBarWidth(0.5);
 		tagm_adc_occ->SetBarOffset(0.5);
-		tagm_adc_occ->SetFillColor(kGreen);
+		tagm_adc_occ->SetFillColor(kBlue);
 		tagm_adc_occ->SetStats(0);
 		tagm_adc_occ->SetTitle("TAGM column occupancy");
 		tagm_adc_occ->SetXTitle("Column number");
