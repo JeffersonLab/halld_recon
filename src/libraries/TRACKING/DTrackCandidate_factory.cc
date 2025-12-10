@@ -431,6 +431,19 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	  
 	  if (prob>0.01) num_matches++;
 	}
+	if (num_matches<3){
+	  num_matches=0;
+	  for (unsigned int k=0;k<fdccan->fdchits.size();k++){
+	    // Look for a match
+	    double variance=1./12.;
+	    const DFDCPseudo *fdchit=fdccan->fdchits[k];
+	    double dr=sqrt(pow(fdchit->xy.X()-mData[i]->xc,2)
+			   +pow(fdchit->xy.Y()-mData[i]->yc,2))-mData[i]->rc;
+	    double prob=TMath::Prob(dr*dr/variance,1);
+	    
+	    if (prob>0.01) num_matches++;
+	  }
+	}
 	// If we got a match, redo the helical fit with the extra hits
 	if (num_matches>=3){
 	  // List of FDC hits attached to track candidate
