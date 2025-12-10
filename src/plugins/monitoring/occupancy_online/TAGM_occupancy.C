@@ -114,7 +114,7 @@
 	
 	legend_sa->Draw();
 	legend_na->Draw();
-	lat.DrawLatex(225.0, 1.075*ymax, nevents_str);
+	lat.DrawLatex(85.0, 1.075*ymax, nevents_str);
 
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------
