@@ -767,9 +767,6 @@ void DTrackHitSelectorALT2::GetFDCHits(fit_type_t fit_type, const DReferenceTraj
     // Include uncertainty in phi due to uncertainty in the center of 
     // the circle
     var_phi+=var_phi_radial;
-
-    var_phi=0.;
-    var_lambda=0.;
     
     // Variance in position due to multiple scattering
     double var_pos_ms=last_step->itheta02s2/3.;
