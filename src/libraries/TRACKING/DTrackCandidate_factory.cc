@@ -263,6 +263,50 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	    if (prob>0.01) num_matches++;
 	  }
 	}
+	// If there is no match, redo circle fit for cdc candidate requiring
+	// the circle to go through the origin
+	if (num_matches<3){
+	  DHelicalFit fit;
+	  for (unsigned int k=0;k<cdchits.size();k++){	
+	    if (cdchits[k]->is_stereo==false){
+	      double cov=1.6*1.6/12.;  //guess
+	      DVector3 pos=cdchits[k]->wire->origin;
+	      fit.AddHitXYZ(pos.x(),pos.y(),pos.z(),cov,cov,0.,true);
+	    }
+	  }
+	  fit.FitCircle();
+	  num_matches=0;
+	  double variance=1./12.;
+	  for (unsigned int m=0;m<fdchits.size();m++){
+	    const DFDCPseudo *hit=fdchits[m];
+	    double dr=sqrt(pow(hit->xy.X()-fit.x0,2)
+			   +pow(hit->xy.Y()-fit.y0,2))-fit.r0;
+	    double prob=TMath::Prob(dr*dr/variance,1);
+	    if (prob>0.01) num_matches++;
+	  }
+	}
+	// If there is no match, redo circle fit for fdc candidate requiring
+	// the circle to go through the origin
+	if (num_matches<3){
+	  DHelicalFit fit;
+	  for (unsigned int k=0;k<fdchits.size();k++){	
+	    const DFDCPseudo *fdchit=fdchits[k];
+	    fit.AddHit(fdchit);
+	  }
+	  fit.FitCircle();
+	  num_matches=0;
+	  for (unsigned int m=0;m<cdchits.size();m++){
+	    double variance=1.6*1.6/12.;
+	    DVector3 wirepos=cdchits[m]->wire->origin;
+	    if (cdchits[m]->is_stereo){
+	      GetCDCIntersection(cdccan,cdchits[m],wirepos);
+	    }
+	    double dr=sqrt(pow(wirepos.x()-fit.x0,2)
+			   +pow(wirepos.y()-fit.y0,2))-fit.r0;
+	    double prob=TMath::Prob(dr*dr/variance,1);
+	    if (prob>0.01) num_matches++;
+	  }
+	}
 	if (num_matches>=3){	
 	  DVector3 pos=fdccan->dPosition;
 	  DVector3 mom=fdccan->dMomentum;
