@@ -257,8 +257,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	  double variance=1./12.;
 	  for (unsigned int m=0;m<fdchits.size();m++){
 	    const DFDCPseudo *hit=fdchits[m];
-	    double dr=sqrt(pow(hit->xy.X()-fdccan->xc,2)
-			   +pow(hit->xy.Y()-fdccan->yc,2))-fdccan->rc;
+	    double dr=sqrt(pow(hit->xy.X()-cdccan->xc,2)
+			   +pow(hit->xy.Y()-cdccan->yc,2))-cdccan->rc;
 	    double prob=TMath::Prob(dr*dr/variance,1);
 	    if (prob>0.01) num_matches++;
 	  }
