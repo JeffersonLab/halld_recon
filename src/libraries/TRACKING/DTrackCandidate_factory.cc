@@ -359,6 +359,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       if (fdccan->FirstPackage>0) continue;
       
       vector<const DCDCTrackHit*>cdchits;
+      int num_axial=0;
       for (unsigned int k=0;k<used_cdc_hits.size();k++){
 	if (used_cdc_hits[k]) continue;
 
@@ -377,7 +378,8 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	if (fabs(dr)<cut){
 	  num_unmatched_cdcs--;
 	  used_cdc_hits[k]=1;
-
+	  if (allcdchits[k]->is_stereo==false) num_axial++;
+	  
 	  cdchits.push_back(allcdchits[k]);
 	}
       }
@@ -396,9 +398,15 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	fit.h=fdccan->dCharge*FactorForSenseOfRotation;
 	// Get the magnetic field at pos
 	double Bz=fabs(bfield->GetBz(pos.x(),pos.y(),pos.z()));
-	// Update position and momentum at the start counter barrel radius
-	UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
-	
+	if (num_axial>2){ // Refit if we added several cdc axial hits
+	  vector<const DFDCPseudo*>fdchits=fdccan->fdchits;
+	  DoRefit(fit,fdccan,fdchits,cdchits,mom,pos);
+	}
+	else{
+	  // Update position and momentum at the start counter barrel radius
+	  UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
+	}
+	  
 	// Create new track candidate object 
 	DTrackCandidate *can = new DTrackCandidate;
 
