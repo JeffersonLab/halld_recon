@@ -91,6 +91,7 @@ class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
 
   int DEBUG_LEVEL,MIN_NUM_HITS;
   bool ADD_VERTEX_POINT;
+  double FDC_MATCH_CUT,CDC_MATCH_CUT;
 
   double FactorForSenseOfRotation;
   double TARGET_Z,BEAM_VAR;
