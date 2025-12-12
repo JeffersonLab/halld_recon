@@ -28,7 +28,6 @@ using namespace std;
 
 #include <TROOT.h>
 #include <TH2F.h>
-#include <TMath.h>
 
 #define CUT 10.
 #define RADIUS_CUT 50.0
@@ -137,6 +136,11 @@ void DTrackCandidate_factory::BeginRun(const std::shared_ptr<const JEvent>& even
 
   ADD_VERTEX_POINT=true;
   app->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
+
+  FDC_MATCH_CUT=0.5;
+  CDC_MATCH_CUT=0.8;
+  app->SetDefaultParameter("TRKFIND:FDC_MATCH_CUT",FDC_MATCH_CUT);
+  app->SetDefaultParameter("TRKFIND:CDC_MATCH_CUT",CDC_MATCH_CUT);
    
   return;
 }
@@ -239,28 +243,24 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	vector<const DCDCTrackHit*>cdchits=cdccan->cdchits;
 	unsigned int num_matches=0;
 	for (unsigned int m=0;m<cdchits.size();m++){
-	  double variance=1.6*1.6/12.;
 	  DVector3 wirepos=cdchits[m]->wire->origin;
 	  if (cdchits[m]->is_stereo){
 	    GetCDCIntersection(cdccan,cdchits[m],wirepos);
 	  }
 	  double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 			 +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
-	  double prob=TMath::Prob(dr*dr/variance,1);
-	  if (prob>0.01) num_matches++;
+	  if (fabs(dr)<CDC_MATCH_CUT) num_matches++;
 	}
 	// List of FDC hits attached to track candidate
 	vector<const DFDCPseudo*>fdchits=fdccan->fdchits;
 	if (num_matches<3){
 	  // Try using the cdc candidate to match to fdc hits
 	  num_matches=0;
-	  double variance=1./12.;
 	  for (unsigned int m=0;m<fdchits.size();m++){
 	    const DFDCPseudo *hit=fdchits[m];
 	    double dr=sqrt(pow(hit->xy.X()-cdccan->xc,2)
 			   +pow(hit->xy.Y()-cdccan->yc,2))-cdccan->rc;
-	    double prob=TMath::Prob(dr*dr/variance,1);
-	    if (prob>0.01) num_matches++;
+	    if (fabs(dr)<FDC_MATCH_CUT) num_matches++;
 	  }
 	}
 	// If there is no match, redo circle fit for cdc candidate requiring
@@ -276,13 +276,11 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	  }
 	  fit.FitCircle();
 	  num_matches=0;
-	  double variance=1./12.;
 	  for (unsigned int m=0;m<fdchits.size();m++){
 	    const DFDCPseudo *hit=fdchits[m];
 	    double dr=sqrt(pow(hit->xy.X()-fit.x0,2)
 			   +pow(hit->xy.Y()-fit.y0,2))-fit.r0;
-	    double prob=TMath::Prob(dr*dr/variance,1);
-	    if (prob>0.01) num_matches++;
+	    if (fabs(dr)<FDC_MATCH_CUT) num_matches++;
 	  }
 	}
 	// If there is no match, redo circle fit for fdc candidate requiring
@@ -296,15 +294,13 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	  fit.FitCircle();
 	  num_matches=0;
 	  for (unsigned int m=0;m<cdchits.size();m++){
-	    double variance=1.6*1.6/12.;
 	    DVector3 wirepos=cdchits[m]->wire->origin;
 	    if (cdchits[m]->is_stereo){
 	      GetCDCIntersection(cdccan,cdchits[m],wirepos);
 	    }
 	    double dr=sqrt(pow(wirepos.x()-fit.x0,2)
 			   +pow(wirepos.y()-fit.y0,2))-fit.r0;
-	    double prob=TMath::Prob(dr*dr/variance,1);
-	    if (prob>0.01) num_matches++;
+	    if (fabs(dr)<CDC_MATCH_CUT) num_matches++;
 	  }
 	}
 	if (num_matches>=3){	
@@ -363,12 +359,11 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       if (fdccan->FirstPackage>0) continue;
       
       vector<const DCDCTrackHit*>cdchits;
+      int num_axial=0;
       for (unsigned int k=0;k<used_cdc_hits.size();k++){
 	if (used_cdc_hits[k]) continue;
 
 	// Look for a match
-	double variance=1.6*1.6/12.;
-	if (allcdchits[k]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
 	DVector3 wirepos=allcdchits[k]->wire->origin;
 	// Skip hits on the other side the target
 	if (fdccan->dPosition.x()*wirepos.x()<0) continue;
@@ -379,12 +374,12 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	
 	double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 		       +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
-	double prob=TMath::Prob(dr*dr/variance,1);
-	
-	if (prob>0.01){
+	double cut=(allcdchits[k]->is_stereo)?9.57*CDC_MATCH_CUT:CDC_MATCH_CUT;
+	if (fabs(dr)<cut){
 	  num_unmatched_cdcs--;
 	  used_cdc_hits[k]=1;
-
+	  if (allcdchits[k]->is_stereo==false) num_axial++;
+	  
 	  cdchits.push_back(allcdchits[k]);
 	}
       }
@@ -403,9 +398,15 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	fit.h=fdccan->dCharge*FactorForSenseOfRotation;
 	// Get the magnetic field at pos
 	double Bz=fabs(bfield->GetBz(pos.x(),pos.y(),pos.z()));
-	// Update position and momentum at the start counter barrel radius
-	UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
-	
+	if (num_axial>2){ // Refit if we added several cdc axial hits
+	  vector<const DFDCPseudo*>fdchits=fdccan->fdchits;
+	  DoRefit(fit,fdccan,fdchits,cdchits,mom,pos);
+	}
+	else{
+	  // Update position and momentum at the start counter barrel radius
+	  UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
+	}
+	  
 	// Create new track candidate object 
 	DTrackCandidate *can = new DTrackCandidate;
 
@@ -456,36 +457,29 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	unsigned int num_matches=0;
 	for (unsigned int k=0;k<cdchits.size();k++){
 	  // Look for a match
-	  double variance=1.6*1.6/12.;
-	  if (cdchits[k]->is_stereo) variance=7.8*7.8/3.;  // we don't know the z position...
 	  DVector3 wirepos=cdchits[k]->wire->origin;
+	  if (cdchits[k]->is_stereo){
+	    GetCDCIntersection(mData[i],cdchits[k],wirepos);
+	  }
 	  double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 			 +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
-	  double prob=TMath::Prob(dr*dr/variance,1);
-	  
-	  if (prob>0.01) num_matches++;
+	  if (fabs(dr)<CDC_MATCH_CUT) num_matches++;
 	}
 	// Find matches to FDC hits
 	for (unsigned int k=0;k<fdchits.size();k++){
 	  // Look for a match
-	  double variance=1./12.;
 	  double dr=sqrt(pow(fdchits[k]->xy.X()-fdccan->xc,2)
 			 +pow(fdchits[k]->xy.Y()-fdccan->yc,2))-fdccan->rc;
-	  double prob=TMath::Prob(dr*dr/variance,1);
-	  
-	  if (prob>0.01) num_matches++;
+	  if (fabs(dr)<FDC_MATCH_CUT) num_matches++;
 	}
 	if (num_matches<3){
 	  num_matches=0;
 	  for (unsigned int k=0;k<fdccan->fdchits.size();k++){
 	    // Look for a match
-	    double variance=1./12.;
 	    const DFDCPseudo *fdchit=fdccan->fdchits[k];
 	    double dr=sqrt(pow(fdchit->xy.X()-mData[i]->xc,2)
 			   +pow(fdchit->xy.Y()-mData[i]->yc,2))-mData[i]->rc;
-	    double prob=TMath::Prob(dr*dr/variance,1);
-	    
-	    if (prob>0.01) num_matches++;
+	    if (fabs(dr)<FDC_MATCH_CUT) num_matches++;
 	  }
 	}
 	// If we got a match, redo the helical fit with the extra hits
