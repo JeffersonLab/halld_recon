@@ -26,31 +26,12 @@ using namespace std;
 #include "HDGEOMETRY/DGeometry.h"
 #include <CDC/DCDCTrackHit.h>
 
-#include "START_COUNTER/DSCHit.h"
-#include <TRACKING/DHoughFind.h>
-
 #include <TROOT.h>
 #include <TH2F.h>
-#include <TMath.h>
 
 #define CUT 10.
 #define RADIUS_CUT 50.0
-#define BEAM_VAR 1. // cm^2
 #define EPS 0.001
-
-//------------------
-// cdc_fdc_match
-//------------------
-inline bool cdc_fdc_match(double p_fdc,double p_cdc,double dist){
-  //double frac=fabs(1.-p_cdc/p_fdc);
-  //double frac2=fabs(1.-p_fdc/p_cdc);
-  double p=p_fdc;
-  if (p_cdc <p ) p=p_cdc;
-  if (dist<10. && dist <4.+1.75/p
-      //&& (frac<0.5 || frac2<0.5)
-      ) return true;
-  return false;
-}
 
 //------------------
 // SegmentSortByLayerincreasing
@@ -104,7 +85,12 @@ inline bool FDCHitSortByLayerincreasing(const DFDCPseudo* const &hit1, const DFD
 //------------------
 void DTrackCandidate_factory::Init()
 {
-	MAX_NUM_TRACK_CANDIDATES = 20;
+  auto app = GetApplication();
+
+  MAX_NUM_TRACK_CANDIDATES = 20;
+  
+  BEAM_VAR=1.;
+  app->SetDefaultParameter("TRKFIND:BEAM_VAR",BEAM_VAR);
 }
 
 //------------------
@@ -140,36 +126,6 @@ void DTrackCandidate_factory::BeginRun(const std::shared_ptr<const JEvent>& even
     dgeom->GetTargetZ(TARGET_Z);
   }
 
-  DEBUG_HISTS=false;
-  app->SetDefaultParameter("TRKFIND:DEBUG_HISTS",DEBUG_HISTS);
-
-  if(DEBUG_HISTS){
-    root_lock->RootWriteLock();
-    /*
-    match_center_dist2=(TH2F*)gROOT->FindObject("match_center_dist2");
-    if (!match_center_dist2){
-      match_center_dist2=new TH2F("match_center_dist2","larger radius vs matching distance squared between two circle centers",100,0,100.,100,0,100);
-      match_center_dist2->SetYTitle("r_{c} [cm]");
-      match_center_dist2->SetXTitle("(#Deltad)^{2} [cm^{2}]");
-    }
-    */
-    match_dist=(TH2F*)gROOT->FindObject("match_dist");
-    if (!match_dist){
-      match_dist=new TH2F("match_dist","Matching distance",
-			  120,0.,60.,500,0,25.);
-      match_dist->SetXTitle("r (cm)");
-      match_dist->SetYTitle("#Deltar (cm)");
-    }
-    match_dist_vs_p=(TH2F*)gROOT->FindObject("match_dist_vs_p");
-    if (!match_dist_vs_p) {
-      match_dist_vs_p=new TH2F("match_dist_vs_p","Matching distance vs p",
-			       50,0.,7.,100,0,25.);
-      match_dist_vs_p->SetYTitle("#Deltar (cm)");
-      match_dist_vs_p->SetXTitle("p (GeV/c)");
-    }
-      root_lock->RootUnLock();
-  }
-
   app->SetDefaultParameter("TRKFIND:MAX_NUM_TRACK_CANDIDATES", MAX_NUM_TRACK_CANDIDATES); 
 
   //  MIN_NUM_HITS=6;
@@ -180,6 +136,11 @@ void DTrackCandidate_factory::BeginRun(const std::shared_ptr<const JEvent>& even
 
   ADD_VERTEX_POINT=true;
   app->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
+
+  FDC_MATCH_CUT=0.5;
+  CDC_MATCH_CUT=0.8;
+  app->SetDefaultParameter("TRKFIND:FDC_MATCH_CUT",FDC_MATCH_CUT);
+  app->SetDefaultParameter("TRKFIND:CDC_MATCH_CUT",CDC_MATCH_CUT);
    
   return;
 }
@@ -282,28 +243,64 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	vector<const DCDCTrackHit*>cdchits=cdccan->cdchits;
 	unsigned int num_matches=0;
 	for (unsigned int m=0;m<cdchits.size();m++){
-	  double variance=0.8*0.8/12.;
 	  DVector3 wirepos=cdchits[m]->wire->origin;
 	  if (cdchits[m]->is_stereo){
 	    GetCDCIntersection(cdccan,cdchits[m],wirepos);
 	  }
 	  double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 			 +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
-	  double prob=TMath::Prob(dr*dr/variance,1);
-	  if (prob>0.01) num_matches++;
+	  if (fabs(dr)<CDC_MATCH_CUT) num_matches++;
 	}
 	// List of FDC hits attached to track candidate
 	vector<const DFDCPseudo*>fdchits=fdccan->fdchits;
 	if (num_matches<3){
 	  // Try using the cdc candidate to match to fdc hits
 	  num_matches=0;
-	  double variance=0.5*0.5/12.;
 	  for (unsigned int m=0;m<fdchits.size();m++){
 	    const DFDCPseudo *hit=fdchits[m];
-	    double dr=sqrt(pow(hit->xy.X()-fdccan->xc,2)
-			   +pow(hit->xy.Y()-fdccan->yc,2))-fdccan->rc;
-	    double prob=TMath::Prob(dr*dr/variance,1);
-	    if (prob>0.01) num_matches++;
+	    double dr=sqrt(pow(hit->xy.X()-cdccan->xc,2)
+			   +pow(hit->xy.Y()-cdccan->yc,2))-cdccan->rc;
+	    if (fabs(dr)<FDC_MATCH_CUT) num_matches++;
+	  }
+	}
+	// If there is no match, redo circle fit for cdc candidate requiring
+	// the circle to go through the origin
+	if (num_matches<3){
+	  DHelicalFit fit;
+	  for (unsigned int k=0;k<cdchits.size();k++){	
+	    if (cdchits[k]->is_stereo==false){
+	      double cov=1.6*1.6/12.;  //guess
+	      DVector3 pos=cdchits[k]->wire->origin;
+	      fit.AddHitXYZ(pos.x(),pos.y(),pos.z(),cov,cov,0.,true);
+	    }
+	  }
+	  fit.FitCircle();
+	  num_matches=0;
+	  for (unsigned int m=0;m<fdchits.size();m++){
+	    const DFDCPseudo *hit=fdchits[m];
+	    double dr=sqrt(pow(hit->xy.X()-fit.x0,2)
+			   +pow(hit->xy.Y()-fit.y0,2))-fit.r0;
+	    if (fabs(dr)<FDC_MATCH_CUT) num_matches++;
+	  }
+	}
+	// If there is no match, redo circle fit for fdc candidate requiring
+	// the circle to go through the origin
+	if (num_matches<3){
+	  DHelicalFit fit;
+	  for (unsigned int k=0;k<fdchits.size();k++){	
+	    const DFDCPseudo *fdchit=fdchits[k];
+	    fit.AddHit(fdchit);
+	  }
+	  fit.FitCircle();
+	  num_matches=0;
+	  for (unsigned int m=0;m<cdchits.size();m++){
+	    DVector3 wirepos=cdchits[m]->wire->origin;
+	    if (cdchits[m]->is_stereo){
+	      GetCDCIntersection(cdccan,cdchits[m],wirepos);
+	    }
+	    double dr=sqrt(pow(wirepos.x()-fit.x0,2)
+			   +pow(wirepos.y()-fit.y0,2))-fit.r0;
+	    if (fabs(dr)<CDC_MATCH_CUT) num_matches++;
 	  }
 	}
 	if (num_matches>=3){	
@@ -362,12 +359,11 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
       if (fdccan->FirstPackage>0) continue;
       
       vector<const DCDCTrackHit*>cdchits;
+      int num_axial=0;
       for (unsigned int k=0;k<used_cdc_hits.size();k++){
 	if (used_cdc_hits[k]) continue;
 
 	// Look for a match
-	double variance=0.8*0.8/12.;
-	if (allcdchits[k]->is_stereo) variance=7.8*7.8/12.;  // we don't know the z position...
 	DVector3 wirepos=allcdchits[k]->wire->origin;
 	// Skip hits on the other side the target
 	if (fdccan->dPosition.x()*wirepos.x()<0) continue;
@@ -378,12 +374,12 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	
 	double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 		       +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
-	double prob=TMath::Prob(dr*dr/variance,1);
-	
-	if (prob>0.01){
+	double cut=(allcdchits[k]->is_stereo)?9.57*CDC_MATCH_CUT:CDC_MATCH_CUT;
+	if (fabs(dr)<cut){
 	  num_unmatched_cdcs--;
 	  used_cdc_hits[k]=1;
-
+	  if (allcdchits[k]->is_stereo==false) num_axial++;
+	  
 	  cdchits.push_back(allcdchits[k]);
 	}
       }
@@ -402,9 +398,15 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	fit.h=fdccan->dCharge*FactorForSenseOfRotation;
 	// Get the magnetic field at pos
 	double Bz=fabs(bfield->GetBz(pos.x(),pos.y(),pos.z()));
-	// Update position and momentum at the start counter barrel radius
-	UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
-	
+	if (num_axial>2){ // Refit if we added several cdc axial hits
+	  vector<const DFDCPseudo*>fdchits=fdccan->fdchits;
+	  DoRefit(fit,fdccan,fdchits,cdchits,mom,pos);
+	}
+	else{
+	  // Update position and momentum at the start counter barrel radius
+	  UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
+	}
+	  
 	// Create new track candidate object 
 	DTrackCandidate *can = new DTrackCandidate;
 
@@ -455,24 +457,30 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	unsigned int num_matches=0;
 	for (unsigned int k=0;k<cdchits.size();k++){
 	  // Look for a match
-	  double variance=0.8*0.8/12.;
-	  if (cdchits[k]->is_stereo) variance=7.8*7.8/12.;  // we don't know the z position...
 	  DVector3 wirepos=cdchits[k]->wire->origin;
+	  if (cdchits[k]->is_stereo){
+	    GetCDCIntersection(mData[i],cdchits[k],wirepos);
+	  }
 	  double dr=sqrt(pow(wirepos.x()-fdccan->xc,2)
 			 +pow(wirepos.y()-fdccan->yc,2))-fdccan->rc;
-	  double prob=TMath::Prob(dr*dr/variance,1);
-	  
-	  if (prob>0.01) num_matches++;
+	  if (fabs(dr)<CDC_MATCH_CUT) num_matches++;
 	}
 	// Find matches to FDC hits
 	for (unsigned int k=0;k<fdchits.size();k++){
 	  // Look for a match
-	  double variance=0.5*0.5/12.;
 	  double dr=sqrt(pow(fdchits[k]->xy.X()-fdccan->xc,2)
 			 +pow(fdchits[k]->xy.Y()-fdccan->yc,2))-fdccan->rc;
-	  double prob=TMath::Prob(dr*dr/variance,1);
-	  
-	  if (prob>0.01) num_matches++;
+	  if (fabs(dr)<FDC_MATCH_CUT) num_matches++;
+	}
+	if (num_matches<3){
+	  num_matches=0;
+	  for (unsigned int k=0;k<fdccan->fdchits.size();k++){
+	    // Look for a match
+	    const DFDCPseudo *fdchit=fdccan->fdchits[k];
+	    double dr=sqrt(pow(fdchit->xy.X()-mData[i]->xc,2)
+			   +pow(fdchit->xy.Y()-mData[i]->yc,2))-mData[i]->rc;
+	    if (fabs(dr)<FDC_MATCH_CUT) num_matches++;
+	  }
 	}
 	// If we got a match, redo the helical fit with the extra hits
 	if (num_matches>=3){
@@ -770,7 +778,7 @@ void DTrackCandidate_factory::DoRefit(DHelicalFit &fit,
   // Add the cdc hits to use in the fit
   for (unsigned int k=0;k<cdchits.size();k++){	
     if (cdchits[k]->is_stereo==false){
-      double cov=0.213;  //guess
+      double cov=1.6*1.6/12.;  //guess
       DVector3 pos=cdchits[k]->wire->origin;
       fit.AddHitXYZ(pos.x(),pos.y(),pos.z(),cov,cov,0.,true);
     }

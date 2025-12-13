@@ -50,8 +50,6 @@ class DParticleID;
 class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
  public:
   DTrackCandidate_factory(){
-    DEBUG_HISTS=false;
-    //DEBUG_HISTS=true;
   };
   ~DTrackCandidate_factory(){};
 
@@ -92,12 +90,11 @@ class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
   bool dIsNoFieldFlag;
 
   int DEBUG_LEVEL,MIN_NUM_HITS;
-  bool DEBUG_HISTS,ADD_VERTEX_POINT;
-  TH2F *match_dist,*match_dist_vs_p;
-//  TH2F *match_center_dist2;
+  bool ADD_VERTEX_POINT;
+  double FDC_MATCH_CUT,CDC_MATCH_CUT;
 
   double FactorForSenseOfRotation;
-  double TARGET_Z;
+  double TARGET_Z,BEAM_VAR;
   int MAX_NUM_TRACK_CANDIDATES; //used to avoid memory spikes: if this # is exceeded, delete all tracks //to disable, set = -1!!
 };
 
