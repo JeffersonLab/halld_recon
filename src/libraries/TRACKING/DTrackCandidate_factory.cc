@@ -482,6 +482,31 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	    if (fabs(dr)<FDC_MATCH_CUT) num_matches++;
 	  }
 	}
+	if (num_matches<3){
+	  // Refit assuming the circle goes through the origin
+	  DHelicalFit fit;
+	  for (unsigned int k=0;k<cdchits.size();k++){
+	    if (cdchits[k]->is_stereo==false){
+	      double cov=1.6*1.6/12.;  //guess
+	      DVector3 pos=cdchits[k]->wire->origin;
+	      fit.AddHitXYZ(pos.x(),pos.y(),pos.z(),cov,cov,0.,true);
+	    }
+	  }
+	  for (unsigned int k=0;k<fdchits.size();k++){
+	    const DFDCPseudo *fdchit=fdchits[k];
+	    fit.AddHit(fdchit);
+	  }
+	  fit.FitCircle();
+	  num_matches=0;
+	  // Get list of hits associated with the fdc candidate
+	  vector<const DFDCPseudo*>candidate_fdchits=fdccan->fdchits;
+	  for (unsigned int m=0;m<candidate_fdchits.size();m++){
+	    const DFDCPseudo *hit=candidate_fdchits[m];
+	    double dr=sqrt(pow(hit->xy.X()-fit.x0,2)
+			   +pow(hit->xy.Y()-fit.y0,2))-fit.r0;
+	    if (fabs(dr)<FDC_MATCH_CUT) num_matches++;
+	  }
+	}
 	// If we got a match, redo the helical fit with the extra hits
 	if (num_matches>=3){
 	  // List of FDC hits attached to track candidate
