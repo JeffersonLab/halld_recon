@@ -122,6 +122,11 @@ bool DCustomAction_dirc_tree::Perform_Action(const std::shared_ptr<const JEvent>
       fEvent->SetParent(0);
       fEvent->SetId(locBar);// bar id where the particle hit the detector
       fEvent->SetPosition(TVector3(posInBar.X(), posInBar.Y(), posInBar.Z()));
+      fEvent->SetNPhotons(locDIRCMatchParams->dNPhotons);
+      fEvent->SetLikelihoodElectron(locDIRCMatchParams->dLikelihoodElectron);
+      fEvent->SetLikelihoodPion(locDIRCMatchParams->dLikelihoodPion);
+      fEvent->SetLikelihoodKaon(locDIRCMatchParams->dLikelihoodKaon);
+      fEvent->SetLikelihoodProton(locDIRCMatchParams->dLikelihoodProton);
       DrcHit hit;
 
       for(const auto dhit : locDIRCPmtHits){

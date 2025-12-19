@@ -92,6 +92,25 @@ void DEventProcessor_pid_dirc::Process(const std::shared_ptr<const JEvent>& even
   event->Get(dataPmtHits);
   event->Get(trig);
 
+  // get PID algos
+  const DParticleID* locParticleID = NULL;
+  event->GetSingle(locParticleID);
+
+  vector<const DDIRCGeometry*> locDIRCGeometryVec;
+  event->Get(locDIRCGeometryVec);
+  auto locDIRCGeometry = locDIRCGeometryVec[0];
+
+  // Initialize DIRC LUT
+  const DDIRCLut* dDIRCLut = nullptr;
+  event->GetSingle(dDIRCLut);
+
+  // retrieve tracks and detector matches
+  vector<const DTrackTimeBased*> locTimeBasedTracks;
+  event->Get(locTimeBasedTracks);
+  
+  const DDetectorMatches* locDetectorMatches = NULL;
+  event->GetSingle(locDetectorMatches);
+  DDetectorMatches locDetectorMatch = (DDetectorMatches)locDetectorMatches[0];
   
   DEvent::GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
@@ -124,7 +143,9 @@ void DEventProcessor_pid_dirc::Process(const std::shared_ptr<const JEvent>& even
   // loop over mc/reco tracks
   TClonesArray& cevt = *fcEvent;
   cevt.Clear();
+  int locThrownPDGID = 0;
   for (unsigned int m = 0; m < mcthrowns.size(); m++){
+    if(m==0) locThrownPDGID = mcthrowns[m]->pdgtype;
     if(dircPmtHits.size() > 0.){
       fEvent = new DrcEvent();
       fEvent->SetType(trigger);
@@ -174,7 +195,79 @@ void DEventProcessor_pid_dirc::Process(const std::shared_ptr<const JEvent>& even
       if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);      
     }
   }
+
+#if 0
+  // reconstruct DIRC LUT variables for specific tracks  
+  for (unsigned int loc_i = 0; loc_i < locTimeBasedTracks.size(); loc_i++){
+
+    const DTrackTimeBased* locTrackTimeBased = locTimeBasedTracks[loc_i];
+    Particle_t locPID = locTrackTimeBased->PID();
+    if(PDGtype(locPID) != locThrownPDGID) continue;
+    
+    // require well reconstructed tracks for initial studies
+    int locDCHits = locTrackTimeBased->Ndof + 5;
+    double locTheta = locTrackTimeBased->momentum().Theta()*180/TMath::Pi();
+    double locP = locTrackTimeBased->momentum().Mag();
+    if(locDCHits < 10 || locTheta < 1.0 || locTheta > 12.0 || locP > 12.0)
+      continue;
+    
+    // require has good match to TOF hit for cleaner sample
+    shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
+    bool foundTOF = locParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
+    if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
+      continue;
+    double toftrackdist = locTOFHitMatchParams->Get_DistanceToTrack();
+    double toftrackdeltat = 0.; //locChargedTrackHypothesis->Get_TimeAtPOCAToVertex() - locTrackTimeBased->t0();
+    
+    double locMass = ParticleMass(locPID);
+    
+    // get DIRC match parameters (contains LUT information)
+    shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
+    bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
+    
+    if(foundDIRC) {
+	    
+      TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos;
+      TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+      double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
+      int locBar = locDIRCGeometry->GetBar(posInBar.Y());
+      
+      fEvent = new DrcEvent();
+      fEvent->SetType(0);
+      fEvent->SetMomentum(TVector3(momInBar.X(),momInBar.Y(),momInBar.Z()));
+      fEvent->SetPdg(PDGtype(locPID));
+      fEvent->SetTime(locExtrapolatedTime);
+      fEvent->SetParent(0);
+      fEvent->SetId(locBar);// bar id where the particle hit the detector
+      fEvent->SetPosition(TVector3(posInBar.X(), posInBar.Y(), posInBar.Z()));
+      fEvent->SetNPhotons(locDIRCMatchParams->dNPhotons);
+      fEvent->SetLikelihoodElectron(locDIRCMatchParams->dLikelihoodElectron);
+      fEvent->SetLikelihoodPion(locDIRCMatchParams->dLikelihoodPion);
+      fEvent->SetLikelihoodKaon(locDIRCMatchParams->dLikelihoodKaon);
+      fEvent->SetLikelihoodProton(locDIRCMatchParams->dLikelihoodProton);
+      fEvent->SetDcHits(locDCHits);
+      fEvent->SetTofTrackDist(toftrackdist);
+      fEvent->SetTofTrackDeltaT(toftrackdeltat);
+      
+      DrcHit hit;
+      for(const auto dhit : dataPmtHits){
+	int ch=dhit->ch;
+	int pmt=ch/DDIRCGeometry::kPixels;
+	int pix=ch%DDIRCGeometry::kPixels;
+	hit.SetChannel(ch);
+	hit.SetPmtId(pmt);
+	hit.SetPixelId(pix);
+	hit.SetLeadTime(dhit->t);
+	hit.SetTotTime(dhit->tot);
+	fEvent->AddHit(hit);
+      }
+      
+      if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);
+    }
+  }
+#endif
   
+/*
   // calibrated hists
   if(dataPmtHits.size()>0){
     fEvent = new DrcEvent();
@@ -211,6 +304,7 @@ void DEventProcessor_pid_dirc::Process(const std::shared_ptr<const JEvent>& even
     
     if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);
   }
+*/
   
   if(cevt.GetEntriesFast()>0) fTree->Fill();
   DEvent::GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK

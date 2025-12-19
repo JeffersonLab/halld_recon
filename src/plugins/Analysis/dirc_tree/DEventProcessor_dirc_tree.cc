@@ -167,6 +167,11 @@ void DEventProcessor_dirc_tree::Process(const std::shared_ptr<const JEvent> &eve
 	  fEvent->SetParent(0);
 	  fEvent->SetId(locBar);// bar id where the particle hit the detector
 	  fEvent->SetPosition(TVector3(posInBar.X(), posInBar.Y(), posInBar.Z()));
+	  fEvent->SetNPhotons(locDIRCMatchParams->dNPhotons);
+	  fEvent->SetLikelihoodElectron(locDIRCMatchParams->dLikelihoodElectron);
+	  fEvent->SetLikelihoodPion(locDIRCMatchParams->dLikelihoodPion);
+	  fEvent->SetLikelihoodKaon(locDIRCMatchParams->dLikelihoodKaon);
+	  fEvent->SetLikelihoodProton(locDIRCMatchParams->dLikelihoodProton);
 	  fEvent->SetDcHits(locDCHits);
 	  fEvent->SetTofTrackDist(toftrackdist);
 	  fEvent->SetTofTrackDeltaT(toftrackdeltat);

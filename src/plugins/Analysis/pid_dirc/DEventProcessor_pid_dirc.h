@@ -20,8 +20,9 @@ using namespace std;
 
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DMCTrackHit.h>
+#include <TRACKING/DTrackTimeBased.h>
 #include <PID/DKinematicData.h>
-#include <PID/DBeamPhoton.h>
+#include <PID/DParticleID.h>
 #include <DIRC/DDIRCTruthBarHit.h>
 #include <DIRC/DDIRCTruthPmtHit.h>
 
