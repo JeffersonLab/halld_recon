@@ -499,6 +499,13 @@ int JEventProcessor_HELI_online::readParms(int source=0){    // Read setup etc f
   }
   else{ //read from the cal database
   }
+  
+  // close the file
+  if (fclose(parmfile) == EOF) {
+      printf("HEL: Warning: Failed to close helicity_setup.txt\n");
+      return -1;
+  }
+  
   return 0;
 }
 
