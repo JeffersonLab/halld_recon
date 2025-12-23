@@ -25,8 +25,8 @@ void DReaction_factory_p2pi_hists::BeginRun(const std::shared_ptr<const JEvent> 
 void DReaction_factory_p2pi_hists::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// Make as many DReaction objects as desired
-	DReactionStep* locReactionStep = NULL;
-	DReaction* locReaction = new DReaction("p2pi_pmiss"); //needs to be a unique name for each DReaction object, CANNOT (!) be "Thrown"
+	DReactionStep* locReactionStep = nullptr;
+	DReaction* locReaction = new DReaction("p2pi_preco"); //needs to be a unique name for each DReaction object, CANNOT (!) be "Thrown"
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
@@ -35,7 +35,6 @@ void DReaction_factory_p2pi_hists::Process(const std::shared_ptr<const JEvent> &
 	/**************************************************** p2pi_preco Reaction Steps ****************************************************/
 
 	bool unused = false;
-	locReaction = new DReaction("p2pi_preco"); //needs to be a unique name for each DReaction object, CANNOT (!) be "Thrown"
 
 	// g, p -> pi+, pi- ,p
 	locReactionStep = new DReactionStep();
