@@ -104,14 +104,14 @@ private:
   double m_2ndfdc_package;
   double m_3rdfdc_package;
   double m_fcalX, m_fcalY, m_fcalZ;
-  double m_ccalX, m_ccalY, m_ccalZ;
+  double m_ecalX, m_ecalY, m_ecalZ;
   vector<vector<DVector3> >sc_pos;
   vector<vector<DVector3> >sc_norm;
   Particle_t TargetA;
   Particle_t TargetN;
   const double c = 29.9792458;
   const double FCAL_C_EFFECTIVE = 15.0;
-  
+  const double m_pi0 = 0.1349770;
   const DECALGeometry * ecalGeom = NULL;
   const DFCALGeometry * fcalGeom = NULL;
   double TargetMass;
@@ -170,6 +170,12 @@ private:
   TH2F * h_efcal_mgg_v_blk[7];
   TH2F * h_fecal_fdc_mgg_v_blk[7];
   TH2F * h_efcal_fdc_mgg_v_blk[7];
+
+
+  TH1F * h_ecal_im[20], * h_fcal_im[20];
+  TH2F * h_ecal_nl[25], * h_fcal_nl[25];
+  TH2F * h_ecal_snl[3][25], * h_fcal_snl[3][25];
+  TH2F * h_ecal_wnl[3][25], * h_fcal_wnl[3][25];
 };
 
 #endif // _JEventProcessor_cal_cal_

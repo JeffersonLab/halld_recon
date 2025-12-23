@@ -143,7 +143,7 @@ void DNeutralShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       locNeutralShower->dQuality = getFCALQuality( locFCALShowers[loc_i], rfTime );
       
       // Check if indeed shower is not related to a non-reconstructed track in SC and/or TOF
-      DVector3 position = locFCALShowers[loc_i]->getPosition_log() - vertex;
+      DVector3 position = locFCALShowers[loc_i]->getPosition() - vertex;
       double phi_fcal = position.Phi();
       double delta_x_min = 1000.;
       double delta_y_min = 1000.;
@@ -236,6 +236,20 @@ void DNeutralShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       locNeutralShower->AddAssociatedObject(locECALShowers[loc_i]);
       
       locNeutralShower->dQuality = 1;
+
+      // Check if indeed shower is not related to a non-reconstructed track in SC and/or TOF
+      DVector3 position = locECALShowers[loc_i]->pos - vertex;
+      double phi_fcal = position.Phi();
+      double delta_x_min = 1000.;
+      double delta_y_min = 1000.;
+      double delta_phi_min = 1000.;
+      int sc_match = check_SC_match(phi_fcal, rfTime, locSCHits, delta_phi_min);
+      int tof_match = check_TOF_match(position, rfTime, vertex, locTOFPoints, delta_x_min, delta_y_min);
+      locNeutralShower->dTOF_ECAL_match = tof_match;
+      locNeutralShower->dTOF_ECAL_x_min = (float) delta_x_min;
+      locNeutralShower->dTOF_ECAL_y_min = (float) delta_y_min;
+      locNeutralShower->dSC_ECAL_match = sc_match;
+      locNeutralShower->dSC_ECAL_phi_min = (float) delta_phi_min;
       
       auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
       locCovMatrix->ResizeTo(5, 5);
