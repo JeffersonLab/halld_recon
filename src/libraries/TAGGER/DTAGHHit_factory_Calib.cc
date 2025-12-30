@@ -272,7 +272,7 @@ void DTAGHHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
     	if(hit->has_fADC==true || hit->has_TDC==true)
     		filtered_results.push_back(hit);
 
-	Set(filtered_results);
+    Set(filtered_results);
 }
 
 //------------------
