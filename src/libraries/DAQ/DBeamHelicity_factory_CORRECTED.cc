@@ -37,7 +37,7 @@ void DBeamHelicity_factory_CORRECTED::BeginRun(const std::shared_ptr<const JEven
     else
         jerr << "Unable to get correction from /ELECTRON_BEAM/helicity_correction !" << endl;
 
-	return; //NOERROR;
+    return; //NOERROR;
 }
 
 //------------------
