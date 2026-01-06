@@ -12,6 +12,8 @@
 #include "FCAL/DFCALDigiHit.h"
 
 #include "TTree.h"
+#include "TH1.h"
+#include "TH2.h"
 
 // Routine used to create our JEventProcessor
 extern "C"{

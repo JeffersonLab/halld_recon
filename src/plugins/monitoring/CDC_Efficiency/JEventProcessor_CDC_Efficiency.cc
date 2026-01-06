@@ -12,6 +12,8 @@
 #include "DANA/DEvent.h"
 #include "TRIGGER/DTrigger.h"
 
+#include <TDirectory.h>
+
 
 // Routine used to create our JEventProcessor
 extern "C"{

@@ -11,8 +11,12 @@
 #include <JANA/JEventProcessor.h>
 #include "TH3I.h"
 #include "TProfile.h"
+#include "TProfile2D.h"
 #include "TH2F.h"
 #include <vector>
+
+// Convenience methods for GlueX services
+#include <DANA/DEvent.h>
 
 using namespace std;
 
@@ -30,7 +34,9 @@ class JEventProcessor_FDC_InternalAlignment:public JEventProcessor{
 		void Finish() override;
       TH3I *Hist3D[24];
       TProfile *HistCurrentConstants;
-      
+  
+  		std::shared_ptr<JLockService> lockService;
+    
       vector<TH2F *> hWireT0s;
       vector<TProfile2D *> hWirePositions;
       

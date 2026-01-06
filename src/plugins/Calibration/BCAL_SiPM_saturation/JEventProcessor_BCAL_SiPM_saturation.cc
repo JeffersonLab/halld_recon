@@ -26,6 +26,7 @@
 // #include "TRACKING/DTrackTimeBased.h"
 // #include "TRIGGER/DL1Trigger.h"
 
+#include <TDirectory.h>
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>

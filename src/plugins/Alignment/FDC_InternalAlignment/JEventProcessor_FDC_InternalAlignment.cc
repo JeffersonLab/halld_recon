@@ -6,7 +6,6 @@
 //
 
 #include "JEventProcessor_FDC_InternalAlignment.h"
-#include "HistogramTools.h"
 #include "FDC/DFDCPseudo.h"
 
 // Routine used to create our JEventProcessor
@@ -14,8 +13,7 @@
 #include <JANA/JFactoryT.h>
 #include <JANA/Calibrations/JCalibration.h>
 
-// Convenience methods for GlueX services
-#include <DANA/DEvent.h>
+#include "TDirectory.h"
 
 extern "C"{
 void InitPlugin(JApplication *app){
@@ -178,7 +176,6 @@ void JEventProcessor_FDC_InternalAlignment::Process(const std::shared_ptr<const 
 
       GetLockService(event)->RootFillLock(this);
       Hist3D[thisPseudo->wire->layer - 1]->Fill(thisPseudo->w, thisPseudo->s, thisPseudo->w_c - thisPseudo->w);
-      GetLockService(event)->RootFillUnLock(this);
 
       // Plot the wire times
       hWireT0s[thisPseudo->wire->layer-1]->Fill(thisPseudo->wire->wire, thisPseudo->time);
@@ -205,6 +202,8 @@ void JEventProcessor_FDC_InternalAlignment::Process(const std::shared_ptr<const 
 	      hCathodeUProjections_Pos[thisPseudo->wire->layer-1]->Fill(thisPseudo->u - deltaU, thisPseudo->u - upred);
     	  hCathodeVProjections_Pos[thisPseudo->wire->layer-1]->Fill(thisPseudo->v - deltaV, thisPseudo->v - vpred);
       }
+
+      GetLockService(event)->RootFillUnLock(this);
 
       //jout << "==upred " << upred << " u " << thisPseudo->u << endl;
       //jout << "vpred " << vpred << " v " << thisPseudo->v << endl;

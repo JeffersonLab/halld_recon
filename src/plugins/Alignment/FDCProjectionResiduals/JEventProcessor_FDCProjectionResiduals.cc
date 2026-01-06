@@ -9,7 +9,6 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRACKING/DReferenceTrajectory.h"
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
-#include "HistogramTools.h"
 
 #include <CDC/DCDCHit.h>
 #include "DANA/DEvent.h"
@@ -54,6 +53,9 @@ void JEventProcessor_FDCProjectionResiduals::Init()
 
     TDirectory *main = gDirectory;
     gDirectory->mkdir("FDCProjectionResiduals")->cd();
+    
+    hTrackingFOM = new TH1F( "Tracking FOM", "TrackingFOM", 200, 0.0, 1.0);
+    
     gDirectory->mkdir("FDCReco")->cd();
 
 	hDistanceVsTime = new TH2F("Distance Vs Time","Distance Vs. Time; Time [ns]; Distance [cm]", 300, 0.0, 300., 100, 0.0, 0.5);
@@ -261,7 +263,9 @@ void JEventProcessor_FDCProjectionResiduals::Process(const std::shared_ptr<const
 
       double t0 = thisTimeBasedTrack->t0();
 
-      Fill1DHistogram("FDCProjectionResiduals", "", "Tracking FOM", thisTimeBasedTrack->FOM, "TrackingFOM", 200, 0.0, 1.0);
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	  hTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
       if (thisTimeBasedTrack->FOM < 0.0027 || thisTimeBasedTrack->Ndof < 4) continue;
 
       // Loop through the pulls to try to check on the FDC calibtrations

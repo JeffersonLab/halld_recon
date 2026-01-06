@@ -53,6 +53,8 @@
 
 #include "ANALYSIS/DTreeInterface.h"
 
+#include "DANA/DEvent.h"
+
 //#include <KINFITTER/DKinFitter.h>
 //#include <ANALYSIS/DKinFitUtils_GlueX.h>
 

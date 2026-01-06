@@ -76,6 +76,8 @@ class JEventProcessor_BCAL_TDC_Timing:public JEventProcessor{
 
 
 	// histograms
+	TH1F* hCCDB_raw_channel_global_offset;
+	
 	TH2F *hUpstream_Channel_Deltat_All;
 	TH2F *hDownstream_Channel_Deltat_All;
 	TH2F *hUpstream_Channel_Deltat_All_Corrected;

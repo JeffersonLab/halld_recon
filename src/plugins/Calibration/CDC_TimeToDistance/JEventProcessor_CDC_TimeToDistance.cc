@@ -16,6 +16,8 @@
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include "DANA/DEvent.h"
 
+#include <TDirectory.h>
+
 
 extern "C"{
 void InitPlugin(JApplication *app){

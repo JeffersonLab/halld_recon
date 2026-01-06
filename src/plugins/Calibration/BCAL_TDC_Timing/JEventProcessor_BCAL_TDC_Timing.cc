@@ -12,7 +12,6 @@
  *************************************/
 
 #include "JEventProcessor_BCAL_TDC_Timing.h"
-#include "HistogramTools.h" // To make my life easier
 #include "BCAL/DBCALHit.h"
 #include "BCAL/DBCALTDCHit.h"
 #include "BCAL/DBCALCluster.h"
@@ -28,6 +27,8 @@
 #include "PID/DVertex.h"
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DL1Trigger.h"
+
+#include <TDirectory.h>
 
 
 #include "DANA/DEvent.h"
@@ -246,6 +247,27 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
     gDirectory->mkdir("Z Position")->cd();
 
 	hAllPointsVsShower_zpos = new TH2F("AllPointsVsShower", "Z_{Point} vs Z_{Shower};Z_{Shower}  [cm];Z_{Point} [cm]", 225, zminhall, zmaxhall, 225, zminhall, zmaxhall);
+    htrackZvsBCALZ_all = new TH2F("AllPoints",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall); 
+    htrackZvsBCALZ_qpos = new TH2F("All_q+",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
+    htrackZvsBCALZ_qneg = new TH2F("All_q-",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
+
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "AllLayer%i", layer+1);
+		htrackZvsBCALZ_layer[layer] = new TH2F(layername,   "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
+	}
+	for(int module = 0; module < NBCALMODS; module++) {
+		for(int layer = 0; layer < NBCALLAYERS; layer++) {
+			for(int sector = 0; sector < NBCALSECTORS; sector++) {
+				char name[200], title[200];
+				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
+            	sprintf(title, "%s  Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]]", name);
+
+				int the_cell = module * 12 + layer * 4 + sector + 1;
+				htrackZvsBCALZ_chan[the_cell] = new TH2F(name, title, 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);
+			}
+		}
+	}
 
     gDirectory->cd("..");
     gDirectory->mkdir("ZvsDeltat")->cd();
@@ -313,32 +335,6 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 		}
 	}
 	
-
-    gDirectory->cd("..");
-    gDirectory->mkdir("Z Position")->cd();
-
-    htrackZvsBCALZ_all = new TH2F("AllPoints",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall); 
-    htrackZvsBCALZ_qpos = new TH2F("All_q+",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
-    htrackZvsBCALZ_qneg = new TH2F("All_q-",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
-
-	for(int layer = 0; layer < NBCALLAYERS; layer++) {
-		char layername[255];
-		sprintf(layername, "AllLayer%i", layer+1);
-		htrackZvsBCALZ_layer[layer] = new TH2F(layername,   "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
-	}
-	for(int module = 0; module < NBCALMODS; module++) {
-		for(int layer = 0; layer < NBCALLAYERS; layer++) {
-			for(int sector = 0; sector < NBCALSECTORS; sector++) {
-				char name[200], title[200];
-				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
-            	sprintf(title, "%s  Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]]", name);
-
-				int the_cell = module * 12 + layer * 4 + sector + 1;
-				htrackZvsBCALZ_chan[the_cell] = new TH2F(name, title, 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);
-			}
-		}
-	}
-	
     gDirectory->cd("..");
     gDirectory->mkdir("Deltat_raw")->cd();
     
@@ -347,6 +343,8 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 
     gDirectory->cd("..");
     gDirectory->mkdir("Target Time")->cd();
+
+    hCCDB_raw_channel_global_offset = new TH1F("CCDB_raw_channel_global_offset",  "Offsets at time of running;CCDB Index;CCDB timing offset [ns]", 769, 0.5, 769.5); 
 
     hdeltaTVsCell_all = new TH2F("deltaTVsCell",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10); 
     hdeltaTVsCell_qpos = new TH2F("deltaTVsCell_q+",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
@@ -552,16 +550,9 @@ void JEventProcessor_BCAL_TDC_Timing::BeginRun(const std::shared_ptr<const JEven
     lockService->RootFillLock(this);
     //TH1D *CCDB_raw_channel_global_offset = new TH1D("CCDB_raw_channel_global_offset","Offsets at time of running;channel;offset",768,0.5,768.5);
     int counter = 1;
-    Fill1DWeightedHistogram("BCAL_Global_Offsets", "Target Time", "CCDB_raw_channel_global_offset",
-                            769, 1,
-                            "Offsets at time of running;CCDB Index;CCDB timing offset [ns]",
-                            769, 0.5, 769.5);
+    hCCDB_raw_channel_global_offset->Fill(769, 1);
     for (vector<double>::iterator iter = raw_channel_global_offset.begin(); iter != raw_channel_global_offset.end(); ++iter) {
-        //CCDB_raw_channel_global_offset->SetBinContent(counter,*iter);
-        Fill1DWeightedHistogram("BCAL_Global_Offsets", "Target Time", "CCDB_raw_channel_global_offset",
-                                counter, *iter,
-                                "Offsets at time of running;CCDB Index;CCDB timing offset [ns]",
-                                769, 0.5, 769.5);
+        hCCDB_raw_channel_global_offset->Fill(counter, *iter);
         counter++;
     }
     lockService->RootFillUnLock(this);
@@ -656,6 +647,8 @@ void JEventProcessor_BCAL_TDC_Timing::Process(const std::shared_ptr<const JEvent
 //                                    1539,1643,1754,1872,1998,2133,2277,2430,2594,2769,2956,3155,
 //                                    3368,3595,3837,4096};
 
+   lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+
    for (unsigned int i = 0; i < bcalUnifiedHitVector.size(); i++){
       //int the_cell = (bcalUnifiedHitVector[i]->module - 1) * 16 + (bcalUnifiedHitVector[i]->layer - 1) * 4 + bcalUnifiedHitVector[i]->sector;
       // There is one less layer of TDCs so the numbering relects this
@@ -700,6 +693,7 @@ void JEventProcessor_BCAL_TDC_Timing::Process(const std::shared_ptr<const JEvent
       }
    }
 
+   lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
    //
    // Attenuation Length
@@ -772,6 +766,8 @@ void JEventProcessor_BCAL_TDC_Timing::Process(const std::shared_ptr<const JEvent
    vector <const DChargedTrack *> chargedTrackVector;
    event->Get(chargedTrackVector);
 
+   lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+   
    hDebug->Fill(1);
    for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
       // Pick out the best charged track hypothesis for this charged track based only on the Tracking FOM
@@ -1301,6 +1297,8 @@ void JEventProcessor_BCAL_TDC_Timing::Process(const std::shared_ptr<const JEvent
        }
    }   
 
+   lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
    return;
 }
 
@@ -1321,7 +1319,6 @@ void JEventProcessor_BCAL_TDC_Timing::EndRun()
 void JEventProcessor_BCAL_TDC_Timing::Finish()
 {
    // Called before program exit after event processing is finished.
-   SortDirectories(); // Sort the histogram directories by name
    return;
 }
 
