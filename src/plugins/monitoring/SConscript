@@ -58,7 +58,6 @@ subdirs = [
 'TS_scaler',
 'TrackingPulls',
 'TrackingPulls_straight',
-'timing_online',
 'DIRC_online',
 'TRD_online',
 'TRDTrack',

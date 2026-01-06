@@ -11,7 +11,6 @@
 #include "BCAL/DBCALDigiHit.h"
 #include <DANA/DEvent.h>
 #include "DANA/DStatusBits.h"
-#include "HistogramTools.h" // To make my life easier
 
 #include <TDirectory.h>
 #include <TStyle.h>
@@ -126,6 +125,7 @@ void JEventProcessor_BCAL_attenlength_gainratio::Init()
 	TDirectory *dirlogintratiovsZ = bcalgainratio->mkdir("logintratiovsZ");
 	TDirectory *dirlogEratiovsZ = bcalgainratio->mkdir("logEratiovsZ");
 	TDirectory *dirEvsZ = bcalgainratio->mkdir("EvsZ");
+	TDirectory *dirResults = bcalgainratio->mkdir("results");
 
 	// Create histograms
     if (VERBOSEHISTOGRAMS) {
@@ -191,6 +191,10 @@ void JEventProcessor_BCAL_attenlength_gainratio::Init()
             }
         }
     }
+
+	dirResults->cd();
+	hEattenlength = new TH2F("hist2D_Eattenlength","Atten. length from E;Module;Layer and Sector",48,0.5,48.5,16,0.5,16.5);
+	hEgainratio = new TH2F("hist2D_Egainratio","Gain ratio from integ.;Module;Layer and Sector;G_{U}/G_{D}",48,0.5,48.5,16,0.5,16.5);
 
 	// back to main dir
 	main->cd();
@@ -349,7 +353,7 @@ void JEventProcessor_BCAL_attenlength_gainratio::Finish()
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	//lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	// for (int module=0; module<nummodule; module++) {
 	// 	if (VERBOSE>0) printf("M%i ",module);
@@ -361,7 +365,7 @@ void JEventProcessor_BCAL_attenlength_gainratio::Finish()
 	// 	}
 	// 	if (VERBOSE>0) printf("\n");
 	// }
-	printf("BCAL_attenlength_gainratio::fini >>  Fitting all histograms\n");
+	printf("BCAL_attenlength_gainratio::Finish >>  Fitting all histograms\n");
 
     TF1 *intfit = new TF1("intfit","pol1");
     if (VERBOSEHISTOGRAMS) {
@@ -369,8 +373,9 @@ void JEventProcessor_BCAL_attenlength_gainratio::Finish()
             for (int layer=0; layer<numlayer; layer++) {
                 for (int sector=0; sector<numsector; sector++) {
                     char name[255];
-                    sprintf(name,"logEratiovsZ_%02i%i%i",module+1,layer+1,sector+1);
-                    TH2I* hist  = (TH2I*)GetHistPointer("bcalgainratio", "logEratiovsZ", name);
+//                     sprintf(name,"logEratiovsZ_%02i%i%i",module+1,layer+1,sector+1);
+//                     TH2I* hist  = (TH2I*)GetHistPointer("bcalgainratio", "logEratiovsZ", name);
+                    TH2I* hist  = logEratiovsZ[module][layer][sector];
                     if (hist) {
                         int layersect = (layer)*4 + sector + 1;
                         int entries = hist->GetEntries();
@@ -387,13 +392,8 @@ void JEventProcessor_BCAL_attenlength_gainratio::Finish()
                             //float gainratioerr = exp(p0)*p0err;
                             if (VERBOSE>0) printf("(%2i,%i,%i) %3i %8.3f %8.3f   ", module, layer,sector,entries,attenlength,gainratio);
                         
-                            char histtitle[255];
-                            sprintf(histtitle,"Atten. length from E;Module;Layer and Sector");
-                            Fill2DWeightedHistogram("bcalgainratio", "results", "hist2D_Eattenlength",
-                                                    module+1,layersect,attenlength, histtitle, 48,0.5,48.5,16,0.5,16.5);
-                            sprintf(histtitle,"Gain ratio from integ.;Module;Layer and Sector;G_{U}/G_{D}");
-                            Fill2DWeightedHistogram("bcalgainratio", "results", "hist2D_Egainratio",
-                                                    module+1,layersect,gainratio, histtitle, 48,0.5,48.5,16,0.5,16.5);
+                        	hEattenlength->Fill(module+1,layersect,attenlength);
+                        	hEgainratio->Fill(module+1,layersect,gainratio);                        
                         }
                     }
                 }
@@ -459,8 +459,7 @@ void JEventProcessor_BCAL_attenlength_gainratio::Finish()
 	hist2D_intattenlength->SetBinContent(0,0,1);
 	hist2D_intgainratio->SetBinContent(0,0,1);
 
-	//lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-    //SortDirectories();    // THIS CRASHES SOMETIMES, SHOULD FIGURE OUT WHY
 }
 

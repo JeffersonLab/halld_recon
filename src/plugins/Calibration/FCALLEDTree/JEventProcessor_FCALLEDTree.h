@@ -11,7 +11,8 @@
 class TTree;
 
 #include <JANA/JEventProcessor.h>
-#include "HistogramTools.h"
+
+#include "DANA/DEvent.h"
 
 class JEventProcessor_FCALLEDTree:public JEventProcessor{
  public:

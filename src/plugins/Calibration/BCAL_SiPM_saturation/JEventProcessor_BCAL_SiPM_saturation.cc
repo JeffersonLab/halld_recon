@@ -7,7 +7,6 @@
 //
 
 #include "JEventProcessor_BCAL_SiPM_saturation.h"
-#include "HistogramTools.h"
 #include "TRACKING/DMCThrown.h"
 // #include "BCAL/DBCALHit.h"
 // #include "BCAL/DBCALTDCHit.h"
@@ -27,6 +26,7 @@
 // #include "TRACKING/DTrackTimeBased.h"
 // #include "TRIGGER/DL1Trigger.h"
 
+#include <TDirectory.h>
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>

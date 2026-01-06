@@ -47,12 +47,13 @@
 #include <HDGEOMETRY/DGeometry.h>
 //#include <PID/DChargedTrack.h>
 //#include "TRACKING/DTrackTimeBased.h"
-#include "HistogramTools.h"
 #include "PID/DMCReaction.h"
 #include "TProfile.h"
 //#include <PID/DDetectorMatches.h>
 
 #include "ANALYSIS/DTreeInterface.h"
+
+#include "DANA/DEvent.h"
 
 //#include <KINFITTER/DKinFitter.h>
 //#include <ANALYSIS/DKinFitUtils_GlueX.h>
