@@ -13,8 +13,8 @@
 #include <BCAL/DBCALGeometry.h>
 #include <TRACKING/DTrackFitter.h>
 
-#include <TH1F.h>
-#include <TH2F.h>
+#include <TH1I.h>
+#include <TH2I.h>
 
 #include <map>
 #include <string>
@@ -76,155 +76,155 @@ class JEventProcessor_BCAL_TDC_Timing:public JEventProcessor{
 
 
 	// histograms
-	TH1F* hCCDB_raw_channel_global_offset;
+	TH1I* hCCDB_raw_channel_global_offset;
 	
-	TH2F *hUpstream_Channel_Deltat_All;
-	TH2F *hDownstream_Channel_Deltat_All;
-	TH2F *hUpstream_Channel_Deltat_All_Corrected;
-	TH2F *hDownstream_Channel_Deltat_All_Corrected;
+	TH2I *hUpstream_Channel_Deltat_All;
+	TH2I *hDownstream_Channel_Deltat_All;
+	TH2I *hUpstream_Channel_Deltat_All_Corrected;
+	TH2I *hDownstream_Channel_Deltat_All_Corrected;
 	
-	map<int, TH2F*> hUpstream_TimewalkVsPeak;
-	map<int, TH2F*> hDownstream_TimewalkVsPeak;
-	map<int, TH2F*> hUpstream_TimewalkVsPeak_Corrected;
-	map<int, TH2F*> hDownstream_TimewalkVsPeak_Corrected;
+	map<int, TH2I*> hUpstream_TimewalkVsPeak;
+	map<int, TH2I*> hDownstream_TimewalkVsPeak;
+	map<int, TH2I*> hUpstream_TimewalkVsPeak_Corrected;
+	map<int, TH2I*> hDownstream_TimewalkVsPeak_Corrected;
 	
-	TH1F *hDebug;
-	TH2F *hBCALMatch;
-	TH2F *hPosShowers_Evst;
-	TH2F *hNegShowers_Evst;
-	TH2F *hPosPionShowers_Evst;
-	TH2F *hPosPionShowers_Pvst;
-	TH2F *hPosPionShowers_zvst;
-	TH2F *hNegPionShowers_Evst;
-	TH2F *hNegPionShowers_Pvst;
-	TH2F *hNegPionShowers_zvst;
-	TH2F *hNeutShowers_Evst;
-	TH2F *hNeutShowers_zvst;
+	TH1I *hDebug;
+	TH2I *hBCALMatch;
+	TH2I *hPosShowers_Evst;
+	TH2I *hNegShowers_Evst;
+	TH2I *hPosPionShowers_Evst;
+	TH2I *hPosPionShowers_Pvst;
+	TH2I *hPosPionShowers_zvst;
+	TH2I *hNegPionShowers_Evst;
+	TH2I *hNegPionShowers_Pvst;
+	TH2I *hNegPionShowers_zvst;
+	TH2I *hNeutShowers_Evst;
+	TH2I *hNeutShowers_zvst;
 	
-	TH2F *hPosShowers_PvsdEdx;
-	TH2F *hPosShowers_dEdxvst;
-	TH2F *hPosShowers_PvsE;
-	TH2F *hPosShowers_PvsEP;
-	TH2F *hNegShowers_PvsdEdx;
-	TH2F *hNegShowers_dEdxvst;
-	TH2F *hNegShowers_PvsE;
-	TH2F *hNegShowers_PvsEP;
-	TH2F *hMatching_dZvsdPhi;
+	TH2I *hPosShowers_PvsdEdx;
+	TH2I *hPosShowers_dEdxvst;
+	TH2I *hPosShowers_PvsE;
+	TH2I *hPosShowers_PvsEP;
+	TH2I *hNegShowers_PvsdEdx;
+	TH2I *hNegShowers_dEdxvst;
+	TH2I *hNegShowers_PvsE;
+	TH2I *hNegShowers_PvsEP;
+	TH2I *hMatching_dZvsdPhi;
 	
-	TH2F *hNpointVsEshower_qpos;
-	TH2F *hNpointVsEshower_qneg;
-	TH2F *hNpointVsEshower_q0;
-	TH2F *hEpointVsEshower_qpos;
-	TH2F *hEpointVsEshower_qneg;
+	TH2I *hNpointVsEshower_qpos;
+	TH2I *hNpointVsEshower_qneg;
+	TH2I *hNpointVsEshower_q0;
+	TH2I *hEpointVsEshower_qpos;
+	TH2I *hEpointVsEshower_qneg;
 	
-	map<int, TH2F*> hEpointVsEshower_qpos_layer;
-	map<int, TH2F*> hEpointVsEshower_qneg_layer;
+	map<int, TH2I*> hEpointVsEshower_qpos_layer;
+	map<int, TH2I*> hEpointVsEshower_qneg_layer;
 	
-	TH2F *hAllPointsVsShower_zpos;
+	TH2I *hAllPointsVsShower_zpos;
 	
-	TH2F *hZvsDeltat_all;
-	TH2F *hZvsDeltat_qpos;
-	TH2F *hZvsDeltat_qneg;
+	TH2I *hZvsDeltat_all;
+	TH2I *hZvsDeltat_qpos;
+	TH2I *hZvsDeltat_qneg;
 	
-	map<int, TH2F*> hZvsDeltat_layer;
-	map<int, TH2F*> hZvsDeltat_chan;
-	map<int, TH2F*> hThetavsDeltat_layer;
+	map<int, TH2I*> hZvsDeltat_layer;
+	map<int, TH2I*> hZvsDeltat_chan;
+	map<int, TH2I*> hThetavsDeltat_layer;
 
-	TH1F *hDeltat_corr_all;
-	TH2F *hDeltatvscell_corr;
+	TH1I *hDeltat_corr_all;
+	TH2I *hDeltatvscell_corr;
 	
-	TH2F *hZvsDeltaz_all;
-	TH2F *hZvsDeltaz_qpos;
-	TH2F *hZvsDeltaz_qneg;
+	TH2I *hZvsDeltaz_all;
+	TH2I *hZvsDeltaz_qpos;
+	TH2I *hZvsDeltaz_qneg;
 	
-	map<int, TH2F*> hZvsDeltaz_layer;
-	map<int, TH2F*> hZvsDeltaz_chan;
+	map<int, TH2I*> hZvsDeltaz_layer;
+	map<int, TH2I*> hZvsDeltaz_chan;
 
-	TH2F *htrackZvsBCALZ_all;
-	TH2F *htrackZvsBCALZ_qpos;
-	TH2F *htrackZvsBCALZ_qneg;
+	TH2I *htrackZvsBCALZ_all;
+	TH2I *htrackZvsBCALZ_qpos;
+	TH2I *htrackZvsBCALZ_qneg;
 	
-	map<int, TH2F*> htrackZvsBCALZ_layer;
-	map<int, TH2F*> htrackZvsBCALZ_chan;
+	map<int, TH2I*> htrackZvsBCALZ_layer;
+	map<int, TH2I*> htrackZvsBCALZ_chan;
 
-	TH1F *hDeltat_raw_all;
-	TH2F *hDeltat_raw_chan;
+	TH1I *hDeltat_raw_all;
+	TH2I *hDeltat_raw_chan;
 	
-	TH2F *hdeltaTVsCell_all;
-	TH2F *hdeltaTVsCell_qpos;
-	TH2F *hdeltaTVsCell_qneg;
-	TH2F *hdeltaTVsCell_q0;
-	TH2F *hdeltaTVsCell_qpos_Eweight;
-	TH2F *hdeltaTVsCell_qneg_Eweight;
-	TH2F *hdeltaTVsCell_q0_Eweight;
-	TH2F *hdeltaTVsCell_qpos_E2weight;
-	TH2F *hdeltaTVsCell_qneg_E2weight;
-	TH2F *hdeltaTVsCell_q0_E2weight;
-	TH2F *hdeltaTVsLayer_qpos;
-	TH2F *hdeltaTVsLayer_qneg;
-	TH2F *hHitDeltaTVsChannel;
-	TH2F *hHittimediff;
+	TH2I *hdeltaTVsCell_all;
+	TH2I *hdeltaTVsCell_qpos;
+	TH2I *hdeltaTVsCell_qneg;
+	TH2I *hdeltaTVsCell_q0;
+	TH2I *hdeltaTVsCell_qpos_Eweight;
+	TH2I *hdeltaTVsCell_qneg_Eweight;
+	TH2I *hdeltaTVsCell_q0_Eweight;
+	TH2I *hdeltaTVsCell_qpos_E2weight;
+	TH2I *hdeltaTVsCell_qneg_E2weight;
+	TH2I *hdeltaTVsCell_q0_E2weight;
+	TH2I *hdeltaTVsLayer_qpos;
+	TH2I *hdeltaTVsLayer_qneg;
+	TH2I *hHitDeltaTVsChannel;
+	TH2I *hHittimediff;
 	
-	TH2F *hHits_deltaTVsE_ADC_qpos;
-	TH2F *hHits_deltaTVsE_TDC_qpos;
-	TH2F *hHits_deltaTVsE_Mixed_qpos;
-	TH2F *hHits_deltaTVsE_ADC_qneg;
-	TH2F *hHits_deltaTVsE_TDC_qneg;
-	TH2F *hHits_deltaTVsE_Mixed_qneg;
+	TH2I *hHits_deltaTVsE_ADC_qpos;
+	TH2I *hHits_deltaTVsE_TDC_qpos;
+	TH2I *hHits_deltaTVsE_Mixed_qpos;
+	TH2I *hHits_deltaTVsE_ADC_qneg;
+	TH2I *hHits_deltaTVsE_TDC_qneg;
+	TH2I *hHits_deltaTVsE_Mixed_qneg;
 	
-	TH2F *hHits_deltaTVsPPmax_ADC_qpos;
-	TH2F *hHits_deltaTVsPPmax_TDC_qpos;
-	TH2F *hHits_deltaTVsPPmax_Mixed_qpos;
-	TH2F *hHits_deltaTVsPPmax_ADC_qneg;
-	TH2F *hHits_deltaTVsPPmax_TDC_qneg;
-	TH2F *hHits_deltaTVsPPmax_Mixed_qneg;
+	TH2I *hHits_deltaTVsPPmax_ADC_qpos;
+	TH2I *hHits_deltaTVsPPmax_TDC_qpos;
+	TH2I *hHits_deltaTVsPPmax_Mixed_qpos;
+	TH2I *hHits_deltaTVsPPmax_ADC_qneg;
+	TH2I *hHits_deltaTVsPPmax_TDC_qneg;
+	TH2I *hHits_deltaTVsPPmax_Mixed_qneg;
 	
-	TH2F *hHits_deltaTVsPPmin_ADC_qpos;
-	TH2F *hHits_deltaTVsPPmin_TDC_qpos;
-	TH2F *hHits_deltaTVsPPmin_Mixed_qpos;
-	TH2F *hHits_deltaTVsPPmin_ADC_qneg;
-	TH2F *hHits_deltaTVsPPmin_TDC_qneg;
-	TH2F *hHits_deltaTVsPPmin_Mixed_qneg;
+	TH2I *hHits_deltaTVsPPmin_ADC_qpos;
+	TH2I *hHits_deltaTVsPPmin_TDC_qpos;
+	TH2I *hHits_deltaTVsPPmin_Mixed_qpos;
+	TH2I *hHits_deltaTVsPPmin_ADC_qneg;
+	TH2I *hHits_deltaTVsPPmin_TDC_qneg;
+	TH2I *hHits_deltaTVsPPmin_Mixed_qneg;
 	
-	TH2F *hPoints_deltaTVsEnergy_qpos;
-	TH2F *hPoints_deltaTVsEnergy_qneg;
-	TH2F *hPoints_deltaTVsEnergy_q0;
-	TH2F *hPoints_altdeltaTVsEnergy_q0;
-	TH2F *hPoints_deltaTVsEnergy_ADC_qpos;
-	TH2F *hPoints_deltaTVsEnergy_ADC_qneg;
-	TH2F *hPoints_deltaTVsEnergy_TDC_qpos;
-	TH2F *hPoints_deltaTVsEnergy_TDC_qneg;
-	TH2F *hPoints_deltaTVsEnergy_Mixed_qpos;
-	TH2F *hPoints_deltaTVsEnergy_Mixed_qneg;
+	TH2I *hPoints_deltaTVsEnergy_qpos;
+	TH2I *hPoints_deltaTVsEnergy_qneg;
+	TH2I *hPoints_deltaTVsEnergy_q0;
+	TH2I *hPoints_altdeltaTVsEnergy_q0;
+	TH2I *hPoints_deltaTVsEnergy_ADC_qpos;
+	TH2I *hPoints_deltaTVsEnergy_ADC_qneg;
+	TH2I *hPoints_deltaTVsEnergy_TDC_qpos;
+	TH2I *hPoints_deltaTVsEnergy_TDC_qneg;
+	TH2I *hPoints_deltaTVsEnergy_Mixed_qpos;
+	TH2I *hPoints_deltaTVsEnergy_Mixed_qneg;
 	
-	map<int, TH2F*> hPoints_deltaTVsEnergy_qpos_layer;
-	map<int, TH2F*> hPoints_deltaTVsEnergy_qneg_layer;
-	map<int, TH2F*> hPoints_deltaTVsEnergy_q0_layer;
-	map<int, TH2F*> hPoints_deltaTVsEnergy_ADC_qpos_layer;
-	map<int, TH2F*> hPoints_deltaTVsEnergy_ADC_qneg_layer;
-	map<int, TH2F*> hPoints_deltaTVsEnergy_TDC_qpos_layer;
-	map<int, TH2F*> hPoints_deltaTVsEnergy_TDC_qneg_layer;
-	map<int, TH2F*> hPoints_deltaTVsEnergy_Mixed_qpos_layer;
-	map<int, TH2F*> hPoints_deltaTVsEnergy_Mixed_qneg_layer;
-	map<int, TH2F*> hPoints_altdeltaTVsEnergy_q0_layer;
+	map<int, TH2I*> hPoints_deltaTVsEnergy_qpos_layer;
+	map<int, TH2I*> hPoints_deltaTVsEnergy_qneg_layer;
+	map<int, TH2I*> hPoints_deltaTVsEnergy_q0_layer;
+	map<int, TH2I*> hPoints_deltaTVsEnergy_ADC_qpos_layer;
+	map<int, TH2I*> hPoints_deltaTVsEnergy_ADC_qneg_layer;
+	map<int, TH2I*> hPoints_deltaTVsEnergy_TDC_qpos_layer;
+	map<int, TH2I*> hPoints_deltaTVsEnergy_TDC_qneg_layer;
+	map<int, TH2I*> hPoints_deltaTVsEnergy_Mixed_qpos_layer;
+	map<int, TH2I*> hPoints_deltaTVsEnergy_Mixed_qneg_layer;
+	map<int, TH2I*> hPoints_altdeltaTVsEnergy_q0_layer;
 
 	
-	TH2F *hPoints_deltaTVsShowerEnergy_qpos;
-	TH2F *hPoints_deltaTVsShowerEnergy_qneg;
-	TH2F *hPoints_deltaTVsShowerEnergy_q0;
+	TH2I *hPoints_deltaTVsShowerEnergy_qpos;
+	TH2I *hPoints_deltaTVsShowerEnergy_qneg;
+	TH2I *hPoints_deltaTVsShowerEnergy_q0;
 	
-	map<int, TH2F*> hPoints_deltaTVsShowerEnergy_qpos_layer;
-	map<int, TH2F*> hPoints_deltaTVsShowerEnergy_qneg_layer;
-	map<int, TH2F*> hPoints_deltaTVsShowerEnergy_q0_layer;
-	map<int, TH2F*> hPoints_altdeltaTVsShowerEnergy_q0_layer;
+	map<int, TH2I*> hPoints_deltaTVsShowerEnergy_qpos_layer;
+	map<int, TH2I*> hPoints_deltaTVsShowerEnergy_qneg_layer;
+	map<int, TH2I*> hPoints_deltaTVsShowerEnergy_q0_layer;
+	map<int, TH2I*> hPoints_altdeltaTVsShowerEnergy_q0_layer;
 	
-	TH2F *hPoints_altdeltaTVsShowerEnergy_q0;
-	TH2F *hlogintratiovsZtrack_all;
+	TH2I *hPoints_altdeltaTVsShowerEnergy_q0;
+	TH2I *hlogintratiovsZtrack_all;
 
-	map<int, TH2F*> hlogintratiovsZtrack_chan;
+	map<int, TH2I*> hlogintratiovsZtrack_chan;
 
 
-	//TH2F *;
+	//TH2I *;
 	
 	
 

@@ -107,16 +107,16 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
     gDirectory->mkdir("BCAL_TDC_Timing")->cd();
     gDirectory->mkdir("Timewalk_All")->cd();
 
-	hUpstream_Channel_Deltat_All = new TH2F("Upstream_Channel_Deltat_All",
+	hUpstream_Channel_Deltat_All = new TH2I("Upstream_Channel_Deltat_All",
 											"BCAL Upstream t_{TDC}-t_{ADC}; cellID; t_{TDC} - t_{ADC} [ns] ",
                              				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
-	hDownstream_Channel_Deltat_All = new TH2F("Downstream_Channel_Deltat_All",
+	hDownstream_Channel_Deltat_All = new TH2I("Downstream_Channel_Deltat_All",
 											"BCAL Downstream t_{TDC}-t_{ADC}; cellID; t_{TDC} - t_{ADC} [ns] ",
                              				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
-	hUpstream_Channel_Deltat_All_Corrected = new TH2F("Upstream_Channel_Deltat_All_Corrected",
+	hUpstream_Channel_Deltat_All_Corrected = new TH2I("Upstream_Channel_Deltat_All_Corrected",
 											"BCAL Upstream t_{TDC}-t_{ADC} corrected; cellID; t_{TDC} - t_{ADC} [ns] ",
                              				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
-	hDownstream_Channel_Deltat_All_Corrected = new TH2F("Downstream_Channel_Deltat_All_Corrected",
+	hDownstream_Channel_Deltat_All_Corrected = new TH2I("Downstream_Channel_Deltat_All_Corrected",
 											"BCAL Downstream t_{TDC}-t_{ADC} corrected; cellID; t_{TDC} - t_{ADC} [ns] ",
                              				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
 
@@ -130,7 +130,7 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 				sprintf(name, "M%02iL%iS%i", module, layer, sector);
 
 				int the_tdc_cell = module * 12 + layer * 4 + sector + 1;
-				hUpstream_TimewalkVsPeak[the_tdc_cell] = new TH2F(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
+				hUpstream_TimewalkVsPeak[the_tdc_cell] = new TH2I(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
                              npeakbins, peakbins, ndtbinswide, dtbinswide);
 			}
 		}
@@ -146,7 +146,7 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 				sprintf(name, "M%02iL%iS%i", module, layer, sector);
 
 				int the_tdc_cell = module * 12 + layer * 4 + sector + 1;
-				hDownstream_TimewalkVsPeak[the_tdc_cell] = new TH2F(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
+				hDownstream_TimewalkVsPeak[the_tdc_cell] = new TH2I(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
                              npeakbins, peakbins, ndtbinswide, dtbinswide);
 			}
 		}
@@ -162,7 +162,7 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 				sprintf(name, "M%02iL%iS%i", module, layer, sector);
 
 				int the_tdc_cell = module * 12 + layer * 4 + sector + 1;
-				hUpstream_TimewalkVsPeak_Corrected[the_tdc_cell] = new TH2F(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
+				hUpstream_TimewalkVsPeak_Corrected[the_tdc_cell] = new TH2I(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
                              npeakbins, peakbins, ndtbinswide, dtbinswide);
 			}
 		}
@@ -178,7 +178,7 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 				sprintf(name, "M%02iL%iS%i", module, layer, sector);
 
 				int the_tdc_cell = module * 12 + layer * 4 + sector + 1;
-				hDownstream_TimewalkVsPeak_Corrected[the_tdc_cell] = new TH2F(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
+				hDownstream_TimewalkVsPeak_Corrected[the_tdc_cell] = new TH2I(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
                              npeakbins, peakbins, ndtbinswide, dtbinswide);
 			}
 		}
@@ -191,95 +191,233 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 	gDirectory->mkdir("BCAL_Global_Offsets")->cd();
     gDirectory->mkdir("Debug")->cd();
 
-	hDebug = new TH1F("Success", "Success profile;Step", 16, -0.5, 15.5);
+	hDebug = new TH1I("Success", "Success profile;Step", 16, -0.5, 15.5);
 
     gDirectory->cd("..");
     gDirectory->mkdir("Showers")->cd();
 
-	hBCALMatch = new TH2F("BCAL Match",  "BCAL Match;#Delta Z [cm]; #Delta#phi [rad]",
+	hBCALMatch = new TH2I("BCAL Match",  "BCAL Match;#Delta Z [cm]; #Delta#phi [rad]",
                       200, -25, 25, 200, -0.1, 0.1);
-    hPosShowers_Evst = new TH2F("AllShowers_q+",  "Charged shower; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
-    hNegShowers_Evst = new TH2F("AllShowers_q-",  "Charged shower; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hPosShowers_Evst = new TH2I("AllShowers_q+",  "Charged shower; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hNegShowers_Evst = new TH2I("AllShowers_q-",  "Charged shower; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
 
-    hPosPionShowers_Evst = new TH2F("PionShowers_q+",  "Pion showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
-    hPosPionShowers_Pvst = new TH2F("PionShowersVsP_q+",  "Pion showers; P [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
-    hPosPionShowers_zvst = new TH2F("PionShowersVsZ_q+",  "Pion showers; Z [cm]; t_{Target} - t_{RF} [ns]", 880, 0.0, 440.0, 200, -10, 10);
-    hNegPionShowers_Evst = new TH2F("PionShowers_q-",  "Pion showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
-    hNegPionShowers_Pvst = new TH2F("PionShowersVsP_q-",  "Pion showers; P [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
-    hNegPionShowers_zvst = new TH2F("PionShowersVsZ_q-",  "Pion showers; Z [cm]; t_{Target} - t_{RF} [ns]", 880, 0.0, 440.0, 200, -10, 10);
+    hPosPionShowers_Evst = new TH2I("PionShowers_q+",  "Pion showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hPosPionShowers_Pvst = new TH2I("PionShowersVsP_q+",  "Pion showers; P [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hPosPionShowers_zvst = new TH2I("PionShowersVsZ_q+",  "Pion showers; Z [cm]; t_{Target} - t_{RF} [ns]", 880, 0.0, 440.0, 200, -10, 10);
+    hNegPionShowers_Evst = new TH2I("PionShowers_q-",  "Pion showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hNegPionShowers_Pvst = new TH2I("PionShowersVsP_q-",  "Pion showers; P [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hNegPionShowers_zvst = new TH2I("PionShowersVsZ_q-",  "Pion showers; Z [cm]; t_{Target} - t_{RF} [ns]", 880, 0.0, 440.0, 200, -10, 10);
 
-    hNeutShowers_Evst = new TH2F("AllShowers_q0",  "Neutral Showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
-    hNeutShowers_zvst = new TH2F("AllShowers_q0",  "Neutral Showers; Z [cm]; t_{Target} - t_{RF} [ns]", 880, 0.0, 440.0, 200, -10, 10);
+    hNeutShowers_Evst = new TH2I("AllShowers_q0",  "Neutral Showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hNeutShowers_zvst = new TH2I("AllShowers_q0",  "Neutral Showers; Z [cm]; t_{Target} - t_{RF} [ns]", 880, 0.0, 440.0, 200, -10, 10);
 
     gDirectory->cd("..");
     gDirectory->mkdir("Showers_PID")->cd();
 
-    hPosShowers_PvsdEdx = new TH2F("dEdxVsP_q+",  "CDC dE/dx vs P; P [GeV]; dE/dx [keV/cm]", 200, 0.0, 5.0, 200, 0.0, 5.0);
-    hPosShowers_dEdxvst = new TH2F("deltaTVsdEdx_q+",  "PID; dE/dx [keV/cm]; t_{Target} - t_{RF} [ns]", 200, 0.0, 5.0, 200, -10, 10);
-    hPosShowers_PvsE = new TH2F("EVsP_q+", "PID; P  [GeV]; E/P", 200, 0.0, 5.0, 200, 0, 5.0);
-    hPosShowers_PvsEP = new TH2F("EoverPVsP_q+", "PID; P  [GeV]; E  [GeV]", 200, 0.0, 5.0, 200, 0, 2);
-    hNegShowers_PvsdEdx = new TH2F("dEdxVsP_q-",  "CDC dE/dx vs P; P [GeV]; dE/dx [keV/cm]", 200, 0.0, 5.0, 200, 0.0, 5.0);
-    hNegShowers_dEdxvst = new TH2F("deltaTVsdEdx_q-",  "PID; dE/dx [keV/cm]; t_{Target} - t_{RF} [ns]", 200, 0.0, 5.0, 200, -10, 10);
-    hNegShowers_PvsE = new TH2F("EVsP_q-", "PID; P  [GeV]; E/P", 200, 0.0, 5.0, 200, 0, 5.0);
-    hNegShowers_PvsEP = new TH2F("EoverPVsP_q-", "PID; P  [GeV]; E  [GeV]", 200, 0.0, 5.0, 200, 0, 2);
+    hPosShowers_PvsdEdx = new TH2I("dEdxVsP_q+",  "CDC dE/dx vs P; P [GeV]; dE/dx [keV/cm]", 200, 0.0, 5.0, 200, 0.0, 5.0);
+    hPosShowers_dEdxvst = new TH2I("deltaTVsdEdx_q+",  "PID; dE/dx [keV/cm]; t_{Target} - t_{RF} [ns]", 200, 0.0, 5.0, 200, -10, 10);
+    hPosShowers_PvsE = new TH2I("EVsP_q+", "PID; P  [GeV]; E/P", 200, 0.0, 5.0, 200, 0, 5.0);
+    hPosShowers_PvsEP = new TH2I("EoverPVsP_q+", "PID; P  [GeV]; E  [GeV]", 200, 0.0, 5.0, 200, 0, 2);
+    hNegShowers_PvsdEdx = new TH2I("dEdxVsP_q-",  "CDC dE/dx vs P; P [GeV]; dE/dx [keV/cm]", 200, 0.0, 5.0, 200, 0.0, 5.0);
+    hNegShowers_dEdxvst = new TH2I("deltaTVsdEdx_q-",  "PID; dE/dx [keV/cm]; t_{Target} - t_{RF} [ns]", 200, 0.0, 5.0, 200, -10, 10);
+    hNegShowers_PvsE = new TH2I("EVsP_q-", "PID; P  [GeV]; E/P", 200, 0.0, 5.0, 200, 0, 5.0);
+    hNegShowers_PvsEP = new TH2I("EoverPVsP_q-", "PID; P  [GeV]; E  [GeV]", 200, 0.0, 5.0, 200, 0, 2);
 
-    hMatching_dZvsdPhi = new TH2F("Matching",  "Shower-Track position difference;dZ [cm]; d#phi [degrees]", 200, -60.0, 60.0, 200, -30, 30); 
+    hMatching_dZvsdPhi = new TH2I("Matching",  "Shower-Track position difference;dZ [cm]; d#phi [degrees]", 200, -60.0, 60.0, 200, -30, 30); 
 
     gDirectory->cd("..");
     gDirectory->mkdir("Points")->cd();
 
-	hNpointVsEshower_qpos = new TH2F("NpointVsEshower_q+",  "PID; E_{shower} [GeV]; N_{point}", 500, 0.0, 5.0, 50, 0, 50);
-	hNpointVsEshower_qneg = new TH2F("NpointVsEshower_q-",  "PID; E_{shower} [GeV]; N_{point}", 500, 0.0, 5.0, 50, 0, 50);
-	hEpointVsEshower_qpos = new TH2F("EpointVsEshower_q+",  "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);
-	hEpointVsEshower_qneg = new TH2F("EpointVsEshower_q-",  "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);
+	hNpointVsEshower_qpos = new TH2I("NpointVsEshower_q+",  "PID; E_{shower} [GeV]; N_{point}", 500, 0.0, 5.0, 50, 0, 50);
+	hNpointVsEshower_qneg = new TH2I("NpointVsEshower_q-",  "PID; E_{shower} [GeV]; N_{point}", 500, 0.0, 5.0, 50, 0, 50);
+	hEpointVsEshower_qpos = new TH2I("EpointVsEshower_q+",  "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);
+	hEpointVsEshower_qneg = new TH2I("EpointVsEshower_q-",  "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);
 	for(int layer = 0; layer < NBCALLAYERS; layer++) {
 		char layername[255];
 		sprintf(layername, "EpointVsEshower_Layer%i_q+", layer+1);
-		hEpointVsEshower_qpos_layer[layer] = new TH2F(layername, "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);  
+		hEpointVsEshower_qpos_layer[layer] = new TH2I(layername, "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);  
 		sprintf(layername, "EpointVsEshower_Layer%i_q-", layer+1);
-		hEpointVsEshower_qneg_layer[layer] = new TH2F(layername, "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);  
+		hEpointVsEshower_qneg_layer[layer] = new TH2I(layername, "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);  
 	}
 
-	hNpointVsEshower_q0 = new TH2F("NpointVsEshower_q0",  "PID; E_{shower} [GeV]; N_{point}", 500, 0.0, 5.0, 50, 0, 50);
+	hNpointVsEshower_q0 = new TH2I("NpointVsEshower_q0",  "PID; E_{shower} [GeV]; N_{point}", 500, 0.0, 5.0, 50, 0, 50);
 
 
     gDirectory->cd("..");
     gDirectory->mkdir("Z Position")->cd();
 
-	hAllPointsVsShower_zpos = new TH2F("AllPointsVsShower", "Z_{Point} vs Z_{Shower};Z_{Shower}  [cm];Z_{Point} [cm]", 225, zminhall, zmaxhall, 225, zminhall, zmaxhall);
-    htrackZvsBCALZ_all = new TH2F("AllPoints",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall); 
-    htrackZvsBCALZ_qpos = new TH2F("All_q+",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
-    htrackZvsBCALZ_qneg = new TH2F("All_q-",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
+	hAllPointsVsShower_zpos = new TH2I("AllPointsVsShower", "Z_{Point} vs Z_{Shower};Z_{Shower}  [cm];Z_{Point} [cm]", 225, zminhall, zmaxhall, 225, zminhall, zmaxhall);
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Deltat")->cd();
+
+    hDeltat_corr_all = new TH1I("AllPoints",  "#Delta t (Hit) corrected for Z;#Delta t - Z_{Track}/v_{eff}", 70, -10, 14);  
+    hDeltatvscell_corr = new TH2I("VsCell",  "#Delta t (Hit) corrected for Z;#Delta t - Z_{Track}/v_{eff}", 768, 0.5, 768.5, 70, -10, 14);  
+	
+    gDirectory->cd("..");
+    gDirectory->mkdir("Deltat_raw")->cd();
+    
+    hDeltat_raw_all = new TH1I("AllPoints", "#Delta t (Hit) corrected for Z;#Delta t_{raw} - Z_{Track}/v_{eff}",  70, -10, 14);
+    hDeltat_raw_chan = new TH2I("VsCell", "#Delta t (Hit) corrected for Z;#Delta t_{raw} - Z_{Track}/v_{eff}", 768, 0.5, 768.5, 70, -10, 14);
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Target Time")->cd();
+
+    hCCDB_raw_channel_global_offset = new TH1I("CCDB_raw_channel_global_offset",  "Offsets at time of running;CCDB Index;CCDB timing offset [ns]", 769, 0.5, 769.5); 
+
+    hdeltaTVsCell_all = new TH2I("deltaTVsCell",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10); 
+    hdeltaTVsCell_qpos = new TH2I("deltaTVsCell_q+",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_qneg = new TH2I("deltaTVsCell_q-",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_q0 = new TH2I("deltaTVsCell_q-0",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_qpos_Eweight = new TH2I("deltaTVsCell_q+_Eweight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_qneg_Eweight = new TH2I("deltaTVsCell_q-_Eweight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_q0_Eweight = new TH2I("deltaTVsCell_q0_Eweight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_qpos_E2weight = new TH2I("deltaTVsCell_q+_E2weight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_qneg_E2weight = new TH2I("deltaTVsCell_q-_E2weight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_q0_E2weight = new TH2I("deltaTVsCell_q0_E2weight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsLayer_qpos = new TH2I("deltaTVsLayer_q+",  "Charged shower points; Layer; t_{Target} - t_{RF} [ns]", 4, 0.5, 4.5, 200, -10, 10);  
+    hdeltaTVsLayer_qneg = new TH2I("deltaTVsLayer_q-",  "Charged shower points; Layer; t_{Target} - t_{RF} [ns]", 4, 0.5, 4.5, 200, -10, 10);  
+
+	hHitDeltaTVsChannel = new TH2I("hitDeltaTVsChannel",  "Charged shower hit; CCDB Index; t_{Target} - t_{RF} [ns]", 1536, 0.5, 1536.5, 200, -10, 10);
+	hHittimediff = new TH2I("hittimediff",  "Charged shower hit; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);
+
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Hits_deltaTVsE")->cd();
+    
+    hHits_deltaTVsE_ADC_qpos = new TH2I("AllHits_ADC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hHits_deltaTVsE_TDC_qpos = new TH2I("AllHits_TDC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hHits_deltaTVsE_Mixed_qpos = new TH2I("AllHits_Mixed_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hHits_deltaTVsE_ADC_qneg = new TH2I("AllHits_ADC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hHits_deltaTVsE_TDC_qneg = new TH2I("AllHits_TDC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hHits_deltaTVsE_Mixed_qneg = new TH2I("AllHits_Mixed_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Hits_deltaTVsPPmax")->cd();
+
+    hHits_deltaTVsPPmax_ADC_qpos = new TH2I("AllHits_ADC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmax_TDC_qpos = new TH2I("AllHits_TDC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmax_Mixed_qpos = new TH2I("AllHits_Mixed_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmax_ADC_qneg = new TH2I("AllHits_ADC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmax_TDC_qneg = new TH2I("AllHits_TDC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmax_Mixed_qneg = new TH2I("AllHits_Mixed_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    
+    gDirectory->cd("..");
+    gDirectory->mkdir("Hits_deltaTVsPPmin")->cd();
+
+    hHits_deltaTVsPPmin_ADC_qpos = new TH2I("AllHits_ADC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmin_TDC_qpos = new TH2I("AllHits_TDC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmin_Mixed_qpos = new TH2I("AllHits_Mixed_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmin_ADC_qneg = new TH2I("AllHits_ADC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmin_TDC_qneg = new TH2I("AllHits_TDC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmin_Mixed_qneg = new TH2I("AllHits_Mixed_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Points_deltaTVsEnergy")->cd();
+
+    hPoints_deltaTVsEnergy_qpos = new TH2I("AllPoints_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_qneg = new TH2I("AllPoints_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_q0 = new TH2I("AllPoints_q0",  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_ADC_qpos = new TH2I("AllPoints_ADC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_ADC_qneg = new TH2I("AllPoints_ADC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_TDC_qpos = new TH2I("AllPoints_TDC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_TDC_qneg = new TH2I("AllPoints_TDC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_Mixed_qpos = new TH2I("AllPoints_Mixed_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_Mixed_qneg = new TH2I("AllPoints_Mixed_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
 
 	for(int layer = 0; layer < NBCALLAYERS; layer++) {
 		char layername[255];
-		sprintf(layername, "AllLayer%i", layer+1);
-		htrackZvsBCALZ_layer[layer] = new TH2F(layername,   "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
+		sprintf(layername, "Layer%i_q+", layer+1);
+		hPoints_deltaTVsEnergy_qpos_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_q-", layer+1);
+		hPoints_deltaTVsEnergy_qneg_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_q0", layer+1);
+		hPoints_deltaTVsEnergy_q0_layer[layer] = new TH2I(layername,  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+
+		sprintf(layername, "Layer%i_ADC_q+", layer+1);
+		hPoints_deltaTVsEnergy_ADC_qpos_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_ADC_q-", layer+1);
+		hPoints_deltaTVsEnergy_ADC_qneg_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_TDC_q+", layer+1);
+		hPoints_deltaTVsEnergy_TDC_qpos_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_TDC_q-", layer+1);
+		hPoints_deltaTVsEnergy_TDC_qneg_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_Mixed_q+", layer+1);
+		hPoints_deltaTVsEnergy_Mixed_qpos_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_Mixed_q-", layer+1);
+		hPoints_deltaTVsEnergy_Mixed_qneg_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
 	}
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Points_altDeltaTVsEnergy")->cd();
+
+    hPoints_altdeltaTVsEnergy_q0 = new TH2I("AllPoints_q0",  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "Layer%i_q0", layer);
+		hPoints_altdeltaTVsEnergy_q0_layer[layer] = new TH2I(layername,  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	}
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Points_deltaTVsShowerEnergy")->cd();
+
+    hPoints_deltaTVsShowerEnergy_qpos = new TH2I("AllPoints_q+",  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsShowerEnergy_qneg = new TH2I("AllPoints_q-",  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsShowerEnergy_q0 = new TH2I("AllPoints_q0",  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "Layer%i_q+", layer+1);
+		hPoints_deltaTVsShowerEnergy_qpos_layer[layer] = new TH2I(layername,  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_q-", layer+1);
+		hPoints_deltaTVsShowerEnergy_qneg_layer[layer] = new TH2I(layername,  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_q0", layer+1);
+		hPoints_deltaTVsShowerEnergy_q0_layer[layer] = new TH2I(layername,  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	}
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Points_altDeltaTVsShowerEnergy")->cd();
+
+    hPoints_altdeltaTVsShowerEnergy_q0 = new TH2I("AllPoints_q0",  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "Layer%i_q0", layer);
+		hPoints_altdeltaTVsShowerEnergy_q0_layer[layer] = new TH2I(layername,  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	}
+
+
+    gDirectory->cd("../..");
+    gDirectory->mkdir("BCAL_atten_gain")->cd();
+    gDirectory->mkdir("logintratiovsZtrack")->cd();
+
+    hlogintratiovsZtrack_all = new TH2I("AllPoints", "Attenuation;Z_{Track}  (cm);log of integral ratio US/DS", 250, zminlocal, zmaxlocal, 250, -3, 3);
 	for(int module = 0; module < NBCALMODS; module++) {
 		for(int layer = 0; layer < NBCALLAYERS; layer++) {
 			for(int sector = 0; sector < NBCALSECTORS; sector++) {
 				char name[200], title[200];
 				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
-            	sprintf(title, "%s  Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]]", name);
+                sprintf(title,"Attenuation (M%i,L%i,S%i);Z_{Track}  (cm);log of integral ratio US/DS", module+1, layer+1, sector+1);
 
 				int the_cell = module * 12 + layer * 4 + sector + 1;
-				htrackZvsBCALZ_chan[the_cell] = new TH2F(name, title, 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);
+				hlogintratiovsZtrack_chan[the_cell] = new TH2I(name, title, 250, zminlocal, zmaxlocal, 250, -3, 3);
 			}
 		}
 	}
 
-    gDirectory->cd("..");
+	main->cd();
+
+    gDirectory->mkdir("BCAL_TDC_Offsets")->cd();
     gDirectory->mkdir("ZvsDeltat")->cd();
     
-    hZvsDeltat_all = new TH2F("AllPoints",  "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  // simulation has 16 values in each Deltat=1
-    hZvsDeltat_qpos = new TH2F("All_q+",  "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  
-    hZvsDeltat_qneg = new TH2F("All_q-",  "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  
+    hZvsDeltat_all = new TH2I("AllPoints",  "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  // simulation has 16 values in each Deltat=1
+    hZvsDeltat_qpos = new TH2I("All_q+",  "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  
+    hZvsDeltat_qneg = new TH2I("All_q-",  "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  
 
 	for(int layer = 0; layer < NBCALLAYERS; layer++) {
 		char layername[255];
 		sprintf(layername, "AllLayer%i", layer+1);
-		hZvsDeltat_layer[layer] = new TH2F(layername, "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  
+		hZvsDeltat_layer[layer] = new TH2I(layername, "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  
 	}
 	for(int module = 0; module < NBCALMODS; module++) {
 		for(int layer = 0; layer < NBCALLAYERS; layer++) {
@@ -289,7 +427,7 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
             	sprintf(title, "%s  Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", name);
 
 				int the_cell = module * 12 + layer * 4 + sector + 1;
-				hZvsDeltat_chan[the_cell] = new TH2F(name, title, 480, -30, 30, 250, zminhall, zmaxhall);
+				hZvsDeltat_chan[the_cell] = new TH2I(name, title, 480, -30, 30, 250, zminhall, zmaxhall);
 			}
 		}
 	}
@@ -300,27 +438,21 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 	for(int layer = 0; layer < NBCALLAYERS; layer++) {
 		char layername[255];
 		sprintf(layername, "AllLayer%i", layer+1);
-		hThetavsDeltat_layer[layer] = new TH2F(layername, "#Delta t vs #theta_{Track};#theta_{Track}  (deg);#Delta t = t_{US}-t_{DS}  (ns)",
+		hThetavsDeltat_layer[layer] = new TH2I(layername, "#Delta t vs #theta_{Track};#theta_{Track}  (deg);#Delta t = t_{US}-t_{DS}  (ns)",
                              360,0,180, 480, -30, 30);  
 	}
 
     gDirectory->cd("..");
-    gDirectory->mkdir("Deltat")->cd();
-
-    hDeltat_corr_all = new TH1F("AllPoints",  "#Delta t (Hit) corrected for Z;#Delta t - Z_{Track}/v_{eff}", 70, -10, 14);  
-    hDeltatvscell_corr = new TH2F("VsCell",  "#Delta t (Hit) corrected for Z;#Delta t - Z_{Track}/v_{eff}", 768, 0.5, 768.5, 70, -10, 14);  
-
-    gDirectory->cd("..");
     gDirectory->mkdir("Delta Z")->cd();
 
-    hZvsDeltaz_all = new TH2F("AllPoints",  "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50); 
-    hZvsDeltaz_qpos = new TH2F("All_q+",  "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50);  
-    hZvsDeltaz_qneg = new TH2F("All_q-",  "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50);  
+    hZvsDeltaz_all = new TH2I("AllPoints",  "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50); 
+    hZvsDeltaz_qpos = new TH2I("All_q+",  "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50);  
+    hZvsDeltaz_qneg = new TH2I("All_q-",  "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50);  
 
 	for(int layer = 0; layer < NBCALLAYERS; layer++) {
 		char layername[255];
 		sprintf(layername, "AllLayer%i", layer+1);
-		hZvsDeltaz_layer[layer] = new TH2F(layername, "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50);  
+		hZvsDeltaz_layer[layer] = new TH2I(layername, "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50);  
 	}
 	for(int module = 0; module < NBCALMODS; module++) {
 		for(int layer = 0; layer < NBCALLAYERS; layer++) {
@@ -330,164 +462,38 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
             	sprintf(title, "%s  #Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", name);
 
 				int the_cell = module * 12 + layer * 4 + sector + 1;
-				hZvsDeltaz_chan[the_cell] = new TH2F(name, title, 250, zminhall, zmaxhall, 100, -50, 50);
+				hZvsDeltaz_chan[the_cell] = new TH2I(name, title, 250, zminhall, zmaxhall, 100, -50, 50);
 			}
 		}
 	}
-	
-    gDirectory->cd("..");
-    gDirectory->mkdir("Deltat_raw")->cd();
-    
-    hDeltat_raw_all = new TH1F("AllPoints", "#Delta t (Hit) corrected for Z;#Delta t_{raw} - Z_{Track}/v_{eff}",  70, -10, 14);
-    hDeltat_raw_chan = new TH2F("VsCell", "#Delta t (Hit) corrected for Z;#Delta t_{raw} - Z_{Track}/v_{eff}", 768, 0.5, 768.5, 70, -10, 14);
 
     gDirectory->cd("..");
-    gDirectory->mkdir("Target Time")->cd();
+    gDirectory->mkdir("Z Position")->cd();
 
-    hCCDB_raw_channel_global_offset = new TH1F("CCDB_raw_channel_global_offset",  "Offsets at time of running;CCDB Index;CCDB timing offset [ns]", 769, 0.5, 769.5); 
-
-    hdeltaTVsCell_all = new TH2F("deltaTVsCell",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10); 
-    hdeltaTVsCell_qpos = new TH2F("deltaTVsCell_q+",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
-    hdeltaTVsCell_qneg = new TH2F("deltaTVsCell_q-",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
-    hdeltaTVsCell_q0 = new TH2F("deltaTVsCell_q-0",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
-    hdeltaTVsCell_qpos_Eweight = new TH2F("deltaTVsCell_q+_Eweight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
-    hdeltaTVsCell_qneg_Eweight = new TH2F("deltaTVsCell_q-_Eweight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
-    hdeltaTVsCell_q0_Eweight = new TH2F("deltaTVsCell_q0_Eweight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
-    hdeltaTVsCell_qpos_E2weight = new TH2F("deltaTVsCell_q+_E2weight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
-    hdeltaTVsCell_qneg_E2weight = new TH2F("deltaTVsCell_q-_E2weight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
-    hdeltaTVsCell_q0_E2weight = new TH2F("deltaTVsCell_q0_E2weight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
-    hdeltaTVsLayer_qpos = new TH2F("deltaTVsLayer_q+",  "Charged shower points; Layer; t_{Target} - t_{RF} [ns]", 4, 0.5, 4.5, 200, -10, 10);  
-    hdeltaTVsLayer_qneg = new TH2F("deltaTVsLayer_q-",  "Charged shower points; Layer; t_{Target} - t_{RF} [ns]", 4, 0.5, 4.5, 200, -10, 10);  
-
-	hHitDeltaTVsChannel = new TH2F("hitDeltaTVsChannel",  "Charged shower hit; CCDB Index; t_{Target} - t_{RF} [ns]", 1536, 0.5, 1536.5, 200, -10, 10);
-	hHittimediff = new TH2F("hittimediff",  "Charged shower hit; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);
-
-
-    gDirectory->cd("..");
-    gDirectory->mkdir("Hits_deltaTVsE")->cd();
-    
-    hHits_deltaTVsE_ADC_qpos = new TH2F("AllHits_ADC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hHits_deltaTVsE_TDC_qpos = new TH2F("AllHits_TDC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hHits_deltaTVsE_Mixed_qpos = new TH2F("AllHits_Mixed_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hHits_deltaTVsE_ADC_qneg = new TH2F("AllHits_ADC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hHits_deltaTVsE_TDC_qneg = new TH2F("AllHits_TDC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hHits_deltaTVsE_Mixed_qneg = new TH2F("AllHits_Mixed_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-
-    gDirectory->cd("..");
-    gDirectory->mkdir("Hits_deltaTVsPPmax")->cd();
-
-    hHits_deltaTVsPPmax_ADC_qpos = new TH2F("AllHits_ADC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    hHits_deltaTVsPPmax_TDC_qpos = new TH2F("AllHits_TDC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    hHits_deltaTVsPPmax_Mixed_qpos = new TH2F("AllHits_Mixed_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    hHits_deltaTVsPPmax_ADC_qneg = new TH2F("AllHits_ADC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    hHits_deltaTVsPPmax_TDC_qneg = new TH2F("AllHits_TDC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    hHits_deltaTVsPPmax_Mixed_qneg = new TH2F("AllHits_Mixed_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    
-    gDirectory->cd("..");
-    gDirectory->mkdir("Hits_deltaTVsPPmin")->cd();
-
-    hHits_deltaTVsPPmin_ADC_qpos = new TH2F("AllHits_ADC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    hHits_deltaTVsPPmin_TDC_qpos = new TH2F("AllHits_TDC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    hHits_deltaTVsPPmin_Mixed_qpos = new TH2F("AllHits_Mixed_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    hHits_deltaTVsPPmin_ADC_qneg = new TH2F("AllHits_ADC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    hHits_deltaTVsPPmin_TDC_qneg = new TH2F("AllHits_TDC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    hHits_deltaTVsPPmin_Mixed_qneg = new TH2F("AllHits_Mixed_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
-    
-
-    gDirectory->cd("..");
-    gDirectory->mkdir("Points_deltaTVsEnergy")->cd();
-
-    hPoints_deltaTVsEnergy_qpos = new TH2F("AllPoints_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hPoints_deltaTVsEnergy_qneg = new TH2F("AllPoints_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hPoints_deltaTVsEnergy_q0 = new TH2F("AllPoints_q0",  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hPoints_deltaTVsEnergy_ADC_qpos = new TH2F("AllPoints_ADC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hPoints_deltaTVsEnergy_ADC_qneg = new TH2F("AllPoints_ADC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hPoints_deltaTVsEnergy_TDC_qpos = new TH2F("AllPoints_TDC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hPoints_deltaTVsEnergy_TDC_qneg = new TH2F("AllPoints_TDC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hPoints_deltaTVsEnergy_Mixed_qpos = new TH2F("AllPoints_Mixed_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hPoints_deltaTVsEnergy_Mixed_qneg = new TH2F("AllPoints_Mixed_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    htrackZvsBCALZ_all = new TH2I("AllPoints",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall); 
+    htrackZvsBCALZ_qpos = new TH2I("All_q+",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
+    htrackZvsBCALZ_qneg = new TH2I("All_q-",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
 
 	for(int layer = 0; layer < NBCALLAYERS; layer++) {
 		char layername[255];
-		sprintf(layername, "Layer%i_q+", layer+1);
-		hPoints_deltaTVsEnergy_qpos_layer[layer] = new TH2F(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-		sprintf(layername, "Layer%i_q-", layer+1);
-		hPoints_deltaTVsEnergy_qneg_layer[layer] = new TH2F(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-		sprintf(layername, "Layer%i_q0", layer+1);
-		hPoints_deltaTVsEnergy_q0_layer[layer] = new TH2F(layername,  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-
-		sprintf(layername, "Layer%i_ADC_q+", layer+1);
-		hPoints_deltaTVsEnergy_ADC_qpos_layer[layer] = new TH2F(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-		sprintf(layername, "Layer%i_ADC_q-", layer+1);
-		hPoints_deltaTVsEnergy_ADC_qneg_layer[layer] = new TH2F(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-		sprintf(layername, "Layer%i_TDC_q+", layer+1);
-		hPoints_deltaTVsEnergy_TDC_qpos_layer[layer] = new TH2F(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-		sprintf(layername, "Layer%i_TDC_q-", layer+1);
-		hPoints_deltaTVsEnergy_TDC_qneg_layer[layer] = new TH2F(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-		sprintf(layername, "Layer%i_Mixed_q+", layer+1);
-		hPoints_deltaTVsEnergy_Mixed_qpos_layer[layer] = new TH2F(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-		sprintf(layername, "Layer%i_Mixed_q-", layer+1);
-		hPoints_deltaTVsEnergy_Mixed_qneg_layer[layer] = new TH2F(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "AllLayer%i", layer+1);
+		htrackZvsBCALZ_layer[layer] = new TH2I(layername,   "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
 	}
-
-    gDirectory->cd("..");
-    gDirectory->mkdir("Points_altDeltaTVsEnergy")->cd();
-
-    hPoints_altdeltaTVsEnergy_q0 = new TH2F("AllPoints_q0",  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-	for(int layer = 0; layer < NBCALLAYERS; layer++) {
-		char layername[255];
-		sprintf(layername, "Layer%i_q0", layer);
-		hPoints_altdeltaTVsEnergy_q0_layer[layer] = new TH2F(layername,  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-	}
-
-    gDirectory->cd("..");
-    gDirectory->mkdir("Points_deltaTVsShowerEnergy")->cd();
-
-    hPoints_deltaTVsShowerEnergy_qpos = new TH2F("AllPoints_q+",  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hPoints_deltaTVsShowerEnergy_qneg = new TH2F("AllPoints_q-",  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-    hPoints_deltaTVsShowerEnergy_q0 = new TH2F("AllPoints_q0",  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-
-	for(int layer = 0; layer < NBCALLAYERS; layer++) {
-		char layername[255];
-		sprintf(layername, "Layer%i_q+", layer+1);
-		hPoints_deltaTVsShowerEnergy_qpos_layer[layer] = new TH2F(layername,  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-		sprintf(layername, "Layer%i_q-", layer+1);
-		hPoints_deltaTVsShowerEnergy_qneg_layer[layer] = new TH2F(layername,  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-		sprintf(layername, "Layer%i_q0", layer+1);
-		hPoints_deltaTVsShowerEnergy_q0_layer[layer] = new TH2F(layername,  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-	}
-
-    gDirectory->cd("..");
-    gDirectory->mkdir("Points_altDeltaTVsShowerEnergy")->cd();
-
-    hPoints_altdeltaTVsShowerEnergy_q0 = new TH2F("AllPoints_q0",  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-	for(int layer = 0; layer < NBCALLAYERS; layer++) {
-		char layername[255];
-		sprintf(layername, "Layer%i_q0", layer);
-		hPoints_altdeltaTVsShowerEnergy_q0_layer[layer] = new TH2F(layername,  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
-	}
-
-
-    gDirectory->cd("../..");
-    gDirectory->mkdir("BCAL_atten_gain")->cd();
-    gDirectory->mkdir("logintratiovsZtrack")->cd();
-
-    hlogintratiovsZtrack_all = new TH2F("AllPoints", "Attenuation;Z_{Track}  (cm);log of integral ratio US/DS", 250, zminlocal, zmaxlocal, 250, -3, 3);
 	for(int module = 0; module < NBCALMODS; module++) {
 		for(int layer = 0; layer < NBCALLAYERS; layer++) {
 			for(int sector = 0; sector < NBCALSECTORS; sector++) {
 				char name[200], title[200];
 				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
-                sprintf(title,"Attenuation (M%i,L%i,S%i);Z_{Track}  (cm);log of integral ratio US/DS", module+1, layer+1, sector+1);
+            	sprintf(title, "%s  Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]]", name);
 
 				int the_cell = module * 12 + layer * 4 + sector + 1;
-				hlogintratiovsZtrack_chan[the_cell] = new TH2F(name, title, 250, zminlocal, zmaxlocal, 250, -3, 3);
+				htrackZvsBCALZ_chan[the_cell] = new TH2I(name, title, 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);
 			}
 		}
 	}
 
-
 	main->cd();
+
 
 }
 
