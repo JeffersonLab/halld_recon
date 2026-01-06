@@ -761,9 +761,9 @@ void JEventProcessor_myanalyzer::Process(const std::shared_ptr<const JEvent>& ev
     }
   }
   //Basic selection criteria
-  Bool_t Prim2g = good_eta_to_2g * (locChargedTracks.size() == 0 && n_locBCALShowers == 0 && n_locFCALTOFShowers == 2);
-  Bool_t Prim3pi0 = good_eta_to_3pi0 * (locChargedTracks.size() == 0);
-  Bool_t Prim2g2pi = good_eta_to_2g2pi * target_vtx_z * target_vtx_r * (locChargedTracks.size() == 2);
+  Bool_t Prim2g = good_eta_to_2g && (locChargedTracks.size() == 0 && n_locBCALShowers == 0 && n_locFCALTOFShowers == 2);
+  Bool_t Prim3pi0 = good_eta_to_3pi0 && (locChargedTracks.size() == 0);
+  Bool_t Prim2g2pi = good_eta_to_2g2pi && target_vtx_z && target_vtx_r && (locChargedTracks.size() == 2);
   
   //Loop over beam-photon if basic selection criteria is fullfilled
   if ((Prim2g || Prim3pi0 || Prim2g2pi) 

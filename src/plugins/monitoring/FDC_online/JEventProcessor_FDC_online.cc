@@ -260,9 +260,9 @@ void JEventProcessor_FDC_online::Process(const std::shared_ptr<const JEvent>& ev
      
         	// load configuration information
 			uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
-			uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
-			uint16_t NW   = 0;
-			uint16_t IE   = 0;
+			// uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
+			// uint16_t NW   = 0;
+			// uint16_t IE   = 0;
 			
 			// Cut on quality factor?
 			vector<const Df125Config*> configs;
@@ -274,9 +274,9 @@ void JEventProcessor_FDC_online::Process(const std::shared_ptr<const JEvent>& ev
 				const Df125Config *config = configs[0];
 				//IBIT = config->IBIT == 0xffff ? 4 : config->IBIT;
 				ABIT = config->ABIT == 0xffff ? 3 : config->ABIT;
-				PBIT = config->PBIT == 0xffff ? 0 : config->PBIT;
-				NW   = config->NW   == 0xffff ? 80 : config->NW;
-				IE   = config->IE   == 0xffff ? 16 : config->IE;
+				// PBIT = config->PBIT == 0xffff ? 0 : config->PBIT;
+				// NW   = config->NW   == 0xffff ? 80 : config->NW;
+				// IE   = config->IE   == 0xffff ? 16 : config->IE;
 				}else{
 				static int Nwarnings = 0;
 				if(Nwarnings<10){
