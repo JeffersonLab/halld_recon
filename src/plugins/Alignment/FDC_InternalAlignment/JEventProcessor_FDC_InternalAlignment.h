@@ -11,6 +11,10 @@
 #include <JANA/JEventProcessor.h>
 #include "TH3I.h"
 #include "TProfile.h"
+#include "TH2F.h"
+#include <vector>
+
+using namespace std;
 
 class JEventProcessor_FDC_InternalAlignment:public JEventProcessor{
 	public:
@@ -26,6 +30,16 @@ class JEventProcessor_FDC_InternalAlignment:public JEventProcessor{
 		void Finish() override;
       TH3I *Hist3D[24];
       TProfile *HistCurrentConstants;
+      
+      vector<TH2F *> hWireT0s;
+      vector<TProfile2D *> hWirePositions;
+      
+      vector<TH2F *> hCathodeUProjections;
+      vector<TH2F *> hCathodeVProjections;
+      vector<TH2F *> hCathodeUProjections_Pos;
+      vector<TH2F *> hCathodeVProjections_Pos;
+      vector<TH2F *> hCathodeUProjections_Neg;
+      vector<TH2F *> hCathodeVProjections_Neg;
 };
 
 #endif // _JEventProcessor_FDC_InternalAlignment_

@@ -47,7 +47,7 @@ JEventProcessor_FDC_InternalAlignment::~JEventProcessor_FDC_InternalAlignment()
 void JEventProcessor_FDC_InternalAlignment::Init()
 {
 	// This is called once at program startup. 
-
+   TDirectory *main = gDirectory;
    gDirectory->mkdir("FDC_InternalAlignment");
    gDirectory->cd("FDC_InternalAlignment");
    for (int i=1; i<=24;i++){
@@ -61,7 +61,53 @@ void JEventProcessor_FDC_InternalAlignment::Init()
    // Use a TProfile to avoid problems adding together multiple root files...
    HistCurrentConstants = new TProfile("CathodeAlignmentConstants", "Constants Used for Cathode Alignment (In CCDB Order)", 450,0.5,450.5);
 
+   gDirectory->mkdir("Wire t0")->cd();
+
+   // iterate over FDC layers
+   for(int layer=0; layer<24; layer++) {
+      char thisName[256];
+      sprintf(thisName, "Plane %.2i Wire t Vs Wire Number", layer+1);
+	  hWireT0s.push_back( new TH2F(thisName, thisName, 96, 0.5, 96.5, 250, -50.0, 200.0) );
+	  
+      sprintf(thisName, "Plane %.2i Wire Position Vs XY", layer+1);
+	  hWirePositions.push_back( new TProfile2D(thisName, thisName, 100, -50.,50., 100,-50., 50.) );
+   }
+
    gDirectory->cd("..");
+   gDirectory->mkdir("Cathode Projections")->cd();
+
+   for(int layer=0; layer<24; layer++) {
+      char thisName[256];
+      sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
+	  hCathodeUProjections.push_back( new TH2F(thisName, "u_res Vs. u;u_{local};u-upred", 192,-47.5,47.5,200, -0.2,0.2) );
+	  hCathodeVProjections.push_back( new TH2F(thisName, "v_res Vs. v;v_{local};v-vpred", 192,-47.5,47.5,200, -0.2,0.2) );
+   }
+
+   gDirectory->cd("..");
+   gDirectory->mkdir("Cathode Projections Negative")->cd();
+
+   for(int layer=0; layer<24; layer++) {
+      char thisName[256];
+      sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
+	  hCathodeUProjections_Neg.push_back( new TH2F(thisName, "u_res Vs. u;u_{local};u-upred", 192,-47.5,47.5,200, -0.2,0.2) );
+	  hCathodeVProjections_Neg.push_back( new TH2F(thisName, "v_res Vs. v;v_{local};v-vpred", 192,-47.5,47.5,200, -0.2,0.2) );
+   }
+
+   gDirectory->cd("..");
+   gDirectory->mkdir("Cathode Projections Positive")->cd();
+
+   for(int layer=0; layer<24; layer++) {
+      char thisName[256];
+      sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
+	  hCathodeUProjections_Pos.push_back( new TH2F(thisName, "u_res Vs. u;u_{local};u-upred", 192,-47.5,47.5,200, -0.2,0.2) );
+	  hCathodeVProjections_Pos.push_back( new TH2F(thisName, "v_res Vs. v;v_{local};v-vpred", 192,-47.5,47.5,200, -0.2,0.2) );
+   }
+
+   gDirectory->cd("..");
+   gDirectory->mkdir("Wire t0")->cd();
+
+
+   main->cd();
 }
 
 //------------------
@@ -135,19 +181,9 @@ void JEventProcessor_FDC_InternalAlignment::Process(const std::shared_ptr<const 
       GetLockService(event)->RootFillUnLock(this);
 
       // Plot the wire times
-      char thisName[256];
-      sprintf(thisName, "Plane %.2i Wire t Vs Wire Number", thisPseudo->wire->layer);
-      Fill2DHistogram("FDC_InternalAlignment","Wire t0",thisName,
-            thisPseudo->wire->wire, thisPseudo->time,
-            thisName,
-            96, 0.5, 96.5, 250, -50.0, 200.0);
-
-      sprintf(thisName, "Plane %.2i Wire Position Vs XY", thisPseudo->wire->layer);
-      Fill2DProfile("FDC_InternalAlignment", "Profile2D", thisName,
-            thisPseudo->w, thisPseudo->s, thisPseudo->w_c - thisPseudo->w,
-            thisName,
-            100, -50.,50., 100,-50., 50.);
-
+      hWireT0s[thisPseudo->wire->layer-1]->Fill(thisPseudo->wire->wire, thisPseudo->time);
+      hWirePositions[thisPseudo->wire->layer-1]->Fill(thisPseudo->w, thisPseudo->s, thisPseudo->w_c - thisPseudo->w);
+      
       // Calculate the projection of u,w onto v
       double sinphiu = sin(thisPseudo->phi_u), sinphiv = sin(thisPseudo->phi_v);
       double sinphiumphiv = sin(thisPseudo->phi_u-thisPseudo->phi_v);
@@ -157,44 +193,17 @@ void JEventProcessor_FDC_InternalAlignment::Process(const std::shared_ptr<const 
       double upred = ((thisPseudo->w-deltaX)*sinphiumphiv + thisPseudo->v*sinphiu)/sinphiv;
       double vpred = -((thisPseudo->w-deltaX)*sinphiumphiv-thisPseudo->u*sinphiv)/sinphiu;
 
-      sprintf(thisName, "Plane %.2i u_res vs u", thisPseudo->wire->layer);
-      Fill2DHistogram("FDC_InternalAlignment","Cathode Projections", thisName,
-            thisPseudo->u - deltaU, thisPseudo->u - upred,
-            "u_res Vs. u;u_{local};u-upred",
-            192,-47.5,47.5,200, -0.2,0.2);
-
-      sprintf(thisName, "Plane %.2i v_res vs v", thisPseudo->wire->layer);
-      Fill2DHistogram("FDC_InternalAlignment","Cathode Projections", thisName,
-            thisPseudo->v - deltaV, thisPseudo->v - vpred,
-            "v_res Vs. v;v_{local};v-vpred",
-            192,-47.5,47.5,200, -0.2,0.2);
+      hCathodeUProjections[thisPseudo->wire->layer-1]->Fill(thisPseudo->u - deltaU, thisPseudo->u - upred);
+      hCathodeVProjections[thisPseudo->wire->layer-1]->Fill(thisPseudo->v - deltaV, thisPseudo->v - vpred);
 
       // For the gains we need to break up the two halves of the cathode planes
       if((thisPseudo->w-deltaX)<0.){
-         sprintf(thisName, "Plane %.2i u_res vs u", thisPseudo->wire->layer);
-         Fill2DHistogram("FDC_InternalAlignment","Cathode Projections Negative", thisName,
-               thisPseudo->u - deltaU, thisPseudo->u - upred,
-               "u_res Vs. u;u_{local};u-upred",
-               192,-47.5,47.5,200, -0.2,0.2);
-
-         sprintf(thisName, "Plane %.2i v_res vs v", thisPseudo->wire->layer);
-         Fill2DHistogram("FDC_InternalAlignment","Cathode Projections Negative", thisName,
-               thisPseudo->v - deltaV, thisPseudo->v - vpred,
-               "v_res Vs. v;v_{local};v-vpred",
-               192,-47.5,47.5,200, -0.2,0.2);
+	      hCathodeUProjections_Neg[thisPseudo->wire->layer-1]->Fill(thisPseudo->u - deltaU, thisPseudo->u - upred);
+    	  hCathodeVProjections_Neg[thisPseudo->wire->layer-1]->Fill(thisPseudo->v - deltaV, thisPseudo->v - vpred);
       }
       else{
-         sprintf(thisName, "Plane %.2i u_res vs u", thisPseudo->wire->layer);
-         Fill2DHistogram("FDC_InternalAlignment","Cathode Projections Positive", thisName,
-               thisPseudo->u - deltaU, thisPseudo->u - upred,
-               "u_res Vs. u;u_{local};u-upred",
-               192,-47.5,47.5,200, -0.2,0.2);
-
-         sprintf(thisName, "Plane %.2i v_res vs v", thisPseudo->wire->layer);
-         Fill2DHistogram("FDC_InternalAlignment","Cathode Projections Positive", thisName,
-               thisPseudo->v - deltaV, thisPseudo->v - vpred,
-               "v_res Vs. v;v_{local};v-vpred",
-               192,-47.5,47.5,200, -0.2,0.2);
+	      hCathodeUProjections_Pos[thisPseudo->wire->layer-1]->Fill(thisPseudo->u - deltaU, thisPseudo->u - upred);
+    	  hCathodeVProjections_Pos[thisPseudo->wire->layer-1]->Fill(thisPseudo->v - deltaV, thisPseudo->v - vpred);
       }
 
       //jout << "==upred " << upred << " u " << thisPseudo->u << endl;
