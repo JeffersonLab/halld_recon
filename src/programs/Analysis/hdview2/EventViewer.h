@@ -141,6 +141,7 @@ public:
 
     map<string, double> photon_track_matching;
     double DELTA_R_FCAL;
+  double GEMTRDz;
 
     void AddKinematicDataTrack(const DKinematicData* kd, int color, double size);
     void GetIntersectionWithCalorimeter(const DKinematicData* kd, DVector3 &pos, DetectorSystem_t &who);

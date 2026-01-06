@@ -63,6 +63,7 @@ using namespace std;
 #include "BCAL/DBCALHit.h"
 #include "BCAL/DBCALIncidentParticle.h"
 #include "TOF/DTOFPoint.h"
+#include "TRD/DTRDSegment.h"
 #include "START_COUNTER/DSCHit.h"
 #include "DVector2.h"
 #include "TRIGGER/DL1Trigger.h"
@@ -158,6 +159,7 @@ void EventViewer::BeginRun(const std::shared_ptr<const JEvent>& event)
 	RootGeom = geo_manager->GetRootGeom(runnumber);
 	geom = geo_manager->GetDGeometry(runnumber);
 	geom->GetFDCWires(fdcwires);
+	geom->GetGEMTRDz(GEMTRDz);
 
 	DEvent::GetCalib(event, "PID/photon_track_matching", photon_track_matching);
 	DELTA_R_FCAL = photon_track_matching["DELTA_R_FCAL"];
@@ -1082,6 +1084,19 @@ void EventViewer::FillGraphics(void)
 		graphics.push_back(gsetp);
 	}
 
+	// TRD segments
+	if(hdvmf->GetCheckButton("trdsegment")){
+	  vector<const DTRDSegment *>trdsegments;
+	  event.Get(trdsegments);
+	  DGraphicSet gsetp(kOrange, kMarker, 1.0);
+	  
+	  for(unsigned int i=0; i<trdsegments.size(); i++){
+	    TVector3 pos(trdsegments[i]->x,trdsegments[i]->y,GEMTRDz);
+	    gsetp.points.push_back(pos);
+	  }
+	  graphics.push_back(gsetp);
+	}
+	  
 	// DMCThrown
 	if(hdvmf->GetCheckButton("thrown")){
 		vector<const DMCThrown*> mcthrown;
