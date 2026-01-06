@@ -7,7 +7,6 @@
 //
 
 #include "JEventProcessor_BCAL_SiPM_saturation.h"
-#include "HistogramTools.h"
 #include "TRACKING/DMCThrown.h"
 // #include "BCAL/DBCALHit.h"
 // #include "BCAL/DBCALTDCHit.h"
