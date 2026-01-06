@@ -69,6 +69,14 @@ class JEventProcessor_FDCProjectionResiduals:public JEventProcessor{
       double CDCDriftDistance(double delta, double t);
       unsigned int Locate(vector<double>&xx,double x);
       double GetDOCA(DVector3, DVector3, DVector3, DVector3, DVector3&, DVector3&);
+  
+  	  TH2F *hDistanceVsTime;
+  	  TH2F *hResidualsVsTime;
+  	  TH1F *hCathodeResiduals;
+  
+  	  vector<TH2F*> hResidualVsStrawNumber;
+  	  vector<TH2F*> hResidualVsPhi;
+  	  vector<TH2F*> hDistanceVsTimeRing1;
       
 };
 
