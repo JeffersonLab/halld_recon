@@ -2193,15 +2193,12 @@ bool DGeometry::GetGEMTRDz(double &z_gemtrd) const
     _DBG_<<"Unable to retrieve GEMTRD position."<<endl;
     return false;
   }
-  vector<double>dimensions;
-  Get("//box[@name='GTMV']/@X_Y_Z",dimensions);
-  vector<double>frame;
-  Get("//box[@name='GTRD']/@X_Y_Z",frame);
-  vector<double>gasvolume;
-  Get("//box[@name='GTSV']/@X_Y_Z",gasvolume);
+  vector<double>readout;
+  Get("//box[@name='GTRO']/@X_Y_Z",readout);
  
-  z_gemtrd=origin[2]+0.5*dimensions[2]-frame[2]+gasvolume[2];
-  
+  z_gemtrd=origin[2]+readout[2];
+
+  cout << "GEMTRD z " << z_gemtrd << endl;
   return true;
 }
 
