@@ -2198,7 +2198,6 @@ bool DGeometry::GetGEMTRDz(double &z_gemtrd) const
  
   z_gemtrd=origin[2]+readout[2];
 
-  cout << "GEMTRD z " << z_gemtrd << endl;
   return true;
 }
 
