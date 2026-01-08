@@ -89,8 +89,8 @@ float CTOF_depth  =  1.27;  // from CppScint_HDDS.xml
 vector<DVector3> CTOF_pos;  // from DGeometry::GetCTOFPositions()
 // the following are obtained from the xml for the GEMTRD
 static double GEMTRDz=0.;  
-static double GEMTRDx=0.;
-static double GEMTRDy=0.;
+static vector<double>GEMTRDx;
+static vector<double>GEMTRDy;
 static double GEMTRD_zwidth=0.;
 static double GEMTRD_xwidth=0.;
 static double GEMTRD_ywidth=0.;
@@ -150,10 +150,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
 
   // GEMTRD positions and dimensions
   if (dgeom->GetGEMTRDz(GEMTRDz)==true){
-    vector<double>gemtrd_xvec,gemtrd_yvec;
-    dgeom->GetGEMTRDxy_vec(gemtrd_xvec,gemtrd_yvec);
-    GEMTRDx=gemtrd_xvec[0];
-    GEMTRDy=gemtrd_yvec[0];
+    dgeom->GetGEMTRDxy_vec(GEMTRDx,GEMTRDy);
     dgeom->GetGEMTRDsize(GEMTRD_xwidth,GEMTRD_ywidth,GEMTRD_zwidth);
     got_GEMTRD=true;
   }
@@ -1491,14 +1488,26 @@ void hdv_mainframe::DrawDetectorsXY(void)
 	}
 	// ----- GEMTRD -----
 	if (got_GEMTRD){
-	  TBox *gemtrd1x=new TBox(GEMTRDz-GEMTRD_zwidth,GEMTRDx-0.5*GEMTRD_xwidth,
-				  GEMTRDz,GEMTRDx+0.5*GEMTRD_xwidth);
+	  double half_x_width=0.5*GEMTRD_xwidth;
+	  double half_y_width=0.5*GEMTRD_ywidth;
+	  TBox *gemtrd1x=new TBox(GEMTRDz-GEMTRD_zwidth,GEMTRDx[0]-half_x_width,
+				  GEMTRDz,GEMTRDx[0]+half_x_width);
 	  gemtrd1x->SetFillColor(42);
 	  graphics_sideA.push_back(gemtrd1x);
-	  TBox *gemtrd1y=new TBox(GEMTRDz-GEMTRD_zwidth,GEMTRDy-0.5*GEMTRD_ywidth,
-				  GEMTRDz,GEMTRDy+0.5*GEMTRD_ywidth);
+	  TBox *gemtrd1y=new TBox(GEMTRDz-GEMTRD_zwidth,GEMTRDy[0]-half_y_width,
+				  GEMTRDz,GEMTRDy[0]+half_y_width);
 	  gemtrd1y->SetFillColor(42);
 	  graphics_sideB.push_back(gemtrd1y);
+	  if (GEMTRDx.size()>1){
+	    TBox *gemtrd2x=new TBox(GEMTRDz-GEMTRD_zwidth,GEMTRDx[1]-half_x_width,
+				  GEMTRDz,GEMTRDx[1]+half_x_width);
+	    gemtrd2x->SetFillColor(42);
+	    graphics_sideA.push_back(gemtrd2x);
+	    TBox *gemtrd2y=new TBox(GEMTRDz-GEMTRD_zwidth,GEMTRDy[1]-half_y_width,
+				    GEMTRDz,GEMTRDy[1]+half_y_width);
+	    gemtrd2y->SetFillColor(42);
+	    graphics_sideB.push_back(gemtrd2y);
+	  }
 	}
 	  
 	//============== End A
