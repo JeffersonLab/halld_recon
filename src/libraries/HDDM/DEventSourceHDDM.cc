@@ -1181,9 +1181,14 @@ bool DEventSourceHDDM::Extract_DMCReaction(hddm_s::HDDM *record,
       const hddm_s::BeamList &beams = record->getBeams();
       if (beams.size() > 0) {
          hddm_s::Beam &beam = iter->getBeam();
-         DVector3 mom(beam.getMomentum().getPx(),
-                      beam.getMomentum().getPy(),
-                      beam.getMomentum().getPz());
+         hddm_s::Momentum &mome = beam.getMomentum();
+         DVector3 mom(mome.getPx(), mome.getPy(), mome.getPz());
+         hddm_s::Momentum_doubleList momd = mome.getMomentum_doubles();
+         if (momd.size() > 0) {
+            mom[0] = momd(0).getPx();
+            mom[1] = momd(0).getPy();
+            mom[2] = momd(0).getPz();
+         }
          mcreaction->beam.setPosition(locPosition);
          mcreaction->beam.setMomentum(mom);
          mcreaction->beam.setPID(Gamma);
@@ -1201,9 +1206,14 @@ bool DEventSourceHDDM::Extract_DMCReaction(hddm_s::HDDM *record,
       if (targets.size() > 0) {
          hddm_s::Target &target = iter->getTarget();
          DKinematicData target_kd;
-         DVector3 mom(target.getMomentum().getPx(),
-                      target.getMomentum().getPy(),
-                      target.getMomentum().getPz());
+         hddm_s::Momentum &mome = target.getMomentum();
+         DVector3 mom(mome.getPx(), mome.getPy(), mome.getPz());
+         hddm_s::Momentum_doubleList momd = mome.getMomentum_doubles();
+         if (momd.size() > 0) {
+            mom[0] = momd(0).getPx();
+            mom[1] = momd(0).getPy();
+            mom[2] = momd(0).getPz();
+         }
          mcreaction->target.setPosition(locPosition);
          mcreaction->target.setMomentum(mom);
          hddm_s::PropertiesList &properties = target.getPropertiesList();
@@ -1258,10 +1268,18 @@ bool DEventSourceHDDM::Extract_DMCThrown(hddm_s::HDDM *record,
       }
       hddm_s::ProductList::iterator piter;
       for (piter = prods.begin(); piter != prods.end(); ++piter) {
-         double E  = piter->getMomentum().getE();
-         double px = piter->getMomentum().getPx();
-         double py = piter->getMomentum().getPy();
-         double pz = piter->getMomentum().getPz();
+         hddm_s::Momentum &mome = piter->getMomentum();
+         double E  = mome.getE();
+         double px = mome.getPx();
+         double py = mome.getPy();
+         double pz = mome.getPz();
+         hddm_s::Momentum_doubleList momd = mome.getMomentum_doubles();
+         if (momd.size() > 0) {
+            E  = momd(0).getE();
+            px = momd(0).getPx();
+            py = momd(0).getPy();
+            pz = momd(0).getPz();
+         }
          double mass = sqrt(E*E - (px*px + py*py + pz*pz));
          if (!isfinite(mass))
             mass = 0.0;
@@ -2381,12 +2399,16 @@ bool DEventSourceHDDM::Extract_DTrackTimeBased(hddm_s::HDDM *record,
    const hddm_s::TracktimebasedList &ttbs = record->getTracktimebaseds();
    hddm_s::TracktimebasedList::iterator iter;
    for (iter = ttbs.begin(); iter != ttbs.end(); ++iter) {
-      DVector3 mom(iter->getMomentum().getPx(),
-                   iter->getMomentum().getPy(),
-                   iter->getMomentum().getPz());
-      DVector3 pos(iter->getOrigin().getVx(),
-                   iter->getOrigin().getVy(),
-                   iter->getOrigin().getVz());
+      hddm_s::Momentum &mome = iter->getMomentum();
+      hddm_s::Origin &orig = iter->getOrigin();
+      DVector3 mom(mome.getPx(), mome.getPy(), mome.getPz());
+      hddm_s::Momentum_doubleList momd = mome.getMomentum_doubles();
+      if (momd.size() > 0) {
+         mom[0] = momd(0).getPx();
+         mom[1] = momd(0).getPy();
+         mom[2] = momd(0).getPz();
+      }
+      DVector3 pos(orig.getVx(), orig.getVy(), orig.getVz());
       DTrackTimeBased *track = new DTrackTimeBased();
       track->setMomentum(mom);
       track->setPosition(pos);

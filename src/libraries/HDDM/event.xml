@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1" standalone="no" ?>
+
 <HDDM xmlns="http://www.gluex.org/hddm" class="s" version="1.0">
 
   <geometry minOccurs="0" maxOccurs="1" md5simulation="string" md5smear="string" md5reconstruction="string"/>
@@ -8,18 +9,24 @@
     <ccdbContext minOccurs="0" maxOccurs="unbounded" text="string"/>
     <reaction maxOccurs="unbounded" minOccurs="0" type="int" weight="float">
       <beam minOccurs="0" type="Particle_t">
-        <momentum E="float" px="float" py="float" pz="float"/>
+        <momentum E="float" px="float" py="float" pz="float">
+          <momentum_double minOccurs="0" E="double" px="double" py="double" pz="double"/>
+        </momentum>
         <polarization minOccurs="0" Px="float" Py="float" Pz="float"/>
         <properties charge="int" mass="float"/>
       </beam>
       <target minOccurs="0" type="Particle_t">
-        <momentum E="float" px="float" py="float" pz="float"/>
+        <momentum E="float" px="float" py="float" pz="float">
+          <momentum_double minOccurs="0" E="double" px="double" py="double" pz="double"/>
+        </momentum>
         <polarization minOccurs="0" Px="float" Py="float" Pz="float"/>
         <properties charge="int" mass="float"/>
       </target>
       <vertex maxOccurs="unbounded">
         <product decayVertex="int" id="int" maxOccurs="unbounded" mech="int" parentid="int" pdgtype="int" type="Particle_t">
-          <momentum E="float" px="float" py="float" pz="float"/>
+          <momentum E="float" px="float" py="float" pz="float">
+            <momentum_double minOccurs="0" E="double" px="double" py="double" pz="double"/>
+          </momentum>
           <polarization minOccurs="0" Px="float" Py="float" Pz="float"/>
           <properties minOccurs="0" charge="int" mass="float"/>
         </product>
@@ -278,7 +285,9 @@
     </hitView>
     <reconView minOccurs="0" version="1.0">
       <tracktimebased maxOccurs="unbounded" minOccurs="0" FOM="float" Ndof="int" chisq="float" candidateid="int" trackid="int" id="int">
-        <momentum E="float" px="float" py="float" pz="float"/>
+        <momentum E="float" px="float" py="float" pz="float">
+          <momentum_double minOccurs="0" E="double" px="double" py="double" pz="double"/>
+        </momentum>
         <properties charge="int" mass="float"/>
         <origin t="float" vx="float" vy="float" vz="float"/>
         <errorMatrix Nrows="int" Ncols="int" type="string" vals="string"/>
