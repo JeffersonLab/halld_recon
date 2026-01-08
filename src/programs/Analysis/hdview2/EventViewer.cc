@@ -1088,7 +1088,7 @@ void EventViewer::FillGraphics(void)
 	if(hdvmf->GetCheckButton("trdsegment")){
 	  vector<const DTRDSegment *>trdsegments;
 	  event.Get(trdsegments);
-	  DGraphicSet gsetp(kOrange, kMarker, 1.0);
+	  DGraphicSet gsetp(kGreen+1, kMarker, 0.75);
 	  
 	  for(unsigned int i=0; i<trdsegments.size(); i++){
 	    TVector3 pos(trdsegments[i]->x,trdsegments[i]->y,GEMTRDz);
