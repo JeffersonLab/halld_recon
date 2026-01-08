@@ -57,12 +57,7 @@ void DTRDPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 
   // Get GEM geometry from xml (CCDB or private HDDS)
   dgeom->GetGEMTRDz(dTRDz);
-
-  vector<double>xvec,yvec;
-  if(dgeom->GetGEMTRDxy_vec(xvec,yvec)){
-    dTRDx=xvec[0];
-    dTRDy=yvec[0];
-  }
+  dgeom->GetGEMTRDxy_vec(dTRDx,dTRDy);
 
   return;
 }
@@ -106,9 +101,10 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
             // some requirements for a good point
 			if(fabs(t_diff) < TIME_DIFF_MAX) {
 				// save new point
-				DTRDPoint* newPoint = new DTRDPoint;     
-				newPoint->x = dTRDx+stripClusX[i]->pos.x();
-				newPoint->y = dTRDy+stripClusY[j]->pos.y();
+				DTRDPoint* newPoint = new DTRDPoint;
+				int chamber=stripClusX[i]->chamber-1;
+				newPoint->x = dTRDx[chamber]+stripClusX[i]->pos.x();
+				newPoint->y = dTRDy[chamber]+stripClusY[j]->pos.y();
 				newPoint->t_x = stripClusX[i]->t_avg;
 				newPoint->t_y = stripClusY[j]->t_avg;
 				newPoint->time = (stripClusX[i]->t_avg*stripClusX[i]->q_tot + stripClusY[j]->t_avg*stripClusY[j]->q_tot) / dE;
