@@ -23,6 +23,7 @@ class DTRDStripCluster : public JObject
   
   vector<const DTRDHit*> members; ///< DTRDHits that make up this cluster
   int num_hits;               ///< number of hits (needed for raw analysis)
+  int chamber; /// Upper chamber=2 , lower chamber=1
   int plane;			      ///< GEM X=1, GEM Y=2 
   double q_tot;		          ///< total energy/charge deposited in the cluster
   double t_avg;               ///< average time for hits in cluster

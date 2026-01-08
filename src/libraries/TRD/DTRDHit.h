@@ -12,6 +12,7 @@ class DTRDHit: public JObject {
 public:
   JOBJECT_PUBLIC (DTRDHit);
 
+  int chamber;  // Chamber: lower=1, upper=2;
   int   plane;        // plane number  (X=1, Y=2)
   int   strip;        // strip number  (different numbers for X and Y planes, from CCDB)
 
@@ -24,6 +25,7 @@ public:
     summary.add(t, "t", "%1.3f");
     summary.add(pulse_height, "pulse_height", "%1.3f");
     summary.add(q, "q", "%1.3f");
+    summary.add(chamber, "chamber", "%d");
     summary.add(plane, "plane", "%d");
     summary.add(strip, "strip", "%d");
   }
