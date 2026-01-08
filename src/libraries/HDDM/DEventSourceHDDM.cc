@@ -3347,6 +3347,7 @@ bool DEventSourceHDDM::Extract_DTRDHit(hddm_s::HDDM *record,  JFactoryT<DTRDHit>
    hddm_s::GemtrdHitList::iterator iter;
    for (iter = points.begin(); iter != points.end(); ++iter) {
       DTRDHit *hit = new DTRDHit;
+      hit->chamber = iter->getChamber();
       hit->plane = iter->getPlane();
       hit->strip = iter->getStrip();
       hit->q = iter->getQ();
