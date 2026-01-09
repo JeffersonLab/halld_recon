@@ -2194,10 +2194,10 @@ bool DGeometry::GetGEMTRDz(double &z_gemtrd) const
     return false;
   }
   vector<double>readout;
-  Get("//box[@name='GTRO']/@X_Y_Z",readout);
+  Get("//section/composition[@name='gemTRDmodule']/posXYZ[@volume='GTRO']/@X_Y_Z",readout);
  
   z_gemtrd=origin[2]+readout[2];
-
+  
   return true;
 }
 
@@ -2217,8 +2217,14 @@ bool DGeometry::GetGEMTRDxy_vec(vector<double>&xvec, vector<double>&yvec) const
   }
   vector<double>TRDModulePos;
   Get("//posXYZ[@volume='gemTRDmodule']/@X_Y_Z/layer[@value='1']", TRDModulePos);
-  xvec.push_back(TRDorigin[0]+TRDModulePos[0]);
-  yvec.push_back(TRDorigin[1]+TRDModulePos[1]);
+  vector<double>TRDSensitivePos;
+  Get("//posXYZ[@volume='gemSensitiveVolume']/@X_Y_Z", TRDSensitivePos);
+  xvec.push_back(TRDorigin[0]+TRDModulePos[0]+TRDSensitivePos[0]);
+  yvec.push_back(TRDorigin[1]+TRDModulePos[1]+TRDSensitivePos[1]);
+  if (Get("//posXYZ[@volume='gemTRDmodule']/@X_Y_Z/layer[@value='2']", TRDModulePos)){
+    xvec.push_back(TRDorigin[0]+TRDModulePos[0]-TRDSensitivePos[0]);
+    yvec.push_back(TRDorigin[1]+TRDModulePos[1]-TRDSensitivePos[1]);
+  }
   
   return true;
 }
