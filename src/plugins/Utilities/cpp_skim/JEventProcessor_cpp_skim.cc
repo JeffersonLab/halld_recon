@@ -117,7 +117,7 @@ void JEventProcessor_cpp_skim::Process(const std::shared_ptr<const JEvent>& even
     if(q<-0.1) ++nneg;
   }
 
-  if(npos*nneg) locEventWriterEVIO->Write_EVIOEvent(event,"cpp_2c");
+  if(npos && nneg) locEventWriterEVIO->Write_EVIOEvent(event,"cpp_2c");
 
 	return; //NOERROR;
 }

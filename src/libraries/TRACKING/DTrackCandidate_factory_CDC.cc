@@ -911,8 +911,8 @@ void DTrackCandidate_factory_CDC::Reject_SuperLayerSeeds_HighSeedDensity(unsigne
 	// We use a simple array to store our histogram here. We don't want to use ROOT histograms because they are not thread safe.
 	// Setup histogram
 	unsigned int hist[dNumSeedDensityPhiBins];
-	for(unsigned int i = 0; i < dNumSeedDensityPhiBins; ++i)
-		hist[i] = 0; // clear histogram
+	fill(hist, hist + dNumSeedDensityPhiBins, 0);
+	
 	double bin_width = M_TWO_PI/(double)dNumSeedDensityPhiBins;
 	double hist_low_limit = 0.0; // lower edge of histogram limits
 
@@ -5323,4 +5323,3 @@ double DTrackCandidate_factory_CDC::DCDCLineFit::FindMinimumChisq(double ax,doub
   xmin=x;
   return fx;
 }
-

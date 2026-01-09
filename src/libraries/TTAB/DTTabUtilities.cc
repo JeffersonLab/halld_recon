@@ -14,9 +14,14 @@ DTTabUtilities::DTTabUtilities(void)
 
 double DTTabUtilities::Convert_DigiTimeToNs_F1TDC(const JObject* locTDCDigiHit) const
 {
+   	// immediately fail if locTDCDigiHit is null
+	if (locTDCDigiHit == nullptr) {
+		return std::numeric_limits<double>::quiet_NaN();
+	}
+	
 	//See if the input object is an DF1TDCHit. If so, convert it
 	const DF1TDCHit* locF1TDCHit = dynamic_cast<const DF1TDCHit*>(locTDCDigiHit);
-	if(locF1TDCHit != NULL) //it's an F1TDCHit
+	if(locF1TDCHit != nullptr) //it's an F1TDCHit
 		return Convert_DigiTimeToNs_F1TDC(locF1TDCHit);
 
 	//Get the DF1TDCHit associated object
@@ -152,9 +157,14 @@ double DTTabUtilities::Convert_TriggerReferenceSignal(void) const
 
 double DTTabUtilities::Convert_DigiTimeToNs_CAEN1290TDC(const JObject* locTDCDigiHit) const
 {
-	//See if the input object is an DCAEN1290TDCHit. If so, convert it
+	// immediately fail if locTDCDigiHit is null
+	if (locTDCDigiHit == nullptr) {
+		return std::numeric_limits<double>::quiet_NaN();
+	}
+	
+    //See if the input object is an DCAEN1290TDCHit. If so, convert it
 	const DCAEN1290TDCHit* locCAEN1290TDCHit = dynamic_cast<const DCAEN1290TDCHit*>(locTDCDigiHit);
-	if(locCAEN1290TDCHit != NULL) //it's an DCAEN1290TDCHit
+	if(locCAEN1290TDCHit != nullptr) //it's an DCAEN1290TDCHit
 		return Convert_DigiTimeToNs_CAEN1290TDC(locCAEN1290TDCHit);
 
 	//Get the DF1TDCHit associated object
