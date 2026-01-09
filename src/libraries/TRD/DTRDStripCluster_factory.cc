@@ -79,7 +79,8 @@ double DTRDStripCluster_factory::StripToPosition(int iplane, const DTRDHit *hit)
 {
   // better to pull this from CCDB, also probably the pitch as well
   if(iplane == 0) {
-    return -1.*STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
+    //return -1.*STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
+    return STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
   }
   return STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
 }
@@ -165,6 +166,7 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
 	  
 	  // make a new cluster
 	  DTRDStripCluster *new_cluster = new DTRDStripCluster;
+	  new_cluster->chamber=points[iClusterId].hit->chamber;
 	  new_cluster->plane = iplane+1;
 	  new_cluster->q_tot = GetTotalClusterEnergy(points, iClusterId);
 	  pair<double,double> centroid = GetClusterCentroid(points, iClusterId);
