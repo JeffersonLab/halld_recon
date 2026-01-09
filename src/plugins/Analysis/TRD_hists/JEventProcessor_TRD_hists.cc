@@ -172,7 +172,7 @@ void JEventProcessor_TRD_hists::Process(const std::shared_ptr<const JEvent>& eve
     if (points.size() > 0) trd_num_events->Fill(1);
 
     // check if have good extrapolated track with TRD wire point
-    bool goodTrack = false;
+    // bool goodTrack = false;
 
     /////////////////////////////
     // Straight track analysis //
@@ -197,7 +197,7 @@ void JEventProcessor_TRD_hists::Process(const std::shared_ptr<const JEvent>& eve
 
 				if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
 					hTRDPoint_Time->Fill(point->time);
-					goodTrack = true;
+					// goodTrack = true;
 				}
 		    }
 
@@ -240,7 +240,7 @@ void JEventProcessor_TRD_hists::Process(const std::shared_ptr<const JEvent>& eve
 
 				if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
 					hTRDPoint_Time->Fill(point->time);
-					goodTrack = true;
+					// goodTrack = true;
 				}
 				
 				// select electrons

@@ -27,8 +27,8 @@ class DReaction_factory_npp_hists : public JFactoryT<DReaction>
 		{
 			// This is so that the created DReaction objects persist throughout the life of the program instead of being cleared each event. 
 			SetFactoryFlag(PERSISTENT);
+			SetTag("npp_hists");
 		}
-		const char* Tag(void){return "npp_hists";}
 
 	private:
 		void Process(const std::shared_ptr<const JEvent>& event) override;

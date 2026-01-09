@@ -67,11 +67,10 @@ namespace digest{
     {
         LOG("md5::process_chunk (A,B,C,D) = (" << AA << "," << BB << "," << CC << "," << DD << ")");
 
-        //hope register is at least tolerated by most compilers
-        register uint32_t A=AA;
-        register uint32_t B=BB;
-        register uint32_t C=CC;
-        register uint32_t D=DD;
+        uint32_t A=AA;
+        uint32_t B=BB;
+        uint32_t C=CC;
+        uint32_t D=DD;
         
         //needed for endian agnostic copy bellow
         unsigned char* buf = reinterpret_cast<unsigned char*>(_buf);

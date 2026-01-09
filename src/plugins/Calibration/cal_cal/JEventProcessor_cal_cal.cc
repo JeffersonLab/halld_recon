@@ -137,6 +137,22 @@ void JEventProcessor_cal_cal::Init()
   }
   h_tof_time = new TH1F("tof_time", ";#font[42]{t_{RF} - t_{TOF} [ns]};#font[42]{Events #}", 1000, -50., 50.);
   h_sc_time_v_e = new TH2F("sc_time_v_e", ";#font[42]{t_{RF} - t_{SC} [ns]};#font[42]{Energy [MeV]};#font[42]{Events #}", 1000, -50., 50., 1000, 0., 0.01);
+    
+  for (int i = 0; i < 5; i ++) {
+    h_ecal_im[i] = new TH1F(Form("ecal_im_%d", i), ";#font[42]{m [GeV]};#font[42]{Events #}", 5000, 0., 2.);
+    h_fcal_im[i] = new TH1F(Form("fcal_im_%d", i), ";#font[42]{m [GeV]};#font[42]{Events #}", 5000, 0., 2.);
+  }
+  for (int i = 0; i < 25; i ++) {
+    h_ecal_nl[i] = new TH2F(Form("ecal_nl_%d", i), ";#font[42]{E_{cluster}^{bachelor} [GeV]};#font[42]{#it{m}_{#gamma#gamma} [GeV/#it{c}^{2}]};#font[42]{Events #}", 900, 0., 9., 1000, 0., 0.5);
+    h_fcal_nl[i] = new TH2F(Form("fcal_nl_%d", i), ";#font[42]{E_{cluster}^{bachelor} [GeV]};#font[42]{#it{m}_{#gamma#gamma} [GeV/#it{c}^{2}]};#font[42]{Events #}", 900, 0., 9., 1000, 0., 0.5);
+    for (int j = 0; j < 3; j ++) {
+      h_ecal_wnl[j][i] = new TH2F(Form("ecal_wnl_%d_%d", j, i), ";#font[42]{E_{cluster}^{bachelor} [GeV]};#font[42]{#it{m}_{#gamma#gamma} [GeV/#it{c}^{2}]};#font[42]{Events #}", 900, 0., 9., 1000, 0., 0.5);
+      h_ecal_snl[j][i] = new TH2F(Form("ecal_snl_%d_%d", j, i), ";#font[42]{E_{cluster}^{bachelor} [GeV]};#font[42]{#it{m}_{#gamma#gamma} [GeV/#it{c}^{2}]};#font[42]{Events #}", 900, 0., 9., 1000, 0., 0.5);
+      h_fcal_wnl[j][i] = new TH2F(Form("fcal_wnl_%d_%d", j, i), ";#font[42]{E_{cluster}^{bachelor} [GeV]};#font[42]{#it{m}_{#gamma#gamma} [GeV/#it{c}^{2}]};#font[42]{Events #}", 900, 0., 9., 1000, 0., 0.5);
+      h_fcal_snl[j][i] = new TH2F(Form("fcal_snl_%d_%d", j, i), ";#font[42]{E_{cluster}^{bachelor} [GeV]};#font[42]{#it{m}_{#gamma#gamma} [GeV/#it{c}^{2}]};#font[42]{Events #}", 900, 0., 9., 1000, 0., 0.5);
+    }
+  }
+
   dir_cal_cal->cd("../");
   return;
 }
@@ -151,7 +167,7 @@ void JEventProcessor_cal_cal::BeginRun(const std::shared_ptr<const JEvent>& even
   if( dgeom ){
     dgeom->GetTargetZ( m_beamZ );
     dgeom->GetFCALPosition( m_fcalX, m_fcalY, m_fcalZ );
-    dgeom->GetCCALPosition( m_ccalX, m_ccalY, m_ccalZ );
+    dgeom->GetECALPosition( m_ecalX, m_ecalY, m_ecalZ );
   } else{
     cerr << "No geometry accessbile to compton_analysis plugin." << endl;
     return;
@@ -291,6 +307,10 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
   
   //bool b_inner_layers = false;
   float m_weight = 0;
+  vector<const DECALShower *> Photons_ecal_list; Photons_ecal_list.clear();
+  vector<const DFCALShower *> Photons_fcal_list; Photons_fcal_list.clear();
+  vector<TLorentzVector> photons_ecal_list; photons_ecal_list.clear();
+  vector<TLorentzVector> photons_fcal_list; photons_fcal_list.clear();
   
   //if (m_FCAL1 == 0) {
   for (unsigned int i = 0; i < locECALShowers.size(); i++) {
@@ -361,6 +381,11 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     tof_match1 = 0;
     if (delta_x_min1 < 4 && delta_y_min1 < 4) {
       tof_match1 = 1;
+    }
+
+    if (tof_match1 == 0 && fabs(diff_t1) < 3.005) {
+      Photons_ecal_list.push_back(locECALShowers[i]);
+      photons_ecal_list.push_back(photon1P4);
     }
     
     h_ecal_xy[0]->Fill(xc1, yc1);
@@ -756,6 +781,12 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
     if (delta_x_min1 < 6 && delta_y_min1 < 6) {
       tof_match1 = 1;
     }
+
+    if (tof_match1 == 0 && fabs(diff_t1) < 4.005) {
+      Photons_fcal_list.push_back(locFCALShowers[i]);
+      photons_fcal_list.push_back(photon1P4);
+    }
+    
     //int tofs_match1 = 0;
     //if (delta_x_min1 < 10 && delta_y_min1 < 10) {
     //tofs_match1 = 1;
@@ -988,10 +1019,177 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
       }
     }
   }
+
+  if (Photons_ecal_list.size() == 2) {
+    TLorentzVector wP4 = photons_ecal_list[0] + photons_ecal_list[1];
+     h_ecal_im[4]->Fill(wP4.M());
+  }
+  if (Photons_fcal_list.size() == 2) {
+    TLorentzVector wP4 = photons_fcal_list[0] + photons_fcal_list[1];
+     h_fcal_im[4]->Fill(wP4.M());
+  }
   
+  if (Photons_ecal_list.size() == 3) {
+    TLorentzVector wP4 = photons_ecal_list[0] + photons_ecal_list[1] + photons_ecal_list[2];
+    TLorentzVector wggP4[3];
+    TLorentzVector wgP4[3];
+    wggP4[0] = photons_ecal_list[0] + photons_ecal_list[1];
+    wggP4[1] = photons_ecal_list[0] + photons_ecal_list[2];
+    wggP4[2] = photons_ecal_list[1] + photons_ecal_list[2];
+    wgP4[0] = photons_ecal_list[2];
+    wgP4[1] = photons_ecal_list[1];
+    wgP4[2] = photons_ecal_list[0];
+    h_ecal_im[0]->Fill(wP4.M());
+    double best_chi2 = 1e7;
+    int ibest = -1;
+    for (int i = 0; i < 3; i ++) {
+      double chi2 = TMath::Power((wggP4[i].M() - m_pi0) / 8.0e-3,2.0);
+      if (chi2 < best_chi2) {
+	chi2 = best_chi2;
+	ibest = i;
+      }
+    }
+    /*
+    int word[3];
+    if (ibest == 0) {
+      word[0] = 0;
+      word[1] = 1;
+      word[2] = 2;
+    } else if (ibest == 1) {
+      word[0] = 0;
+      word[1] = 2;
+      word[2] = 1;
+    } else if (ibest == 2) {
+      word[0] = 1;
+      word[1] = 2;
+      word[2] = 0;
+    } 
+    */
+    if (ibest >= 0) {
+      h_ecal_im[1]->Fill(wggP4[ibest].M());
+      h_ecal_im[2]->Fill(wP4.M());
+      if (0.67 < wP4.M() && wP4.M() < 0.85) {
+	h_ecal_im[3]->Fill(wggP4[ibest].M());
+	double ecl_tab[3] = {0, 0, 0};
+	for (int i = 0; i < 3; i ++) {
+	  const DECALCluster * ecalCluster;
+	  Photons_ecal_list[i]->GetSingle(ecalCluster);
+	  double cl_e = ecalCluster->E;
+	  ecl_tab[i] = cl_e;
+	}
+	bool sym_cl = 0.85 < ecl_tab[0] / ecl_tab[1] && ecl_tab[0] / ecl_tab[1] < 1.15;
+	for (int i = 0; i < 3; i ++) {
+	  //double e = Photons_ecal_list[i]->E;
+	  DVector3 position = Photons_ecal_list[i]->pos - vertex;
+	  double r = position.Mag();
+	  double t = Photons_ecal_list[i]->t - (r / TMath::C() * 1e7);
+	  double diff_t = t - locRFTime;
+	  double face_x = vertex.X() + (position.X() * (m_ecalZ - vertex.Z())/position.Z());
+	  double face_y = vertex.Y() + (position.Y() * (m_ecalZ - vertex.Z())/position.Z());
+	  double ra = sqrt(pow(face_x, 2) + pow(face_y, 2));
+	  const DECALCluster *ecalCluster;
+	  Photons_ecal_list[i]->GetSingle(ecalCluster);
+	  double cl_e = ecalCluster->E;
+	  int rg = (int) (ra / (2.5 * k_cm));
+	  if (fabs(diff_t) < 3.005) {
+	    h_ecal_nl[rg]->Fill(cl_e, wggP4[ibest].M());
+	    //h_ecal_cs->Fill(cl_e / e);    
+	      
+	    h_ecal_wnl[i][rg]->Fill(cl_e, wggP4[ibest].M());
+	    //h_ecal_wcs[i]->Fill(cl_e / e);    
+	    if (sym_cl) {
+	      if (i < 2) h_ecal_snl[i][rg]->Fill(cl_e, wggP4[ibest].M());
+	    }
+	    if (i == 2) h_ecal_snl[i][rg]->Fill(cl_e, wggP4[ibest].M());
+	  }
+	}
+      }
+    }
+  }
+  
+  if (Photons_fcal_list.size() == 3) {
+    TLorentzVector wP4 = photons_fcal_list[0] + photons_fcal_list[1] + photons_fcal_list[2];
+    TLorentzVector wggP4[3];
+    TLorentzVector wgP4[3];
+    wggP4[0] = photons_fcal_list[0] + photons_fcal_list[1];
+    wggP4[1] = photons_fcal_list[0] + photons_fcal_list[2];
+    wggP4[2] = photons_fcal_list[1] + photons_fcal_list[2];
+    wgP4[0] = photons_fcal_list[2];
+    wgP4[1] = photons_fcal_list[1];
+    wgP4[2] = photons_fcal_list[0];
+    h_fcal_im[0]->Fill(wP4.M());
+    double best_chi2 = 1e7;
+    int ibest = -1;
+    for (int i = 0; i < 3; i ++) {
+      double chi2 = TMath::Power((wggP4[i].M() - m_pi0) / 8.0e-3,2.0);
+      if (chi2 < best_chi2 /*&& 0.11 < wggP4[i].M() && wggP4[i].M() < 0.16*/) {
+	chi2 = best_chi2;
+	ibest = i;
+      }
+    }
+    /*
+    int word[3];
+    if (ibest == 0) {
+      word[0] = 0;
+      word[1] = 1;
+      word[2] = 2;
+    } else if (ibest == 1) {
+      word[0] = 0;
+      word[1] = 2;
+      word[2] = 1;
+    } else if (ibest == 2) {
+      word[0] = 1;
+      word[1] = 2;
+      word[2] = 0;
+    } 
+    */
+    if (ibest >= 0) {
+      h_fcal_im[1]->Fill(wggP4[ibest].M());
+      h_fcal_im[2]->Fill(wP4.M());
+      if (0.67 < wP4.M() && wP4.M() < 0.85) {
+	h_fcal_im[3]->Fill(wggP4[ibest].M());
+	double ecl_tab[3] = {0, 0, 0};
+	for (int i = 0; i < 3; i ++) {
+	  const DFCALCluster * fcalCluster;
+	  Photons_fcal_list[i]->GetSingle(fcalCluster);
+	  double cl_e = fcalCluster->getEnergy();
+	  ecl_tab[i] = cl_e;
+	}
+	bool sym_cl = 0.85 < ecl_tab[0] / ecl_tab[1] && ecl_tab[0] / ecl_tab[1] < 1.15;
+	for (int i = 0; i < 3; i ++) {
+	  //double e = Photons_fcal_list[i]->getEnergy();
+	  DVector3 position = Photons_fcal_list[i]->getPosition() - vertex;
+	  double r = position.Mag();
+	  double t = Photons_fcal_list[i]->getTime() - (r / TMath::C() * 1e7);
+	  double diff_t = t - locRFTime;
+	  double face_x = vertex.X() + (position.X() * (m_fcalZ - vertex.Z())/position.Z());
+	  double face_y = vertex.Y() + (position.Y() * (m_fcalZ - vertex.Z())/position.Z());
+	  double ra = sqrt(pow(face_x, 2) + pow(face_y, 2));
+	  const DFCALCluster *fcalCluster;
+	  Photons_fcal_list[i]->GetSingle(fcalCluster);
+	  double cl_e = fcalCluster->getEnergy();
+	  int rg = (int) (ra / (5 * k_cm));
+	  if (fabs(diff_t) < 3.005) {
+	    h_fcal_nl[rg]->Fill(cl_e, wggP4[ibest].M());
+	    //h_fcal_cs->Fill(cl_e / e);    
+	      
+	    h_fcal_wnl[i][rg]->Fill(cl_e, wggP4[ibest].M());
+	    //h_fcal_wcs[i]->Fill(cl_e / e);    
+	    if (sym_cl) {
+	      if (i < 2) h_fcal_snl[i][rg]->Fill(cl_e, wggP4[ibest].M());
+	    }
+	    if (i == 2) h_fcal_snl[i][rg]->Fill(cl_e, wggP4[ibest].M());
+	  }
+	}
+      }
+    }
+  }
   
   lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK  
 
+  
+
+  
   return;
 }
 

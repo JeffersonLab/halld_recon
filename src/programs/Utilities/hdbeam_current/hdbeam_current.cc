@@ -42,7 +42,9 @@ int main(int narg, char *argv[])
 
 	// Parse command line arguments and then create a DApplication
 	ParseCommandLineArgs(narg, argv);
-	DApplication *dapp = new DApplication(0, NULL);
+	// the raw dapp ptr probably wasn't leaking since OS would reclaim after exit,
+	// but wrapping in unique enforces destructor call and silences clang SA
+	unique_ptr<DApplication> dapp{ new DApplication(0, NULL) };
 	auto app = dapp->GetJApp();
 
 	auto params = app->GetJParameterManager();
@@ -220,4 +222,3 @@ void ParseCommandLineArgs(int narg, char* argv[])
 		exit(0);
 	}
 }
-

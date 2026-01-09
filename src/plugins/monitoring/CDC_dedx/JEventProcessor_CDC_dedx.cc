@@ -101,8 +101,8 @@ void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& even
   // select events with physics events, i.e., not LED and other front panel triggers
   const DTrigger* locTrigger = NULL; 
   event->GetSingle(locTrigger); 
-  if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) return;
-
+  if (locTrigger->Get_L1FrontPanelTriggerBits()) return;
+  if (!locTrigger->Get_IsPhysicsEvent()) return; // ignore PS triggers
 
   const DVertex* locVertex  = NULL;
   event->GetSingle(locVertex);
