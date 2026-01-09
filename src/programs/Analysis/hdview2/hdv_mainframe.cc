@@ -115,10 +115,10 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   fcalgeom= new DFCALGeometry(dgeom);
 
   // Figure out ECAL details
+  auto app = event.GetJApplication();
+  auto runnumber = event.GetRunNumber();
+  auto jcalib =  app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
   if (dgeom->HaveInsert()) {
-    auto app = event.GetJApplication();
-    auto runnumber = event.GetRunNumber();
-    auto jcalib =  app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
     m_insert_size = dgeom->GetFCALInsertSize();
     ecalgeom = new DECALGeometry(dgeom,jcalib);
     m_insert_block_size = ecalgeom->blockSize();
@@ -149,7 +149,10 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   dgeom->GetCTOFPositions(CTOF_pos);
 
   // GEMTRD positions and dimensions
-  if (dgeom->GetGEMTRDz(GEMTRDz)==true){
+  map<string,string> installed;
+  jcalib->Get("TRD/install_status", installed);
+  if(atoi(installed["status"].data()) == 1){
+    dgeom->GetGEMTRDz(GEMTRDz);
     dgeom->GetGEMTRDxy_vec(GEMTRDx,GEMTRDy);
     dgeom->GetGEMTRDsize(GEMTRD_xwidth,GEMTRD_ywidth,GEMTRD_zwidth);
     got_GEMTRD=true;

@@ -159,8 +159,14 @@ void EventViewer::BeginRun(const std::shared_ptr<const JEvent>& event)
 	RootGeom = geo_manager->GetRootGeom(runnumber);
 	geom = geo_manager->GetDGeometry(runnumber);
 	geom->GetFDCWires(fdcwires);
-	geom->GetGEMTRDz(GEMTRDz);
 
+	 // GEMTRD position
+	map<string,string> installed;
+	DEvent::GetCalib(event, "TRD/install_status", installed);
+	if(atoi(installed["status"].data()) == 1){
+	  geom->GetGEMTRDz(GEMTRDz);
+	}
+	
 	DEvent::GetCalib(event, "PID/photon_track_matching", photon_track_matching);
 	DELTA_R_FCAL = photon_track_matching["DELTA_R_FCAL"];
 }
