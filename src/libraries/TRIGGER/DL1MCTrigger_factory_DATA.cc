@@ -491,7 +491,7 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		return; //NOERROR;
         }
 
-        int l1_found = 1;  
+        // int l1_found = 1;
 
 	int status = 0;
 
@@ -1034,7 +1034,7 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 
 	//cerr << "find triggers" << endl;
 
-	l1_found = FindTriggers(trigger);
+	// l1_found = FindTriggers(trigger);
 
 // 	  int fcal_gtp_max = 0;
 // 	  int bcal_gtp_max = 0;
@@ -1662,20 +1662,20 @@ template <typename T>  int DL1MCTrigger_factory_DATA::GTPDigi(vector<T> digi_hit
   // 3  - ECAL
 
   int EN_THR =  4096; 
-  int INT_WINDOW = 20; 
+  // int INT_WINDOW = 20;
 
   switch(detector){
   case 1:
     EN_THR     =  FCAL_CELL_THR;
-    INT_WINDOW =  FCAL_WINDOW;
+    // INT_WINDOW =  FCAL_WINDOW;
     break;
   case 2:
     EN_THR     =  BCAL_CELL_THR;
-    INT_WINDOW =  BCAL_WINDOW;
+    // INT_WINDOW =  BCAL_WINDOW;
     break;
   case 3:
     EN_THR     =  ECAL_CELL_THR;
-    INT_WINDOW =  ECAL_WINDOW;
+    // INT_WINDOW =  ECAL_WINDOW;
     break;
   default:
     break;

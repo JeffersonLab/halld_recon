@@ -72,6 +72,9 @@ class DTrackCandidate_factory_FDCCathodes:public JFactoryT<DTrackCandidate>{
 		    vector<pair<const DFDCSegment*,const DFDCSegment*> >&paired_segments, vector<vector<int> >&is_paired); 
   double MatchR(double rc) const;
 
+  double DocaToCircle(const DFDCSegment *segment1,const DFDCSegment *segment2) const;
+  double DocaToCircle(const DTrackCandidate *candidate,const DFDCSegment *segment) const;
+
   bool LinkStraySegment(const DFDCSegment *segment);
   void MakeCandidate(vector<const DFDCSegment *>&mytrack);
   void DoHelicalFit(vector<const DFDCSegment *>&mytrack,DHelicalFit &fit);

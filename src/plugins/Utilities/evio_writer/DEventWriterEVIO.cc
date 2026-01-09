@@ -366,8 +366,11 @@ bool DEventWriterEVIO::Open_OutputFile(const std::shared_ptr<const JEvent>& locE
 
 
 	//evaluate status
-	if(!success)
-		jerr << "Unable to open EVIO file:  error code = " << result << endl;
+	if(!success){
+	    jerr << "Unable to open EVIO file:  error code = " << result << endl;
+		delete locEVIOout; // dealloc the handle
+		delete locEVIOwriter; // dealloc the buffer creator
+	} 
 	else
 	{
 		jout << "Output EVIO file " << locOutputFileName << " created." << endl;

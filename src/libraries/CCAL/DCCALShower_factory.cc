@@ -1794,8 +1794,8 @@ void DCCALShower_factory::gamma_hyc(int nadc, vector<int> ia, vector<int> id, do
 	double chimem, chisq0, chi0;   //
 	double chiold;                 // 
 	double chi00;                  // 
-	double x0, y0;                 // 
-	double ee, xx, yy;             // 
+	double x0, y0;                 // test vals for while(1) iteration
+	double ee, xx, yy;             // test vals for two gamma attempt
 	double d2, xm2, xm2cut;        // 
 	double chir, chil, chiu, chid; //
 	const double ysize=2.09;
@@ -1888,6 +1888,10 @@ void DCCALShower_factory::gamma_hyc(int nadc, vector<int> ia, vector<int> id, do
 	if(chisq <= chimem) return; 
 	
 	chiold = chisq;
+	// initialize two gamma variables to the current best
+	xx = x1;
+	yy = y1;
+	ee = e1;
 	tgamma_hyc(nadc, ia, id, nzero, iaz, chisq, ee, xx, yy, e2, x2, y2);
 	
 	if(e2 > 0.) { 

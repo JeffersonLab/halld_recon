@@ -27,11 +27,12 @@ private:
   double GetCorrectedEnergy(double E) const;
   double GetCorrectedZ(double E) const;
   
-  double mECALz;
-  double SHOWER_ENERGY_THRESHOLD;
+  double mECALz,mECALzBack;
+  double SHOWER_ENERGY_THRESHOLD,ECAL_C_EFFECTIVE;
   double E_VAR1,E_VAR2,E_VAR3,POS_RES1,POS_RES2;
   double E_CORRECTION_PAR1,E_CORRECTION_PAR2,E_CORRECTION_PAR3;
   double E_CORRECTION_PAR4;
+  bool ENABLE_ENERGY_CORRECTION;
 };
 
 #endif // _DECALShower_factory_
