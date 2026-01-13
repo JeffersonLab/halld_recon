@@ -881,7 +881,6 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 					}
 				}
 
-				vector<DTrackFitter::Extrapolation_t> extrapolations=tracks[loc_j]->extrapolations.at(SYS_DIRC);
 				DVector3 locProjPos = locDIRCMatchParams->dExtrapolatedPos;
 				DVector3 locProjMom = locDIRCMatchParams->dExtrapolatedMom;
 				double locFlightTime = locDIRCMatchParams->dExtrapolatedTime;
