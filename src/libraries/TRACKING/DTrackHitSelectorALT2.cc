@@ -209,7 +209,6 @@ void DTrackHitSelectorALT2::GetCDCHits(double Bz,double q,
 
   // variances
   double var_lambda_res=0.;
-  double var_phi_radial=0.;
   double var_x0=0.0,var_y0=0.0;
   double var_k=0.;
 
@@ -271,18 +270,10 @@ void DTrackHitSelectorALT2::GetCDCHits(double Bz,double q,
 	    var_lambda_res=12.0*var*double(N-1)/double(N*(N+1))
 	      *sinl2*sinl2/s_sq;
 	    
-	    // Variance in phi, crude approximation
-	    double tan_s_2R=tan(s*cosl/(2.*pt_over_a));
-	    var_phi_radial=tan_s_2R*tan_s_2R*pt_over_a*pt_over_a*var_k;
-	    
 	    outermost_hit=false;
 	  } 
 	  // Include error in lambda due to measurements
 	  var_lambda+=var_lambda_res;
-
-	  // Include uncertainty in phi due to uncertainty in the center of 
-	  // the circle
-	  var_phi+=var_phi_radial;
 
 	  // Variance in position due to multiple scattering
 	  double var_pos_ms=extrapolations[i].s_theta_ms_sum/3.;
@@ -919,7 +910,6 @@ void DTrackHitSelectorALT2::GetFDCHits(double Bz,double q,
   double z0=extrapolations[0].position.z();
   // variances
   double var_lambda=0.,var_phi=0.,var_lambda_res=0.,var_k=0.;
-  double var_phi_radial=0.;
   double var_x0=0.0,var_y0=0.0; 
   double var_z0=2.*tanl2*(var_tot)*double(2*N-1)/double(N*(N+1));
 
@@ -938,7 +928,7 @@ void DTrackHitSelectorALT2::GetFDCHits(double Bz,double q,
 	// Variance in dip angle due to multiple scattering
 	var_lambda = extrapolations[k].theta2ms_sum/3.;
 	// the above expression seems to lead to overestimation of  the uncertainty in the dip angle after the wire-based pass..
-	var_lambda*=0.01;
+	//var_lambda*=0.01;
 	// Variance in phi due to multiple scattering
 	var_phi=var_lambda*(1.+tanl2); 
 
@@ -960,18 +950,10 @@ void DTrackHitSelectorALT2::GetFDCHits(double Bz,double q,
 	  var_lambda_res=12.0*var_tot*double(N-1)/double(N*(N+1))
 	    *sinl2*sinl2/s_sq;
 
-	  // Variance in phi, crude approximation
-	  double tan_s_2R=tan(s*cosl/(2.*pt_over_a));
-	  var_phi_radial=tan_s_2R*tan_s_2R*pt_over_a*pt_over_a*var_k;
-	  
 	  most_downstream_hit=false;
 	}
 	// Include error in lambda due to measurements
 	var_lambda+=var_lambda_res;	
-
-	// Include uncertainty in phi due to uncertainty in the center of 
-	// the circle
-	var_phi+=var_phi_radial;
 
 	// Variance in position due to multiple scattering
 	double var_pos_ms=extrapolations[k].s_theta_ms_sum/3.;
