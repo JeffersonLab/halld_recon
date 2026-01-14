@@ -10,11 +10,8 @@
 
 #include <JANA/JFactoryT.h>
 #include "DTrackCandidate.h"
-#include <DTrackFinder.h>
-#include <DMatrix.h>
 #include "FDC/DFDCSegment_factory.h"
 #include "HDGEOMETRY/DMagneticFieldMap.h"
-#include "DMagneticFieldStepper.h"
 #include <TH1F.h>
 #include <TH2F.h>
 #include "DHelicalFit.h"
