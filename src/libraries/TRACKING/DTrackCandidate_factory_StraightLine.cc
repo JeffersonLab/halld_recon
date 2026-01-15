@@ -107,7 +107,7 @@ void DTrackCandidate_factory_StraightLine::Process(const std::shared_ptr<const J
        for (size_t i=0;i<tracks.size();i++){
 	 // Create new track candidate
 	 DTrackCandidate *cand = new DTrackCandidate;
-	 cand->setPID(PiPlus);
+	 cand->dCharge=0;
 	 
 	 // Add hits as associated objects
 	 vector<const DFDCPseudo *>hits=tracks[i].hits;
@@ -123,11 +123,11 @@ void DTrackCandidate_factory_StraightLine::Process(const std::shared_ptr<const J
 	 double phi=atan2(ty,tx);
 	 double tanl=1./sqrt(tx*tx+ty*ty);
 	 double pt=cos(atan(tanl)); // arbitrary magnitude...    
-	 cand->setMomentum(DVector3(pt*cos(phi),pt*sin(phi),pt*tanl));
+	 cand->dMomentum=DVector3(pt*cos(phi),pt*sin(phi),pt*tanl);
 
 	 DVector3 pos,origin,dir(0,0,1.);
 	 finder->FindDoca(0,tracks[i].S,dir,origin,&pos);
-	 cand->setPosition(pos);
+	 cand->dPosition=pos;
 	 
 	 Insert(cand);
 
@@ -149,7 +149,7 @@ void DTrackCandidate_factory_StraightLine::Process(const std::shared_ptr<const J
          for (size_t i=0;i<tracks.size();i++){
 	   // Create new track candidate
 	   DTrackCandidate *cand = new DTrackCandidate;
-	   cand->setPID(PiPlus);
+	   cand->dCharge=0;
 	   
 	   // Add hits as associated objects
 	   // list of axial and stereo hits for this track
@@ -180,11 +180,11 @@ void DTrackCandidate_factory_StraightLine::Process(const std::shared_ptr<const J
 	     }
 	     double pt=cos(atan(tanl)); // set magnitude to 1.
 	     DVector3 tdir(pt*cos(phi),pt*sin(phi),pt*tanl);
-	     cand->setMomentum(tdir);
+	     cand->dMomentum=tdir;
 
 	     DVector3 tpos(x,y,z),origin,dir(0.,0.,1.),pos;
 	     finder->FindDoca(tpos,tdir,origin,dir,&pos);
-	     cand->setPosition(pos);
+	     cand->dPosition=pos;
 	   }
 	   else{
 	     DVector3 mom(tx,ty,1.);
@@ -196,8 +196,8 @@ void DTrackCandidate_factory_StraightLine::Process(const std::shared_ptr<const J
 	     z+=delta_z;
 
 	     mom.SetMag(1.);
-	     cand->setMomentum(mom);
-	     cand->setPosition(DVector3(x,y,z));
+	     cand->dMomentum=mom;
+	     cand->dPosition=DVector3(x,y,z);
 	   }
 	 
 	   Insert(cand);

@@ -1157,11 +1157,14 @@ void EventViewer::FillGraphics(void)
 	      color++;
 	    if (color > 6)
 	      color++;	      
-	    
-	    AddKinematicDataTrack(trCand[n], color, 1.5);
 
-	    vector<const DCDCTrackHit*> cdctrackhits;
-	    trCand[n]->Get(cdctrackhits,"",1);
+	    DKinematicData kd;
+	    kd.setMomentum(trCand[n]->dMomentum);
+	    kd.setPosition(trCand[n]->dPosition);
+	    kd.setPID(trCand[n]->dCharge>0?PiPlus:PiMinus);
+	    AddKinematicDataTrack(&kd, color, 1.5);
+
+	    vector<const DCDCTrackHit*> cdctrackhits=trCand[n]->cdchits;
 	    for(unsigned int i=0; i<cdctrackhits.size(); i++){
 	      const DCDCWire *wire = cdctrackhits[i]->wire;
 	      DGraphicSet gset(color, kLine, 1.0);
@@ -1174,8 +1177,7 @@ void EventViewer::FillGraphics(void)
 	      graphics.push_back(gset);
 	      
 	    } // end loop of cdc hits of track candidate
-	    vector<const DFDCPseudo*> fdcpseudos;
-	    trCand[n]->Get(fdcpseudos,"",1);
+	    vector<const DFDCPseudo*> fdcpseudos=trCand[n]->fdchits;
 	    DGraphicSet gsetp(color, kMarker, 0.5);
 	    
 	    for(unsigned int i=0; i<fdcpseudos.size(); i++){
@@ -1740,7 +1742,11 @@ void EventViewer::FillGraphics(void)
 			double size=2.0;
 			//if(trackcandidates[i]->charge() >0.0) color += 100; // lighter shade
 			//if(trackcandidates[i]->charge() <0.0) color += 150; // darker shade
-			AddKinematicDataTrack(trackcandidates[i], color, size);
+			DKinematicData kd;
+			kd.setPosition(trackcandidates[i]->dPosition);
+			kd.setMomentum(trackcandidates[i]->dMomentum);
+			kd.setPID(trackcandidates[i]->dCharge>0?PiPlus:PiMinus);
+			AddKinematicDataTrack(&kd, color, size);
 		}
 	}
 
@@ -1974,13 +1980,10 @@ void EventViewer::UpdateTrackLabels(void)
 
 	// Get the track info as DKinematicData objects
 	vector<const DKinematicData*> trks;
-	vector<const DKinematicData*> TrksCand;
 	vector<const DTrackWireBased*> TrksWireBased;
 	vector<const DTrackTimeBased*> TrksTimeBased;
-	vector<const DTrackCandidate*> cand;
-	event.Get(cand);
-	for(unsigned int i=0; i<cand.size(); i++)TrksCand.push_back(cand[i]);
-
+	vector<const DTrackCandidate*> TrksCand;
+	event.Get(TrksCand);
 	event.Get(TrksWireBased);
 	event.Get(TrksTimeBased);
 	
@@ -2000,18 +2003,6 @@ void EventViewer::UpdateTrackLabels(void)
 		vector<const DTrackWireBased*> wiretracks;
 		event.Get(wiretracks, tag.c_str());
 		for(unsigned int i=0; i<wiretracks.size(); i++)trks.push_back(wiretracks[i]);
-	}
-	if(name=="DTrackCandidate"){
-		vector<const DTrackCandidate*> candidates;
-		event.Get(candidates, tag.c_str());
-		for(unsigned int i=0; i<candidates.size(); i++)trks.push_back(candidates[i]);
-	}
-	if(name=="DNeutralParticle"){
-		vector<const DNeutralParticle*> photons;
-		event.Get(photons, tag.c_str());
-		for(unsigned int i=0; i<photons.size(); i++) {
-		  trks.push_back(photons[i]->Get_BestFOM());
-		}
 	}
 	
 	// Clear all labels (i.e. draw ---- in them)
@@ -2051,94 +2042,120 @@ void EventViewer::UpdateTrackLabels(void)
 
 		double myphi = trk->momentum().Phi();
 		if(myphi<0.0)myphi+=2.0*M_PI;
-		phi<<setprecision(4)<<myphi;
+		phi<<setprecision(4)<<myphi*TMath::RadToDeg();
 		thrownlabs["phi"][row]->SetText(phi.str().c_str());
 
 		z<<setprecision(4)<<trk->position().Z();
 		thrownlabs["z"][row]->SetText(z.str().c_str());
 	}
-
-	// Loop over tracks and fill in labels
-	for(unsigned int i=0; i<trks.size(); i++){
-		const DKinematicData *trk = trks[i];
-		int row = reconlabs["trk"].size()-i-1;
-		if(row<1)break;
-		
-		stringstream trkno, type, p, theta, phi, z, chisq_per_dof, Ndof,cand;
-		stringstream fom;
-		trkno<<setprecision(4)<<i+1;
-		reconlabs["trk"][row]->SetText(trkno.str().c_str());
-		
-		double mass = trk->mass();
-		if(fabs(mass-0.13957)<1.0E-4)type<<"pi";
-		else if(fabs(mass-0.93827)<1.0E-4)type<<"proton";
-		else if(fabs(mass-0.493677)<1.0E-4)type<<"K";
-		else if(fabs(mass-0.000511)<1.0E-4)type<<"e";
-		else if (fabs(mass)<1.e-4 && fabs(trk->charge())<1.e-4) type << "gamma";
-		else type<<"q=";
-		if (fabs(trk->charge())>1.e-4){
-		  type<<(trk->charge()>0 ? "+":"-");
+       
+	// Loop over candidates and fill in labels
+	if (name=="DTrackCandidate"){
+	  for(unsigned int i=0; i<TrksCand.size(); i++){
+	    const DTrackCandidate *cand=TrksCand[i];
+	    int row = reconlabs["trk"].size()-i-1;
+	    if(row<1)break;
+	    
+	    stringstream trkno, type, p, theta, phi, z;
+	    trkno<<setprecision(4)<<i+1;
+	    reconlabs["trk"][row]->SetText(trkno.str().c_str());
+	    
+	    type<<(cand->dCharge>0 ? "pi+":"pi-");
+	    reconlabs["type"][row]->SetText(type.str().c_str());
+	    
+	    p<<setprecision(3)<<fixed<<cand->dMomentum.Mag();
+	    reconlabs["p"][row]->SetText(p.str().c_str());
+	    
+	    theta<<setprecision(2)<<fixed<<cand->dMomentum.Theta()*TMath::RadToDeg();
+	    reconlabs["theta"][row]->SetText(theta.str().c_str());
+	    
+	    double myphi = cand->dMomentum.Phi();
+	    if(myphi<0.0)myphi+=2.0*M_PI;
+	    phi<<setprecision(2)<<fixed<<myphi*TMath::RadToDeg();
+	    reconlabs["phi"][row]->SetText(phi.str().c_str());
+	    
+	  z<<setprecision(2)<<fixed<<cand->dPosition.Z();
+	  reconlabs["z"][row]->SetText(z.str().c_str());
+	  
+	  }
+	}
+	else {
+	  // Loop over tracks and fill in labels
+	  for(unsigned int i=0; i<trks.size(); i++){
+	    const DKinematicData *trk = trks[i];
+	    int row = reconlabs["trk"].size()-i-1;
+	    if(row<1)break;
+	    
+	    stringstream trkno, type, p, theta, phi, z, chisq_per_dof, Ndof,cand;
+	    stringstream fom;
+	    trkno<<setprecision(4)<<i+1;
+	    reconlabs["trk"][row]->SetText(trkno.str().c_str());
+	    
+	    double mass = trk->mass();
+	    if(fabs(mass-0.13957)<1.0E-4)type<<"pi";
+	    else if(fabs(mass-0.93827)<1.0E-4)type<<"proton";
+	    else if(fabs(mass-0.493677)<1.0E-4)type<<"K";
+	    else if(fabs(mass-0.000511)<1.0E-4)type<<"e";
+	    else if (fabs(mass)<1.e-4 && fabs(trk->charge())<1.e-4) type << "gamma";
+	    else type<<"q=";
+	    if (fabs(trk->charge())>1.e-4){
+	      type<<(trk->charge()>0 ? "+":"-");
+	    }
+	    reconlabs["type"][row]->SetText(type.str().c_str());
+	    
+	    p<<setprecision(4)<<trk->momentum().Mag();
+	    reconlabs["p"][row]->SetText(p.str().c_str());
+	    
+	    theta<<setprecision(4)<<trk->momentum().Theta()*TMath::RadToDeg();
+	    reconlabs["theta"][row]->SetText(theta.str().c_str());
+	    
+	    phi<<setprecision(4)<<trk->momentum().Phi()*TMath::RadToDeg();
+	    reconlabs["phi"][row]->SetText(phi.str().c_str());
+	    
+	    z<<setprecision(4)<<trk->position().Z();
+	    reconlabs["z"][row]->SetText(z.str().c_str());
+	    
+	    // Get chisq and Ndof for DTrackTimeBased or DTrackWireBased objects
+	    const DTrackTimeBased *timetrack=dynamic_cast<const DTrackTimeBased*>(trk);
+	    const DTrackWireBased *track=dynamic_cast<const DTrackWireBased*>(trk);	
+	    const DChargedTrackHypothesis *chargedtrack=dynamic_cast<const DChargedTrackHypothesis *>(trk);
+	    
+	    if(timetrack){
+	      chisq_per_dof<<setprecision(4)<<timetrack->chisq/timetrack->Ndof;
+	      Ndof<<timetrack->Ndof;
+	      fom << timetrack->FOM;
+	    }else if(track){
+	      chisq_per_dof<<setprecision(4)<<track->chisq/track->Ndof;
+	      Ndof<<track->Ndof;
+	      fom << "N/A";
+	    }
+	    else if (chargedtrack){
+	      auto locTrackTimeBased = chargedtrack->Get_TrackTimeBased();
+	      chisq_per_dof<<setprecision(4)<<locTrackTimeBased->chisq/locTrackTimeBased->Ndof;
+	      Ndof<<locTrackTimeBased->Ndof;
+	      fom << locTrackTimeBased->FOM;
+	    }
+	    else{
+	      chisq_per_dof << "--------";
+	      Ndof << "--------";
+	      fom << "--------";
+	    }
+	    
+	    reconlabs["chisq/Ndof"][row]->SetText(chisq_per_dof.str().c_str());
+	    reconlabs["Ndof"][row]->SetText(Ndof.str().c_str());
+	    reconlabs["FOM"][row]->SetText(fom.str().c_str());
+	    
+	    if (timetrack){
+	      cand << timetrack->candidateid;
 		}
-		reconlabs["type"][row]->SetText(type.str().c_str());
-
-		p<<setprecision(4)<<trk->momentum().Mag();
-		reconlabs["p"][row]->SetText(p.str().c_str());
-
-		theta<<setprecision(4)<<trk->momentum().Theta()*TMath::RadToDeg();
-		reconlabs["theta"][row]->SetText(theta.str().c_str());
-
-		phi<<setprecision(4)<<trk->momentum().Phi()*TMath::RadToDeg();
-		reconlabs["phi"][row]->SetText(phi.str().c_str());
-
-		z<<setprecision(4)<<trk->position().Z();
-		reconlabs["z"][row]->SetText(z.str().c_str());
-
-		// Get chisq and Ndof for DTrackTimeBased or DTrackWireBased objects
-		const DTrackTimeBased *timetrack=dynamic_cast<const DTrackTimeBased*>(trk);
-		const DTrackWireBased *track=dynamic_cast<const DTrackWireBased*>(trk);	
-	
-		const DTrackCandidate *candidate=dynamic_cast<const DTrackCandidate*>(trk);
-		const DChargedTrackHypothesis *chargedtrack=dynamic_cast<const DChargedTrackHypothesis *>(trk);
-
-		if(timetrack){
-			chisq_per_dof<<setprecision(4)<<timetrack->chisq/timetrack->Ndof;
-			Ndof<<timetrack->Ndof;
-			fom << timetrack->FOM;
-		}else if(track){
-			chisq_per_dof<<setprecision(4)<<track->chisq/track->Ndof;
-			Ndof<<track->Ndof;
-			fom << "N/A";
-		}else if (candidate){
-			chisq_per_dof<<setprecision(4)<<candidate->chisq/candidate->Ndof;
-			Ndof<<candidate->Ndof;
-			fom << "N/A";
-		}
-		else if (chargedtrack){
-			auto locTrackTimeBased = chargedtrack->Get_TrackTimeBased();
-		  chisq_per_dof<<setprecision(4)<<locTrackTimeBased->chisq/locTrackTimeBased->Ndof;
-			Ndof<<locTrackTimeBased->Ndof;
-			fom << locTrackTimeBased->FOM;
-		}
-		else{
-		  chisq_per_dof << "--------";
-		  Ndof << "--------";
-		  fom << "--------";
-		}
-		
-		reconlabs["chisq/Ndof"][row]->SetText(chisq_per_dof.str().c_str());
-		reconlabs["Ndof"][row]->SetText(Ndof.str().c_str());
-		reconlabs["FOM"][row]->SetText(fom.str().c_str());
-		
-		if (timetrack){
-		  cand << timetrack->candidateid;
-		}
-		else if (track){
-		  cand << track->candidateid;
-		}
-		else {
-		  cand << "--------";
-		}
-		reconlabs["cand"][row]->SetText(cand.str().c_str());
+	    else if (track){
+	      cand << track->candidateid;
+	    }
+	    else {
+	      cand << "--------";
+	    }
+	    reconlabs["cand"][row]->SetText(cand.str().c_str());
+	  }
 	}
 	
 	// Have the pop-up window with the full particle list update it's labels
@@ -2340,11 +2357,11 @@ _DBG__;
 		vector<const DTrackCandidate*> tracks;
 		event.Get(tracks, tag.c_str());
 		if(index>=tracks.size())return;
-		q = tracks[index]->charge();
-		pos = tracks[index]->position();
-		mom = tracks[index]->momentum();
+		q = tracks[index]->dCharge;
+		pos = tracks[index]->dPosition;
+		mom = tracks[index]->dMomentum;
 		tracks[index]->Get(cdchits);
-		mass = tracks[index]->mass();
+		mass = ParticleMass(PiPlus);
 	}
 
 	if(dataname=="DMCThrown"){
