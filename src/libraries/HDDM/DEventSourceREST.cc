@@ -810,10 +810,18 @@ bool DEventSourceREST::Extract_DMCThrown(hddm_r::HDDM *record,
       const hddm_r::ProductList &products = iter->getProducts();
       hddm_r::ProductList::iterator piter;
       for (piter = products.begin(); piter != products.end(); ++piter) {
-         double E  = piter->getMomentum().getE();
-         double px = piter->getMomentum().getPx();
-         double py = piter->getMomentum().getPy();
-         double pz = piter->getMomentum().getPz();
+         hddm_r::Momentum &mome = piter->getMomentum();
+         double E  = mome.getE();
+         double px = mome.getPx();
+         double py = mome.getPy();
+         double pz = mome.getPz();
+         hddm_r::Momentum_doubleList momd = mome.getMomentum_doubles();
+         if (momd.size() > 0) {
+            E  = momd(0).getE();
+            px = momd(0).getPx();
+            py = momd(0).getPy();
+            pz = momd(0).getPz();
+         }
          double mass = sqrt(E*E - (px*px + py*py + pz*pz));
          if (!isfinite(mass)) {
             mass = 0.0;
