@@ -127,7 +127,7 @@ void DL3Trigger_factory::Process(const std::shared_ptr<const JEvent>& event)
 
 		// Ptot for candidates
 		double Ptot_candidates = 0.0;
-		for(auto tc : trackcandidates) Ptot_candidates += tc->momentum().Mag();
+		for(auto tc : trackcandidates) Ptot_candidates += tc->dMomentum.Mag();
 
 		Nstart_counter    = scdigihits.size();
 		Ntof              = tofdigihits.size();
