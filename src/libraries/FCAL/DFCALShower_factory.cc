@@ -9,6 +9,7 @@
 #include "TH2F.h"
 #include "TROOT.h"
 #include "TDirectory.h"
+#include <TMath.h>
 using namespace std;
 
 #include <JANA/JEvent.h>
