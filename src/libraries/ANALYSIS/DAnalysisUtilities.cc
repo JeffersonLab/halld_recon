@@ -1028,7 +1028,7 @@ int DAnalysisUtilities::Calc_Energy_UnusedShowers(const std::shared_ptr<const JE
 	return locNumber_UnusedShowers;
 }
 
-int DAnalysisUtilities::Calc_Momentum_UnusedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, TVector3 &locSumP3_UnusedTracks) const
+int DAnalysisUtilities::Calc_Momentum_UnusedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, DVector3 &locSumP3_UnusedTracks) const
 {
 	vector<const DChargedTrack*> locUnusedChargedTracks;
 	Get_UnusedChargedTracks(locEvent, locParticleCombo, locUnusedChargedTracks);

@@ -1421,7 +1421,7 @@ bool DCutAction_OneVertexKinFit::Perform_Action(const std::shared_ptr<const JEve
 	}
 
 	// vertex guess
-	TVector3 locVertexGuess = dAnalysisUtilities->Calc_CrudeVertex(locParticles);
+	DVector3 locVertexGuess = dAnalysisUtilities->Calc_CrudeVertex(locParticles);
 
 	// make & set vertex constraint
 	auto locVertexConstraint = dKinFitUtils->Make_VertexConstraint(locKinFitParticleSet, {}, locVertexGuess);
@@ -1437,7 +1437,7 @@ bool DCutAction_OneVertexKinFit::Perform_Action(const std::shared_ptr<const JEve
 	// GET THE FIT RESULTS
 	double locConfidenceLevel = dKinFitter->Get_ConfidenceLevel();
 	auto locResultVertexConstraint = std::dynamic_pointer_cast<DKinFitConstraint_Vertex>(*dKinFitter->Get_KinFitConstraints().begin());
-	TVector3 locFitVertex = locResultVertexConstraint->Get_CommonVertex();
+	DVector3 locFitVertex = locResultVertexConstraint->Get_CommonVertex();
 
 	//RESET MEMORY FROM LAST KINFIT!!
 	dKinFitter->Recycle_LastFitMemory(); //results no longer needed

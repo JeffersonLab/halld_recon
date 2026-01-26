@@ -475,7 +475,7 @@ void DParticleComboCreator::Set_SpacetimeVertex(const DReaction* locReaction, co
 		return; //vertex fit chosen but could not be performed: don't update!
 
 	//need the spacetime vertex at the production vertex of the particle grabbed
-	TLorentzVector locSpacetimeVertex;
+	DLorentzVector locSpacetimeVertex;
 	if(locKinFitParticle->Get_VertexP4AtProductionVertex()) //"position" is at production vertex
 		locSpacetimeVertex = locKinFitParticle->Get_SpacetimeVertex();
 	else //"position" is at decay vertex
@@ -679,8 +679,8 @@ const DChargedTrackHypothesis* DParticleComboCreator::Create_ChargedHypo_KinFit(
 	locNewHypo->AddAssociatedObject(locChargedTrack);
 
 	//p3 & v3
-	TVector3 locFitMomentum = locKinFitParticle->Get_Momentum();
-	TVector3 locFitVertex = locKinFitParticle->Get_Position();
+	DVector3 locFitMomentum = locKinFitParticle->Get_Momentum();
+	DVector3 locFitVertex = locKinFitParticle->Get_Position();
 	locNewHypo->setMomentum(DVector3(locFitMomentum.X(), locFitMomentum.Y(), locFitMomentum.Z()));
 	locNewHypo->setPosition(DVector3(locFitVertex.X(), locFitVertex.Y(), locFitVertex.Z()));
 
@@ -730,8 +730,8 @@ const DNeutralParticleHypothesis* DParticleComboCreator::Create_NeutralHypo_KinF
 
 	//p3 & v3
 	auto locWasNeutralShowerInFit = (locKinFitParticle->Get_EParamIndex() >= 0);
-	TVector3 locFitMomentum = locKinFitParticle->Get_Momentum();
-	TVector3 locFitVertex = locWasNeutralShowerInFit ? locKinFitParticle->Get_CommonVertex() : locKinFitParticle->Get_Position();
+	DVector3 locFitMomentum = locKinFitParticle->Get_Momentum();
+	DVector3 locFitVertex = locWasNeutralShowerInFit ? locKinFitParticle->Get_CommonVertex() : locKinFitParticle->Get_Position();
 	locNewHypo->setMomentum(DVector3(locFitMomentum.X(), locFitMomentum.Y(), locFitMomentum.Z()));
 	locNewHypo->setPosition(DVector3(locFitVertex.X(), locFitVertex.Y(), locFitVertex.Z()));
 

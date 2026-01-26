@@ -1439,7 +1439,7 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 
 	//UNUSED TRACKS
 	double locSumPMag_UnusedTracks = 0.0;
-	TVector3 locSumP3_UnusedTracks;
+	DVector3 locSumP3_UnusedTracks;
 	int locNumUnusedTracks = dAnalysisUtilities->Calc_Momentum_UnusedTracks(locEvent, locParticleCombos[0], locSumPMag_UnusedTracks, locSumP3_UnusedTracks);
 	locTreeFillData->Fill_Single<UChar_t>("NumUnusedTracks", locNumUnusedTracks);
 
@@ -1461,10 +1461,11 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 
 		//MOMENTUM OF UNUSED TRACKS (access to event loop required)
 		double locSumPMag_UnusedTracks = 0;
-		TVector3 locSumP3_UnusedTracks;
+		DVector3 locSumP3_UnusedTracks;
 		dAnalysisUtilities->Calc_Momentum_UnusedTracks(locEvent, locParticleCombos[loc_i], locSumPMag_UnusedTracks, locSumP3_UnusedTracks);
 		locTreeFillData->Fill_Array<Float_t>("SumPMag_UnusedTracks", locSumPMag_UnusedTracks, loc_i);
-		locTreeFillData->Fill_Array<TVector3>("SumP3_UnusedTracks", locSumP3_UnusedTracks, loc_i);
+		locTreeFillData->Fill_Array<TVector3>("SumP3_UnusedTracks",
+						      TVector3(locSumP3_UnusedTracks.X(),locSumP3_UnusedTracks.Y(),locSumP3_UnusedTracks.Z()), loc_i);
 
 		if(locMCReaction != NULL)
 		{

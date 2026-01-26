@@ -6,9 +6,9 @@
 #include <map>
 #include <set>
 
-#include "TVector3.h"
+#include "DVector3.h"
 #include "TMatrixFSym.h"
-#include "TLorentzVector.h"
+#include "DLorentzVector.h"
 
 #include "particleType.h"
 
@@ -88,13 +88,13 @@ class DKinFitUtils_GlueX : public DKinFitUtils
 
 		bool Propagate_TrackInfoToCommonVertex(DKinematicData* locKinematicData, DKinFitParticle* locKinFitParticle, const TMatrixDSym* locVXi);
 
-		inline TVector3 Make_TVector3(DVector3 locDVector3) const;
-		inline TLorentzVector Make_TLorentzVector(DLorentzVector locDLorentzVector) const;
+		inline DVector3 Make_DVector3(DVector3 locDVector3) const;
+		inline DLorentzVector Make_DLorentzVector(DLorentzVector locDLorentzVector) const;
 
 		/******************************************************* OVERRIDE BASE CLASS FUNCTIONS ******************************************************/
 
 		bool Get_IncludeBeamlineInVertexFitFlag(void) const;
-		TVector3 Get_BField(const TVector3& locPosition) const; //must return in units of Tesla!!
+		DVector3 Get_BField(const DVector3& locPosition) const; //must return in units of Tesla!!
 		bool Get_IsBFieldNearBeamline(void) const;
 
 	private:
@@ -160,14 +160,14 @@ class DKinFitUtils_GlueX : public DKinFitUtils
 		bool dWillBeamHaveErrorsFlag;
 };
 
-inline TVector3 DKinFitUtils_GlueX::Make_TVector3(DVector3 locDVector3) const
+inline DVector3 DKinFitUtils_GlueX::Make_DVector3(DVector3 locDVector3) const
 {
-	return TVector3(locDVector3.X(), locDVector3.Y(), locDVector3.Z());
+	return DVector3(locDVector3.X(), locDVector3.Y(), locDVector3.Z());
 }
 
-inline TLorentzVector DKinFitUtils_GlueX::Make_TLorentzVector(DLorentzVector locDLorentzVector) const
+inline DLorentzVector DKinFitUtils_GlueX::Make_DLorentzVector(DLorentzVector locDLorentzVector) const
 {
-	return TLorentzVector(locDLorentzVector.X(), locDLorentzVector.Y(), locDLorentzVector.Z(), locDLorentzVector.T());
+	return DLorentzVector(locDLorentzVector.X(), locDLorentzVector.Y(), locDLorentzVector.Z(), locDLorentzVector.T());
 }
 
 inline const JObject* DKinFitUtils_GlueX::Get_SourceJObject(const shared_ptr<DKinFitParticle>& locInputKinFitParticle) const

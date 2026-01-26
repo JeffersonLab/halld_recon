@@ -107,7 +107,7 @@ class DSourceComboTimeHandler
 		bool Cut_PhotonPID(const DNeutralShower* locNeutralShower, const DVector3& locVertex, double locPropagatedRFTime, bool locTargetCenterFlag, bool locDetachedVertex);
 		bool Cut_TrackPID(const DChargedTrackHypothesis* locHypothesis, bool locIsProductionVertex, const DSourceCombo* locFullReactionCombo, const DSourceCombo* locVertexPrimaryCombo, const DKinematicData* locBeamPhoton, bool locIsCombo2ndVertex, DVector3 locVertex, double locPropagatedRFTime, bool locDetachedVertex);
 
-		pair<double, double> Calc_RFDeltaTChiSq(const DNeutralShower* locNeutralShower, const TVector3& locVertex, double locPropagatedRFTime) const;
+		pair<double, double> Calc_RFDeltaTChiSq(const DNeutralShower* locNeutralShower, const DVector3& locVertex, double locPropagatedRFTime) const;
 		pair<double, double> Calc_RFDeltaTChiSq(const DChargedTrackHypothesis* locHypothesis, double locVertexTime, double locPropagatedRFTime) const;
 
 		void Define_DefaultCuts(void);
@@ -323,7 +323,7 @@ inline vector<int> DSourceComboTimeHandler::Get_CommonRFBunches(const vector<int
 	return locCommonRFBunches;
 }
 
-inline pair<double, double> DSourceComboTimeHandler::Calc_RFDeltaTChiSq(const DNeutralShower* locNeutralShower, const TVector3& locVertex, double locPropagatedRFTime) const
+inline pair<double, double> DSourceComboTimeHandler::Calc_RFDeltaTChiSq(const DNeutralShower* locNeutralShower, const DVector3& locVertex, double locPropagatedRFTime) const
 {
 	//calc vertex time, get delta-t cut
 	auto locPathLength = (locNeutralShower->dSpacetimeVertex.Vect() - locVertex).Mag();
