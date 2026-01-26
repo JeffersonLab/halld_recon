@@ -1840,8 +1840,8 @@ bool DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const JEve
 	      locDetectorMatches->Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParams);
 
 	      if(RECO_DIRC_CALC_LUT) {
-		      TVector3 locProjPos(dircIter->getX(),dircIter->getY(),dircIter->getZ());
-		      TVector3 locProjMom(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
+		      DVector3 locProjPos(dircIter->getX(),dircIter->getY(),dircIter->getZ());
+		      DVector3 locProjMom(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
 		      double locFlightTime = dircIter->getT();
 
 		      if( locParticleID->Get_DIRCLut()->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locTrackTimeBased->mass(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams) )
