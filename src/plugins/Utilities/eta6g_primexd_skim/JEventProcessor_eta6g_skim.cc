@@ -14,7 +14,7 @@
 #include "JEventProcessor_eta6g_skim.h"
 
 // Routine used to create our JEventProcessor
-#include <TLorentzVector.h>
+#include <DLorentzVector.h>
 #include "TMath.h"
 #include "DANA/DEvent.h"
 #include "FCAL/DFCALShower.h"
@@ -248,7 +248,7 @@ void JEventProcessor_eta6g_skim::Process(const std::shared_ptr<const JEvent>& ev
     locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches[0]));
   }
 
-  vector <TLorentzVector> PhotonList; PhotonList.clear(); 
+  vector <DLorentzVector> PhotonList; PhotonList.clear(); 
   //int photon_nb = locBCALShowers.size() + locFCALShowers.size() + locCCALShowers.size();
   for (unsigned int i = 0; i < locBCALShowers.size(); i ++) {
     double e =  locBCALShowers[i]->E;
@@ -262,7 +262,7 @@ void JEventProcessor_eta6g_skim::Process(const std::shared_ptr<const JEvent>& ev
     double px = p * sin(vertex.Theta()) * cos(vertex.Phi());
     double py = p * sin(vertex.Theta()) * sin(vertex.Phi());
     double pz = p * cos(vertex.Theta());
-    TLorentzVector PhotonVec(px, py, pz, e);
+    DLorentzVector PhotonVec(px, py, pz, e);
     if (e > 0.2) PhotonList.push_back(PhotonVec);
   }
   for (unsigned int i = 0; i < locFCALShowers.size(); i ++) {
@@ -277,7 +277,7 @@ void JEventProcessor_eta6g_skim::Process(const std::shared_ptr<const JEvent>& ev
     double px = p * sin(vertex.Theta()) * cos(vertex.Phi());
     double py = p * sin(vertex.Theta()) * sin(vertex.Phi());
     double pz = p * cos(vertex.Theta());
-    TLorentzVector PhotonVec(px, py, pz, e);
+    DLorentzVector PhotonVec(px, py, pz, e);
     if (e > 0.2) PhotonList.push_back(PhotonVec);
   }
   for (unsigned int i = 0; i < locCCALShowers.size(); i ++) {
@@ -292,7 +292,7 @@ void JEventProcessor_eta6g_skim::Process(const std::shared_ptr<const JEvent>& ev
     double px = p * sin(vertex.Theta()) * cos(vertex.Phi());
     double py = p * sin(vertex.Theta()) * sin(vertex.Phi());
     double pz = p * cos(vertex.Theta());
-    TLorentzVector PhotonVec(px, py, pz, e);
+    DLorentzVector PhotonVec(px, py, pz, e);
     //PhotonList.push_back(PhotonVec);
   }
 
@@ -314,8 +314,8 @@ void JEventProcessor_eta6g_skim::Process(const std::shared_ptr<const JEvent>& ev
   /*
   Double_t bestChi2Eta = 1.0e30;
   Double_t bestChi2EtaPrim = 1.0e30;
-  vector <TLorentzVector> PhotonEta6gList;PhotonEta6gList.clear();
-  vector <TLorentzVector> PhotonEtaprim6gList;PhotonEtaprim6gList.clear();
+  vector <DLorentzVector> PhotonEta6gList;PhotonEta6gList.clear();
+  vector <DLorentzVector> PhotonEtaprim6gList;PhotonEtaprim6gList.clear();
   Combined6g(PhotonList,
 	     bestChi2Eta,
 	     bestChi2EtaPrim,
@@ -363,11 +363,11 @@ void JEventProcessor_eta6g_skim::Finish()
 {
   // Called before program exit after event processing is finished.
 }
-void JEventProcessor_eta6g_skim::Combined6g(vector<TLorentzVector>&EMList,
+void JEventProcessor_eta6g_skim::Combined6g(vector<DLorentzVector>&EMList,
 					    Double_t &bestChi0Eta,
 					    Double_t &bestChi0EtaPrim,
-					    vector<TLorentzVector>&PhotonEta6gList,
-					    vector<TLorentzVector>&PhotonEtaprim6gList)
+					    vector<DLorentzVector>&PhotonEta6gList,
+					    vector<DLorentzVector>&PhotonEtaprim6gList)
 {	  
   bestChi0EtaPrim   = 1.0e30;
   bestChi0Eta       = 1.0e30;
@@ -382,9 +382,9 @@ void JEventProcessor_eta6g_skim::Combined6g(vector<TLorentzVector>&EMList,
       
       double Chi2_pi0Mass[3];
       double Chi2_etaMass[3];
-      vector<TLorentzVector>GG;GG.clear();
-      vector<TLorentzVector>Pi0Cor;Pi0Cor.clear();
-      vector<TLorentzVector>EtaCor;EtaCor.clear();
+      vector<DLorentzVector>GG;GG.clear();
+      vector<DLorentzVector>Pi0Cor;Pi0Cor.clear();
+      vector<DLorentzVector>EtaCor;EtaCor.clear();
       
       for (int i = 0; i < 3; i ++) {
 	GG.push_back(EMList[combi6->combi[2*i]] + EMList[combi6->combi[2*i+1]] );
@@ -400,7 +400,7 @@ void JEventProcessor_eta6g_skim::Combined6g(vector<TLorentzVector>&EMList,
       double Chi2_2pi0eta_2 = Chi2_etaMass[0] + Chi2_pi0Mass[1] + Chi2_pi0Mass[2];
       
       if (Esum > 500.0e-3) {
-	TLorentzVector EtaVec = Pi0Cor[0] + Pi0Cor[1] + Pi0Cor[2];
+	DLorentzVector EtaVec = Pi0Cor[0] + Pi0Cor[1] + Pi0Cor[2];
 	bool AnEta     = false; 
 	if (GG[0].M() > 110.0e-3 && 
 	    GG[1].M() > 110.0e-3 && 
@@ -500,11 +500,11 @@ void JEventProcessor_eta6g_skim::Combined6g(vector<TLorentzVector>&EMList,
   if(PhotonEta6gList.size()>0)
     PhotonEtaprim6gList.clear();
 }
-void JEventProcessor_eta6g_skim::Combined7g(vector<TLorentzVector>&EMList,
+void JEventProcessor_eta6g_skim::Combined7g(vector<DLorentzVector>&EMList,
 					    Double_t &bestChi0Eta,
 					    Double_t &bestChi0EtaPrim,
-					    vector<TLorentzVector>&PhotonEta6gList,
-					    vector<TLorentzVector>&PhotonEtaprim6gList)
+					    vector<DLorentzVector>&PhotonEta6gList,
+					    vector<DLorentzVector>&PhotonEtaprim6gList)
 {	  
   bestChi0EtaPrim   = 1.0e30;
   bestChi0Eta       = 1.0e30;
@@ -519,9 +519,9 @@ void JEventProcessor_eta6g_skim::Combined7g(vector<TLorentzVector>&EMList,
       
       double Chi2_pi0Mass[3];
       double Chi2_etaMass[3];
-      vector<TLorentzVector>GG;GG.clear();
-      vector<TLorentzVector>Pi0Cor;Pi0Cor.clear();
-      vector<TLorentzVector>EtaCor;EtaCor.clear();
+      vector<DLorentzVector>GG;GG.clear();
+      vector<DLorentzVector>Pi0Cor;Pi0Cor.clear();
+      vector<DLorentzVector>EtaCor;EtaCor.clear();
       
       for (int i = 0; i < 3; i ++) {
 	GG.push_back( EMList[combi7->combi[2*i]] + EMList[combi7->combi[2*i+1]] );
@@ -532,11 +532,11 @@ void JEventProcessor_eta6g_skim::Combined7g(vector<TLorentzVector>&EMList,
       }
       
       if (Esum > 500.0e-3) {
-	TLorentzVector EtaVec             = Pi0Cor[0] + Pi0Cor[1] + Pi0Cor[2];
-	TLorentzVector EtaprimVec1        = Pi0Cor[0] + Pi0Cor[1] + EtaCor[2];
-	TLorentzVector EtaprimVec2        = Pi0Cor[0] + EtaCor[1] + Pi0Cor[2];
-	TLorentzVector EtaprimVec3        = EtaCor[0] + Pi0Cor[1] + Pi0Cor[2];
-	TLorentzVector Candidate          = (TLorentzVector) EMList[combi7->combi[6]];
+	DLorentzVector EtaVec             = Pi0Cor[0] + Pi0Cor[1] + Pi0Cor[2];
+	DLorentzVector EtaprimVec1        = Pi0Cor[0] + Pi0Cor[1] + EtaCor[2];
+	DLorentzVector EtaprimVec2        = Pi0Cor[0] + EtaCor[1] + Pi0Cor[2];
+	DLorentzVector EtaprimVec3        = EtaCor[0] + Pi0Cor[1] + Pi0Cor[2];
+	DLorentzVector Candidate          = (DLorentzVector) EMList[combi7->combi[6]];
 	Double_t CopAngleEta       = (fabs(EtaVec.Phi() - Candidate.Phi())) * TMath::RadToDeg();
 	Double_t Chi2AngleEta      = TMath::Power((180.0  - CopAngleEta) / 30.0,2.0);
 	

@@ -14,7 +14,7 @@
 #include "JEventProcessor_etapi0_skim.h"
 
 // Routine used to create our JEventProcessor
-#include <TLorentzVector.h>
+#include <DLorentzVector.h>
 #include "TMath.h"
 #include "FCAL/DFCALShower.h"
 #include "BCAL/DBCALShower.h"
@@ -37,7 +37,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
-#include "TLorentzVector.h"
+#include "DLorentzVector.h"
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
@@ -239,7 +239,7 @@ void JEventProcessor_etapi0_skim::Process(const std::shared_ptr<const JEvent>& e
   if(locEventRFBunches.size() > 0) {
     locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches[0]));
   }
-  vector <TLorentzVector> PhotonList; PhotonList.clear(); 
+  vector <DLorentzVector> PhotonList; PhotonList.clear(); 
   int photon_nb = locBCALShowers.size() + locFCALShowers.size() + locCCALShowers.size();
   
   for (unsigned int i = 0; i < locBCALShowers.size(); i ++) {
@@ -254,7 +254,7 @@ void JEventProcessor_etapi0_skim::Process(const std::shared_ptr<const JEvent>& e
     double px = p * sin(vertex.Theta()) * cos(vertex.Phi());
     double py = p * sin(vertex.Theta()) * sin(vertex.Phi());
     double pz = p * cos(vertex.Theta());
-    TLorentzVector PhotonVec(px, py, pz, e);
+    DLorentzVector PhotonVec(px, py, pz, e);
     PhotonList.push_back(PhotonVec);
   }
   for (unsigned int i = 0; i < locFCALShowers.size(); i ++) {
@@ -269,7 +269,7 @@ void JEventProcessor_etapi0_skim::Process(const std::shared_ptr<const JEvent>& e
     double px = p * sin(vertex.Theta()) * cos(vertex.Phi());
     double py = p * sin(vertex.Theta()) * sin(vertex.Phi());
     double pz = p * cos(vertex.Theta());
-    TLorentzVector PhotonVec(px, py, pz, e);
+    DLorentzVector PhotonVec(px, py, pz, e);
     PhotonList.push_back(PhotonVec);
   }
   for (unsigned int i = 0; i < locCCALShowers.size(); i ++) {
@@ -284,16 +284,16 @@ void JEventProcessor_etapi0_skim::Process(const std::shared_ptr<const JEvent>& e
     double px = p * sin(vertex.Theta()) * cos(vertex.Phi());
     double py = p * sin(vertex.Theta()) * sin(vertex.Phi());
     double pz = p * cos(vertex.Theta());
-    TLorentzVector PhotonVec(px, py, pz, e);
+    DLorentzVector PhotonVec(px, py, pz, e);
     PhotonList.push_back(PhotonVec);
   }
   
   Double_t bestChi22Pi0 = 1.0e30;
   Double_t bestChi2Pi0Eta = 1.0e30;
   Double_t bestChi22Eta = 1.0e30;
-  vector <TLorentzVector> Photon2Pi0List;Photon2Pi0List.clear();
-  vector <TLorentzVector> PhotonPi0EtaList;PhotonPi0EtaList.clear();
-  vector <TLorentzVector> Photon2EtaList;Photon2EtaList.clear();
+  vector <DLorentzVector> Photon2Pi0List;Photon2Pi0List.clear();
+  vector <DLorentzVector> PhotonPi0EtaList;PhotonPi0EtaList.clear();
+  vector <DLorentzVector> Photon2EtaList;Photon2EtaList.clear();
   Combined4g(PhotonList,
 	     bestChi22Pi0,
 	     bestChi2Pi0Eta,
@@ -346,13 +346,13 @@ void JEventProcessor_etapi0_skim::Finish()
 }
 
 
-void JEventProcessor_etapi0_skim::Combined4g(vector<TLorentzVector>&EMList,
+void JEventProcessor_etapi0_skim::Combined4g(vector<DLorentzVector>&EMList,
 					     Double_t &bestChi22Pi0,
 					     Double_t &bestChi2EtaPi0,
 					     Double_t &bestChi22Eta,
-					     vector<TLorentzVector>&Photon2Pi0List,
-					     vector<TLorentzVector>&PhotonEtaPi0List,
-					     vector<TLorentzVector>&Photon2EtaList)
+					     vector<DLorentzVector>&Photon2Pi0List,
+					     vector<DLorentzVector>&PhotonEtaPi0List,
+					     vector<DLorentzVector>&Photon2EtaList)
 {	  
   bestChi22Pi0   = 1.0e30;
   bestChi2EtaPi0 = 1.0e30;
@@ -369,9 +369,9 @@ void JEventProcessor_etapi0_skim::Combined4g(vector<TLorentzVector>&EMList,
       
       double Chi2_pi0Mass[3];
       double Chi2_etaMass[3];
-      vector<TLorentzVector>GG;GG.clear();
-      vector<TLorentzVector>Pi0Cor;Pi0Cor.clear();
-      vector<TLorentzVector>EtaCor;EtaCor.clear();
+      vector<DLorentzVector>GG;GG.clear();
+      vector<DLorentzVector>Pi0Cor;Pi0Cor.clear();
+      vector<DLorentzVector>EtaCor;EtaCor.clear();
       
       for (int i = 0; i < 2; i ++) {
 	GG.push_back(EMList[combi4->combi[2*i]] + EMList[combi4->combi[2*i+1]] );
@@ -451,13 +451,13 @@ void JEventProcessor_etapi0_skim::Combined4g(vector<TLorentzVector>&EMList,
     }
   }
 }
-void JEventProcessor_etapi0_skim::Combined5g(vector<TLorentzVector>&EMList,
+void JEventProcessor_etapi0_skim::Combined5g(vector<DLorentzVector>&EMList,
 					     Double_t &bestChi22Pi0,
 					     Double_t &bestChi2EtaPi0,
 					     Double_t &bestChi22Eta,
-					     vector<TLorentzVector>&Photon2Pi0List,
-					     vector<TLorentzVector>&PhotonEtaPi0List,
-					     vector<TLorentzVector>&Photon2EtaList)
+					     vector<DLorentzVector>&Photon2Pi0List,
+					     vector<DLorentzVector>&PhotonEtaPi0List,
+					     vector<DLorentzVector>&Photon2EtaList)
 {	  
   bestChi22Pi0   = 1.0e30;
   bestChi2EtaPi0 = 1.0e30;
@@ -473,9 +473,9 @@ void JEventProcessor_etapi0_skim::Combined5g(vector<TLorentzVector>&EMList,
 	
 	double Chi2_pi0Mass[3];
 	double Chi2_etaMass[3];
-	vector<TLorentzVector>GG;GG.clear();
-	vector<TLorentzVector>Pi0Cor;Pi0Cor.clear();
-	vector<TLorentzVector>EtaCor;EtaCor.clear();
+	vector<DLorentzVector>GG;GG.clear();
+	vector<DLorentzVector>Pi0Cor;Pi0Cor.clear();
+	vector<DLorentzVector>EtaCor;EtaCor.clear();
 	
 	for (int i = 0; i < 2; i ++) {
 	  GG.push_back( EMList[combi5->combi[2*i]] + EMList[combi5->combi[2*i+1]] );

@@ -19,7 +19,7 @@
 #include <TH1.h>
 #include <TDirectory.h>
 #include <TMath.h>
-#include <TLorentzVector.h>
+#include <DLorentzVector.h>
 #include <TString.h>
 
 // C++
@@ -195,8 +195,8 @@ void JEventProcessor_epem_ml_skim::Process(const std::shared_ptr<const JEvent>& 
         const double Ebeam  = cppepem->Ebeam;
         const double weight = cppepem->weight;
 
-        const TLorentzVector& ep = cppepem->ep_v4;
-        const TLorentzVector& em = cppepem->em_v4;
+        const DLorentzVector& ep = cppepem->ep_v4;
+        const DLorentzVector& em = cppepem->em_v4;
 
         const auto* ep_FCAL = cppepem->PositronShower;
         const auto* em_FCAL = cppepem->ElectronShower;

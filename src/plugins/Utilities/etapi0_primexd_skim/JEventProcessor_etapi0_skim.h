@@ -37,20 +37,20 @@ class JEventProcessor_etapi0_skim:public JEventProcessor{
   void Finish() override;
 
   void writeClustersToRoot( const vector< const DFCALCluster* > clusVec );
-  void Combined4g(vector<TLorentzVector>&EMList,
+  void Combined4g(vector<DLorentzVector>&EMList,
 		  Double_t &bestChi22Pi0,
 		  Double_t &bestChi2EtaPi0,
 		  Double_t &bestChi22Eta,
-		  vector<TLorentzVector>&Photon2Pi0List,
-		  vector<TLorentzVector>&PhotonEtaPi0List,
-		  vector<TLorentzVector>&Photon2EtaList);
-  void Combined5g(vector<TLorentzVector>&EMList,
+		  vector<DLorentzVector>&Photon2Pi0List,
+		  vector<DLorentzVector>&PhotonEtaPi0List,
+		  vector<DLorentzVector>&Photon2EtaList);
+  void Combined5g(vector<DLorentzVector>&EMList,
 		  Double_t &bestChi22Pi0,
 		  Double_t &bestChi2EtaPi0,
 		  Double_t &bestChi22Eta,
-		  vector<TLorentzVector>&Photon2Pi0List,
-		  vector<TLorentzVector>&PhotonEtaPi0List,
-		  vector<TLorentzVector>&Photon2EtaList);
+		  vector<DLorentzVector>&Photon2Pi0List,
+		  vector<DLorentzVector>&PhotonEtaPi0List,
+		  vector<DLorentzVector>&Photon2EtaList);
   double MIN_MASS;
   double MAX_MASS;
   double MIN_E;
