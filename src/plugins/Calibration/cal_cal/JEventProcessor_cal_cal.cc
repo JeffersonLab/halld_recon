@@ -309,8 +309,8 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
   float m_weight = 0;
   vector<const DECALShower *> Photons_ecal_list; Photons_ecal_list.clear();
   vector<const DFCALShower *> Photons_fcal_list; Photons_fcal_list.clear();
-  vector<TLorentzVector> photons_ecal_list; photons_ecal_list.clear();
-  vector<TLorentzVector> photons_fcal_list; photons_fcal_list.clear();
+  vector<DLorentzVector> photons_ecal_list; photons_ecal_list.clear();
+  vector<DLorentzVector> photons_fcal_list; photons_fcal_list.clear();
   
   //if (m_FCAL1 == 0) {
   for (unsigned int i = 0; i < locECALShowers.size(); i++) {
@@ -1021,18 +1021,18 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
   }
 
   if (Photons_ecal_list.size() == 2) {
-    TLorentzVector wP4 = photons_ecal_list[0] + photons_ecal_list[1];
+    DLorentzVector wP4 = photons_ecal_list[0] + photons_ecal_list[1];
      h_ecal_im[4]->Fill(wP4.M());
   }
   if (Photons_fcal_list.size() == 2) {
-    TLorentzVector wP4 = photons_fcal_list[0] + photons_fcal_list[1];
+    DLorentzVector wP4 = photons_fcal_list[0] + photons_fcal_list[1];
      h_fcal_im[4]->Fill(wP4.M());
   }
   
   if (Photons_ecal_list.size() == 3) {
-    TLorentzVector wP4 = photons_ecal_list[0] + photons_ecal_list[1] + photons_ecal_list[2];
-    TLorentzVector wggP4[3];
-    TLorentzVector wgP4[3];
+    DLorentzVector wP4 = photons_ecal_list[0] + photons_ecal_list[1] + photons_ecal_list[2];
+    DLorentzVector wggP4[3];
+    DLorentzVector wgP4[3];
     wggP4[0] = photons_ecal_list[0] + photons_ecal_list[1];
     wggP4[1] = photons_ecal_list[0] + photons_ecal_list[2];
     wggP4[2] = photons_ecal_list[1] + photons_ecal_list[2];
@@ -1108,9 +1108,9 @@ void JEventProcessor_cal_cal::Process(const std::shared_ptr<const JEvent>& event
   }
   
   if (Photons_fcal_list.size() == 3) {
-    TLorentzVector wP4 = photons_fcal_list[0] + photons_fcal_list[1] + photons_fcal_list[2];
-    TLorentzVector wggP4[3];
-    TLorentzVector wgP4[3];
+    DLorentzVector wP4 = photons_fcal_list[0] + photons_fcal_list[1] + photons_fcal_list[2];
+    DLorentzVector wggP4[3];
+    DLorentzVector wgP4[3];
     wggP4[0] = photons_fcal_list[0] + photons_fcal_list[1];
     wggP4[1] = photons_fcal_list[0] + photons_fcal_list[2];
     wggP4[2] = photons_fcal_list[1] + photons_fcal_list[2];
