@@ -7,33 +7,41 @@
 
 #ifndef _DVector2S_
 #define _DVector2S_
-
-#include <JANA/jerror.h>
+#include <math.h>
 
 class DVector2S{
-	public:
-		DVector2S(){};
-		DVector2S(double xx, double yy){x=xx; y=yy;}
-		virtual ~DVector2S(){};
+public:
+  DVector2S(){x=0;y=0;};
+  DVector2S(double xx, double yy){x=xx; y=yy;}
+  ~DVector2S(){};
 		
-		inline double X(void) const {return x;}
-		inline double Y(void) const {return y;}
-		inline void Set(double xx, double yy){x=xx; y=yy;}
-		inline double Mod(void){return sqrt(x*x + y*y);}
-		inline double Phi(void){return atan2(y,x);}
-		inline double Phi2pi(void){double a=atan2(y,x); return a<0.0 ? a+2*M_PI:a;}
-		
-		inline DVector2S& operator*=(const double &f){x*=f; y*=f; return *(this);}
-		inline DVector2S& operator/=(const double &f){x/=f; y/=f; return *(this);}
-		inline DVector2S& operator+=(const DVector2S &v){x+=v.X(); y+=v.Y(); return *(this);}
-		inline DVector2S& operator-=(const DVector2S &v){x-=v.X(); y-=v.Y(); return *(this);}
+  double X(void) const {return x;}
+  double Y(void) const {return y;}
+  void Set(double xx, double yy){x=xx; y=yy;}
+  double Mod2(void) const {return x*x+y*y;}
+  double Mod(void) const {return sqrt(Mod2());}
+  double Phi(void) const {return atan2(y,x);}
+  double Phi_0_2pi(double phi) const {
+    while (phi>=2.*M_PI) phi -= 2.*M_PI;
+    while (phi<0.) phi += 2.*M_PI;
+    return phi;
+  }
+  DVector2S Rotate(double phi) const {
+    double cosphi=cos(phi),sinphi=sin(phi);
+    return DVector2S(X()*cosphi-Y()*sinphi,X()*sinphi+Y()*cosphi);
+  }
 
-	protected:
-	
-	
-	private:
-		double x;
-		double y;
+  double operator*(const DVector2S &v) const {return X()*v.X()+Y()*v.Y();}
+  DVector2S& operator*=(const double &f){x*=f; y*=f; return *(this);}
+  DVector2S& operator/=(const double &f){x/=f; y/=f; return *(this);}
+  DVector2S& operator+=(const DVector2S &v){x+=v.X(); y+=v.Y(); return *(this);}
+  DVector2S& operator-=(const DVector2S &v){x-=v.X(); y-=v.Y(); return *(this);}
+  
+protected:
+  
+private:
+  double x;
+  double y;
 };
 
 inline DVector2S operator*(const double &f, const DVector2S &vec){
