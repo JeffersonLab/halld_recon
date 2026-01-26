@@ -383,7 +383,7 @@ void JEventProcessor_FMWPC_Performance::Process(const std::shared_ptr<const JEve
 
 	
 	//------ Rory's recipe ------
-	TVector3 k_hat = (pip_v4+pim_v4).Vect();
+	DVector3 k_hat = (pip_v4+pim_v4).Vect();
 	k_hat.SetMag(1.0);
 
 	// Rotation angle about y to get into y-z plane
@@ -391,7 +391,7 @@ void JEventProcessor_FMWPC_Performance::Process(const std::shared_ptr<const JEve
 	k_hat.RotateY(theta_yz);
 
 	// pi+ direction in rotated lab frame
-	TVector3 pip_hat = pip_v4.Vect();
+	DVector3 pip_hat = pip_v4.Vect();
 	pip_hat.RotateY(theta_yz);
 
 	// Angle to rotate k_hat into z-direction
@@ -404,19 +404,23 @@ void JEventProcessor_FMWPC_Performance::Process(const std::shared_ptr<const JEve
 
 
 	//------- rho study recipe --------
-	TLorentzRotation resonanceBoost2( -(pip_v4 + pim_v4).BoostVector() );   // boost into 2pi frame                                                     
-	TLorentzVector beam_res = resonanceBoost2 * locBeamP4;
-	TLorentzVector recoil_res = resonanceBoost2 * locMissingPb208P4;
-	TLorentzVector p1_res = resonanceBoost2 * pip_v4;
-	TLorentzVector p2_res = resonanceBoost2 * pim_v4;
+	DLorentzVector pippim_v4=pip_v4 + pim_v4;
+	DLorentzVector beam_res = locBeamP4;
+	beam_res.Boost(-pippim_v4.BoostVector());
+	DLorentzVector recoil_res=locMissingPb208P4;
+	recoil_res.Boost(-pippim_v4.BoostVector());
+	DLorentzVector p1_res = pip_v4;
+	p1_res.Boost(-pippim_v4.BoostVector());
+	DLorentzVector p2_res = pim_v4;
+	p2_res.Boost(-pippim_v4.BoostVector());
 	double phipol = 0;
-	TVector3 eps(cos(phipol), sin(phipol), 0.0);
-	TVector3 y = (locBeamP4.Vect().Unit().Cross(-locMissingPb208P4.Vect().Unit())).Unit();
+	DVector3 eps(cos(phipol), sin(phipol), 0.0);
+	DVector3 y = (locBeamP4.Vect().Unit().Cross(-locMissingPb208P4.Vect().Unit())).Unit();
 	// choose helicity frame: z-axis opposite recoil lead in rho rest frame 
-	TVector3 z = -1. * recoil_res.Vect().Unit();
-	TVector3 x = y.Cross(z).Unit();
+	DVector3 z = -1. * recoil_res.Vect().Unit();
+	DVector3 x = y.Cross(z).Unit();
 
-	TVector3 angles( (p1_res.Vect()).Dot(x),
+	DVector3 angles( (p1_res.Vect()).Dot(x),
 			    (p1_res.Vect()).Dot(y),
 			    (p1_res.Vect()).Dot(z) );
 

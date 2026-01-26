@@ -434,8 +434,8 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
 	DFDCWire * wire = wireByNumber[wireIndex]; 
 	double dz=wire->origin.z()-interPosition.z();
 	DVector3 trackPosition = interPosition + (dz/trackDirection.z())*trackDirection;
-	TVector3 perp = wire->udir.Cross(trackDirection).Unit();
-	double distanceToWire = fabs(perp * (trackPosition - wire->origin));
+	DVector3 perp = wire->udir.Cross(trackDirection).Unit();
+	double distanceToWire = fabs(perp.Dot(trackPosition - wire->origin));
 	bool expectHit = false;
 
 	// starting from here, only histograms with distance to wire < 0.5, maybe change later

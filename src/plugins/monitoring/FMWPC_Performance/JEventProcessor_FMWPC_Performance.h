@@ -9,7 +9,6 @@
 #define _JEventProcessor_FMWPC_Performance_
 
 #include <JANA/JEventProcessor.h>
-#include "TLorentzRotation.h"
 
 class JEventProcessor_FMWPC_Performance:public JEventProcessor{
 	public:
