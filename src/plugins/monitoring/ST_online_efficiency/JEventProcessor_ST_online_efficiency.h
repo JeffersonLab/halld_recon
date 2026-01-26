@@ -35,7 +35,6 @@
 #include "TObjArray.h"
 #include "TMath.h"
 // Define some constants
-const double  RAD2DEG       = 57.29577951;      // Convert radians to degrees
 const uint32_t  NCHANNELS     = 30;              // number of scintillator paddles
 const uint32_t  Nof_ss_intervals = 5;
 const uint32_t  Nof_bs_intervals = 3;
