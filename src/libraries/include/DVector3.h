@@ -12,6 +12,8 @@
 
 #include <TVector3.h>
 typedef TVector3 DVector3;
+//#include <DVector3S.h>
+//typedef DVector3S DVector3;
 
 #else
 #include <math.h>
