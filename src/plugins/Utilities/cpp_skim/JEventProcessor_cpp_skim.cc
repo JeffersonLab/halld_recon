@@ -6,7 +6,7 @@
 //
 
 #include "JEventProcessor_cpp_skim.h"
-
+#include <TMath.h>
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
