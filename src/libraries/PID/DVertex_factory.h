@@ -10,8 +10,6 @@
 
 #include <JANA/JFactoryT.h>
 
-#include "TVector3.h"
-
 #include "HDGEOMETRY/DMagneticFieldMap.h"
 #include "DVector3.h"
 
