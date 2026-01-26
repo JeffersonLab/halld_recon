@@ -31,7 +31,7 @@ using namespace std;
 #include "TRIGGER/DTrigger.h"
 
 // Define some constants
-const double    RAD2DEG       = 57.29577951;      // Convert radians to degrees
+const double    RAD2DEG_       = 57.29577951;      // Convert radians to degrees
 const uint32_t  NCHANNELS     = 30;              // number of scintillator paddles
 
 // Declare 2D tracking histos
@@ -225,7 +225,7 @@ void JEventProcessor_ST_online_tracking::Process(const std::shared_ptr<const JEv
       // applied vertex cut
       DLorentzVector Lor_Mom = timeBasedTrack->lorentzMomentum();
       double P_mag = Lor_Mom.P(); 
-      double phi_mom = momentum_vec.Phi()*RAD2DEG;
+      double phi_mom = momentum_vec.Phi()*RAD2DEG_;
       if (phi_mom < 0.0) phi_mom += 360.0;
    
       if (st_match_pid)  // Get the intersection point which can not be obtained from st_match
@@ -234,7 +234,7 @@ void JEventProcessor_ST_online_tracking::Process(const std::shared_ptr<const JEv
 	  Int_t sector_m = st_params[0]->dSCHit->sector;
 	  //Acquire the energy loss per unit length in the ST (arbitrary units)
 	  double dEdx = st_params[0]->dEdx;
-	  double dphi = st_params[0]->dDeltaPhiToHit*RAD2DEG;
+	  double dphi = st_params[0]->dDeltaPhiToHit*RAD2DEG_;
 	  // Fill dEdx vs Momentum 
 	  h2_dedx_P_mag->Fill(P_mag,dEdx);
 	  // Fill dEdx vs Momentum with cut on positive charges  
@@ -248,7 +248,7 @@ void JEventProcessor_ST_online_tracking::Process(const std::shared_ptr<const JEv
 	      h2_dedx_P_mag_negtv->Fill(P_mag,dEdx);
 	    }
 	  // Obtain the intersection point with the ST		  
-	  double phi_ip   = IntersectionPoint.Phi()*RAD2DEG;
+	  double phi_ip   = IntersectionPoint.Phi()*RAD2DEG_;
 		      // Correct phi calculation
 	  if (phi_ip < 0.0) phi_ip += 360.0;
 	  // Acquire the intersection point
