@@ -23,6 +23,7 @@
 #include "TTree.h"
 #include "TH1.h"
 #include "TH2.h"
+#include "TMath.h"
 
 #include <PID/DBeamPhoton.h>
 #include <PID/DEventRFBunch.h>
