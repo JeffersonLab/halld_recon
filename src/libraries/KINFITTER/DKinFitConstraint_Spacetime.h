@@ -4,8 +4,8 @@
 #include <set>
 #include <algorithm>
 
-#include "TVector3.h"
-#include "TLorentzVector.h"
+#include "DVector3.h"
+#include "DLorentzVector.h"
 
 #include "DKinFitParticle.h"
 #include "DKinFitConstraint.h"
@@ -27,7 +27,7 @@ class DKinFitConstraint_Spacetime : public DKinFitConstraint_Vertex
 		double Get_InitTimeGuess(void) const{return dInitTimeGuess;};
 		void Set_InitTimeGuess(double locInitTimeGuess){dInitTimeGuess = locInitTimeGuess;};
 
-		TLorentzVector Get_CommonSpacetime(void) const;
+		DLorentzVector Get_CommonSpacetime(void) const;
 		double Get_CommonTime(void) const;
 
 		char Get_CommonTParamIndex(void) const;
@@ -44,8 +44,8 @@ class DKinFitConstraint_Spacetime : public DKinFitConstraint_Vertex
 	private:
 
 		void Set_CommonTime(double locTime);
-		void Set_CommonVertex(const TVector3& locVertex);
-		void Set_CommonSpacetime(TLorentzVector& locSpacetime);
+		void Set_CommonVertex(const DVector3& locVertex);
+		void Set_CommonSpacetime(DLorentzVector& locSpacetime);
 
 		void Set_CommonTParamIndex(char locCommonTParamIndex);
 		void Set_OnlyConstrainTimeParticles(const set<shared_ptr<DKinFitParticle>>& locOnlyConstrainTimeParticles){dOnlyConstrainTimeParticles = locOnlyConstrainTimeParticles;}
@@ -88,9 +88,9 @@ inline set<shared_ptr<DKinFitParticle>> DKinFitConstraint_Spacetime::Get_AllCons
 	return locAllConstrainedParticles;
 }
 
-inline TLorentzVector DKinFitConstraint_Spacetime::Get_CommonSpacetime(void) const
+inline DLorentzVector DKinFitConstraint_Spacetime::Get_CommonSpacetime(void) const
 {
-	return TLorentzVector(Get_CommonVertex(), Get_CommonTime());
+	return DLorentzVector(Get_CommonVertex(), Get_CommonTime());
 }
 
 inline double DKinFitConstraint_Spacetime::Get_CommonTime(void) const
@@ -116,14 +116,14 @@ inline void DKinFitConstraint_Spacetime::Set_CommonTime(double locTime)
 		locParticle->Set_CommonTime(locTime);
 }
 
-inline void DKinFitConstraint_Spacetime::Set_CommonVertex(const TVector3& locVertex)
+inline void DKinFitConstraint_Spacetime::Set_CommonVertex(const DVector3& locVertex)
 {
 	DKinFitConstraint_Vertex::Set_CommonVertex(locVertex);
 	for(auto& locParticle : dOnlyConstrainTimeParticles)
 		locParticle->Set_CommonVertex(locVertex);
 }
 
-inline void DKinFitConstraint_Spacetime::Set_CommonSpacetime(TLorentzVector& locSpacetime)
+inline void DKinFitConstraint_Spacetime::Set_CommonSpacetime(DLorentzVector& locSpacetime)
 {
 	DKinFitConstraint_Vertex::Set_CommonVertex(locSpacetime.Vect());
 	Set_CommonTime(locSpacetime.T());

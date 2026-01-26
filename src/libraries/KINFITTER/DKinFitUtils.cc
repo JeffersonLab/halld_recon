@@ -53,7 +53,7 @@ shared_ptr<TMatrixFSym> DKinFitUtils::Get_SymMatrixResource(unsigned int locNumM
 
 /***************************************************************** CREATE PARTICLES ****************************************************************/
 
-shared_ptr<DKinFitParticle> DKinFitUtils::Make_BeamParticle(int locPID, int locCharge, double locMass, TLorentzVector locSpacetimeVertex, TVector3 locMomentum, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix)
+shared_ptr<DKinFitParticle> DKinFitUtils::Make_BeamParticle(int locPID, int locCharge, double locMass, DLorentzVector locSpacetimeVertex, DVector3 locMomentum, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix)
 {
 	if((locCovarianceMatrix->GetNrows() != 7) || (locCovarianceMatrix->GetNcols() != 7))
 		return NULL; //is not 7x7
@@ -97,7 +97,7 @@ shared_ptr<DKinFitParticle> DKinFitUtils::Make_TargetParticle(int locPID, int lo
 	return locKinFitParticle;
 }
 
-shared_ptr<DKinFitParticle> DKinFitUtils::Make_DetectedParticle(int locPID, int locCharge, double locMass, TLorentzVector locSpacetimeVertex, TVector3 locMomentum, double locPathLength, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix)
+shared_ptr<DKinFitParticle> DKinFitUtils::Make_DetectedParticle(int locPID, int locCharge, double locMass, DLorentzVector locSpacetimeVertex, DVector3 locMomentum, double locPathLength, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix)
 {
 	if((locCovarianceMatrix->GetNrows() != 7) || (locCovarianceMatrix->GetNcols() != 7))
 		return NULL; //is not 7x7
@@ -122,7 +122,7 @@ shared_ptr<DKinFitParticle> DKinFitUtils::Make_DetectedParticle(int locPID, int 
 	return locKinFitParticle;
 }
 
-shared_ptr<DKinFitParticle> DKinFitUtils::Make_DetectedShower(int locPID, double locMass, TLorentzVector locSpacetimeVertex, double locShowerEnergy, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix)
+shared_ptr<DKinFitParticle> DKinFitUtils::Make_DetectedShower(int locPID, double locMass, DLorentzVector locSpacetimeVertex, double locShowerEnergy, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix)
 {
 	if((locCovarianceMatrix->GetNrows() != 5) || (locCovarianceMatrix->GetNcols() != 5))
 		return NULL; //is not 5x5
@@ -223,7 +223,7 @@ shared_ptr<DKinFitConstraint_P4> DKinFitUtils::Make_P4Constraint(const set<share
 	return locConstraint;
 }
 
-shared_ptr<DKinFitConstraint_Vertex> DKinFitUtils::Make_VertexConstraint(const set<shared_ptr<DKinFitParticle>>& locFullConstrainParticles, const set<shared_ptr<DKinFitParticle>>& locNoConstrainParticles, TVector3 locVertexGuess)
+shared_ptr<DKinFitConstraint_Vertex> DKinFitUtils::Make_VertexConstraint(const set<shared_ptr<DKinFitParticle>>& locFullConstrainParticles, const set<shared_ptr<DKinFitParticle>>& locNoConstrainParticles, DVector3 locVertexGuess)
 {
 	//if constraint already exists for this input, return it
 	auto locInputPair = std::make_pair(locFullConstrainParticles, locNoConstrainParticles);
@@ -240,7 +240,7 @@ shared_ptr<DKinFitConstraint_Vertex> DKinFitUtils::Make_VertexConstraint(const s
 	return locConstraint;
 }
 
-shared_ptr<DKinFitConstraint_Spacetime> DKinFitUtils::Make_SpacetimeConstraint(const set<shared_ptr<DKinFitParticle>>& locFullConstrainParticles, const set<shared_ptr<DKinFitParticle>>& locOnlyConstrainTimeParticles, const set<shared_ptr<DKinFitParticle>>& locNoConstrainParticles, TLorentzVector locSpacetimeGuess)
+shared_ptr<DKinFitConstraint_Spacetime> DKinFitUtils::Make_SpacetimeConstraint(const set<shared_ptr<DKinFitParticle>>& locFullConstrainParticles, const set<shared_ptr<DKinFitParticle>>& locOnlyConstrainTimeParticles, const set<shared_ptr<DKinFitParticle>>& locNoConstrainParticles, DLorentzVector locSpacetimeGuess)
 {
 	cout << "ERROR: SPACETIME CONSTRAINTS ARE NOT SUPPORTED YET. RETURNING NULL FROM DKinFitUtils::Make_SpacetimeConstraint()." << endl;
 	return NULL;
@@ -475,12 +475,12 @@ bool DKinFitUtils::Get_IsDecayingParticleDefinedByProducts(const DKinFitParticle
 	return ((*locFromInitState.begin())->Get_KinFitParticleType() == d_TargetParticle);
 }
 
-TLorentzVector DKinFitUtils::Calc_DecayingP4_ByPosition(const DKinFitParticle* locKinFitParticle, bool locAtPositionFlag, bool locDontPropagateAtAllFlag) const
+DLorentzVector DKinFitUtils::Calc_DecayingP4_ByPosition(const DKinFitParticle* locKinFitParticle, bool locAtPositionFlag, bool locDontPropagateAtAllFlag) const
 {
 	//if input flag is true: return the value of the p4 at spot defined by locKinFitParticle->Get_Position() //else at the common vertex
 		//useful for setting the momentum: locKinFitParticle->Set_Momentum()
 	if(locKinFitParticle->Get_KinFitParticleType() != d_DecayingParticle)
-		return TLorentzVector();
+		return DLorentzVector();
 
 	bool locP3DerivedAtProductionVertexFlag = !Get_IsDecayingParticleDefinedByProducts(locKinFitParticle); //else decay vertex
 	bool locP3DerivedAtPositionFlag = (locP3DerivedAtProductionVertexFlag == locKinFitParticle->Get_VertexP4AtProductionVertex());
@@ -488,23 +488,23 @@ TLorentzVector DKinFitUtils::Calc_DecayingP4_ByPosition(const DKinFitParticle* l
 	return Calc_DecayingP4(locKinFitParticle, locDontPropagateDecayingP3Flag, 1.0, locDontPropagateAtAllFlag);
 }
 
-TLorentzVector DKinFitUtils::Calc_DecayingP4_ByP3Derived(const DKinFitParticle* locKinFitParticle, bool locAtP3DerivedFlag, bool locDontPropagateAtAllFlag) const
+DLorentzVector DKinFitUtils::Calc_DecayingP4_ByP3Derived(const DKinFitParticle* locKinFitParticle, bool locAtP3DerivedFlag, bool locDontPropagateAtAllFlag) const
 {
 	//if input flag is true: return the value of the p4 at the vertex where the p3-deriving particles are at
 		//useful for doing mass constraints
 	if(locKinFitParticle->Get_KinFitParticleType() != d_DecayingParticle)
-		return TLorentzVector();
+		return DLorentzVector();
 
 	bool locDontPropagateDecayingP3Flag = locAtP3DerivedFlag;
 	return Calc_DecayingP4(locKinFitParticle, locDontPropagateDecayingP3Flag, 1.0, locDontPropagateAtAllFlag);
 }
 
-TLorentzVector DKinFitUtils::Calc_DecayingP4_ByVertex(const DKinFitParticle* locKinFitParticle, bool locAtProductionVertexFlag, bool locDontPropagateAtAllFlag) const
+DLorentzVector DKinFitUtils::Calc_DecayingP4_ByVertex(const DKinFitParticle* locKinFitParticle, bool locAtProductionVertexFlag, bool locDontPropagateAtAllFlag) const
 {
 	//if input flag is true: return the value of the p4 at the production vertex
 		//else return it at the decay vertex
 	if(locKinFitParticle->Get_KinFitParticleType() != d_DecayingParticle)
-		return TLorentzVector();
+		return DLorentzVector();
 
 	bool locP3DerivedAtProductionVertexFlag = !Get_IsDecayingParticleDefinedByProducts(locKinFitParticle);
 	bool locDontPropagateDecayingP3Flag = (locP3DerivedAtProductionVertexFlag == locAtProductionVertexFlag);
@@ -512,17 +512,17 @@ TLorentzVector DKinFitUtils::Calc_DecayingP4_ByVertex(const DKinFitParticle* loc
 }
 
 //Don't call this directly! Well you can, but it's a little confusing. Better to call the wrapper functions. 
-TLorentzVector DKinFitUtils::Calc_DecayingP4(const DKinFitParticle* locKinFitParticle, bool locDontPropagateDecayingP3Flag, double locStateSignMultiplier, bool locDontPropagateAtAllFlag) const
+DLorentzVector DKinFitUtils::Calc_DecayingP4(const DKinFitParticle* locKinFitParticle, bool locDontPropagateDecayingP3Flag, double locStateSignMultiplier, bool locDontPropagateAtAllFlag) const
 {
 	//locDontPropagateDecayingP3Flag: if true: don't propagate first decaying particle p3 from defined vertex to the other vertex
 	//E, px, py, pz
 	int locCharge = locKinFitParticle->Get_Charge();
 	DKinFitParticleType locKinFitParticleType = locKinFitParticle->Get_KinFitParticleType();
 
-	TLorentzVector locP4 = locKinFitParticle->Get_P4();
-	TVector3 locPosition = locKinFitParticle->Get_Position();
-	TVector3 locBField = Get_IsBFieldNearBeamline() ? Get_BField(locPosition) : TVector3(0.0, 0.0, 0.0);
-	TVector3 locCommonVertex = locKinFitParticle->Get_CommonVertex();
+	DLorentzVector locP4 = locKinFitParticle->Get_P4();
+	DVector3 locPosition = locKinFitParticle->Get_Position();
+	DVector3 locBField = Get_IsBFieldNearBeamline() ? Get_BField(locPosition) : DVector3(0.0, 0.0, 0.0);
+	DVector3 locCommonVertex = locKinFitParticle->Get_CommonVertex();
 
 	//This section is calculated assuming that the p4 is NEEDED at the COMMON vertex
 		//if not, need a factor of -1 on delta-x, and on the derivatives wrst the vertices
@@ -539,15 +539,15 @@ TLorentzVector DKinFitUtils::Calc_DecayingP4(const DKinFitParticle* locKinFitPar
 		//Thus we need a factor of -1
 	bool locNeedP4AtProductionVertex = Get_IsDecayingParticleDefinedByProducts(locKinFitParticle); //true if defined by decay products; else by missing mass
 	double locVertexSignMultiplier = (locNeedP4AtProductionVertex == locKinFitParticle->Get_VertexP4AtProductionVertex()) ? -1.0 : 1.0;
-	TVector3 locDeltaX = locVertexSignMultiplier*(locCommonVertex - locPosition); //vector points in the OPPOSITE direction of the momentum
+	DVector3 locDeltaX = locVertexSignMultiplier*(locCommonVertex - locPosition); //vector points in the OPPOSITE direction of the momentum
 
-	TVector3 locH = locBField.Unit();
+	DVector3 locH = locBField.Unit();
 	double locA = -0.00299792458*(double(locCharge))*locBField.Mag();
 
 	bool locCommonVertexFitFlag = locKinFitParticle->Get_FitCommonVertexFlag();
 	bool locChargedBFieldFlag = (locCharge != 0) && Get_IsBFieldNearBeamline();
 
-	TLorentzVector locP4Sum;
+	DLorentzVector locP4Sum;
 	if(locKinFitParticleType != d_DecayingParticle)
 		locP4Sum += locStateSignMultiplier*locP4; //all but enclosed decaying particle: will instead get p4 from decay products (may still need to propagate it below)
 
@@ -560,7 +560,7 @@ TLorentzVector DKinFitUtils::Calc_DecayingP4(const DKinFitParticle* locKinFitPar
 		//decaying particles: p4 not directly used, deriving particles are: so must propagate if charged
 		//if initial particle is a "detected" particle (actually a decaying particle treated as detected): still propagate vertex (assume p3/v3 defined at production vertex)
 
-		TVector3 locDeltaXCrossH = locDeltaX.Cross(locH);
+		DVector3 locDeltaXCrossH = locDeltaX.Cross(locH);
 		if(dDebugLevel > 30)
 			cout << "propagate pxyz by: " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.X() << ", " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.Y() << ", " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.Z() << endl;
 
@@ -600,7 +600,7 @@ TLorentzVector DKinFitUtils::Calc_DecayingP4(const DKinFitParticle* locKinFitPar
 	return locP4Sum;
 }
 
-bool DKinFitUtils::Propagate_TrackInfoToCommonVertex(const DKinFitParticle* locKinFitParticle, const TMatrixDSym* locVXi, TVector3& locMomentum, TLorentzVector& locSpacetimeVertex, pair<double, double>& locPathLengthPair, pair<double, double>& locRestFrameLifetimePair, TMatrixFSym* locCovarianceMatrix) const
+bool DKinFitUtils::Propagate_TrackInfoToCommonVertex(const DKinFitParticle* locKinFitParticle, const TMatrixDSym* locVXi, DVector3& locMomentum, DLorentzVector& locSpacetimeVertex, pair<double, double>& locPathLengthPair, pair<double, double>& locRestFrameLifetimePair, TMatrixFSym* locCovarianceMatrix) const
 {
 	// propagates the track info to the fit common vertex
 		//returns false if nothing changed (info not propagated: e.g. missing particle), else returns true
@@ -639,13 +639,13 @@ bool DKinFitUtils::Propagate_TrackInfoToCommonVertex(const DKinFitParticle* locK
 
 	bool locNeutralShowerFlag = locKinFitParticle->Get_IsNeutralShowerFlag();
 	int locCharge = locKinFitParticle->Get_Charge();
-	TVector3 locCommonVertex = locKinFitParticle->Get_CommonVertex();
+	DVector3 locCommonVertex = locKinFitParticle->Get_CommonVertex();
 
-	TLorentzVector locP4 = locKinFitParticle->Get_P4();
-	TVector3 locPosition = locKinFitParticle->Get_Position();
-	TVector3 locDeltaX = locCommonVertex - locPosition;
-	TVector3 locBField = Get_IsBFieldNearBeamline() ? Get_BField(locPosition) : TVector3(0.0, 0.0, 0.0);
-	TVector3 locH = locBField.Unit();
+	DLorentzVector locP4 = locKinFitParticle->Get_P4();
+	DVector3 locPosition = locKinFitParticle->Get_Position();
+	DVector3 locDeltaX = locCommonVertex - locPosition;
+	DVector3 locBField = Get_IsBFieldNearBeamline() ? Get_BField(locPosition) : DVector3(0.0, 0.0, 0.0);
+	DVector3 locH = locBField.Unit();
 	double locA = -0.00299792458*(double(locCharge))*locBField.Mag();
 
 	// covariance matrix
@@ -730,9 +730,9 @@ bool DKinFitUtils::Propagate_TrackInfoToCommonVertex(const DKinFitParticle* locK
 			for(unsigned int loc_i = 0; int(loc_i) < locCovarianceMatrix->GetNcols(); ++loc_i)
 				locTransformationMatrix_CommonTime(loc_i, loc_i) = 1.0; //other params are unchanged
 
-			TVector3 locDCommonTimeDP3 = (locDeltaXDotH/(29.9792458*locPDotH)) * ((1.0/locP4.E())*locP4.Vect() - (locP4.E()/locPDotH)*locH);
-			TVector3 locDCommonTimeDCommonVertex = (locP4.E()/(29.9792458*locPDotH))*locH;
-			TVector3 locDCommonTimeDPosition = -1.0*locDCommonTimeDCommonVertex;
+			DVector3 locDCommonTimeDP3 = (locDeltaXDotH/(29.9792458*locPDotH)) * ((1.0/locP4.E())*locP4.Vect() - (locP4.E()/locPDotH)*locH);
+			DVector3 locDCommonTimeDCommonVertex = (locP4.E()/(29.9792458*locPDotH))*locH;
+			DVector3 locDCommonTimeDPosition = -1.0*locDCommonTimeDCommonVertex;
 
 			locTransformationMatrix_CommonTime(locCommonTParamIndex_TempMatrix, locCovMatrixPxParamIndex) = locDCommonTimeDP3.X();
 			locTransformationMatrix_CommonTime(locCommonTParamIndex_TempMatrix, locCovMatrixPxParamIndex + 1) = locDCommonTimeDP3.Y();
@@ -758,9 +758,9 @@ bool DKinFitUtils::Propagate_TrackInfoToCommonVertex(const DKinFitParticle* locK
 			for(unsigned int loc_i = 0; int(loc_i) < locCovarianceMatrix->GetNcols(); ++loc_i)
 				locTransformationMatrix_CommonTime(loc_i, loc_i) = 1.0; //other params are unchanged
 
-			TVector3 locDCommonTimeDP3 = (1.0/(29.9792458*locP4.Vect().Mag2())) * (locP4.E()*locDeltaX + locDeltaXDotP*(1.0/locP4.E() - 2.0*locP4.E()/locP4.Vect().Mag2())*locP4.Vect());
-			TVector3 locDCommonTimeDCommonVertex = (locP4.E()/(29.9792458*locP4.Vect().Mag2()))*locP4.Vect();
-			TVector3 locDCommonTimeDPosition = -1.0*locDCommonTimeDCommonVertex;
+			DVector3 locDCommonTimeDP3 = (1.0/(29.9792458*locP4.Vect().Mag2())) * (locP4.E()*locDeltaX + locDeltaXDotP*(1.0/locP4.E() - 2.0*locP4.E()/locP4.Vect().Mag2())*locP4.Vect());
+			DVector3 locDCommonTimeDCommonVertex = (locP4.E()/(29.9792458*locP4.Vect().Mag2()))*locP4.Vect();
+			DVector3 locDCommonTimeDPosition = -1.0*locDCommonTimeDCommonVertex;
 
 			locTransformationMatrix_CommonTime(locCommonTParamIndex_TempMatrix, locCovMatrixPxParamIndex) = locDCommonTimeDP3.X();
 			locTransformationMatrix_CommonTime(locCommonTParamIndex_TempMatrix, locCovMatrixPxParamIndex + 1) = locDCommonTimeDP3.Y();
@@ -785,8 +785,8 @@ bool DKinFitUtils::Propagate_TrackInfoToCommonVertex(const DKinFitParticle* locK
 				locTransformationMatrix_CommonTime(loc_i, loc_i) = 1.0; //other params are unchanged
 
 			double locDCommonTimeDEnergy = locDeltaX.Mag()*locP4.M2()/(29.9792458*locP4.P()*locP4.Vect().Mag2());
-			TVector3 locDCommonTimeDPosition = (locP4.E()/(29.9792458*locP4.P()*locDeltaX.Mag()))*locDeltaX;
-			TVector3 locDCommonTimeDCommonVertex = -1.0*locDCommonTimeDPosition;
+			DVector3 locDCommonTimeDPosition = (locP4.E()/(29.9792458*locP4.P()*locDeltaX.Mag()))*locDeltaX;
+			DVector3 locDCommonTimeDCommonVertex = -1.0*locDCommonTimeDPosition;
 
 			locTransformationMatrix_CommonTime(locCommonTParamIndex_TempMatrix, locCovMatrixEParamIndex) = locDCommonTimeDEnergy;
 
@@ -884,12 +884,12 @@ bool DKinFitUtils::Calc_PathLength(const DKinFitParticle* locKinFitParticle, con
 	auto locVxParamIndex = locKinFitParticle->Get_VxParamIndex();
 
 	int locCharge = locKinFitParticle->Get_Charge();
-	TVector3 locCommonVertex = locKinFitParticle->Get_CommonVertex();
-	TVector3 locMomentum = locKinFitParticle->Get_Momentum();
-	TVector3 locPosition = locKinFitParticle->Get_Position();
-	TVector3 locDeltaX = locCommonVertex - locPosition;
-	TVector3 locBField = Get_IsBFieldNearBeamline() ? Get_BField(locPosition) : TVector3(0.0, 0.0, 0.0);
-	TVector3 locH = locBField.Unit();
+	DVector3 locCommonVertex = locKinFitParticle->Get_CommonVertex();
+	DVector3 locMomentum = locKinFitParticle->Get_Momentum();
+	DVector3 locPosition = locKinFitParticle->Get_Position();
+	DVector3 locDeltaX = locCommonVertex - locPosition;
+	DVector3 locBField = Get_IsBFieldNearBeamline() ? Get_BField(locPosition) : DVector3(0.0, 0.0, 0.0);
+	DVector3 locH = locBField.Unit();
 
 	//First, compute the path length
 	double locPMag = locMomentum.Mag();
@@ -954,13 +954,13 @@ bool DKinFitUtils::Calc_PathLength(const DKinFitParticle* locKinFitParticle, con
 		double locPDotH = locMomentum.Dot(locH);
 		double locPMag = locMomentum.Mag();
 
-		TVector3 locDPathDP3 = (locDeltaXDotH/locPDotH)*((1.0/locPMag)*locMomentum - (locPMag/locPDotH)*locH);
-		TVector3 locDPathDCommon = (locPMag/locPDotH)*locH;
-		TVector3 locDPathDPosition = -1.0*locDPathDCommon;
+		DVector3 locDPathDP3 = (locDeltaXDotH/locPDotH)*((1.0/locPMag)*locMomentum - (locPMag/locPDotH)*locH);
+		DVector3 locDPathDCommon = (locPMag/locPDotH)*locH;
+		DVector3 locDPathDPosition = -1.0*locDPathDCommon;
 		double locMOverC = locMass/29.9792458;
-		TVector3 locDLifetimeDP3 = -1.0*locMOverC*(locDeltaXDotH/(locPDotH*locPDotH))*locH;
-		TVector3 locDLifetimeDCommon = (locMOverC/locPDotH)*locH;
-		TVector3 locDLifetimeDPosition = -1.0*locDLifetimeDCommon;
+		DVector3 locDLifetimeDP3 = -1.0*locMOverC*(locDeltaXDotH/(locPDotH*locPDotH))*locH;
+		DVector3 locDLifetimeDCommon = (locMOverC/locPDotH)*locH;
+		DVector3 locDLifetimeDPosition = -1.0*locDLifetimeDCommon;
 
 		//Path length
 		locTransformationMatrix(0, locCovMatrixPxParamIndex) = locDPathDP3.X();
@@ -990,12 +990,12 @@ bool DKinFitUtils::Calc_PathLength(const DKinFitParticle* locKinFitParticle, con
 	}
 	else // non-accelerating
 	{
-		TVector3 locDPathDCommon = locDeltaX.Unit();
-		TVector3 locDPathDPosition = -1.0*locDPathDCommon;
+		DVector3 locDPathDCommon = locDeltaX.Unit();
+		DVector3 locDPathDPosition = -1.0*locDPathDCommon;
 		double locMOverC = locMass/29.9792458;
-		TVector3 locDLifetimeDP3 = -1.0*locMOverC*(locPathLengthPair.first/(locPMag*locPMag*locPMag))*locMomentum;
-		TVector3 locDLifetimeDCommon = (locMOverC/(locPMag*locPathLengthPair.first))*locDeltaX;
-		TVector3 locDLifetimeDPosition = -1.0*locDLifetimeDCommon;
+		DVector3 locDLifetimeDP3 = -1.0*locMOverC*(locPathLengthPair.first/(locPMag*locPMag*locPMag))*locMomentum;
+		DVector3 locDLifetimeDCommon = (locMOverC/(locPMag*locPathLengthPair.first))*locDeltaX;
+		DVector3 locDLifetimeDPosition = -1.0*locDLifetimeDCommon;
 
 		//Path length
 		locTransformationMatrix(0, locCovMatrixVxParamIndex) = locDPathDPosition.X();
@@ -1023,16 +1023,16 @@ bool DKinFitUtils::Calc_PathLength(const DKinFitParticle* locKinFitParticle, con
 	if(dDebugLevel >= 20)
 	{
 		cout << "Calc_PathLength: Combined matrix: " << endl;
-		Print_Matrix(locTempMatrix);
+		//Print_Matrix(locTempMatrix);
 		cout << "Calc_PathLength: Transform matrix: " << endl;
-		Print_Matrix(locTransformationMatrix);
+		//Print_Matrix(locTransformationMatrix);
 	}
 
 	locTempMatrix.Similarity(locTransformationMatrix);
 	if(dDebugLevel >= 20)
 	{
 		cout << "path/life matrix: " << endl;
-		Print_Matrix(locTempMatrix);
+		//Print_Matrix(locTempMatrix);
 	}
 
 	locPathLengthPair.second = sqrt(locTempMatrix(0, 0));
@@ -1056,10 +1056,10 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 	DKinFitParticleType locKinFitParticleType = locKinFitParticle->Get_KinFitParticleType();
 
 	int locCharge = locKinFitParticle->Get_Charge();
-	TLorentzVector locP4 = locKinFitParticle->Get_P4();
-	TVector3 locPosition = locKinFitParticle->Get_Position();
-	TVector3 locBField = Get_IsBFieldNearBeamline() ? Get_BField(locPosition) : TVector3(0.0, 0.0, 0.0);
-	TVector3 locCommonVertex = locKinFitParticle->Get_CommonVertex();
+	DLorentzVector locP4 = locKinFitParticle->Get_P4();
+	DVector3 locPosition = locKinFitParticle->Get_Position();
+	DVector3 locBField = Get_IsBFieldNearBeamline() ? Get_BField(locPosition) : DVector3(0.0, 0.0, 0.0);
+	DVector3 locCommonVertex = locKinFitParticle->Get_CommonVertex();
 	if(dDebugLevel > 50)
 		cout << "jacobian: decay product: PID = " << locKinFitParticle->Get_PID() << endl;
 
@@ -1078,9 +1078,9 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 		//Thus we need a factor of -1
 	bool locNeedP4AtProductionVertex = Get_IsDecayingParticleDefinedByProducts(locKinFitParticle); //true if defined by decay products; else by missing mass
 	double locVertexSignMultiplier = (locNeedP4AtProductionVertex == locKinFitParticle->Get_VertexP4AtProductionVertex()) ? -1.0 : 1.0;
-	TVector3 locDeltaX = locVertexSignMultiplier*(locCommonVertex - locPosition); //vector points in the OPPOSITE direction of the momentum
+	DVector3 locDeltaX = locVertexSignMultiplier*(locCommonVertex - locPosition); //vector points in the OPPOSITE direction of the momentum
 
-	TVector3 locH = locBField.Unit();
+	DVector3 locH = locBField.Unit();
 	double locA = -0.00299792458*(double(locCharge))*locBField.Mag();
 
 	bool locCommonVertexFitFlag = locKinFitParticle->Get_FitCommonVertexFlag();
@@ -1142,7 +1142,7 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 		locJacobian(1, locEParamIndex) = locEOverPSq*locP4.Py();
 		locJacobian(2, locEParamIndex) = locEOverPSq*locP4.Pz();
 
-		TVector3 locDeltaXOverMagDeltaXSq = locDeltaX*(1.0/locDeltaX.Mag2());
+		DVector3 locDeltaXOverMagDeltaXSq = locDeltaX*(1.0/locDeltaX.Mag2());
 
 		locJacobian(0, locVxParamIndex) = locP4.Px()*(locDeltaXOverMagDeltaXSq.X() - 1.0/locDeltaX.X());
 		locJacobian(1, locVxParamIndex + 1) = locP4.Py()*(locDeltaXOverMagDeltaXSq.Y() - 1.0/locDeltaX.Y());
@@ -1317,14 +1317,3 @@ void DKinFitUtils::Print_Matrix(const TMatrixD& locMatrix) const
 		cout << endl;
 	}
 }
-
-void DKinFitUtils::Print_Matrix(const TMatrixF& locMatrix) const
-{
-	for(int loc_i = 0; loc_i < locMatrix.GetNrows(); ++loc_i)
-	{
-		for(int loc_j = 0; loc_j < locMatrix.GetNcols(); ++loc_j)
-			cout << locMatrix(loc_i, loc_j) << ", ";
-		cout << endl;
-	}
-}
-

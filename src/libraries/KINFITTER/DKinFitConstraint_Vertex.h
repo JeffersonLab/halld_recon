@@ -4,7 +4,7 @@
 #include <set>
 #include <algorithm>
 
-#include "TVector3.h"
+#include "DVector3.h"
 
 #include "DKinFitParticle.h"
 #include "DKinFitConstraint.h"
@@ -24,10 +24,10 @@ class DKinFitConstraint_Vertex : public DKinFitConstraint
 		DKinFitConstraint_Vertex(void);
 		virtual ~DKinFitConstraint_Vertex(void){}
 
-		TVector3 Get_InitVertexGuess(void) const{return dInitVertexGuess;};
-		void Set_InitVertexGuess(const TVector3& locInitVertexGuess){dInitVertexGuess = locInitVertexGuess;};
+		DVector3 Get_InitVertexGuess(void) const{return dInitVertexGuess;};
+		void Set_InitVertexGuess(const DVector3& locInitVertexGuess){dInitVertexGuess = locInitVertexGuess;};
 
-		TVector3 Get_CommonVertex(void) const;
+		DVector3 Get_CommonVertex(void) const;
 		char Get_CommonVxParamIndex(void) const;
 		char Get_FIndex(const shared_ptr<DKinFitParticle>& locKinFitParticle) const;
 
@@ -45,7 +45,7 @@ class DKinFitConstraint_Vertex : public DKinFitConstraint
 
 		void Set_FIndex(const shared_ptr<DKinFitParticle>& locKinFitParticle, char locFIndex){dConstraintEquationParticleMap[locKinFitParticle] = locFIndex;}
 		void Set_CommonVxParamIndex(char locCommonVxParamIndex);
-		virtual void Set_CommonVertex(const TVector3& locVertex);
+		virtual void Set_CommonVertex(const DVector3& locVertex);
 
 		void Set_FullConstrainParticles(const set<shared_ptr<DKinFitParticle>>& locFullConstrainParticles){dFullConstrainParticles = locFullConstrainParticles;}
 		void Set_NoConstrainParticles(const set<shared_ptr<DKinFitParticle>>& locNoConstrainParticles){dNoConstrainParticles = locNoConstrainParticles;}
@@ -56,7 +56,7 @@ class DKinFitConstraint_Vertex : public DKinFitConstraint
 		//key is particle, value is the constraint equation index
 		map<shared_ptr<DKinFitParticle>, char> dConstraintEquationParticleMap;
 
-		TVector3 dInitVertexGuess;
+		DVector3 dInitVertexGuess;
 };
 
 inline DKinFitConstraint_Vertex::DKinFitConstraint_Vertex(void)
@@ -66,7 +66,7 @@ inline DKinFitConstraint_Vertex::DKinFitConstraint_Vertex(void)
 
 inline void DKinFitConstraint_Vertex::Reset(void)
 {
-	dInitVertexGuess = TVector3(0.0, 0.0, 0.0);
+	dInitVertexGuess = DVector3(0.0, 0.0, 0.0);
 	dFullConstrainParticles.clear();
 	dNoConstrainParticles.clear();
 	dConstraintEquationParticleMap.clear();
@@ -94,14 +94,14 @@ inline set<shared_ptr<DKinFitParticle>> DKinFitConstraint_Vertex::Get_AllParticl
 	return locAllParticles;
 }
 
-inline TVector3 DKinFitConstraint_Vertex::Get_CommonVertex(void) const
+inline DVector3 DKinFitConstraint_Vertex::Get_CommonVertex(void) const
 {
 	if(dFullConstrainParticles.empty())
-		return TVector3();
+		return DVector3();
 	return (*dFullConstrainParticles.begin())->Get_CommonVertex();
 }
 
-inline void DKinFitConstraint_Vertex::Set_CommonVertex(const TVector3& locVertex)
+inline void DKinFitConstraint_Vertex::Set_CommonVertex(const DVector3& locVertex)
 {
 	for(auto& locParticle : dFullConstrainParticles)
 		locParticle->Set_CommonVertex(locVertex);

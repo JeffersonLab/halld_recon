@@ -6,8 +6,8 @@
 #include <memory>
 
 #include "DResettable.h"
-#include "TVector3.h"
-#include "TLorentzVector.h"
+#include "DVector3.h"
+#include "DLorentzVector.h"
 #include "TMatrixFSym.h"
 
 using namespace std;
@@ -68,11 +68,11 @@ class DKinFitParticle : public DResettable
 		void Set_Charge(char locCharge){dCharge = locCharge;}
 		void Set_Mass(double locMass){dMass = locMass;}
 
-		void Set_Position(TVector3 locPosition){dSpacetimeVertex.SetVect(locPosition);}
+		void Set_Position(DVector3 locPosition){dSpacetimeVertex.SetVect(locPosition);}
 		void Set_Time(double locTime){dSpacetimeVertex.SetT(locTime);}
-		void Set_SpacetimeVertex(TLorentzVector locSpacetimeVertex){dSpacetimeVertex = locSpacetimeVertex;}
+		void Set_SpacetimeVertex(DLorentzVector locSpacetimeVertex){dSpacetimeVertex = locSpacetimeVertex;}
 
-		void Set_Momentum(TVector3 locMomentum){dMomentum = locMomentum;}
+		void Set_Momentum(DVector3 locMomentum){dMomentum = locMomentum;}
 		void Set_CovarianceMatrix(const shared_ptr<TMatrixFSym>& locCovarianceMatrix){dCovarianceMatrix = std::const_pointer_cast<const TMatrixFSym>(locCovarianceMatrix);}
 		void Set_CovarianceMatrix(const shared_ptr<const TMatrixFSym>& locCovarianceMatrix){dCovarianceMatrix = locCovarianceMatrix;}
 		void Set_ShowerEnergy(double locShowerEnergy){dShowerEnergy = locShowerEnergy;}
@@ -81,9 +81,9 @@ class DKinFitParticle : public DResettable
 		void Set_RestFrameLifetimeUncertainty(double locRestFrameLifetimeUncertainty){dRestFrameLifetimeUncertainty = locRestFrameLifetimeUncertainty;}
 		void Set_RestFrameLifetime(double locRestFrameLifetime){dRestFrameLifetime = locRestFrameLifetime;}
 
-		void Set_CommonVertex(TVector3 locCommonVertex){dCommonSpacetimeVertex.SetVect(locCommonVertex);}
+		void Set_CommonVertex(DVector3 locCommonVertex){dCommonSpacetimeVertex.SetVect(locCommonVertex);}
 		void Set_CommonTime(double locCommonTime){dCommonSpacetimeVertex.SetT(locCommonTime);}
-		void Set_CommonSpacetimeVertex(TLorentzVector locCommonSpacetimeVertex){dCommonSpacetimeVertex = locCommonSpacetimeVertex;}
+		void Set_CommonSpacetimeVertex(DLorentzVector locCommonSpacetimeVertex){dCommonSpacetimeVertex = locCommonSpacetimeVertex;}
 
 		void Set_PxParamIndex(char locPxParamIndex){dPxParamIndex = locPxParamIndex;}
 		void Set_VxParamIndex(char locVxParamIndex){dVxParamIndex = locVxParamIndex;}
@@ -103,9 +103,9 @@ class DKinFitParticle : public DResettable
 		int Get_PID(void) const{return dPID;}
 		double Get_Energy(void) const{return sqrt(dMass*dMass + dMomentum.Mag2());}
 		char Get_Charge(void) const{return dCharge;}
-		TLorentzVector Get_P4(void) const{return TLorentzVector(dMomentum, Get_Energy());}
-		TVector3 Get_Momentum(void) const{return dMomentum;}
-		TVector3 Get_Position(void) const{return dSpacetimeVertex.Vect();}
+		DLorentzVector Get_P4(void) const{return DLorentzVector(dMomentum, Get_Energy());}
+		DVector3 Get_Momentum(void) const{return dMomentum;}
+		DVector3 Get_Position(void) const{return dSpacetimeVertex.Vect();}
 		double Get_Mass(void) const{return dMass;}
 		double Get_Beta(void) const{return dMomentum.Mag()/(Get_Energy());}
 		double Get_Time(void) const{return dSpacetimeVertex.T();}
@@ -115,10 +115,10 @@ class DKinFitParticle : public DResettable
 		double Get_RestFrameLifetimeUncertainty(void) const{return dRestFrameLifetimeUncertainty;}
 		double Get_RestFrameLifetime(void) const{return dRestFrameLifetime;}
 		shared_ptr<const TMatrixFSym> Get_CovarianceMatrix(void) const{return dCovarianceMatrix;}
-		TLorentzVector Get_SpacetimeVertex(void) const{return dSpacetimeVertex;}
-		TVector3 Get_CommonVertex(void) const{return dCommonSpacetimeVertex.Vect();}
+		DLorentzVector Get_SpacetimeVertex(void) const{return dSpacetimeVertex;}
+		DVector3 Get_CommonVertex(void) const{return dCommonSpacetimeVertex.Vect();}
 		double Get_CommonTime(void) const{return dCommonSpacetimeVertex.T();}
-		TLorentzVector Get_CommonSpacetimeVertex(void) const{return dCommonSpacetimeVertex;}
+		DLorentzVector Get_CommonSpacetimeVertex(void) const{return dCommonSpacetimeVertex;}
 
 		unsigned char Get_VertexConstraintFlag(void) const{return dVertexConstraintFlag;}
 		bool Get_FitCommonVertexFlag(void) const{return (dCommonVxParamIndex >= 0);}
@@ -154,11 +154,11 @@ class DKinFitParticle : public DResettable
 		double dMass;
 
 		//p, x, & t must all coincide: t & p at point x (for charged tracks p is a function of x in a b-field!)
-		TLorentzVector dSpacetimeVertex;
-		TLorentzVector dCommonSpacetimeVertex; //if not in vertex/time fit, will be same as dSpacetimeVertex
+		DLorentzVector dSpacetimeVertex;
+		DLorentzVector dCommonSpacetimeVertex; //if not in vertex/time fit, will be same as dSpacetimeVertex
 
 		double dShowerEnergy;
-		TVector3 dMomentum; //must be the value of the momentum at dSpacetimeVertex
+		DVector3 dMomentum; //must be the value of the momentum at dSpacetimeVertex
 
 		//is 7x7 for detected charged particles, either 7x7 (particles) or 5x5 (showers) for neutrals
 		//for decaying particles, is 11x11 if involved in 2 vertex fits (otherwise 7x7): includes common vertex
