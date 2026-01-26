@@ -170,23 +170,23 @@ bool DDIRCLut::CreateDebugHistograms() {
 	return true;
 }
 
-bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const
+bool DDIRCLut::CalcLUT(DVector3 locProjPos, DVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const
 {
 	// get bar and track position/momentum from extrapolation
-	TVector3 momInBar = locProjMom;
-	TVector3 posInBar = locProjPos;
+	DVector3 momInBar = locProjMom;
+	DVector3 posInBar = locProjPos;
 
 	////////////////////////////////////////////
 	// option to cheat and use truth position //
 	////////////////////////////////////////////
 	if(DIRC_TRUTH_BARHIT && locDIRCBarHits.size() > 0) {
 
-		TVector3 bestMatchPos, bestMatchMom;
+		DVector3 bestMatchPos, bestMatchMom;
 		double bestFlightTime = 999.;
 		double bestMatchDist = 999.;
 		for(int i=0; i<(int)locDIRCBarHits.size(); i++) {
-			TVector3 locDIRCBarHitPos(locDIRCBarHits[i]->x, locDIRCBarHits[i]->y, locDIRCBarHits[i]->z);
-			TVector3 locDIRCBarHitMom(locDIRCBarHits[i]->px, locDIRCBarHits[i]->py, locDIRCBarHits[i]->pz);
+			DVector3 locDIRCBarHitPos(locDIRCBarHits[i]->x, locDIRCBarHits[i]->y, locDIRCBarHits[i]->z);
+			DVector3 locDIRCBarHitMom(locDIRCBarHits[i]->px, locDIRCBarHits[i]->py, locDIRCBarHits[i]->pz);
 			if((posInBar - locDIRCBarHitPos).Mag() < bestMatchDist) {
 				bestMatchDist = (posInBar - locDIRCBarHitPos).Mag();
 				bestMatchPos = locDIRCBarHitPos;
@@ -258,19 +258,19 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	return true;
 }
 
-vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const
+vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, DVector3 posInBar, DVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const
 {	
 	// initialize photon pairs for time and thetaC
 	pair<double, double> locDIRCPhoton(-999., -999.);
 	vector<pair<double, double>> locDIRCPhotons;
 
-	TVector3 fnX1 = TVector3 (1,0,0);
-	TVector3 fnY1 = TVector3 (0,1,0);
-	TVector3 fnZ1 = TVector3 (0,0,1);
+	DVector3 fnX1 = DVector3 (1,0,0);
+	DVector3 fnY1 = DVector3 (0,1,0);
+	DVector3 fnZ1 = DVector3 (0,0,1);
 
 	double tangle,luttheta,evtime;
 	int64_t pathid; 
-	TVector3 dir,dird;
+	DVector3 dir,dird;
 	
 	// get bar number from geometry
 	int bar = dDIRCGeometry->GetBar(posInBar.Y()); 
@@ -351,7 +351,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 
 				dir = dir.Unit();
 
-				luttheta = dir.Angle(TVector3(-1,0,0));
+				luttheta = dir.Angle(DVector3(-1,0,0));
 				if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
 
 				double bartime = lenz/cos(luttheta)/DIRC_LIGHT_V;
@@ -366,7 +366,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				// calculate time difference
 				double locDeltaT = totalTime-hitTime;
 
-				TVector3 trackMom = momInBar;
+				DVector3 trackMom = momInBar;
 				if(DIRC_ROTATE_TRACK) { // rotate tracks to bar plane from survey data
 				  trackMom.RotateX(rotX);
 				  trackMom.RotateY(rotY);
@@ -455,7 +455,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 }
 
 // overloaded function when calculating outside LUT factory
-vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum) const
+vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, DVector3 posInBar, DVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum) const
 {
 	int nPhotonsThetaC=0;
 	double meanThetaC=0.0, meanDeltaT=0.0;
