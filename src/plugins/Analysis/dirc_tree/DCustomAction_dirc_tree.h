@@ -10,7 +10,6 @@
 #include <iostream>
 
 #include "TH1.h"
-#include "TLorentzRotation.h"
 
 #include <JANA/JEvent.h>
 #include "JANA/JApplication.h"

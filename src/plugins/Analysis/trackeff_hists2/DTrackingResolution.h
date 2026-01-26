@@ -9,7 +9,7 @@
 #define _DTrackingResolution_
 
 #include <TRandom3.h>
-#include <TVector3.h>
+#include <DVector3.h>
 
 class DTrackingResolution{
 	public:
@@ -21,12 +21,12 @@ class DTrackingResolution{
 		// Virtual methods that must be supplied by subclass
 		// Momenta are in units of GeV/c and angular resolutions
 		// are in units of milliradians.
-		virtual void GetResolution(int geanttype, const TVector3 &mom, double &pt_res, double &theta_res, double &phi_res)=0;
-		virtual double GetEfficiency(int geanttype, const TVector3 &mom)=0;
+		virtual void GetResolution(int geanttype, const DVector3 &mom, double &pt_res, double &theta_res, double &phi_res)=0;
+		virtual double GetEfficiency(int geanttype, const DVector3 &mom)=0;
 
 		// Methods implemented in this class
-		bool Smear(int geanttype, TVector3 &mom);
-		bool Efficiency(int geanttype, const TVector3 &mom);
+		bool Smear(int geanttype, DVector3 &mom);
+		bool Efficiency(int geanttype, const DVector3 &mom);
 	
 	private:
 		TRandom3 rnd;

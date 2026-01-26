@@ -128,13 +128,13 @@ bool DCustomAction_p2gamma_hists::Perform_Action(const std::shared_ptr<const JEv
 	double locMinEgamma = min(locGamma1P4.E(), locGamma2P4.E());
 
 	// production kinematics
-	TVector3 locBoostVector = -1.*locSumInitP4.BoostVector();
-	TLorentzVector locGamma_P4CMFrame = locBeamPhoton->lorentzMomentum();
-	TLorentzVector locPi0_P4CMFrame = loc2g_P4;
+	DVector3 locBoostVector = -1.*locSumInitP4.BoostVector();
+	DLorentzVector locGamma_P4CMFrame = locBeamPhoton->lorentzMomentum();
+	DLorentzVector locPi0_P4CMFrame = loc2g_P4;
 	locGamma_P4CMFrame.Boost(locBoostVector);
 	locPi0_P4CMFrame.Boost(locBoostVector);
 	double locThetaCM = locGamma_P4CMFrame.Vect().Angle(locPi0_P4CMFrame.Vect());
-	TLorentzVector locDelta = (locProtonP4 - locProtonP4Init);
+	DLorentzVector locDelta = (locProtonP4 - locProtonP4Init);
 	double t = locDelta.M2();
 	
 	//FILL HISTOGRAMS

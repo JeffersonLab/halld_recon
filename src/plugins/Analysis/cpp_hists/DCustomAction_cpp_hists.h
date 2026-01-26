@@ -11,7 +11,7 @@
 #include <string>
 #include <iostream>
 
-#include "TLorentzRotation.h"
+#include "TMath.h"
 
 #include "JANA/JApplication.h"
 

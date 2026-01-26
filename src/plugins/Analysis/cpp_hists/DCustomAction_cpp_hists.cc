@@ -120,28 +120,31 @@ bool DCustomAction_cpp_hists::Perform_Action(const std::shared_ptr<const JEvent>
                         locP4_2pi += locParticles[loc_i]->lorentzMomentum();
         }
 	
-	TLorentzVector locBeamP4 = locBeamPhoton->lorentzMomentum();
-	TLorentzVector locPiP4 = locParticles[0]->lorentzMomentum();
+	DLorentzVector locBeamP4 = locBeamPhoton->lorentzMomentum();
+	DLorentzVector locPiP4 = locParticles[0]->lorentzMomentum();
 	
 	// calculate missing P4
 	DLorentzVector locMissingPb208P4 = dAnalysisUtilities->Calc_MissingP4(Get_Reaction(), locParticleCombo,Get_UseKinFitResultsFlag());
 	
 	// production kinematics
-	TLorentzVector locDelta = (locBeamP4 - locP4_2pi);
+	DLorentzVector locDelta = (locBeamP4 - locP4_2pi);
 	double t = fabs(locDelta.M2());
-	
-	TLorentzRotation resonanceBoost( -locP4_2pi.BoostVector() );   // boost into 2pi frame
-	TLorentzVector beam_res = resonanceBoost * locBeamP4;
-	TLorentzVector recoil_res = resonanceBoost * locMissingPb208P4;
-	TLorentzVector pi_res = resonanceBoost * locPiP4;
+
+	// boost into 2pi frame
+	DLorentzVector beam_res = locBeamP4;
+	beam_res.Boost(-locP4_2pi.BoostVector());
+	DLorentzVector recoil_res = locMissingPb208P4;
+	recoil_res.Boost(-locP4_2pi.BoostVector());
+	DLorentzVector pi_res = locPiP4;
+	pi_res.Boost(-locP4_2pi.BoostVector());
 
 	// choose helicity frame: z-axis opposite recoil target in rho rest frame. Note that for Primakoff recoil is missing P4, including target.
-	TVector3 y = (locBeamP4.Vect().Unit().Cross(-locMissingPb208P4.Vect().Unit())).Unit();
+	DVector3 y = (locBeamP4.Vect().Unit().Cross(-locMissingPb208P4.Vect().Unit())).Unit();
 	
 	// choose helicity frame: z-axis opposite recoil nucleus in rho rest frame
-	TVector3 z = -1. * recoil_res.Vect().Unit();
-	TVector3 x = y.Cross(z).Unit();
-	TVector3 angles( (pi_res.Vect()).Dot(x),
+	DVector3 z = -1. * recoil_res.Vect().Unit();
+	DVector3 x = y.Cross(z).Unit();
+	DVector3 angles( (pi_res.Vect()).Dot(x),
 			 (pi_res.Vect()).Dot(y),
 			 (pi_res.Vect()).Dot(z) );
 	
@@ -149,7 +152,7 @@ bool DCustomAction_cpp_hists::Perform_Action(const std::shared_ptr<const JEvent>
 	double phi = angles.Phi();
 
 	double phipol = 0;                           // *** Note assumes horizontal polarization plane.
-	TVector3 eps(cos(phipol), sin(phipol), 0.0); // beam polarization vector in lab
+	DVector3 eps(cos(phipol), sin(phipol), 0.0); // beam polarization vector in lab
 	double Phi = atan2(y.Dot(eps), locBeamP4.Vect().Unit().Dot(eps.Cross(y)));
 	
 	double psi = phi - Phi;

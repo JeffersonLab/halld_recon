@@ -31,7 +31,7 @@ DTrackingResolution::~DTrackingResolution()
 //----------------
 // Smear
 //----------------
-bool DTrackingResolution::Smear(int geanttype, TVector3 &mom)
+bool DTrackingResolution::Smear(int geanttype, DVector3 &mom)
 {
 	/// Smear the momentum vector of a charged particle
 	/// based on reolutions obtained from the GetResolution
@@ -72,7 +72,7 @@ bool DTrackingResolution::Smear(int geanttype, TVector3 &mom)
 //----------------
 // Efficiency
 //----------------
-bool DTrackingResolution::Efficiency(int geanttype, const TVector3 &mom)
+bool DTrackingResolution::Efficiency(int geanttype, const DVector3 &mom)
 {
 	/// Return a boolean saying whether this event would be reconstructed
 	/// or not. The value returned will vary in that if mom points to

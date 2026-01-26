@@ -22,8 +22,8 @@ class DTrackingResolutionGEANT:public DTrackingResolution{
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DTrackingResolutionGEANT";}
 
-		void GetResolution(int geanttype, const TVector3 &mom, double &pt_res, double &theta_res, double &phi_res);
-		double GetEfficiency(int geanttype, const TVector3 &mom);
+		void GetResolution(int geanttype, const DVector3 &mom, double &pt_res, double &theta_res, double &phi_res);
+		double GetEfficiency(int geanttype, const DVector3 &mom);
 
 	private:
 		TFile *file;

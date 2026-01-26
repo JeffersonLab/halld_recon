@@ -92,7 +92,7 @@ DTrackingResolutionGEANT::~DTrackingResolutionGEANT()
 //----------------
 // GetResolution
 //----------------
-void DTrackingResolutionGEANT::GetResolution(int geanttype, const TVector3 &mom, double &pt_res, double &theta_res, double &phi_res)
+void DTrackingResolutionGEANT::GetResolution(int geanttype, const DVector3 &mom, double &pt_res, double &theta_res, double &phi_res)
 {
 	/// Return the momentum and angular resolutions for a charged
 	/// particle based on results from GEANT-based Monte Carlo studies.
@@ -121,7 +121,7 @@ void DTrackingResolutionGEANT::GetResolution(int geanttype, const TVector3 &mom,
 //----------------
 // GetEfficiency
 //----------------
-double DTrackingResolutionGEANT::GetEfficiency(int geanttype, const TVector3 &mom)
+double DTrackingResolutionGEANT::GetEfficiency(int geanttype, const DVector3 &mom)
 {
 	/// Return the reconstruction efficiency for a charged
 	/// particle based on results from GEANT-based Monte Carlo studies.

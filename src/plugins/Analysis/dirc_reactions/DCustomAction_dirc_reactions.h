@@ -11,7 +11,6 @@
 
 #include "TH1.h"
 #include "TH3.h"
-#include "TLorentzRotation.h"
 
 #include <JANA/JEvent.h>
 #include "JANA/JApplication.h"

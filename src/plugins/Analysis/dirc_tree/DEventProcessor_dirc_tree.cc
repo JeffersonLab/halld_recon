@@ -154,8 +154,14 @@ void DEventProcessor_dirc_tree::Process(const std::shared_ptr<const JEvent> &eve
 	bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 
 	if(foundDIRC){
-	  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
-	  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+	  //DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
+	  //DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+	  TVector3 posInBar(locDIRCMatchParams->dExtrapolatedPos.X(),
+			    locDIRCMatchParams->dExtrapolatedPos.Y(),
+			    locDIRCMatchParams->dExtrapolatedPos.Z());
+	  TVector3 momInBar(locDIRCMatchParams->dExtrapolatedMom.X(),
+			    locDIRCMatchParams->dExtrapolatedMom.Y(),
+			    locDIRCMatchParams->dExtrapolatedMom.Z());
 	  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
 	  int locBar = locDIRCGeometryVec[0]->GetBar(posInBar.Y());
 

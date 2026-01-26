@@ -104,7 +104,7 @@ void DCustomAction_dirc_reactions::Initialize(const std::shared_ptr<const JEvent
 					double xbin_max = xbin_min + 5.0;
 					
 					// skip creation of histograms for bins outside active area
-					TVector3 locBinVect((xbin_min+xbin_max)/2., bar_y, 586.5 - 65.);
+					DVector3 locBinVect((xbin_min+xbin_max)/2., bar_y, 586.5 - 65.);
 					if(locBinVect.Theta()*180/TMath::Pi() > 12.) 
 						continue;
 
@@ -210,11 +210,11 @@ bool DCustomAction_dirc_reactions::Perform_Action(const std::shared_ptr<const JE
 		///////////////////////////////////////////	
 		if(DIRC_TRUTH_BARHIT && locDIRCBarHits.size() > 0) {
 
-	                TVector3 bestMatchPos, bestMatchMom;
+	                DVector3 bestMatchPos, bestMatchMom;
                 	double bestMatchDist = 999.;
                 	for(int i=0; i<(int)locDIRCBarHits.size(); i++) {
-                        	TVector3 locDIRCBarHitPos(locDIRCBarHits[i]->x, locDIRCBarHits[i]->y, locDIRCBarHits[i]->z);
-                        	TVector3 locDIRCBarHitMom(locDIRCBarHits[i]->px, locDIRCBarHits[i]->py, locDIRCBarHits[i]->pz);
+                        	DVector3 locDIRCBarHitPos(locDIRCBarHits[i]->x, locDIRCBarHits[i]->y, locDIRCBarHits[i]->z);
+                        	DVector3 locDIRCBarHitMom(locDIRCBarHits[i]->px, locDIRCBarHits[i]->py, locDIRCBarHits[i]->pz);
                         	if((posInBar - locDIRCBarHitPos).Mag() < bestMatchDist) {
                                 	bestMatchDist = (posInBar - locDIRCBarHitPos).Mag();
                                 	bestMatchPos = locDIRCBarHitPos;
@@ -235,7 +235,7 @@ bool DCustomAction_dirc_reactions::Perform_Action(const std::shared_ptr<const JE
 		int locXbin = (int)(posInBar.X()/5.0) + 19;
 		
 		// check that histogram index exists
-		TVector3 locBarHitVect(posInBar.X(), posInBar.Y(), posInBar.Z() - 65.);
+		DVector3 locBarHitVect(posInBar.X(), posInBar.Y(), posInBar.Z() - 65.);
 		if(locBar < 0 || locXbin < 0 || locXbin > 39 || locBarHitVect.Theta()*180/TMath::Pi() > 12.0)
 			return true;
 

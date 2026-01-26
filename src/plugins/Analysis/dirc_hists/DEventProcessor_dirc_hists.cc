@@ -254,8 +254,8 @@ void DEventProcessor_dirc_hists::Process(const std::shared_ptr<const JEvent>& ev
 	 
 	  if(foundDIRC) {
 
-		  TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
-		  TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+		  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
+		  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 		  double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 		  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
 		  int locBar = locDIRCGeometry->GetBar(posInBar.Y());

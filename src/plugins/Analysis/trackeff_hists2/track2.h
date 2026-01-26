@@ -9,7 +9,7 @@
 #define _track2_
 
 #include <TObject.h>
-#include <TVector3.h>
+#include <DVector3.h>
 
 
 class track2:public TObject{
@@ -20,7 +20,7 @@ class track2:public TObject{
 
 		float q_thrown;
 		int PID_thrown;
-		TVector3 pthrown;
+		DVector3 pthrown;
 		bool isreconstructable;
 
 		int Nstereo;
@@ -36,7 +36,7 @@ class track2:public TObject{
 		float q_timebased;
 		int PID_timebased;
 		bool dTrackReconstructedFlag_TimeBased;
-		TVector3 pfit;
+		DVector3 pfit;
 		double trk_chisq;
 		int trk_Ndof;
 		double delta_pt_over_pt;
@@ -47,7 +47,7 @@ class track2:public TObject{
 		float q_wirebased;
 		int PID_wirebased;
 		bool dTrackReconstructedFlag_WireBased;
-		TVector3 pfit_wire;
+		DVector3 pfit_wire;
 		double trk_chisq_wb;
 		int trk_Ndof_wb;
 		double delta_pt_over_pt_wire;
@@ -58,7 +58,7 @@ class track2:public TObject{
 		float q_candidate;
 		int PID_candidate;
 		bool dTrackReconstructedFlag_Candidate;
-		TVector3 pcan;
+		DVector3 pcan;
 		double delta_pt_over_pt_can;
 		double delta_theta_can;	// mrad
 		double delta_phi_can;		// mrad

@@ -170,7 +170,7 @@ void DEventProcessor_1p2pi::Process(const std::shared_ptr<const JEvent> &locEven
 	 locTrackTimeBasedVectorForVertexing.push_back(pi_plus_track);
 	 locTrackTimeBasedVectorForVertexing.push_back(proton_track);
 	 DVector3 locRoughPosition = dAnalysisUtilities->Calc_CrudeVertex(locTrackTimeBasedVectorForVertexing);
-	 TVector3 locTRoughPosition(locRoughPosition.X(), locRoughPosition.Y(), locRoughPosition.Z());
+	 DVector3 locTRoughPosition(locRoughPosition.X(), locRoughPosition.Y(), locRoughPosition.Z());
 
 
       //--------------------------------
@@ -208,7 +208,7 @@ void DEventProcessor_1p2pi::Process(const std::shared_ptr<const JEvent> &locEven
 
       if (_CL>0){
 
-		 TVector3 vertex_kf;
+		 DVector3 vertex_kf;
 		 set<shared_ptr<DKinFitParticle>>myParticles=dKinFitter->Get_KinFitParticles();
 		 set<shared_ptr<DKinFitParticle>>::iterator locParticleIterator=myParticles.begin();
 
