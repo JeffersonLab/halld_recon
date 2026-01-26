@@ -18,6 +18,7 @@
 #include <cmath>
 using namespace std;
 
+#include <TMath.h>
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
 #include <DANA/DEvent.h>
