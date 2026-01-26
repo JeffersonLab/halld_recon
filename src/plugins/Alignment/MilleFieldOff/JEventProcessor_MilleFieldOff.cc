@@ -11,6 +11,7 @@
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include "TDirectory.h"
 #include "TRACKING/DTrackTimeBased.h"
+#include <TMath.h>
 
 // Routine used to create our JEventProcessor
 #include <JANA/JFactoryT.h>
