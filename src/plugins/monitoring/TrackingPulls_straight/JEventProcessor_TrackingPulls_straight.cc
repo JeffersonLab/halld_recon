@@ -8,7 +8,7 @@
 #include "JEventProcessor_TrackingPulls_straight.h"
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DTrigger.h"
-
+#include <TMath.h>
 
 // Routine used to create our JEventProcessor
 extern "C" {
