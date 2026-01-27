@@ -46,7 +46,10 @@ JEventProcessor_FDCProjectionResiduals::~JEventProcessor_FDCProjectionResiduals(
 //------------------
 void JEventProcessor_FDCProjectionResiduals::Init()
 {
-   // This is called once at program startup. 
+   // This is called once at program startup.
+   auto app = GetApplication();
+   lockService = app->GetService<JLockService>();
+
    unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
       135,135,146,146,158,158,170,170,182,182,197,197,
       209,209};
@@ -89,7 +92,7 @@ void JEventProcessor_FDCProjectionResiduals::Init()
     gDirectory->cd("..");
     gDirectory->mkdir("DistanceVsTimeRing1")->cd();
 
-    for(int straw=0; straw<numstraws[0]; straw++) {
+    for(unsigned int straw=0; straw<numstraws[0]; straw++) {
 	  char name[200];
 	  char title[200];	
 	  sprintf(name,"Ring %i Straw %i Distance Vs. Time", 1, straw+1);
@@ -249,10 +252,6 @@ void JEventProcessor_FDCProjectionResiduals::Process(const std::shared_ptr<const
    vector <const DChargedTrack *> chargedTrackVector;
    event->Get(chargedTrackVector);
 
-//    unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
-//       135,135,146,146,158,158,170,170,182,182,197,197,
-//       209,209};
-
    for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
 
       const DChargedTrackHypothesis* bestHypothesis = chargedTrackVector[iTrack]->Get_BestTrackingFOM();
@@ -311,9 +310,9 @@ void JEventProcessor_FDCProjectionResiduals::Process(const std::shared_ptr<const
 	      double zPOCA = POCAOnTrack.Z();
 	      DVector3 LOCA = POCAOnTrack - POCAOnWire;
 	      if(distanceToWire > 1.2 || distanceToBeamline > 1.0 || zPOCA < zVertex || POCAOnWire.Z() > endplate_z) continue;
-	      jout << " Dist = " << distanceToWire << " POCAOnTrack POCAOnWire Manual Distance = " << LOCA.Mag() << endl;
-	      POCAOnTrack.Print();
-	      POCAOnWire.Print(); 
+	      // jout << " Dist = " << distanceToWire << " POCAOnTrack POCAOnWire Manual Distance = " << LOCA.Mag() << endl;
+	      // POCAOnTrack.Print();
+	      // POCAOnWire.Print();
 	      
 	      double delta = 0.0, dz = 0.0;
 	      if(!Expect_Hit(thisTimeBasedTrack, wire, distanceToWire, delta, dz, fitter))
