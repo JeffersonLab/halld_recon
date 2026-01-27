@@ -107,21 +107,21 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
     gDirectory->mkdir("BCAL_TDC_Timing")->cd();
     gDirectory->mkdir("Timewalk_All")->cd();
 
-	hUpstream_Channel_Deltat_All = new TH2I("Upstream_Channel_Deltat_All",
+	hUpstream_Channel_Deltat_All = new TH2I("Upstream_Channel_Deltat",
 											"BCAL Upstream t_{TDC}-t_{ADC}; cellID; t_{TDC} - t_{ADC} [ns] ",
                              				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
-	hDownstream_Channel_Deltat_All = new TH2I("Downstream_Channel_Deltat_All",
+	hDownstream_Channel_Deltat_All = new TH2I("Downstream_Channel_Deltat",
 											"BCAL Downstream t_{TDC}-t_{ADC}; cellID; t_{TDC} - t_{ADC} [ns] ",
                              				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
-	hUpstream_Channel_Deltat_All_Corrected = new TH2I("Upstream_Channel_Deltat_All_Corrected",
+	hUpstream_Channel_Deltat_All_Corrected = new TH2I("Upstream_Channel_Deltat_TimewalkCorrected",
 											"BCAL Upstream t_{TDC}-t_{ADC} corrected; cellID; t_{TDC} - t_{ADC} [ns] ",
                              				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
-	hDownstream_Channel_Deltat_All_Corrected = new TH2I("Downstream_Channel_Deltat_All_Corrected",
+	hDownstream_Channel_Deltat_All_Corrected = new TH2I("Downstream_Channel_Deltat_TimewalkCorrected",
 											"BCAL Downstream t_{TDC}-t_{ADC} corrected; cellID; t_{TDC} - t_{ADC} [ns] ",
                              				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
 
     gDirectory->cd("..");
-    gDirectory->mkdir("Upstream_Channel_Deltat")->cd();
+    gDirectory->mkdir("Upstream_TimewalkVsPeak")->cd();
 
 	for(int module = 0; module < NBCALMODS; module++) {
 		for(int layer = 0; layer < NBCALLAYERS; layer++) {
@@ -137,7 +137,7 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 	}
 	
     gDirectory->cd("..");
-    gDirectory->mkdir("Downstream_Channel_Deltat")->cd();
+    gDirectory->mkdir("Downstream_TimewalkVsPeak")->cd();
 
 	for(int module = 0; module < NBCALMODS; module++) {
 		for(int layer = 0; layer < NBCALLAYERS; layer++) {

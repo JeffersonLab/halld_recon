@@ -81,9 +81,10 @@ void JEventProcessor_FDC_InternalAlignment::Init()
    gDirectory->mkdir("Cathode Projections")->cd();
 
    for(int layer=0; layer<24; layer++) {
-      char thisName[256];
-      sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
+          char thisName[256];
+          sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
 	  hCathodeUProjections.push_back( new TH2F(thisName, "u_res Vs. u;u_{local};u-upred", 192,-47.5,47.5,200, -0.2,0.2) );
+	  sprintf(thisName, "Plane %.2i v_res vs v", layer+1);
 	  hCathodeVProjections.push_back( new TH2F(thisName, "v_res Vs. v;v_{local};v-vpred", 192,-47.5,47.5,200, -0.2,0.2) );
    }
 
@@ -91,9 +92,10 @@ void JEventProcessor_FDC_InternalAlignment::Init()
    gDirectory->mkdir("Cathode Projections Negative")->cd();
 
    for(int layer=0; layer<24; layer++) {
-      char thisName[256];
-      sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
+          char thisName[256];
+          sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
 	  hCathodeUProjections_Neg.push_back( new TH2F(thisName, "u_res Vs. u;u_{local};u-upred", 192,-47.5,47.5,200, -0.2,0.2) );
+	  sprintf(thisName, "Plane %.2i v_res vs v", layer+1);
 	  hCathodeVProjections_Neg.push_back( new TH2F(thisName, "v_res Vs. v;v_{local};v-vpred", 192,-47.5,47.5,200, -0.2,0.2) );
    }
 
@@ -101,9 +103,10 @@ void JEventProcessor_FDC_InternalAlignment::Init()
    gDirectory->mkdir("Cathode Projections Positive")->cd();
 
    for(int layer=0; layer<24; layer++) {
-      char thisName[256];
-      sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
+          char thisName[256];
+          sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
 	  hCathodeUProjections_Pos.push_back( new TH2F(thisName, "u_res Vs. u;u_{local};u-upred", 192,-47.5,47.5,200, -0.2,0.2) );
+	  sprintf(thisName, "Plane %.2i v_res vs v", layer+1);
 	  hCathodeVProjections_Pos.push_back( new TH2F(thisName, "v_res Vs. v;v_{local};v-vpred", 192,-47.5,47.5,200, -0.2,0.2) );
    }
 
