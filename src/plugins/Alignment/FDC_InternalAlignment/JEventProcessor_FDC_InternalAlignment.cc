@@ -66,7 +66,13 @@ void JEventProcessor_FDC_InternalAlignment::Init()
       char thisName[256];
       sprintf(thisName, "Plane %.2i Wire t Vs Wire Number", layer+1);
 	  hWireT0s.push_back( new TH2F(thisName, thisName, 96, 0.5, 96.5, 250, -50.0, 200.0) );
-	  
+   }
+
+   gDirectory->cd("..");
+   gDirectory->mkdir("Profile2D")->cd();
+
+   for(int layer=0; layer<24; layer++) {
+      char thisName[256];
       sprintf(thisName, "Plane %.2i Wire Position Vs XY", layer+1);
 	  hWirePositions.push_back( new TProfile2D(thisName, thisName, 100, -50.,50., 100,-50., 50.) );
    }
@@ -102,8 +108,6 @@ void JEventProcessor_FDC_InternalAlignment::Init()
    }
 
    gDirectory->cd("..");
-   gDirectory->mkdir("Wire t0")->cd();
-
 
    main->cd();
 }
