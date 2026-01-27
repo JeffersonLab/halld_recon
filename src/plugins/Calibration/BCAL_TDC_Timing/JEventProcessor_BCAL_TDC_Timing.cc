@@ -79,10 +79,10 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 	
    double MIN_TDIFF = -10.0, MAX_TDIFF = 10.0, MAX_TDIFF_WIDE = 30.0;
    const int ndtbins = 100;
-   double dtbins[ndtbins+1];
-   for (int i=0; i<=ndtbins; i++) {
-       dtbins[i] = MIN_TDIFF + (MAX_TDIFF-MIN_TDIFF)/ndtbins*i;
-   }
+   // double dtbins[ndtbins+1];
+   // for (int i=0; i<=ndtbins; i++) {
+   //     dtbins[i] = MIN_TDIFF + (MAX_TDIFF-MIN_TDIFF)/ndtbins*i;
+   // }
    const int ndtbinswide = 200;
    double dtbinswide[ndtbinswide+1];
    for (int i=0; i<=ndtbinswide; i++) {
@@ -422,7 +422,7 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 	for(int module = 0; module < NBCALMODS; module++) {
 		for(int layer = 0; layer < NBCALLAYERS; layer++) {
 			for(int sector = 0; sector < NBCALSECTORS; sector++) {
-				char name[200], title[200];
+				char name[200], title[400];
 				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
             	sprintf(title, "%s  Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", name);
 
@@ -457,7 +457,7 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 	for(int module = 0; module < NBCALMODS; module++) {
 		for(int layer = 0; layer < NBCALLAYERS; layer++) {
 			for(int sector = 0; sector < NBCALSECTORS; sector++) {
-				char name[200], title[200];
+				char name[200], title[400];
 				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
             	sprintf(title, "%s  #Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", name);
 
@@ -482,7 +482,7 @@ void JEventProcessor_BCAL_TDC_Timing::Init()
 	for(int module = 0; module < NBCALMODS; module++) {
 		for(int layer = 0; layer < NBCALLAYERS; layer++) {
 			for(int sector = 0; sector < NBCALSECTORS; sector++) {
-				char name[200], title[200];
+				char name[200], title[400];
 				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
             	sprintf(title, "%s  Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]]", name);
 
@@ -831,7 +831,7 @@ void JEventProcessor_BCAL_TDC_Timing::Process(const std::shared_ptr<const JEvent
       const DBCALShower *thisShower = bcalMatch->dBCALShower;
 
       // Fill histograms based on the shower
-      char name[200], title[200];
+      // char name[200], title[200];
       DVector3 proj_pos;
       double flightTime=0.;
       //double innerpathLength, innerflightTime;
@@ -1183,7 +1183,7 @@ void JEventProcessor_BCAL_TDC_Timing::Process(const std::shared_ptr<const JEvent
    // //double r_shower = sqrt(shower_x*shower_x+shower_y*shower_y);
    // double t_shower = shower_t;
    // double E_shower = shower_E;
-   char name[200], title[200];
+   // char name[200], title[200];
    hDebug->Fill(10);
    if (thisRFBunch->dNumParticleVotes >= 2){ // Require good RF bunch
        hDebug->Fill(11);

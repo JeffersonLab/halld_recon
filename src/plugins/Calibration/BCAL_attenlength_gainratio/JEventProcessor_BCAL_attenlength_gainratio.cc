@@ -372,9 +372,9 @@ void JEventProcessor_BCAL_attenlength_gainratio::Finish()
         for (int module=0; module<nummodule; module++) {
             for (int layer=0; layer<numlayer; layer++) {
                 for (int sector=0; sector<numsector; sector++) {
-                    char name[255];
-//                     sprintf(name,"logEratiovsZ_%02i%i%i",module+1,layer+1,sector+1);
-//                     TH2I* hist  = (TH2I*)GetHistPointer("bcalgainratio", "logEratiovsZ", name);
+		  // char name[255];
+		  // sprintf(name,"logEratiovsZ_%02i%i%i",module+1,layer+1,sector+1);
+		  // TH2I* hist  = (TH2I*)GetHistPointer("bcalgainratio", "logEratiovsZ", name);
                     TH2I* hist  = logEratiovsZ[module][layer][sector];
                     if (hist) {
                         int layersect = (layer)*4 + sector + 1;
