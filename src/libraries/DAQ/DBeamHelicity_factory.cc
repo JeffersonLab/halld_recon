@@ -162,6 +162,7 @@ DBeamHelicity *DBeamHelicity_factory::Make_DBeamHelicity(const DHelicityData *lo
 {
 	if(!checkPredictor(locHelicityData->last_helicity_state_pattern_sync)) {
 		jerr << "Consistency check of Helicity Decoder Board data failed!" << endl;
+		reportPredictorError(locHelicityData->last_helicity_state_pattern_sync);
 		return nullptr;
 	}
 
@@ -214,6 +215,19 @@ bool DBeamHelicity_factory::checkPredictor(uint32_t testval) const
 	return (rval == lval);
 }
 
+//------------------
+// reportPredictorError
+//------------------
+void DBeamHelicity_factory::reportPredictorError(uint32_t testval) const
+{
+	UInt_t rval = (testval)&0x3fffffff;
+	UInt_t lval = (testval>>2)&0x3fffffff;
+	lval = advanceSeed(lval);
+	lval = advanceSeed(lval);
+	
+	jerr << "  Bad word: 0x" << hex << testval << endl;
+	jerr << "     Compare 0x" << rval << " to " << lval << dec << endl;
+}
 
 //------------------
 // EndRun
