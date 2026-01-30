@@ -226,7 +226,7 @@ void DBeamHelicity_factory::reportPredictorError(uint32_t testval) const
 	lval = advanceSeed(lval);
 	
 	jerr << "  Bad word: 0x" << hex << testval << endl;
-	jerr << "     Compare 0x" << rval << " to " << lval << dec << endl;
+	jerr << "     Compare 0x" << rval << " to 0x" << lval << dec << endl;
 }
 
 //------------------
