@@ -66,7 +66,6 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	buff                = new uint32_t[buff_len];
 
 	PARSE_F250          = true;
-	SKIP_F250_FORMAT_ERROR = false;
 	PARSE_F125          = true;
 	PARSE_F1TDC         = true;
 	PARSE_CAEN1290TDC   = true;
@@ -76,7 +75,6 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	PARSE_EVENTTAG      = true;
 	PARSE_TRIGGER       = true;
 	PARSE_SSP           = true;
-	SKIP_SSP_FORMAT_ERROR = false;
 	PARSE_GEMSRS        = true;
 	PARSE_HELICITY      = true;
         NSAMPLES_GEMSRS     = 9;
@@ -1606,6 +1604,9 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
       jerr << "Helicity Decoder unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
       cout.flush(); cerr.flush();
       DumpBinary(istart_helicity_data, iend, Nwords, iptr);
+
+
+
       
       // 				if (continue_on_format_error) {  // comment out for now??
       // 					iptr = iend;
@@ -1629,9 +1630,7 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
   if(!PARSE_F250){ iptr = &iptr[(*iptr) + 1]; return; }
-  
-  int continue_on_format_error = SKIP_F250_FORMAT_ERROR;
-  
+    
   auto pe_iter = current_parsed_events.begin();
   DParsedEvent *pe = NULL;
   
@@ -1753,12 +1752,12 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  if( (*iptr>>30) != 0x01) {
 	    jerr << "Bad f250 Pulse Data (word 1) for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
 	    if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, ((uint64_t)&iptr[3]-(uint64_t)istart_pulse_data)/4, iptr);
-	    if (continue_on_format_error) {
-	      iptr = iend;
-	      return;
-	    }
-	    else
-	      throw JException("Bad f250 Pulse Data! DEVIOWorkerThread::Parsef250Bank()", __FILE__, __LINE__);
+
+	    pe->NEW_DBadHit(rocid,slot);   
+	    jerr << "Created new BadHit to store rocid and slot" << endl;
+
+	    iptr = iend;
+	    return;
 	  }
 	  
 	  // from word 2
@@ -1773,12 +1772,10 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  if( (*iptr>>30) != 0x00){
 	    jerr << "Bad f250 Pulse Data (word 2) for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
 	    if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, 128, iptr);
-	    if (continue_on_format_error) {
-	      iptr = iend;
-	      return;
-	    }
-	    else
-	      throw JException("Bad f250 Pulse Data! DEVIOWorkerThread::Parsef250Bank()", __FILE__, __LINE__);
+	    pe->NEW_DBadHit(rocid,slot);   
+	    jerr << "Created new BadHit to store rocid and slot" << endl;
+            iptr = iend;
+	    return;
 	  }
 	  
 	  // from word 3
@@ -1795,11 +1792,12 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  // March 18, 2020 -rtj-
 	  if (integral == 0 && *iptr == *(iptr + 1)) {
 	    jerr << "Bad f250 Pulse Data (word 3) for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
+	    pe->NEW_DBadHit(rocid,slot);   
+	    jerr << "Created new BadHit to store rocid and slot" << endl;
 	    while (*(iptr + 1) == *iptr) {
 	      ++iptr;
 	    }
 	    jerr << "Bug #1: bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
-	    continue_on_format_error = true;
 	    break;
 	  }
 	  
@@ -1857,13 +1855,10 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  cout << "          Associated with event number = "<<pe->event_number<<endl;
 	}
       }
-      
-      if (continue_on_format_error) {
-	iptr = iend;
-	return;
-      }
-      else
-	throw JExceptionDataFormat("Unexpected word type in fADC250 block!", __FILE__, __LINE__);
+      pe->NEW_DBadHit(rocid,slot);   
+      jerr << "Created new BadHit to store rocid and slot" << endl;
+      iptr = iend;
+      return;
     }
   }
   
@@ -2395,6 +2390,7 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 					uint32_t channel      = F1TDC_channel(chip, chan_on_chip, modtype);
 					if(VERBOSE>7) cout << "      Found F1 data  : chip=" << chip << " chan=" << chan_on_chip  << " time=" << time << endl;
 					if(pe){
+					  
 						auto hit = pe->NEW_DF1TDCHit(rocid, slot, channel, itrigger, trig_time_f1header, time, *iptr, MODULE_TYPE(modtype));
 						if(hit->res_status==0){
 							static uint32_t Nwarnings=0;
@@ -2446,8 +2442,6 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 {
 	if(!PARSE_SSP){ iptr = &iptr[(*iptr) + 1]; return; }
 
-	int continue_on_format_error = SKIP_SSP_FORMAT_ERROR;
-	
 	auto pe_iter = current_parsed_events.begin();
 	DParsedEvent *pe = NULL;
 
@@ -2483,14 +2477,12 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 				//last_itrigger = itrigger;
 				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
 				if( slot != slot_bh ){
+				  
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;
-					
-					if (continue_on_format_error) {
-						iptr = iend;
-						return;
-					}	
-					else
-						throw JException("Bad SSP Data! DEVIOWorkerThread::ParseSSPBank()", __FILE__, __LINE__);
+				        pe->NEW_DBadHit(rocid,slot_bh);   // assume block header was correct
+					jerr << "Created new BadHit to store rocid and slot" << endl;
+					iptr = iend;
+					return;
 				}
 				break;
 			case 3:  // Trigger Time

@@ -55,6 +55,7 @@
 #include "Df250EmulatorAlgorithm_factory_v1.h"
 #include "Df250EmulatorAlgorithm_factory_v2.h"
 #include "Df250EmulatorAlgorithm_factory_v3.h"
+#include "DBadHit.h"
 
 #include <JANA/JFactorySet.h>
 
@@ -117,6 +118,6 @@ void DAQ_init(JFactorySet *factorySet) {
     factorySet->Add(new JFactoryT<DGEMSRSWindowRawData>());
 	factorySet->Add(new JFactoryT<DHelicityData>());
 	factorySet->Add(new JFactoryT<DHelicityDataTriggerTime>());
-
+    factorySet->Add(new JFactoryT<DBadHit>());
 }
 
