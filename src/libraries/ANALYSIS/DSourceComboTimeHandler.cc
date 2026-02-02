@@ -360,12 +360,18 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(const std::shared_ptr<const JEv
 	//Setup cuts
 	Define_DefaultCuts();
 	if (dFastTrackingMode){ // overwrite defaults for pion/proton
-	  dPIDTimingCuts_TF1Params[PiPlus][SYS_BCAL] = {2.0};
-	  dPIDTimingCuts_TF1Params[PiPlus][SYS_TOF] = {2.0};
-	  dPIDTimingCuts_TF1Params[PiMinus][SYS_BCAL] = {2.0};
-	  dPIDTimingCuts_TF1Params[PiMinus][SYS_TOF] = {2.0};
-	  dPIDTimingCuts_TF1Params[Proton][SYS_BCAL] = {2.0};
-	  dPIDTimingCuts_TF1Params[Proton][SYS_TOF] = {2.0};
+	  dPIDTimingCuts_TF1Params[PiPlus][SYS_FCAL] = {10.0};
+	  dPIDTimingCuts_TF1Params[PiPlus][SYS_ECAL] = {10.0};
+	  dPIDTimingCuts_TF1Params[PiPlus][SYS_BCAL] = {10.0};
+	  dPIDTimingCuts_TF1Params[PiPlus][SYS_TOF] = {10.0};
+	  dPIDTimingCuts_TF1Params[PiMinus][SYS_FCAL] = {10.0};
+	  dPIDTimingCuts_TF1Params[PiMinus][SYS_ECAL] = {10.0};
+	  dPIDTimingCuts_TF1Params[PiMinus][SYS_BCAL] = {10.0};
+	  dPIDTimingCuts_TF1Params[PiMinus][SYS_TOF] = {10.0};
+	  dPIDTimingCuts_TF1Params[Proton][SYS_FCAL] = {10.0};
+	  dPIDTimingCuts_TF1Params[Proton][SYS_ECAL] = {10.0};
+	  dPIDTimingCuts_TF1Params[Proton][SYS_BCAL] = {10.0};
+	  dPIDTimingCuts_TF1Params[Proton][SYS_TOF] = {10.0};
 	}
 	Get_CommandLineCuts();
 	Create_CutFunctions();
