@@ -1118,7 +1118,7 @@ void DTrackFitterKalmanSIMD::AddFDCHit(const DFDCPseudo *fdchit){
    hit->t=fdchit->time;
    hit->uwire=fdchit->w;
    hit->vstrip=fdchit->s;
-   hit->uvar=0.0833;
+   hit->uvar=0.0833; // (1.0 cm)^2/12
    hit->vvar=fdchit->ds*fdchit->ds;
    hit->z=fdchit->wire->origin.z();
    hit->cosa=cos(fdchit->wire->angle);
@@ -3861,9 +3861,10 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
    DVector2 wirexy=origin+(Sc(state_z)-z0w)*dir;
 
    // Save the starting values for C and S in the deque
-   central_traj[break_point_step_index].Skk=Sc;
-   central_traj[break_point_step_index].Ckk=Cc;
-
+   if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+     central_traj[break_point_step_index].Skk=Sc;
+     central_traj[break_point_step_index].Ckk=Cc;
+   }
    // doca variables
    double doca2,old_doca2=(xy-wirexy).Mod2();
 
@@ -3899,7 +3900,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
       //Cc=Q.AddSym(J*Cc*J.Transpose());
 
       // Save the current state and covariance matrix in the deque
-      if (fit_type==kTimeBased){
+      if (fit_type==kTimeBased || FAST_TRACKING_MODE){
          central_traj[k].Skk=Sc;
          central_traj[k].Ckk=Cc;
       }
@@ -4115,12 +4116,14 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
                if (DEBUG_LEVEL>9) _DBG_ << " Marked Trajectory central_traj[k].h_id=cdc_index+1 (k cdc_index)" << k << " " << cdc_index << endl;
 
                // Save some updated information for this hit   
-               double scale=(skip_ring)?1.:(1.-H*K);		   
-               cdc_updates[cdc_index].tcorr=tcorr;
-               cdc_updates[cdc_index].tdrift=tdrift;
-               cdc_updates[cdc_index].doca=measurement;
-               cdc_updates[cdc_index].variance=V;
-               cdc_updates[cdc_index].dDdt0=dDdt0;
+               double scale=(skip_ring)?1.:(1.-H*K);
+	       if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+		 cdc_updates[cdc_index].tcorr=tcorr;
+		 cdc_updates[cdc_index].tdrift=tdrift;
+		 cdc_updates[cdc_index].doca=measurement;
+		 cdc_updates[cdc_index].variance=V;
+		 cdc_updates[cdc_index].dDdt0=dDdt0;
+	       }
                cdc_used_in_fit[cdc_index]=true;
                if (tdrift < CDC_T_DRIFT_MIN) cdc_used_in_fit[cdc_index]=false;
 
@@ -4149,9 +4152,10 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
 	    StepStateAndCovariance(xy,-ds2,dedx,Sc,J,Cc);
 
             //  Save state and covariance matrix to update vector
-            cdc_updates[cdc_index].S=Sc;
-            cdc_updates[cdc_index].C=Cc;
-
+	    if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+	      cdc_updates[cdc_index].S=Sc;
+	      cdc_updates[cdc_index].C=Cc;
+	    }
 	    //Sc.Print();
 	    //Cc.Print();
 
@@ -4255,9 +4259,10 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
   }
   
   // Save the starting values for C and S in the deque
-  forward_traj[break_point_step_index].Skk=S;
-  forward_traj[break_point_step_index].Ckk=C;
-  
+  if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+    forward_traj[break_point_step_index].Skk=S;
+    forward_traj[break_point_step_index].Ckk=C;
+  }
   // Initialize chi squared
   chisq=0;
   
@@ -4337,9 +4342,11 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     //C=Q.AddSym(J*C*J.Transpose());
     
     // Save the current state and covariance matrix in the deque
-    forward_traj[k].Skk=S;
-    forward_traj[k].Ckk=C;
-    
+    if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+      forward_traj[k].Skk=S;
+      forward_traj[k].Ckk=C;
+    }
+      
     // Save the current state of the reference trajectory
     S0_=S0;
     
@@ -4441,20 +4448,22 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    }
 	    
 	    // Store the "improved" values for the state vector and covariance
-	    fdc_updates[id].S=S;
-	    fdc_updates[id].C=C;
-	    fdc_updates[id].tdrift=drift_time;
-	    fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
-	    fdc_updates[id].doca=doca;
+	    if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+	      fdc_updates[id].S=S;
+	      fdc_updates[id].C=C;
+	      fdc_updates[id].tdrift=drift_time;
+	      fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
+	      fdc_updates[id].doca=doca;
+	    }
 	    fdc_used_in_fit[id]=true;
 	    
 	    if (skip_plane==false){  
 	      // Filtered residual and covariance of filtered residual
 	      R=Mdiff-H*K*Mdiff;   
 	      RC=V-H*(C*H_T);
-	      
-	      fdc_updates[id].V=RC;
-	      
+	      if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+		fdc_updates[id].V=RC;
+	      }
 	      // Update chi2 for this segment
 	      chisq+=RC.Chi2(R);
 	      
@@ -4471,7 +4480,9 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 		}
 	    }
 	    else{
-	      fdc_updates[id].V=V;
+	      if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+		fdc_updates[id].V=V;
+	      }
 	    }
 	    
 	    break_point_fdc_index=id;
@@ -4635,12 +4646,14 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    forward_traj[k].h_id=1000+cdc_index;
 	    
 	    // Store updated info related to this hit
-	    double scale=(skip_ring)?1.:(1.-Hc*Kc); 
-	    cdc_updates[cdc_index].tdrift=tdrift;
-	    cdc_updates[cdc_index].tcorr=tcorr;
-	    cdc_updates[cdc_index].variance=Vc;
-	    cdc_updates[cdc_index].doca=dm;
-	    cdc_updates[cdc_index].dDdt0=dDdt0;
+	    double scale=(skip_ring)?1.:(1.-Hc*Kc);
+	    if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+	      cdc_updates[cdc_index].tdrift=tdrift;
+	      cdc_updates[cdc_index].tcorr=tcorr;
+	      cdc_updates[cdc_index].variance=Vc;
+	      cdc_updates[cdc_index].doca=dm;
+	      cdc_updates[cdc_index].dDdt0=dDdt0;
+	    }
 	    cdc_used_in_fit[cdc_index]=true;
 	    if(tdrift < CDC_T_DRIFT_MIN){
 	      //_DBG_ << tdrift << endl;
@@ -4681,9 +4694,10 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    }
 	    StepBack(dedx,newz,forward_traj[k].z,S0,S,C);
 	  }
-	
-	  cdc_updates[cdc_index].S=S;
-	  cdc_updates[cdc_index].C=C;	  
+	  if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+	    cdc_updates[cdc_index].S=S;
+	    cdc_updates[cdc_index].C=C;
+	  }
 	}
 
 	// new wire origin and direction
@@ -4914,9 +4928,10 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   double chi2cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
   
   // Save the starting values for C and S in the deque
-  forward_traj[break_point_step_index].Skk=S;
-  forward_traj[break_point_step_index].Ckk=C;
-  
+  if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+    forward_traj[break_point_step_index].Skk=S;
+    forward_traj[break_point_step_index].Ckk=C;
+  }
   // z-position
   double z=forward_traj[break_point_step_index].z;
   
@@ -4990,7 +5005,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
     doca2=dx*dx+dy*dy;
 
     // Save the current state and covariance matrix in the deque
-    if (fit_type==kTimeBased){
+    if (fit_type==kTimeBased || FAST_TRACKING_MODE){
       forward_traj[k].Skk=S;
       forward_traj[k].Ckk=C;
     }
@@ -5121,11 +5136,13 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 	  
 	  // Store some updated values related to the hit
 	  double scale=(skip_ring)?1.:(1.-H*K);
-	  cdc_updates[cdc_index].tcorr=tcorr;
-	  cdc_updates[cdc_index].tdrift=tdrift;
-	  cdc_updates[cdc_index].doca=dm;
-	  cdc_updates[cdc_index].variance=V;
-	  cdc_updates[cdc_index].dDdt0=dDdt0;
+	  if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+	    cdc_updates[cdc_index].tcorr=tcorr;
+	    cdc_updates[cdc_index].tdrift=tdrift;
+	    cdc_updates[cdc_index].doca=dm;
+	    cdc_updates[cdc_index].variance=V;
+	    cdc_updates[cdc_index].dDdt0=dDdt0;
+	  }
 	  cdc_used_in_fit[cdc_index]=true;
 	  if(tdrift < CDC_T_DRIFT_MIN) cdc_used_in_fit[cdc_index]=false;
 	  
@@ -5160,9 +5177,10 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 	  }
 	  StepBack(dedx,newz,forward_traj[k].z,S0,S,C);
 	}
-	
-	cdc_updates[cdc_index].S=S;
-	cdc_updates[cdc_index].C=C;	
+	if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+	  cdc_updates[cdc_index].S=S;
+	  cdc_updates[cdc_index].C=C;
+	}
       }
       
       // new wire origin and direction
@@ -6417,7 +6435,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 							      cdc_anneal,
 							      S,C,C0,chisq,
 							      my_ndf);
-	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	if ((fit_type==kTimeBased || USE_PASS1_TIME_MODE) && refit_error!=FIT_SUCCEEDED){
 	  fdc_anneal=1000.;
 	  cdc_anneal=1000.;
 	  refit_error=RecoverBrokenForwardTracks(fdc_anneal,
@@ -6473,7 +6491,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
    } //iteration
    
    IsSmoothed=false;
-   if(fit_type==kTimeBased){
+   if(fit_type==kTimeBased || FAST_TRACKING_MODE){
      forward_pulls.clear();
      if (SmoothForward(forward_pulls) == NOERROR){
        IsSmoothed = true;
@@ -6739,7 +6757,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 	}
 	
 	kalman_error_t refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
-	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	if ((fit_type==kTimeBased || USE_PASS1_TIME_MODE) && refit_error!=FIT_SUCCEEDED){
 	  anneal_factor=1000.;
 	  refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
 	  //chisq=1e6;
@@ -6795,7 +6813,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
  
    // Run the smoother
    IsSmoothed=false;
-   if(fit_type==kTimeBased){
+   if(fit_type==kTimeBased || FAST_TRACKING_MODE){
      cdc_pulls.clear();
      if (SmoothForwardCDC(cdc_pulls) == NOERROR){
        IsSmoothed = true;
@@ -6821,7 +6839,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
    ClearExtrapolations();
    if (forward_traj.size()>1){
      if (fit_type==kWireBased){
-     ExtrapolateForwardToOtherDetectors();
+       ExtrapolateForwardToOtherDetectors();
      }
      else{
        ExtrapolateToInnerDetectors();
@@ -7050,7 +7068,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 	}
 
 	kalman_error_t refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
-	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	if ((fit_type==kTimeBased || USE_PASS1_TIME_MODE) && refit_error!=FIT_SUCCEEDED){
 	  anneal_factor=1000.;
 	  refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
 	  //chisq=1e6;
@@ -7107,7 +7125,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 
    // Run smoother and fill pulls vector
    IsSmoothed=false;
-   if(fit_type==kTimeBased){
+   if(fit_type==kTimeBased || FAST_TRACKING_MODE){
      cdc_pulls.clear();
      if (SmoothCentral(cdc_pulls) == NOERROR){
        IsSmoothed = true;
@@ -9571,11 +9589,14 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
        // Residual for coordinate transverse to wire
        double drift_time=my_fdchits[id]->t-mT0-(*rit).t*TIME_UNIT_CONVERSION;
        if (my_fdchits[id]->hit!=NULL){
-	 double drift=(doca>0.0?1.:-1.)*fdc_drift_distance(drift_time,(*rit).B);
-	 Mdiff(0)=drift-doca;
+	 if (fit_type==kTimeBased){
+	   double drift=(doca>0.0?1.:-1.)*fdc_drift_distance(drift_time,(*rit).B);
+	   Mdiff(0)=drift-doca;
  
-	 // Variance in drift distance
-	 V(0,0)=fdc_drift_variance(drift_time);	
+	   // Variance in drift distance
+	   V(0,0)=fdc_drift_variance(drift_time);
+	 }
+	 else Mdiff(0)=-doca;
        }
        else if (USE_TRD_DRIFT_TIMES&&my_fdchits[id]->status==trd_hit){
 	 double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
@@ -10042,10 +10063,12 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
 	  used_ids.push_back(my_id);
 	  fdc_used_in_fit[my_id]=true; 
 	  
-	  // Add some hit info to the update vector for this plane 
-	  fdc_updates[my_id].tdrift=drift_time;
-	  fdc_updates[my_id].tcorr=fdc_updates[my_id].tdrift;
-	  fdc_updates[my_id].doca=mydoca;
+	  // Add some hit info to the update vector for this plane
+	  if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+	    fdc_updates[my_id].tdrift=drift_time;
+	    fdc_updates[my_id].tcorr=fdc_updates[my_id].tdrift;
+	    fdc_updates[my_id].doca=mydoca;
+	  }
 	}
       }
     } // check that the hit is "good"
@@ -10072,9 +10095,10 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
       DMatrix2x2 RC=Vlist[m]-HK*Vlist[m];
       chisq+=my_prob*RC.Chi2(R);
       
-      unsigned int my_id=used_ids[m];  
-      fdc_updates[my_id].V=RC;
-      
+      unsigned int my_id=used_ids[m];
+      if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+	fdc_updates[my_id].V=RC;
+      }
       if (DEBUG_LEVEL > 25) 
 	{
 	  jout << " Adjusting state vector for FDC hit " << m << " with prob " << my_prob << " S:" << endl;
@@ -10089,12 +10113,14 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
   }
   
   // Save some information about the track at this plane in the update vector
-  for (unsigned int m=0;m<Hlist.size();m++){
-    unsigned int my_id=used_ids[m];  
-    fdc_updates[my_id].S=S;
-    fdc_updates[my_id].C=C; 
-    if (skip_plane){
-      fdc_updates[my_id].V=Vlist[m];
+  if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+    for (unsigned int m=0;m<Hlist.size();m++){
+      unsigned int my_id=used_ids[m];
+      fdc_updates[my_id].S=S;
+      fdc_updates[my_id].C=C;
+      if (skip_plane){
+	fdc_updates[my_id].V=Vlist[m];
+      }
     }
   }
   // update number of degrees of freedom
