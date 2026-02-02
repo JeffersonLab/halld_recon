@@ -1477,15 +1477,21 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 	// sanity checks
 	if(header_reserved != 0x18)  { 
 	  jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="
-	       <<slot<<"  reserved field = 0x"<<hex<<header_reserved<<dec<<"  (expected=0x18)"<<endl; 
-	  throw JExceptionDataFormat("Bad helicity decoder header data in DEVIOWorkerThread::ParseHelicityDecoderBank()",
-				     __FILE__, __LINE__);
+	       <<slot<<"  reserved field = 0x"<<hex<<header_reserved<<dec<<"  (expected=0x18)"<<endl;
+	  pe->NEW_DBadHit(rocid,slot);
+	  iptr = iend;
+	  break;
+	  //throw JExceptionDataFormat("Bad helicity decoder header data in DEVIOWorkerThread::ParseHelicityDecoderBank()",
+	  //			     __FILE__, __LINE__);
 	}
 	if(header_number_words != 14)  { 
 	  jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="
 	       <<slot<<"  number words = "<<header_number_words<<"  (expected=14)"<<endl; 
-	  throw JExceptionDataFormat("Bad helicity decoder header payload in DEVIOWorkerThread::ParseHelicityDecoderBank()",
-				     __FILE__, __LINE__);
+	  pe->NEW_DBadHit(rocid,slot);
+	  iptr = iend;
+	  break;
+	  //	  throw JExceptionDataFormat("Bad helicity decoder header payload in DEVIOWorkerThread::ParseHelicityDecoderBank()",
+	  //			     __FILE__, __LINE__);
 	}
 	
 	iptr++;
@@ -1601,17 +1607,19 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
       jerr << "Helicity Decoder unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
       cout.flush(); cerr.flush();
       DumpBinary(istart_helicity_data, iend, Nwords, iptr);
-
-
-
+      pe->NEW_DBadHit(rocid,slot);
+      iptr = iend;
+      break;
       
       // 				if (continue_on_format_error) {  // comment out for now??
       // 					iptr = iend;
       // 					return;
       // 				}
       // 				else
-      throw JExceptionDataFormat("Unexpected word type in Helicity Decoder block! DEVIOWorkerThread::ParseHelicityDecoderBank()",
-				 __FILE__, __LINE__);
+
+      
+      //throw JExceptionDataFormat("Unexpected word type in Helicity Decoder block! DEVIOWorkerThread::ParseHelicityDecoderBank()",
+      //			 __FILE__, __LINE__);
     }
   }
   
