@@ -570,6 +570,7 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
             track->pulls =std::move(fitter->GetPulls()); 
 	    track->extrapolations=std::move(fitter->GetExtrapolations());
             track->candidateid = c_id+1;
+	    track->IsSmoothed=fitter->GetIsSmoothed();
 
             // Add hits used as associated objects
             vector<const DCDCTrackHit*> cdchits = fitter->GetCDCFitHits();

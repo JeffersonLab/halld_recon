@@ -1441,7 +1441,7 @@ void DTrackTimeBased_factory::MakeTimeBasedFromWireBased(vector<const DFDCPseudo
   timebased_track->trackid = track->id;
   timebased_track->candidateid=track->candidateid;
   timebased_track->FOM=track->FOM;
-  timebased_track->IsSmoothed=false;
+  timebased_track->IsSmoothed=track->IsSmoothed;
   timebased_track->flags=DTrackTimeBased::FLAG__USED_WIREBASED_FIT;
   
   // add the list of start times
