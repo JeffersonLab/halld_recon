@@ -350,6 +350,8 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
 	if (matched_points.size()>=MIN_BCAL_MATCHES){
 	  t0_detector=SYS_BCAL;
 	  t0=matched_points[0]->t();
+	  // Crude correction for flight time from target
+	  t0-=2.2; // assum s=65 cm at roughly the speed of light
 	}
       }
       
