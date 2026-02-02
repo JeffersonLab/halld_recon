@@ -2061,6 +2061,8 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 {
 	//Expect locParticleCombo to be NULL since this is a reaction-independent action.
 
+// 	cerr << "In DHistogramAction_DetectorPID::Perform_Action() ..." << endl;
+
 	if(Get_CalledPriorWithComboFlag())
 		return true; //else double-counting!
 
@@ -2092,7 +2094,7 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action(); //ACQUIRE ROOT LOCK!!
 	{
-		if(locEventRFBunch->dTimeSource != SYS_NULL || (beam_velocity<0.99*SPEED_OF_LIGHT) ) //only histogram beta for neutrals if the t0 is well known
+		if(locEventRFBunch->dTimeSource != SYS_NULL || (beam_velocity<0.99*SPEED_OF_LIGHT) ) // FIX //only histogram beta for neutrals if the t0 is well known
 		{
 			for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 			{
@@ -2142,11 +2144,21 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 			auto locSCHitMatchParams = locChargedTrackHypothesis->Get_SCHitMatchParams();
 			auto locDIRCMatchParams = locChargedTrackHypothesis->Get_DIRCMatchParams();
 
+			// HACK
+//  			if( locChargedTrackHypothesis->z() < 65.-3. || locChargedTrackHypothesis->z() > 65.+3. )
+//  				continue;
+//  			if(  locTheta < 30. || locTheta > 35. )
+//  				continue;
+
+
 			if(locSCHitMatchParams != NULL)
 			{
 				dHistMap_dEdXVsP[SYS_START][locCharge]->Fill(locP, locSCHitMatchParams->dEdx*1.0E3);
-				if((locEventRFBunch->dTimeSource != SYS_START) && (locEventRFBunch->dNumParticleVotes > 1))
-				{
+				
+				// NOTE: loosen these timing requirements, to better single track events
+				
+				//if((locEventRFBunch->dTimeSource != SYS_START) && (locEventRFBunch->dNumParticleVotes > 1))
+				//{
 					//If SC was used for RF time, don't compute delta-beta
 					double locBeta_Timing = locSCHitMatchParams->dPathLength/(29.9792458*(locSCHitMatchParams->dHitTime - locChargedTrackHypothesis->t0()));
 					dHistMap_BetaVsP[SYS_START][locCharge]->Fill(locP, locBeta_Timing);
@@ -2157,7 +2169,7 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 						double locDeltaT = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime - locStartTime;
 						dHistMap_DeltaTVsP[SYS_START][locPID]->Fill(locP, locDeltaT);
 					}
-				}
+				//}
 				if(dHistMap_DeltadEdXVsP[SYS_START].find(locPID) != dHistMap_DeltadEdXVsP[SYS_START].end())
 				{
 					double locdx = locSCHitMatchParams->dHitEnergy/locSCHitMatchParams->dEdx;
@@ -2169,8 +2181,8 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 			if(locTOFHitMatchParams != NULL)
 			{
 				dHistMap_dEdXVsP[SYS_TOF][locCharge]->Fill(locP, locTOFHitMatchParams->dEdx*1.0E3);
-				if(locEventRFBunch->dNumParticleVotes > 1)
-				{
+				//if(locEventRFBunch->dNumParticleVotes > 1)
+				//{
 					double locBeta_Timing = locTOFHitMatchParams->dPathLength/(29.9792458*(locTOFHitMatchParams->dHitTime - locChargedTrackHypothesis->t0()));
 					dHistMap_BetaVsP[SYS_TOF][locCharge]->Fill(locP, locBeta_Timing);
 					if(dHistMap_DeltaBetaVsP[SYS_TOF].find(locPID) != dHistMap_DeltaBetaVsP[SYS_TOF].end())
@@ -2180,7 +2192,7 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 						double locDeltaT = locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime - locStartTime;
 						dHistMap_DeltaTVsP[SYS_TOF][locPID]->Fill(locP, locDeltaT);
 					}
-				}
+				//}
 				if(dHistMap_DeltadEdXVsP[SYS_TOF].find(locPID) != dHistMap_DeltadEdXVsP[SYS_TOF].end())
 				{
 					double locdx = locTOFHitMatchParams->dHitEnergy/locTOFHitMatchParams->dEdx;
@@ -2195,8 +2207,8 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 				double locEOverP = locBCALShower->E/locP;
 				dHistMap_BCALEOverPVsP[locCharge]->Fill(locP, locEOverP);
 				dHistMap_BCALEOverPVsTheta[locCharge]->Fill(locTheta, locEOverP);
-				if(locEventRFBunch->dNumParticleVotes > 1)
-				{
+				//if(locEventRFBunch->dNumParticleVotes > 1)
+				//{
 					double locBeta_Timing = locBCALShowerMatchParams->dPathLength/(29.9792458*(locBCALShower->t - locChargedTrackHypothesis->t0()));
 					dHistMap_BetaVsP[SYS_BCAL][locCharge]->Fill(locP, locBeta_Timing);
 					if(dHistMap_DeltaBetaVsP[SYS_BCAL].find(locPID) != dHistMap_DeltaBetaVsP[SYS_BCAL].end())
@@ -2204,9 +2216,10 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 						double locDeltaBeta = locChargedTrackHypothesis->lorentzMomentum().Beta() - locBeta_Timing;
 						dHistMap_DeltaBetaVsP[SYS_BCAL][locPID]->Fill(locP, locDeltaBeta);
 						double locDeltaT = locBCALShower->t - locBCALShowerMatchParams->dFlightTime - locStartTime;
+// 						cerr << locDeltaT << " " << locBCALShower->t << " " << locBCALShowerMatchParams->dFlightTime << " " << locStartTime << endl;  // HACK
 						dHistMap_DeltaTVsP[SYS_BCAL][locPID]->Fill(locP, locDeltaT);
 					}
-				}
+				//}
 			}
 			if(locFCALShowerMatchParams != NULL)
 			{
@@ -2214,8 +2227,8 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 				double locEOverP = locFCALShower->getEnergy()/locP;
 				dHistMap_FCALEOverPVsP[locCharge]->Fill(locP, locEOverP);
 				dHistMap_FCALEOverPVsTheta[locCharge]->Fill(locTheta, locEOverP);
-				if(locEventRFBunch->dNumParticleVotes > 1)
-				{
+				//if(locEventRFBunch->dNumParticleVotes > 1)
+				//{
 					double locBeta_Timing = locFCALShowerMatchParams->dPathLength/(29.9792458*(locFCALShower->getTime() - locChargedTrackHypothesis->t0()));
 					dHistMap_BetaVsP[SYS_FCAL][locCharge]->Fill(locP, locBeta_Timing);
 					if(dHistMap_DeltaBetaVsP[SYS_FCAL].find(locPID) != dHistMap_DeltaBetaVsP[SYS_FCAL].end())
@@ -2225,7 +2238,7 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 						double locDeltaT = locFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime - locStartTime;
 						dHistMap_DeltaTVsP[SYS_FCAL][locPID]->Fill(locP, locDeltaT);
 					}
-				}
+				//}
 			}
 			if(locDIRCMatchParams != NULL && (dHistMap_NumPhotons_DIRC.find(locPID) != dHistMap_NumPhotons_DIRC.end())) {
 				int locNumPhotons_DIRC = locDIRCMatchParams->dNPhotons;
