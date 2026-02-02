@@ -22,6 +22,7 @@ void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 	dThrownTreeInterface = NULL;
 
 	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEventLoop->GetSingle(dParticleID);
 
 	auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
 
@@ -70,6 +71,7 @@ void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 void DEventWriterROOT::Run_Update(JEventLoop* locEventLoop)
 {
 	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEventLoop->GetSingle(dParticleID);
 
 	//Get Target Center Z
 	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
@@ -704,6 +706,7 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	//HIT ENERGY
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_TOF"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_ST"), locArraySizeString, dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ST_hit_z"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALPreshower"), locArraySizeString, dInitNumNeutralArraySize);
 	if(BCAL_VERBOSE_OUTPUT) {
@@ -1828,6 +1831,19 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_TOF"), locTOFdEdx, locArrayIndex);
 	double locSCdEdx = (locChargedTrackHypothesis->Get_SCHitMatchParams() != NULL) ? locChargedTrackHypothesis->Get_SCHitMatchParams()->dEdx : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_ST"), locSCdEdx, locArrayIndex);
+	
+	double locSCHitZ = 9999.;
+	if(locChargedTrackHypothesis->Get_SCHitMatchParams() != NULL) {
+		DVector3 IntersectionPoint, IntersectionMomentum;
+		shared_ptr<DSCHitMatchParams>  locSCHitMatchParams;
+		
+		vector<DTrackFitter::Extrapolation_t>extrapolations = locChargedTrackHypothesis->Get_TrackTimeBased()->extrapolations.at(SYS_START);
+		bool sc_match = dParticleID->Cut_MatchDistance(extrapolations, locChargedTrackHypothesis->Get_SCHitMatchParams()->dSCHit, locChargedTrackHypothesis->Get_SCHitMatchParams()->dSCHit->t, 
+				locSCHitMatchParams, true, &IntersectionPoint, &IntersectionMomentum);
+		if(sc_match) locSCHitZ = IntersectionPoint.z();
+	}
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ST_hit_z"), locSCHitZ, locArrayIndex);
+
 	double locBCALEnergy = (locBCALShower != NULL) ? locBCALShower->E : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCAL"), locBCALEnergy, locArrayIndex);
 	double locBCALPreshowerEnergy = (locBCALShower != NULL) ? locBCALShower->E_preshower : 0.0;

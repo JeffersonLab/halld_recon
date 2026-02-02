@@ -34,6 +34,7 @@
 #include "PID/DNeutralShower.h"
 #include "PID/DEventRFBunch.h"
 #include "PID/DMCReaction.h"
+#include "PID/DParticleID.h"
 
 #include "ANALYSIS/DParticleCombo.h"
 #include "ANALYSIS/DReaction.h"
@@ -91,6 +92,7 @@ class DEventWriterROOT : public JObject
 		unsigned int dInitNumComboArraySize;
 
 		double dTargetCenterZ;
+        const DParticleID* dParticleID;
 
 		//DEFAULT ACTIONS LISTED SEPARATELY FROM CUSTOM (in case in derived class user does something bizarre)
 		map<const DReaction*, DCutAction_ThrownTopology*> dCutActionMap_ThrownTopology;
