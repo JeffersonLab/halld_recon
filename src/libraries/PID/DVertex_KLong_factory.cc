@@ -17,6 +17,7 @@ jerror_t DVertex_KLong_factory::init(void)
 	dNoKinematicFitFlag = false;
 	dForceTargetCenter = false;
 	dUseWeightedAverage = false;
+	dUseStartCounterTimesOnly = false;
 	dMinTrackingNDF = 7;
 	return NOERROR;
 }
@@ -52,6 +53,7 @@ jerror_t DVertex_KLong_factory::brun(jana::JEventLoop* locEventLoop, int32_t run
 	gPARMS->SetDefaultParameter("VERTEX:MINTRACKINGFOM", dMinTrackingFOM);
 	gPARMS->SetDefaultParameter("VERTEX:MINTRACKNDF", dMinTrackingNDF);
 	gPARMS->SetDefaultParameter("VERTEX:USEWEIGHTEDAVERAGE", dUseWeightedAverage);
+	gPARMS->SetDefaultParameter("VERTEX:USESCTIMESONLY", dUseStartCounterTimesOnly);
 
 	dKinFitter->Set_DebugLevel(dKinFitDebugLevel);
 
@@ -280,35 +282,44 @@ void DVertex_KLong_factory::Set_TrackTime(JEventLoop* locEventLoop, DTrackTimeBa
 // cout << " num SC matches = " << locSCHitMatchParamsVec.size() << endl;
 // //cout << " num SC matches = " << locDetectorMatches->Get_NumTrackSCMatches() << endl;
 // 
-	
-	// BCAL
-	if(locPIDAlgorithm->Get_BestBCALMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locBCALShowerMatchParams))
-	{
-		const DBCALShower* locBCALShower = locBCALShowerMatchParams->dBCALShower;
-		locTrackTimeBased->setTime(locBCALShower->t - locBCALShowerMatchParams->dFlightTime);
-		(*locCovarianceMatrix)(6,6) = 0.25*0.25+locBCALShowerMatchParams->dFlightTimeVariance;
-	}
-	// TOF
-	else if(locPIDAlgorithm->Get_BestTOFMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locTOFHitMatchParams))
-	{
-		locTrackTimeBased->setTime(locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime);
-		(*locCovarianceMatrix)(6,6) = 0.1*0.1+locTOFHitMatchParams->dFlightTimeVariance;
-	}
-	// FCAL
-	else if(locPIDAlgorithm->Get_BestFCALMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locFCALShowerMatchParams))
-	{
-		const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
-		locTrackTimeBased->setTime(locFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime);
-		(*locCovarianceMatrix)(6,6) = 0.7*0.7+locFCALShowerMatchParams->dFlightTimeVariance;
-	}
-	// Start Counter
-	else if(locPIDAlgorithm->Get_BestSCMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locSCHitMatchParams))
-	{
-		double locPropagatedTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime;
-		locTrackTimeBased->setTime(locPropagatedTime);
-		(*locCovarianceMatrix)(6,6) = 0.3*0.3+locSCHitMatchParams->dFlightTimeVariance;
-	}
 
+	if(dUseStartCounterTimesOnly) {
+		if(locPIDAlgorithm->Get_BestSCMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locSCHitMatchParams))
+		{
+			double locPropagatedTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime;
+			locTrackTimeBased->setTime(locPropagatedTime);
+			(*locCovarianceMatrix)(6,6) = 0.3*0.3+locSCHitMatchParams->dFlightTimeVariance;
+		}	
+	} else {
+		// BCAL
+		if(locPIDAlgorithm->Get_BestBCALMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locBCALShowerMatchParams))
+		{
+			const DBCALShower* locBCALShower = locBCALShowerMatchParams->dBCALShower;
+			locTrackTimeBased->setTime(locBCALShower->t - locBCALShowerMatchParams->dFlightTime);
+			(*locCovarianceMatrix)(6,6) = 0.25*0.25+locBCALShowerMatchParams->dFlightTimeVariance;
+		}
+		// TOF
+		else if(locPIDAlgorithm->Get_BestTOFMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locTOFHitMatchParams))
+		{
+			locTrackTimeBased->setTime(locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime);
+			(*locCovarianceMatrix)(6,6) = 0.1*0.1+locTOFHitMatchParams->dFlightTimeVariance;
+		}
+		// FCAL
+		else if(locPIDAlgorithm->Get_BestFCALMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locFCALShowerMatchParams))
+		{
+			const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
+			locTrackTimeBased->setTime(locFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime);
+			(*locCovarianceMatrix)(6,6) = 0.7*0.7+locFCALShowerMatchParams->dFlightTimeVariance;
+		}
+		// Start Counter
+		else if(locPIDAlgorithm->Get_BestSCMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locSCHitMatchParams))
+		{
+			double locPropagatedTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime;
+			locTrackTimeBased->setTime(locPropagatedTime);
+			(*locCovarianceMatrix)(6,6) = 0.3*0.3+locSCHitMatchParams->dFlightTimeVariance;
+		}
+	}
+	
 	locTrackTimeBased->setErrorMatrix(locCovarianceMatrix);
 }
 

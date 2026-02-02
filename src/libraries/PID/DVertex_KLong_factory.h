@@ -54,6 +54,7 @@ class DVertex_KLong_factory : public jana::JFactory<DVertex>
 		bool dNoKinematicFitFlag;
 		bool dForceTargetCenter;
 		bool dUseWeightedAverage;
+		bool dUseStartCounterTimesOnly;
 		
 		double dTargetZCenter;
 		double dTargetLength;
