@@ -29,6 +29,8 @@ public:
     static const int BCAL_NUM_LAYERS   =  4;
     static const int BCAL_NUM_SECTORS  =  4;
 
+    static const int TRIG_TYPE_TOF = 5;
+
     const uint32_t FCAL_mask = (1u << (1-1));
     const uint32_t  TOF_mask = (1u << (2-1));
     const uint32_t BCAL_mask = (1u << (3-1));
@@ -50,6 +52,7 @@ public:
 
     double  FCAL_ADC_PER_MEV, BCAL_ADC_PER_MEV, PEDESTAL_SIGMA;
     bool    USE_RAW_SAMPLES;
+    bool tof_lane_enabled;
 
     int TOF_MAX_CHANNELS; // TOF channels (initizlied by geometry)
     int TOF_NUM_PLANES;   // TOF number of planes (initialized by geometry)

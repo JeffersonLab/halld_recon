@@ -130,6 +130,7 @@ void DL1MCTrigger_factory_CPP::Init() {
   BCAL_BASELINE           = 100;
   TOF_BASELINE            = 100;
   TOF_W_WIDTH             =  80;
+  tof_lane_enabled        = false;  //  no TOF trigger unless found in RCDB config
 
 }
 
@@ -141,6 +142,14 @@ void DL1MCTrigger_factory_CPP::BeginRun(const std::shared_ptr<const JEvent>& eve
 
   int print_level = 1;
   Read_RCDB(event, print_level);
+
+  tof_lane_enabled = false;
+  for(const auto& t : triggers_enabled) {
+    if(t.type == TRIG_TYPE_TOF) {
+      tof_lane_enabled = true;
+      break;
+    }
+  }
 
   vector<const DFCALGeometry*> fcalGeomVect;
   event->Get(fcalGeomVect);
@@ -509,102 +518,106 @@ void DL1MCTrigger_factory_CPP::Process(const std::shared_ptr<const JEvent>& even
 
 //  TOF Part
 
-  vector<const DTOFDigiHit*> tof_digihits;
-  event->Get(tof_digihits);
+  bool  emulated_tof_trigger = false;
 
-  if(USE_RAW_SAMPLES) {
+  if(tof_lane_enabled) {
 
-    for(size_t i = 0; i < tof_digihits.size(); ++i) {
-      const DTOFDigiHit *digihit = tof_digihits[i];
+    vector<const DTOFDigiHit*> tof_digihits;
+    event->Get(tof_digihits);
 
-      int plane = digihit->plane;
-      int bar   = digihit->bar;
-      int end   = digihit->end;
+    if(USE_RAW_SAMPLES) {
 
-			const Df250PulseData* pulse = nullptr;
-      digihit->GetSingle(pulse);
-      if(!pulse) continue;
+      for(size_t i = 0; i < tof_digihits.size(); ++i) {
+        const DTOFDigiHit *digihit = tof_digihits[i];
 
-      const Df250WindowRawData* wdata = nullptr;
-      pulse->GetSingle(wdata);
-      if(!wdata) continue;
+        int plane = digihit->plane;
+        int bar   = digihit->bar;
+        int end   = digihit->end;
 
-			vector<uint16_t> s = wdata->samples;
-			size_t ns = s.size();
-      if(ns>data_sample) {throw JException("sample size exceeds maximum");}
-      for(auto &x : s) x = (x>TOF_BASELINE) ? x-TOF_BASELINE : 0.;
+  			const Df250PulseData* pulse = nullptr;
+        digihit->GetSingle(pulse);
+        if(!pulse) continue;
 
-      int first = -1, last = -1;
-      if(auto it = find_if(s.begin(),s.end(),[&](auto x)   {return x>TOF_CELL_TRIG_THR-TOF_BASELINE;}); it != s.end())   first = distance(s.begin(),it);
-      if(auto it = find_if(s.rbegin(),s.rend(),[&](auto x) {return x>TOF_CELL_TRIG_THR-TOF_BASELINE;}); it != s.rend())  last  = distance(s.begin(), it.base());
-      if(first<TOF_ACCEPT_MIN_SAMP || first>TOF_ACCEPT_MAX_SAMP || last-first < 1) continue;
+        const Df250WindowRawData* wdata = nullptr;
+        pulse->GetSingle(wdata);
+        if(!wdata) continue;
 
-      TOF_SIGNAL traw_signal(plane,bar,end,first);
+  			vector<uint16_t> s = wdata->samples;
+	  		size_t ns = s.size();
+        if(ns>data_sample) {throw JException("sample size exceeds maximum");}
+        for(auto &x : s) x = (x>TOF_BASELINE) ? x-TOF_BASELINE : 0.;
 
-      double ped  = GetConstant(tof_adc_pedestals,plane,bar,end);
-      for(size_t is = 0; is<ns; ++is)
-        traw_signal.adc[is]   = (double)s[is] - ped;
+        int first = -1, last = -1;
+        if(auto it = find_if(s.begin(),s.end(),[&](auto x)   {return x>TOF_CELL_TRIG_THR-TOF_BASELINE;}); it != s.end())   first = distance(s.begin(),it);
+        if(auto it = find_if(s.rbegin(),s.rend(),[&](auto x) {return x>TOF_CELL_TRIG_THR-TOF_BASELINE;}); it != s.rend())  last  = distance(s.begin(), it.base());
+        if(first<TOF_ACCEPT_MIN_SAMP || first>TOF_ACCEPT_MAX_SAMP || last-first < 1) continue;
 
-      bool this_rawhit_is_duplication_due_to_system_glitch = false;
-      for(size_t ii = 0; ii < traw_signal_hits.size(); ++ii) {
-        auto& hh = traw_signal_hits[ii];
-        if( hh.plane  == traw_signal.plane  &&
-            hh.bar    == traw_signal.bar    &&
-            hh.end    == traw_signal.end    &&
-            exact_equal(hh.adc, traw_signal.adc) ) {
-          this_rawhit_is_duplication_due_to_system_glitch = true;
-          break;
+        TOF_SIGNAL traw_signal(plane,bar,end,first);
+
+        double ped  = GetConstant(tof_adc_pedestals,plane,bar,end);
+        for(size_t is = 0; is<ns; ++is)
+          traw_signal.adc[is]   = (double)s[is] - ped;
+
+        bool this_rawhit_is_duplication_due_to_system_glitch = false;
+        for(size_t ii = 0; ii < traw_signal_hits.size(); ++ii) {
+          auto& hh = traw_signal_hits[ii];
+          if( hh.plane  == traw_signal.plane  &&
+              hh.bar    == traw_signal.bar    &&
+              hh.end    == traw_signal.end    &&
+              exact_equal(hh.adc, traw_signal.adc) ) {
+            this_rawhit_is_duplication_due_to_system_glitch = true;
+            break;
+          }
         }
+        if(this_rawhit_is_duplication_due_to_system_glitch) continue;
+        traw_signal_hits.push_back(traw_signal);
+
       }
-      if(this_rawhit_is_duplication_due_to_system_glitch) continue;
-      traw_signal_hits.push_back(traw_signal);
+    }
+
+    for(size_t i = 0; i < tof_hits.size(); ++i) {
+      int plane = tof_hits[i]->plane;
+      int bar   = tof_hits[i]->bar;
+      int end   = tof_hits[i]->end;
+      int id    = 2*TOF_NUM_BARS*plane + TOF_NUM_BARS*end + bar - 1;
+
+      double offset = GetConstant(tof_adc_time_offsets,plane,bar,end);
+      double t      = (tof_hits[i]->t_fADC + offset - tof_t_base)/data_time_bin;
+      int samp      = int(t);
+
+      if(samp<TOF_PEAK_WINDOW_MIN || samp>TOF_PEAK_WINDOW_MAX) continue;
+      double e  = tof_hits[i]->dE/tof_adc2E[id];
+
+      TOF_SIGNAL tof_signal(plane,bar,end,samp);
+
+      Emulate_Waveform(e, t, tof_signal);
+
+      auto it = max_element(tof_signal.adc.begin(), tof_signal.adc.end());
+      if(it==tof_signal.adc.end()) continue;
+      double emulated_pulse_peak = *it;
+      if(emulated_pulse_peak<TOF_CELL_TRIG_THR-TOF_BASELINE) continue;
+
+      tof_signal_hits.push_back(tof_signal);
 
     }
-  }
 
-  for(size_t i = 0; i < tof_hits.size(); ++i) {
-    int plane = tof_hits[i]->plane;
-    int bar   = tof_hits[i]->bar;
-    int end   = tof_hits[i]->end;
-    int id    = 2*TOF_NUM_BARS*plane + TOF_NUM_BARS*end + bar - 1;
-
-    double offset = GetConstant(tof_adc_time_offsets,plane,bar,end);
-    double t      = (tof_hits[i]->t_fADC + offset - tof_t_base)/data_time_bin;
-    int samp     = int(t);
-
-    if(samp<TOF_PEAK_WINDOW_MIN || samp>TOF_PEAK_WINDOW_MAX) continue;
-    double e  = tof_hits[i]->dE/tof_adc2E[id];
-
-    TOF_SIGNAL tof_signal(plane,bar,end,samp);
-
-    Emulate_Waveform(e, t, tof_signal);
-
-    auto it = max_element(tof_signal.adc.begin(), tof_signal.adc.end());
-    if(it==tof_signal.adc.end()) continue;
-    double emulated_pulse_peak = *it;
-    if(emulated_pulse_peak<TOF_CELL_TRIG_THR-TOF_BASELINE) continue;
-
-    tof_signal_hits.push_back(tof_signal);
-
-  }
-
-  if(!USE_RAW_SAMPLES) Digitize(tof_signal_hits);
+    if(!USE_RAW_SAMPLES) Digitize(tof_signal_hits);
 
 // Merge TOF hits:
 
-  auto &tof_signal_hits_to_use = USE_RAW_SAMPLES ? traw_signal_hits : tof_signal_hits;
-  auto coincidences = find_coincidences(tof_signal_hits_to_use,TOF_FE_MATCH_WINDOW);
-  bool  emulated_tof_trigger = false;
+    auto &tof_signal_hits_to_use = USE_RAW_SAMPLES ? traw_signal_hits : tof_signal_hits;
+    auto coincidences = find_coincidences(tof_signal_hits_to_use,TOF_FE_MATCH_WINDOW);
 
-  if(coincidences.size()>3)
-  for(size_t isample = 0; isample < data_sample-TOF_BAR_MATCH_WINDOW; ++isample) {
+    if(coincidences.size()>3)
+    for(size_t isample = 0; isample < data_sample-TOF_BAR_MATCH_WINDOW; ++isample) {
 
-    uint32_t bit0 = BuildTOFGroupBits(coincidences,0,isample,TOF_BAR_MATCH_WINDOW);
-    uint32_t bit1 = BuildTOFGroupBits(coincidences,1,isample,TOF_BAR_MATCH_WINDOW);
+      uint32_t bit0 = BuildTOFGroupBits(coincidences,0,isample,TOF_BAR_MATCH_WINDOW);
+      uint32_t bit1 = BuildTOFGroupBits(coincidences,1,isample,TOF_BAR_MATCH_WINDOW);
 
-    if(bit0*bit1>0 && popcount(bit0)+popcount(bit1)>3) {
-      emulated_tof_trigger = true;
-      break;
+      if(bit0*bit1>0 && popcount(bit0)+popcount(bit1)>3) {
+        emulated_tof_trigger = true;
+        break;
+      }
     }
   }
 
@@ -1090,7 +1103,7 @@ void DL1MCTrigger_factory_CPP::PrintTriggers() {
 
   for(const auto& trig : triggers_enabled) {
     string detector = "BFCAL";  // All known types are BFCAL
-    if (trig.type < 0x1 || trig.type > 0x5) {
+    if (trig.type < 0x1 || trig.type > TRIG_TYPE_TOF) {
       detector = "NONE";
       cout << " Unknown detector ===== " << trig.type << endl;
     }
@@ -1289,7 +1302,7 @@ void DL1MCTrigger_factory_CPP::Read_RCDB(const shared_ptr<const JEvent>& event, 
         trigger_tmp.gtp.fcal = fcal;
         trigger_tmp.gtp.bcal = bcal;
       } else {
-        trigger_tmp.type = 5;
+        trigger_tmp.type = TRIG_TYPE_TOF;
       }
 
       if(!trigRow[6].empty()) trigger_tmp.gtp.en_thr = stoi(trigRow[6]);
