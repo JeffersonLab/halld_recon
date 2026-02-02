@@ -47,11 +47,8 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	// below.
 
 
-  PrintLimitFDC = 0;
-  PrintLimitCDC = 0;
-  PrintLimitTRD = 0;
-  
-
+        PrintLimitFDC = 0;
+        PrintLimitCDC = 0;
   
 	VERBOSE             = 0;
 	Nrecycled           = 0;     // Incremented in JEventSource_EVIOpp::Dispatcher()
@@ -1779,13 +1776,13 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  }
 	  
 	  // from word 3
-	  uint32_t course_time               = (*iptr>>21) & 0x1FF;//< 4 ns/count
+	  uint32_t coarse_time               = (*iptr>>21) & 0x1FF;//< 4 ns/count
 	  uint32_t fine_time                 = (*iptr>>15) & 0x3F;//< 0.0625 ns/count
 	  uint32_t pulse_peak                = (*iptr>>3 ) & 0xFFF;
 	  bool     QF_vpeak_beyond_NSA       = (*iptr>>2 ) & 0x01;
 	  bool     QF_vpeak_not_found        = (*iptr>>1 ) & 0x01;
 	  bool     QF_bad_pedestal           = (*iptr>>0 ) & 0x01;
-	  if(VERBOSE>7) cout << "      FADC250 Pulse Data word 3(0x"<<hex<<*iptr<<dec<<")  course_time="<<course_time<<" fine_time="<<fine_time<<" pulse_peak="<<pulse_peak<<endl;
+	  if(VERBOSE>7) cout << "      FADC250 Pulse Data word 3(0x"<<hex<<*iptr<<dec<<")  coarse_time="<<coarse_time<<" fine_time="<<fine_time<<" pulse_peak="<<pulse_peak<<endl;
 	  
 	  // FIRMWARE BUG: If pulse integral was zero, this is an invalid bad pulse;
 	  // skip over bogus repeated pulse time repeats, and ignore it altogether.
@@ -1811,7 +1808,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 				   , QF_overflow
 				   , QF_underflow
 				   , nsamples_over_threshold
-				   , course_time
+				   , coarse_time
 				   , fine_time
 				   , pulse_peak
 				   , QF_vpeak_beyond_NSA
@@ -1930,10 +1927,10 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
   
   uint32_t slot=0;
   uint32_t itrigger = -1;
-  uint32_t last_itrigger = -2;
-  uint32_t last_pulse_time_channel=0;
-  uint32_t last_slot = -1;
-  uint32_t last_channel = -1;    
+
+  uint32_t last_pulse_time_channel=0;  // old format
+  uint32_t last_slot = -1;   // old format
+  uint32_t last_channel = -1;     // old format
   
   // Loop over data words
   for(; iptr<iend; iptr++){
@@ -1958,7 +1955,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
       //slot_event_header = (*iptr>>22) & 0x1F;
       itrigger = (*iptr>>0) & 0xFFFF;
       pe = *pe_iter++;
-      if(VERBOSE>7) cout << "      FADC125 Event Header: itrigger="<<itrigger<<" last_itrigger="<<last_itrigger<<", rocid="<<rocid<<", slot="<<slot <<endl;
+      if(VERBOSE>7) cout << "      FADC125 Event Header: itrigger="<<itrigger<<", rocid="<<rocid<<", slot="<<slot <<endl;
       break;
     case 3: // Trigger Time
       {
@@ -1996,18 +1993,20 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	// Word 2:
 	++iptr;
 	if(iptr>=iend){
+	  pe->NEW_DBadHit(rocid,slot);   
 	  PrintLimitCDC++;
 	  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
 	  if (PrintLimitCDC<10) {
-	    jerr << " Truncated f125 CDC hit (block ends before continuation word!)" << endl;
+	    jerr << " Truncated f125 CDC hit (block ends before continuation word!). BadHit created." << endl;
 	    continue;
 	  }
 	}
 	if( ((*iptr>>31) & 0x1) != 0 ){
+	  pe->NEW_DBadHit(rocid,slot);   
 	  PrintLimitCDC++;
 	  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
 	  if (PrintLimitCDC<10)
-	    jerr << " Truncated f125 CDC hit (missing continuation word!)" << endl;
+	    jerr << " Truncated f125 CDC hit (missing continuation word!) BadHit created." << endl;
 	  --iptr;
 	  continue;
 	}
@@ -2062,16 +2061,21 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  // Word 2:
 	  ++iptr;
 	  if(iptr>=iend){
+	    pe->NEW_DBadHit(rocid,slot);   
 	    PrintLimitFDC++;
 	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 	    if (PrintLimitFDC<10)
-	      jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
+	      jerr << " Truncated f125 FDC hit (block ends before continuation word!). BadHit created." << endl;
 	    break;
 	  }
 	  if( ((*iptr>>31) & 0x1) != 0 ){
+
+	    // most of the FDC missing cont word errs are caused by the pulse number (1) mis-recorded as 7 or 15
+            if ((int)pulse_number ==1) pe->NEW_DBadHit(rocid,slot);   
+	    
 	    PrintLimitFDC++;
 	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
-	    if (PrintLimitFDC<10)
+	    if (PrintLimitFDC < 10)
 	      jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
 	    --iptr; 
 	    break;
@@ -2157,13 +2161,16 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  // Word 2:
 	  ++iptr;
 	  if(iptr>=iend){
+	    pe->NEW_DBadHit(rocid,slot);   
 	    PrintLimitFDC++;
 	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 	    if (PrintLimitFDC<10)
-	      jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
+	      jerr << " Truncated f125 FDC hit (block ends before continuation word!) BadHit created." << endl;
 	    break;
 	  }
 	  if( ((*iptr>>31) & 0x1) != 0 ){
+	    // most of the FDC missing cont word errs are caused by the pulse number (1) mis-recorded as 7 or 15
+            if (pulse_number ==1) pe->NEW_DBadHit(rocid,slot);   
 	    PrintLimitFDC++;
 	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 	    if (PrintLimitFDC<10)
@@ -2248,7 +2255,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     case 13: // Event Trailer
     case 14: // Data not valid (empty module)
     case 15: // Filler (non-data) word
-      if(VERBOSE>7) cout << "      FADC125 ignored data type: " << data_type <<endl;
+      if(VERBOSE>7) cout << "      FADC125 ignored filler word, data type: " << data_type <<endl;
       break;
     default:
       if(VERBOSE>7) cout << "      FADC125 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;

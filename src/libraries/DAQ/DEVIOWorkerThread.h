@@ -30,7 +30,6 @@ class DEVIOWorkerThread{
 	public:
   int PrintLimitFDC;
   int PrintLimitCDC;
-  int PrintLimitTRD;
   
 		enum JOBTYPE{
 			JOB_NONE       = 0x0,
