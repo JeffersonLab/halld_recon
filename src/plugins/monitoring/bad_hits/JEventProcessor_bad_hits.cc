@@ -66,8 +66,10 @@ void JEventProcessor_bad_hits::Init()
     TDirectory *main = gDirectory;
     gDirectory->mkdir("bad_hits")->cd();
 
-    hroc = new TH1I("roc","Count of data format errors for each ROC; ROC ", 120,0,120);
-    hroc_slot = new TH2I("roc_slot","Count of data format errors; ROC; Slot ", 120,0,120,18,3,21);
+    // slots are 3 to 20.  Might use 0-2 for special cases?
+
+    hroc = new TH1I("roc","Count of data format errors for each ROC; ROC ", 120, 0.5, 120.5);
+    hroc_slot = new TH2I("roc_slot","Count of data format errors; ROC; Slot ", 120, 0.5, 120.5, 20, 0.5, 20.5);
     hevents = new TH1I("num_events","Number of events", 1, 0.0, 1.0);
 
     main->cd();

@@ -1843,6 +1843,8 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     default:
       if(VERBOSE>7) cout << "      FADC250 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
       jerr << "FADC250 unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
+      pe->NEW_DBadHit(rocid,slot);   
+      jerr << "Created new BadHit to store rocid and slot" << endl;
       // make additional debugging output for special error types
       if(data_type == 11) {
 	cout << "          FADC slot mask = "<<" 0x"<<hex<<*(iptr+1)<<dec<<endl;
@@ -1852,8 +1854,6 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  cout << "          Associated with event number = "<<pe->event_number<<endl;
 	}
       }
-      pe->NEW_DBadHit(rocid,slot);   
-      jerr << "Created new BadHit to store rocid and slot" << endl;
       iptr = iend;
       return;
     }
@@ -1886,9 +1886,13 @@ void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid,
       break;
     }
     
-    if (iptr >= iend) jerr << "fa250 window raw data are incomplete - the collection of samples has been truncated!" << endl;
-    if (iptr >= iend) break;
-    
+    if (iptr >= iend) {
+      jerr << "fa250 window raw data are incomplete - the collection of samples has been truncated!" << endl;
+      pe->NEW_DBadHit(rocid,slot);   
+      jerr << "Created new BadHit to store rocid and slot" << endl;
+      break;
+    }
+
     bool invalid_1 = (*iptr>>29) & 0x1;
     bool invalid_2 = (*iptr>>13) & 0x1;
     uint16_t sample_1 = 0;
@@ -1912,6 +1916,8 @@ void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid,
   if(VERBOSE>7) cout << "      FADC250 Window Raw Data: size from header=" << window_width << " Nsamples found=" << wrd->samples.size() << endl;
   if( window_width != wrd->samples.size() ){
     jerr <<" FADC250 Window Raw Data number of samples does not match header! (" <<wrd->samples.size() << " != " << window_width << ") for rocid=" << rocid << " slot=" << slot << " channel=" << channel << endl;
+    pe->NEW_DBadHit(rocid,slot);   
+    jerr << "Created new BadHit to store rocid and slot" << endl;
   }
 }
 
@@ -2288,11 +2294,14 @@ void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid,
         // Make sure this is a data continuation word, if not, stop here
         if(((*iptr>>31) & 0x1) != 0x0)break;
 
-        if (iptr >= iend) jerr << "fa125 window raw data are incomplete - the collection of samples has been truncated!" << endl;
-        if (iptr >= iend) break;
+        if (iptr >= iend) {
+	  jerr << "fa125 window raw data are incomplete - the collection of samples has been truncated!" << endl;
+          pe->NEW_DBadHit(rocid,slot);   
+          jerr << "Created new BadHit to store rocid and slot" << endl;	
+          break;
+	}
 	
         uint16_t sample_1 = (*iptr>>16) & 0xFFF;
-
         uint16_t sample_2 = 0;
         bool invalid_2 = (*iptr>>13) & 0x1;
 	if(!invalid_2)sample_2 = (*iptr>>0) & 0xFFF;
@@ -2401,7 +2410,8 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 						auto hit = pe->NEW_DF1TDCHit(rocid, slot, channel, itrigger, trig_time_f1header, time, *iptr, MODULE_TYPE(modtype));
 						if(hit->res_status==0){
 							static uint32_t Nwarnings=0;
-							if(Nwarnings<10) jerr << "ERROR: F1 TDC chip \"unlocked\" flag set!" << ((++Nwarnings == 10) ? " -- last warning":"") << endl;
+							if(Nwarnings<10) jerr << "ERROR: F1 TDC chip \"unlocked\" flag set! BadHit created." << ((++Nwarnings == 10) ? " -- last warning":"") << endl;
+                                                        pe->NEW_DBadHit(rocid,slot);   
 						}
 					}
 				}
@@ -2487,7 +2497,7 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 				  
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;
 				        pe->NEW_DBadHit(rocid,slot_bh);   // assume block header was correct
-					jerr << "Created new BadHit to store rocid and slot" << endl;
+					jerr << "Created new BadHit to store rocid " << rocid << " and slot " << slot_bh << endl;
 					iptr = iend;
 					return;
 				}
@@ -2558,6 +2568,7 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 						default:
 							jerr << "Bad value for adc_max_bits (" << adc_max_bits << ") from SSP/DIRC with rocid="
 							     << rocid << " slot=" << slot << "channel=" << channel_lower << "," << channel_upper << endl;
+							pe->NEW_DBadHit(rocid,slot);  
 							break;
 					}
 					if( pe ) {
