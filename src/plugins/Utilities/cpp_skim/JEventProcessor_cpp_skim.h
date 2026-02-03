@@ -11,17 +11,7 @@
 #include <JANA/JEventProcessor.h>
 #include "evio_writer/DEventWriterEVIO.h"
 
-#include <TRACKING/DTrackWireBased.h>
-
-#include <TH1.h>
-#include <thread>
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <iostream>
-#include <fstream>
-#include <iomanip>
+#include <TRACKING/DTrackTimeBased.h>
 
 class JEventProcessor_cpp_skim:public JEventProcessor{
 	public:
