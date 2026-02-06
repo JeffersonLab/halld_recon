@@ -1,4 +1,5 @@
-// hnamepath: /bad_hits/errcount
+// hnamepath: /bad_hits/hroc
+// hnamepath: /bad_hits/hroc_slot
 // hnamepath: /bad_hits/num_events
 //
 // e-mail: njarvis@jlab.org
@@ -7,12 +8,9 @@
 //
 //  This plot should be completely empty (white).
 //  
-//  Any filled (pink) cells indicate a problem with an fadc.
-//  The cells are filled if there are large inconsistencies in event count or in trigger times between an fadc and its TI, or between one crate and the rest. 
+//  Any filled cells indicate a data format problem with an fadc.
 //
-//  Large numbers of mismatches indicate that data from different triggers are being packaged together into the same event, becoming useless.  It could be caused by a misconfiguration during startup or by a hardware problem. 
-//
-//  If there are filled cells, stop the DAQ, reboot the bad ROC (the ROCid is on the plot's x-axis) and restart the DAQ.  If that does not clear the error, contact a DAQ expert. 
+//  If there are many filled cells, stop the DAQ, reboot the bad ROC (the ROCid is on the plot's x-axis) and restart the DAQ.  If that does not clear the error, contact a DAQ expert. 
 //  
 // End Guidance: ----------------------------------------
 
@@ -31,11 +29,47 @@
 	
 	locDirectory->cd(); // cd to bad_hits
 
+	TH2I *locHistroc = (TH2I*)gDirectory->Get("roc");
+	if (!locHistroc){
+		std::cout << "HistMacro_bad_hits: Unable to find histogram!" << std::endl;
+	   return;
+	}
+
 	TH2I *locHist = (TH2I*)gDirectory->Get("roc_slot");
 	if (!locHist){
 		std::cout << "HistMacro_bad_hits: Unable to find histogram!" << std::endl;
 	   return;
 	}
+
+
+	// find the 3 rocids with the most problems
+	int rocid[3] = {0};
+	int count[3] = {0};
+	
+        for (int i=1; i<=locHistroc->GetXaxis()->GetNbins(); i++) {
+	  int nerrors = locHistroc->GetBinContent(i);
+
+          if (nerrors > count[0]) {
+	    count[2] = count[1];
+	    count[1] = count[0];
+	    rocid[2] = rocid[1];
+	    rocid[1] = rocid[0];
+
+	    count[0] = nerrors;
+	    rocid[0] = i;
+	    
+          } else if (nerrors > count[1]) {
+	    count[2] = count[1];
+	    rocid[2] = rocid[1];
+	    count[1] = nerrors;
+	    rocid[1] = i;
+	    
+          }else if (nerrors > count[2]) {
+	    count[2] = nerrors;
+	    rocid[2] = i;
+          }
+	}
+
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -65,6 +99,16 @@
 		locHist->GetYaxis()->SetNdivisions(210);  
 		locHist->GetXaxis()->SetNdivisions(15);
 
+		if (rocid[2]>0) {
+		  locHist->SetTitle(Form("Format errors in rocs %i %i %i",rocid[0],rocid[1],rocid[2]));
+		} else if (rocid[1]>0) {
+		  locHist->SetTitle(Form("Format errors in rocs %i %i",rocid[0],rocid[1]));
+		} else if (rocid[0]>0) {
+		  locHist->SetTitle(Form("Format errors in roc %i",rocid[0]));		  
+		} else {
+		  locHist->SetTitle("No format errors found");
+		}
+		
 		locHist->SetStats(0);
 		locHist->Draw("colz");  // don't use colz2, it is buggy in -b mode
 	}

@@ -1,8 +1,8 @@
 Jan 31, 2026, NSJ
-To add a new type of hit, create the DNewTypeOfHit.h file and modify the following:
+To add a new type of hit, create its class definitiion file DNewTypeOfHit.h and modify the following:
  
-DAQ_init.cc - include the file and add the factory template line (unless it has its own factory code)
-JFactoryGenerator_DAQ.h - include the file and add the factory template line
+DAQ_init.cc - include the file and add the factory or the factory template to the factorySet.
+JFactoryGenerator_DAQ.h - if the factory template was used, include the file and add the factory template to the factorySet.
 DParsedEvent.h - include the file
 DEVIOWorkerThread.cc - include the file and add code to parse the event data  
 JEventSource_EVIOpp.cc - set up any command line args and links to BOR data
