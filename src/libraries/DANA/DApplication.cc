@@ -19,7 +19,6 @@ using std::string;
 #include <HDDM/DEventSourceHDDMGenerator.h>
 #include <HDDM/DEventSourceRESTGenerator.h>
 #include <EVENTSTORE/DEventSourceEventStoreGenerator.h>
-#include <DAQ/JEventSourceGenerator_EVIO.h>
 #include <DAQ/JEventSourceGenerator_EVIOpp.h>
 
 #include "DANARootErrorHandler.h"
@@ -125,7 +124,6 @@ void DApplication::InitHallDLibraries(JApplication* app) {
 		app->Add(event_source_generator);
 		app->Add(new DEventSourceRESTGenerator());
 		app->Add(new JEventSourceGenerator_EVIOpp());
-		app->Add(new JEventSourceGenerator_EVIO());
 		app->Add(new DEventSourceEventStoreGenerator());
 	}
 	factory_generator = new DFactoryGenerator();

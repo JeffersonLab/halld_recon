@@ -7,9 +7,6 @@ DParsedEvent.h - include the file
 DEVIOWorkerThread.cc - include the file and add code to parse the event data  
 JEventSource_EVIOpp.cc - set up any command line args and links to BOR data
 
-Ignore these, they were deprecated
-JEventSource_EVIO.h  
-JEventSource_EVIO.cc
 
 
 
