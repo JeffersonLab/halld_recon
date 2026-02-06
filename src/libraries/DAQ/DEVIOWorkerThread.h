@@ -30,7 +30,6 @@ class DEVIOWorkerThread{
 	public:
   int PrintLimitFDC;
   int PrintLimitCDC;
-  int PrintLimitTRD;
   
 		enum JOBTYPE{
 			JOB_NONE       = 0x0,
@@ -84,7 +83,6 @@ class DEVIOWorkerThread{
 		streampos pos;
 
 		bool  PARSE_F250;
-		bool  SKIP_F250_FORMAT_ERROR;
 		bool  PARSE_F125;
 		bool  PARSE_F1TDC;
 		bool  PARSE_CAEN1290TDC;
@@ -94,7 +92,6 @@ class DEVIOWorkerThread{
 		bool  PARSE_EVENTTAG;
 		bool  PARSE_TRIGGER;
 		bool  PARSE_SSP;
-	        bool  SKIP_SSP_FORMAT_ERROR;
 		bool  PARSE_GEMSRS;
 		bool  PARSE_HELICITY;
                 int   NSAMPLES_GEMSRS;

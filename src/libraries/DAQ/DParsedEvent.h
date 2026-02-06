@@ -63,6 +63,7 @@ using std::map;
 #include <DAQ/DBORptrs.h>
 #include <DAQ/DHelicityData.h>
 #include <DAQ/DHelicityDataTriggerTime.h>
+#include <DAQ/DBadHit.h>
 #include <PID/DVertex.h>
 #include <PID/DEventRFBunch.h>
 
@@ -111,7 +112,8 @@ using std::map;
 		X(DDIRCADCHit) \
 		X(DGEMSRSWindowRawData) \
 		X(DHelicityData) \
-		X(DHelicityDataTriggerTime) 
+		X(DHelicityDataTriggerTime) \
+		X(DBadHit)
 
 // These data types are optionally stored in EVIO files from specialized process
 // (e.g. calibration skims) and could be provided by standard analysis factories

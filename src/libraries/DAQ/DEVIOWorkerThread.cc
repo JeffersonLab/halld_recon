@@ -47,11 +47,8 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	// below.
 
 
-  PrintLimitFDC = 0;
-  PrintLimitCDC = 0;
-  PrintLimitTRD = 0;
-  
-
+        PrintLimitFDC = 0;
+        PrintLimitCDC = 0;
   
 	VERBOSE             = 0;
 	Nrecycled           = 0;     // Incremented in JEventSource_EVIOpp::Dispatcher()
@@ -66,7 +63,6 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	buff                = new uint32_t[buff_len];
 
 	PARSE_F250          = true;
-	SKIP_F250_FORMAT_ERROR = false;
 	PARSE_F125          = true;
 	PARSE_F1TDC         = true;
 	PARSE_CAEN1290TDC   = true;
@@ -76,7 +72,6 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	PARSE_EVENTTAG      = true;
 	PARSE_TRIGGER       = true;
 	PARSE_SSP           = true;
-	SKIP_SSP_FORMAT_ERROR = false;
 	PARSE_GEMSRS        = true;
 	PARSE_HELICITY      = true;
         NSAMPLES_GEMSRS     = 9;
@@ -1482,15 +1477,21 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 	// sanity checks
 	if(header_reserved != 0x18)  { 
 	  jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="
-	       <<slot<<"  reserved field = 0x"<<hex<<header_reserved<<dec<<"  (expected=0x18)"<<endl; 
-	  throw JExceptionDataFormat("Bad helicity decoder header data in DEVIOWorkerThread::ParseHelicityDecoderBank()",
-				     __FILE__, __LINE__);
+	       <<slot<<"  reserved field = 0x"<<hex<<header_reserved<<dec<<"  (expected=0x18)"<<endl;
+	  if(pe) pe->NEW_DBadHit(rocid,slot);
+	  iptr = iend;
+	  break;
+	  //throw JExceptionDataFormat("Bad helicity decoder header data in DEVIOWorkerThread::ParseHelicityDecoderBank()",
+	  //			     __FILE__, __LINE__);
 	}
 	if(header_number_words != 14)  { 
 	  jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="
 	       <<slot<<"  number words = "<<header_number_words<<"  (expected=14)"<<endl; 
-	  throw JExceptionDataFormat("Bad helicity decoder header payload in DEVIOWorkerThread::ParseHelicityDecoderBank()",
-				     __FILE__, __LINE__);
+	  if (pe) pe->NEW_DBadHit(rocid,slot);
+	  iptr = iend;
+	  break;
+	  //	  throw JExceptionDataFormat("Bad helicity decoder header payload in DEVIOWorkerThread::ParseHelicityDecoderBank()",
+	  //			     __FILE__, __LINE__);
 	}
 	
 	iptr++;
@@ -1606,14 +1607,19 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
       jerr << "Helicity Decoder unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
       cout.flush(); cerr.flush();
       DumpBinary(istart_helicity_data, iend, Nwords, iptr);
+      if(pe) pe->NEW_DBadHit(rocid,slot);
+      iptr = iend;
+      break;
       
       // 				if (continue_on_format_error) {  // comment out for now??
       // 					iptr = iend;
       // 					return;
       // 				}
       // 				else
-      throw JExceptionDataFormat("Unexpected word type in Helicity Decoder block! DEVIOWorkerThread::ParseHelicityDecoderBank()",
-				 __FILE__, __LINE__);
+
+      
+      //throw JExceptionDataFormat("Unexpected word type in Helicity Decoder block! DEVIOWorkerThread::ParseHelicityDecoderBank()",
+      //			 __FILE__, __LINE__);
     }
   }
   
@@ -1629,9 +1635,7 @@ void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr
 void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
   if(!PARSE_F250){ iptr = &iptr[(*iptr) + 1]; return; }
-  
-  int continue_on_format_error = SKIP_F250_FORMAT_ERROR;
-  
+    
   auto pe_iter = current_parsed_events.begin();
   DParsedEvent *pe = NULL;
   
@@ -1739,7 +1743,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	
 	// Event headers may be suppressed so determine event from hit data
 	if( (event_number_within_block > current_parsed_events.size()) ) {
-	  jerr << "Bad f250 event number for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
+	  jerr << "Bad f250 event number for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;	  
 	  throw JException("Bad f250 event number in DEVIOWorkerThread::Parsef250Bank()", __FILE__, __LINE__);}
 	pe_iter = current_parsed_events.begin();
 	advance( pe_iter, event_number_within_block-1 );
@@ -1753,12 +1757,11 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  if( (*iptr>>30) != 0x01) {
 	    jerr << "Bad f250 Pulse Data (word 1) for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
 	    if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, ((uint64_t)&iptr[3]-(uint64_t)istart_pulse_data)/4, iptr);
-	    if (continue_on_format_error) {
-	      iptr = iend;
-	      return;
-	    }
-	    else
-	      throw JException("Bad f250 Pulse Data! DEVIOWorkerThread::Parsef250Bank()", __FILE__, __LINE__);
+
+	    if (pe) pe->NEW_DBadHit(rocid,slot);   
+	    if (pe) jerr << "Created new BadHit to store rocid and slot" << endl;
+	    iptr = iend;
+	    return;
 	  }
 	  
 	  // from word 2
@@ -1773,22 +1776,20 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  if( (*iptr>>30) != 0x00){
 	    jerr << "Bad f250 Pulse Data (word 2) for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
 	    if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, 128, iptr);
-	    if (continue_on_format_error) {
-	      iptr = iend;
-	      return;
-	    }
-	    else
-	      throw JException("Bad f250 Pulse Data! DEVIOWorkerThread::Parsef250Bank()", __FILE__, __LINE__);
+	    if (pe) pe->NEW_DBadHit(rocid,slot);   
+	    if (pe) jerr << "Created new BadHit to store rocid and slot" << endl;
+            iptr = iend;
+	    return;
 	  }
 	  
 	  // from word 3
-	  uint32_t course_time               = (*iptr>>21) & 0x1FF;//< 4 ns/count
+	  uint32_t coarse_time               = (*iptr>>21) & 0x1FF;//< 4 ns/count
 	  uint32_t fine_time                 = (*iptr>>15) & 0x3F;//< 0.0625 ns/count
 	  uint32_t pulse_peak                = (*iptr>>3 ) & 0xFFF;
 	  bool     QF_vpeak_beyond_NSA       = (*iptr>>2 ) & 0x01;
 	  bool     QF_vpeak_not_found        = (*iptr>>1 ) & 0x01;
 	  bool     QF_bad_pedestal           = (*iptr>>0 ) & 0x01;
-	  if(VERBOSE>7) cout << "      FADC250 Pulse Data word 3(0x"<<hex<<*iptr<<dec<<")  course_time="<<course_time<<" fine_time="<<fine_time<<" pulse_peak="<<pulse_peak<<endl;
+	  if(VERBOSE>7) cout << "      FADC250 Pulse Data word 3(0x"<<hex<<*iptr<<dec<<")  coarse_time="<<coarse_time<<" fine_time="<<fine_time<<" pulse_peak="<<pulse_peak<<endl;
 	  
 	  // FIRMWARE BUG: If pulse integral was zero, this is an invalid bad pulse;
 	  // skip over bogus repeated pulse time repeats, and ignore it altogether.
@@ -1799,7 +1800,6 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	      ++iptr;
 	    }
 	    jerr << "Bug #1: bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
-	    continue_on_format_error = true;
 	    break;
 	  }
 	  
@@ -1813,7 +1813,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 				   , QF_overflow
 				   , QF_underflow
 				   , nsamples_over_threshold
-				   , course_time
+				   , coarse_time
 				   , fine_time
 				   , pulse_peak
 				   , QF_vpeak_beyond_NSA
@@ -1848,6 +1848,8 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     default:
       if(VERBOSE>7) cout << "      FADC250 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
       jerr << "FADC250 unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
+      if(pe) pe->NEW_DBadHit(rocid,slot);   
+      if(pe) jerr << "Created new BadHit to store rocid and slot" << endl;
       // make additional debugging output for special error types
       if(data_type == 11) {
 	cout << "          FADC slot mask = "<<" 0x"<<hex<<*(iptr+1)<<dec<<endl;
@@ -1857,13 +1859,8 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  cout << "          Associated with event number = "<<pe->event_number<<endl;
 	}
       }
-      
-      if (continue_on_format_error) {
-	iptr = iend;
-	return;
-      }
-      else
-	throw JExceptionDataFormat("Unexpected word type in fADC250 block!", __FILE__, __LINE__);
+      iptr = iend;
+      return;
     }
   }
   
@@ -1894,9 +1891,13 @@ void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid,
       break;
     }
     
-    if (iptr >= iend) jerr << "fa250 window raw data are incomplete - the collection of samples has been truncated!" << endl;
-    if (iptr >= iend) break;
-    
+    if (iptr >= iend) {
+      jerr << "fa250 window raw data are incomplete - the collection of samples has been truncated!" << endl;
+      if(pe) pe->NEW_DBadHit(rocid,slot);   
+      if(pe) jerr << "Created new BadHit to store rocid and slot" << endl;
+      break;
+    }
+
     bool invalid_1 = (*iptr>>29) & 0x1;
     bool invalid_2 = (*iptr>>13) & 0x1;
     uint16_t sample_1 = 0;
@@ -1920,6 +1921,8 @@ void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid,
   if(VERBOSE>7) cout << "      FADC250 Window Raw Data: size from header=" << window_width << " Nsamples found=" << wrd->samples.size() << endl;
   if( window_width != wrd->samples.size() ){
     jerr <<" FADC250 Window Raw Data number of samples does not match header! (" <<wrd->samples.size() << " != " << window_width << ") for rocid=" << rocid << " slot=" << slot << " channel=" << channel << endl;
+    if(pe) pe->NEW_DBadHit(rocid,slot);   
+    if(pe) jerr << "Created new BadHit to store rocid and slot" << endl;
   }
 }
 
@@ -1935,10 +1938,10 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
   
   uint32_t slot=0;
   uint32_t itrigger = -1;
-  uint32_t last_itrigger = -2;
-  uint32_t last_pulse_time_channel=0;
-  uint32_t last_slot = -1;
-  uint32_t last_channel = -1;    
+
+  uint32_t last_pulse_time_channel=0;  // old format
+  uint32_t last_slot = -1;   // old format
+  uint32_t last_channel = -1;     // old format
   
   // Loop over data words
   for(; iptr<iend; iptr++){
@@ -1963,7 +1966,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
       //slot_event_header = (*iptr>>22) & 0x1F;
       itrigger = (*iptr>>0) & 0xFFFF;
       pe = *pe_iter++;
-      if(VERBOSE>7) cout << "      FADC125 Event Header: itrigger="<<itrigger<<" last_itrigger="<<last_itrigger<<", rocid="<<rocid<<", slot="<<slot <<endl;
+      if(VERBOSE>7) cout << "      FADC125 Event Header: itrigger="<<itrigger<<", rocid="<<rocid<<", slot="<<slot <<endl;
       break;
     case 3: // Trigger Time
       {
@@ -2001,18 +2004,20 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	// Word 2:
 	++iptr;
 	if(iptr>=iend){
+	  if(pe) pe->NEW_DBadHit(rocid,slot);   
 	  PrintLimitCDC++;
 	  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
 	  if (PrintLimitCDC<10) {
-	    jerr << " Truncated f125 CDC hit (block ends before continuation word!)" << endl;
+	    jerr << " Truncated f125 CDC hit (block ends before continuation word!). BadHit created." << endl;
 	    continue;
 	  }
 	}
 	if( ((*iptr>>31) & 0x1) != 0 ){
+	  if(pe) pe->NEW_DBadHit(rocid,slot);   
 	  PrintLimitCDC++;
 	  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
 	  if (PrintLimitCDC<10)
-	    jerr << " Truncated f125 CDC hit (missing continuation word!)" << endl;
+	    jerr << " Truncated f125 CDC hit (missing continuation word!) BadHit created." << endl;
 	  --iptr;
 	  continue;
 	}
@@ -2067,16 +2072,21 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  // Word 2:
 	  ++iptr;
 	  if(iptr>=iend){
+	    if(pe) pe->NEW_DBadHit(rocid,slot);   
 	    PrintLimitFDC++;
 	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 	    if (PrintLimitFDC<10)
-	      jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
+	      jerr << " Truncated f125 FDC hit (block ends before continuation word!). BadHit created." << endl;
 	    break;
 	  }
 	  if( ((*iptr>>31) & 0x1) != 0 ){
+
+	    // most of the FDC missing cont word errs are caused by the pulse number (1) mis-recorded as 7 or 15
+            if (pe && (pulse_number ==1)) pe->NEW_DBadHit(rocid,slot);   
+	    
 	    PrintLimitFDC++;
 	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
-	    if (PrintLimitFDC<10)
+	    if (PrintLimitFDC < 10)
 	      jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
 	    --iptr; 
 	    break;
@@ -2162,13 +2172,16 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  // Word 2:
 	  ++iptr;
 	  if(iptr>=iend){
+	    if(pe) pe->NEW_DBadHit(rocid,slot);   
 	    PrintLimitFDC++;
 	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 	    if (PrintLimitFDC<10)
-	      jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
+	      jerr << " Truncated f125 FDC hit (block ends before continuation word!) BadHit created." << endl;
 	    break;
 	  }
 	  if( ((*iptr>>31) & 0x1) != 0 ){
+	    // most of the FDC missing cont word errs are caused by the pulse number (1) mis-recorded as 7 or 15
+            if (pe && (pulse_number ==1)) pe->NEW_DBadHit(rocid,slot);   
 	    PrintLimitFDC++;
 	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 	    if (PrintLimitFDC<10)
@@ -2253,7 +2266,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     case 13: // Event Trailer
     case 14: // Data not valid (empty module)
     case 15: // Filler (non-data) word
-      if(VERBOSE>7) cout << "      FADC125 ignored data type: " << data_type <<endl;
+      if(VERBOSE>7) cout << "      FADC125 ignored filler word, data type: " << data_type <<endl;
       break;
     default:
       if(VERBOSE>7) cout << "      FADC125 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
@@ -2286,11 +2299,14 @@ void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid,
         // Make sure this is a data continuation word, if not, stop here
         if(((*iptr>>31) & 0x1) != 0x0)break;
 
-        if (iptr >= iend) jerr << "fa125 window raw data are incomplete - the collection of samples has been truncated!" << endl;
-        if (iptr >= iend) break;
+        if (iptr >= iend) {
+	  jerr << "fa125 window raw data are incomplete - the collection of samples has been truncated!" << endl;
+          if(pe) pe->NEW_DBadHit(rocid,slot);   
+          if(pe) jerr << "Created new BadHit to store rocid and slot" << endl;	
+          break;
+	}
 	
         uint16_t sample_1 = (*iptr>>16) & 0xFFF;
-
         uint16_t sample_2 = 0;
         bool invalid_2 = (*iptr>>13) & 0x1;
 	if(!invalid_2)sample_2 = (*iptr>>0) & 0xFFF;
@@ -2395,10 +2411,12 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 					uint32_t channel      = F1TDC_channel(chip, chan_on_chip, modtype);
 					if(VERBOSE>7) cout << "      Found F1 data  : chip=" << chip << " chan=" << chan_on_chip  << " time=" << time << endl;
 					if(pe){
+					  
 						auto hit = pe->NEW_DF1TDCHit(rocid, slot, channel, itrigger, trig_time_f1header, time, *iptr, MODULE_TYPE(modtype));
 						if(hit->res_status==0){
 							static uint32_t Nwarnings=0;
-							if(Nwarnings<10) jerr << "ERROR: F1 TDC chip \"unlocked\" flag set!" << ((++Nwarnings == 10) ? " -- last warning":"") << endl;
+							if(Nwarnings<10) jerr << "ERROR: F1 TDC chip \"unlocked\" flag set! BadHit created." << ((++Nwarnings == 10) ? " -- last warning":"") << endl;
+                                                        pe->NEW_DBadHit(rocid,slot);   
 						}
 					}
 				}
@@ -2446,8 +2464,6 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 {
 	if(!PARSE_SSP){ iptr = &iptr[(*iptr) + 1]; return; }
 
-	int continue_on_format_error = SKIP_SSP_FORMAT_ERROR;
-	
 	auto pe_iter = current_parsed_events.begin();
 	DParsedEvent *pe = NULL;
 
@@ -2483,14 +2499,12 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 				//last_itrigger = itrigger;
 				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
 				if( slot != slot_bh ){
+				  
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;
-					
-					if (continue_on_format_error) {
-						iptr = iend;
-						return;
-					}	
-					else
-						throw JException("Bad SSP Data! DEVIOWorkerThread::ParseSSPBank()", __FILE__, __LINE__);
+				        if(pe) pe->NEW_DBadHit(rocid,slot_bh);   // assume block header was correct
+					if(pe) jerr << "Created new BadHit to store rocid " << rocid << " and slot " << slot_bh << endl;
+					iptr = iend;
+					return;
 				}
 				break;
 			case 3:  // Trigger Time
@@ -2559,6 +2573,7 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 						default:
 							jerr << "Bad value for adc_max_bits (" << adc_max_bits << ") from SSP/DIRC with rocid="
 							     << rocid << " slot=" << slot << "channel=" << channel_lower << "," << channel_upper << endl;
+							if(pe) pe->NEW_DBadHit(rocid,slot);  
 							break;
 					}
 					if( pe ) {
