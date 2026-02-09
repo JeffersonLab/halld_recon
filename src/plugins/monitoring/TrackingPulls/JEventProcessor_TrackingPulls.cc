@@ -7,7 +7,6 @@
 
 #include "JEventProcessor_TrackingPulls.h"
 #include "DANA/DEvent.h"
-#include "HistogramTools.h"
 #include "PID/DChargedTrack.h"
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DTrigger.h"
