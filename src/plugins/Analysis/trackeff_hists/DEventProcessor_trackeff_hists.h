@@ -50,9 +50,8 @@ class DEventProcessor_trackeff_hists:public JEventProcessor{
 		void EndRun() override;
 		void Finish() override;
 
-		void FillTrackInfo(const DKinematicData *kd, vector<track_info> &vti);
-		void GetTrackInfo(const DKinematicData *kd, track_info &ti, int &track_no);
-		void GetNhits(const DKinematicData *kd, int &Ncdc, int &Nfdc, int &track);
+  void FillTrackInfo(const DVector3 &mom,double chi_sq,double ndf,vector<const DCDCTrackHit*>&cdchits,vector<const DFDCPseudo*>&fdchits,vector<track_info> &vti);
+  void GetNhits(vector<const DCDCTrackHit*>&cdchits,vector<const DFDCPseudo*>&fdchits,int &Ncdc, int &Nfdc, int &track);
 
 		pthread_mutex_t mutex;
 		pthread_mutex_t rt_mutex;
