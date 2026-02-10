@@ -1199,8 +1199,9 @@ void DEVIOWorkerThread::ParseCAEN1190(uint32_t rocid, uint32_t* &iptr, uint32_t 
                 if(VERBOSE>7) cout << "         CAEN TDC Filler Word" << endl;
                 break;
             default:
-                cout << "Unknown datatype: 0x" << hex << type << " full word: "<< *iptr << dec << endl;
-					 throw JExceptionDataFormat("DEVIOWorkerThread::ParseCAEN1190(): Unknown data type for CAEN1190", __FILE__, __LINE__);
+                jerr << "CAEN TDC Unknown datatype: 0x" << hex << type << " full word: "<< *iptr << dec << endl;
+		if (pe) pe->NEW_DBadHit(rocid,slot);   
+		throw JExceptionDataFormat("DEVIOWorkerThread::ParseCAEN1190(): Unknown data type for CAEN1190", __FILE__, __LINE__);
         }
 
         iptr++;
@@ -1942,6 +1943,8 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
   uint32_t last_pulse_time_channel=0;  // old format
   uint32_t last_slot = -1;   // old format
   uint32_t last_channel = -1;     // old format
+
+  bool new_format = false;   // flag any old format words as bugs, if they follow new format data.  Cannot catch this for the first event though.
   
   // Loop over data words
   for(; iptr<iend; iptr++){
@@ -1989,6 +1992,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
       
     case 5: // CDC pulse data (new)  (GlueX-doc-2274-v8)
       {
+        new_format = true;
 	// Word 1:
 	uint32_t word1          = *iptr;
 	uint32_t channel        = (*iptr>>20) & 0x7F;
@@ -2054,6 +2058,8 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
       
     case 6: // FDC pulse data-integral (new)  (GlueX-doc-2274-v8)
       {
+	new_format = true;
+
 	// Word 1:
 	uint32_t word1          = *iptr;
 	uint32_t channel        = (*iptr>>20) & 0x7F;
@@ -2071,23 +2077,23 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
 	  // Word 2:
 	  ++iptr;
-	  if(iptr>=iend){
+	  
+	  if(iptr>=iend){  // no more words
 	    if(pe) pe->NEW_DBadHit(rocid,slot);   
-	    PrintLimitFDC++;
-	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
-	    if (PrintLimitFDC<10)
-	      jerr << " Truncated f125 FDC hit (block ends before continuation word!). BadHit created." << endl;
 	    break;
 	  }
-	  if( ((*iptr>>31) & 0x1) != 0 ){
-
+	  
+	  if( ((*iptr>>31) & 0x1) != 0 ){    // next word is not a continuation word
 	    // most of the FDC missing cont word errs are caused by the pulse number (1) mis-recorded as 7 or 15
-            if (pe && (pulse_number ==1)) pe->NEW_DBadHit(rocid,slot);   
+	    // only make a fuss about these if pulse_number=1
+	    if (pulse_number == 1) {
+              if (pe) pe->NEW_DBadHit(rocid,slot);   
 	    
-	    PrintLimitFDC++;
-	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
-	    if (PrintLimitFDC < 10)
-	      jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
+ 	      PrintLimitFDC++;
+	      if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
+	      if (PrintLimitFDC < 10) jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
+	    }
+	    
 	    --iptr; 
 	    break;
 	  }
@@ -2128,6 +2134,14 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     case 7: // Pulse Integral
       {
 	if(VERBOSE>7) cout << "      FADC125 Pulse Integral"<<endl;
+	
+	if (new_format) { // if new format data were found earlier, data appearing to be old format are in fact buggy
+	    if (pe) pe->NEW_DBadHit(rocid,slot);
+	    jerr << "Found an apparent fa125 old format Pulse Integral word following earlier new format data.  Created a BadHit" << endl;
+            // the continuation word ill be skipped at the start of the parsing loop
+	    break;
+	}
+	
 	uint32_t channel = (*iptr>>20) & 0x7F;
 	uint32_t sum = (*iptr>>0) & 0xFFFFF;
 	uint32_t quality_factor = 0;
@@ -2141,9 +2155,17 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	if( pe ) pe->NEW_Df125PulseIntegral(rocid, slot, channel, itrigger, pulse_number, quality_factor, sum, pedestal, nsamples_integral, nsamples_pedestal);
       }
       break;
+      
     case 8: // Pulse Time
       {
 	if(VERBOSE>7) cout << "      FADC125 Pulse Time"<<endl;
+	if (new_format) { // if new format data were found earlier, data appearing to be old format are in fact buggy
+	    if (pe) pe->NEW_DBadHit(rocid,slot);
+	    jerr << "Found an apparent fa125 old format Pulse Time word following earlier new format data.  Created a BadHit" << endl;
+            // the continuation word ill be skipped at the start of the parsing loop
+	    break;
+	}
+		
 	uint32_t channel = (*iptr>>20) & 0x7F;
 	uint32_t pulse_number = (*iptr>>18) & 0x03;
 	uint32_t pulse_time = (*iptr>>0) & 0xFFFF;
@@ -2155,6 +2177,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
       
     case 9: // FDC pulse data-peak (new)  (GlueX-doc-2274-v8)
       {
+	new_format = true;	
 	// Word 1:
 	uint32_t word1          = *iptr;
 	uint32_t channel        = (*iptr>>20) & 0x7F;
@@ -2173,19 +2196,20 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  ++iptr;
 	  if(iptr>=iend){
 	    if(pe) pe->NEW_DBadHit(rocid,slot);   
-	    PrintLimitFDC++;
-	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
-	    if (PrintLimitFDC<10)
-	      jerr << " Truncated f125 FDC hit (block ends before continuation word!) BadHit created." << endl;
 	    break;
 	  }
-	  if( ((*iptr>>31) & 0x1) != 0 ){
+
+	  if( ((*iptr>>31) & 0x1) != 0 ){    // next word is not a continuation word
 	    // most of the FDC missing cont word errs are caused by the pulse number (1) mis-recorded as 7 or 15
-            if (pe && (pulse_number ==1)) pe->NEW_DBadHit(rocid,slot);   
-	    PrintLimitFDC++;
-	    if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
-	    if (PrintLimitFDC<10)
-	      jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
+	    // only make a fuss about these if pulse_number=1
+	    if (pulse_number == 1) {
+              if (pe) pe->NEW_DBadHit(rocid,slot);   
+	    
+ 	      PrintLimitFDC++;
+	      if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
+	      if (PrintLimitFDC < 10) jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
+	    }
+
 	    --iptr;
 	    break;
 	  }
@@ -2253,6 +2277,12 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     case 10: // Pulse Pedestal (consistent with Beni's hand-edited version of Cody's document)
       {
 	if(VERBOSE>7) cout << "      FADC125 Pulse Pedestal"<<endl;
+	if (new_format) { // if new format data were found earlier, data appearing to be old format are in fact buggy
+	    if (pe) pe->NEW_DBadHit(rocid,slot);
+	    jerr << "Found an apparent fa125 old format Pulse Pedestal word following earlier new format data.  Created a BadHit" << endl;	    
+            // the continuation word ill be skipped at the start of the parsing loop
+	    break;
+	}
 	//channel = (*iptr>>20) & 0x7F;
 	uint32_t channel = last_pulse_time_channel; // not enough bits to hold channel number so rely on proximity to Pulse Time in data stream (see "FADC125 dataformat 250 modes.docx")
 	uint32_t pulse_number = (*iptr>>21) & 0x03;
@@ -2264,15 +2294,28 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
       break;
       
     case 13: // Event Trailer
-    case 14: // Data not valid (empty module)
-    case 15: // Filler (non-data) word
-      if(VERBOSE>7) cout << "      FADC125 ignored filler word, data type: " << data_type <<endl;
       break;
-    default:
+    case 14: // Data not valid (empty module)
+      break;
+    case 15: // Filler (non-data) word
+      break;
+
+    default:     
       if(VERBOSE>7) cout << "      FADC125 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+      if (pe) {
+	 pe->NEW_DBadHit(rocid,slot);
+	 jerr << "Event " <<  pe->event_number<<" contains fa125 unknown data type.  Created a BadHit" << endl;
+      }
       throw JExceptionDataFormat("Unexpected word type in fADC125 block!", __FILE__, __LINE__);
-      
+
+      /*for(; iptr<iend; iptr++){
+        cout <<  "0x"<<hex<<*iptr<<dec;
+	cout <<" first bit: "<<hex << ((*iptr>>27) & 0x1) << dec;
+	cout << " first 4 bits: 0x"<<hex << ((*iptr>>27) & 0xF) <<dec<<endl;
+	}*/
+
     }
+
   }
   
   // Chop off filler words
@@ -2448,6 +2491,7 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 					cerr<<endl;
 					if(iiptr > (iptr+4)) break;
 				}
+				if (pe) pe->NEW_DBadHit(rocid,slot);   				
 				throw JExceptionDataFormat("Unexpected word type in F1TDC block!", __FILE__, __LINE__);
 				break;
 		}
