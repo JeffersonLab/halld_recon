@@ -107,26 +107,39 @@ void DEVIOWorkerThread::Run(void)
 		// condition by checking the in_use flag is really set.
 		if( !in_use ) continue;
 
+
+		
 		try {
 
-			if( jobtype & JOB_SWAP       ) swap_bank(buff, buff, swap32(buff[0])+1 );
+		        uint32_t swapresult = 1;   // 
+			
+			if( jobtype & JOB_SWAP ) swapresult = swap_bank(buff, buff, swap32(buff[0])+1 );
 
 			if( jobtype & JOB_FULL_PARSE ) MakeEvents();
+
+			if (!swapresult) { // something went wrong inside swap_bank, data format problem eg bank the wrong size
+			    for (auto pe: parsed_event_pool) {
+			        pe->NEW_DBadHit(0,0);    
+			        ClearBadDataFormatEventTriggers(pe);  
+			    }
+			}
 			
 			if( jobtype & JOB_ASSOCIATE  ) LinkAllAssociations();
 			
 			if( !current_parsed_events.empty() ) PublishEvents();
             
 		} catch( JExceptionDataFormat &e ){
-			for(auto pe : parsed_event_pool) delete pe; // delete all parsed events any any objects they hold
-			parsed_event_pool.clear();
-			current_parsed_events.clear(); // (these are also in parsed_event_pool so were already deleted)
+
+		        for(auto pe : parsed_event_pool) delete pe; // delete all parsed events any any objects they hold
+		        parsed_event_pool.clear();
+		        current_parsed_events.clear(); // (these are also in parsed_event_pool so were already deleted)
 			jerr << "Data format error exception caught" << endl;
-			jerr << "Stack trace follows:" << endl;
-			jerr << e.GetStackTrace() << endl;
+			//jerr << "Stack trace follows:" << endl;
+			//jerr << e.GetStackTrace() << endl;
 			jerr << e.what() << endl;
 			japp->SetExitCode(10);
 			japp->Quit(true);
+
 		} catch (exception &e) {
 			jerr << e.what() << endl;
 			for(auto pe : parsed_event_pool) delete pe; // delete all parsed events any any objects they hold
@@ -441,7 +454,11 @@ void DEVIOWorkerThread::ParseEPICSbank(uint32_t* &iptr, uint32_t *iend)
 			// Unknown tag. Bail
 			_DBG_ << "Unknown tag 0x" << hex << tag << dec << " in EPICS event!" <<endl;
 			DumpBinary(istart, iend_epics, 32, &iptr[-1]);
-			throw JExceptionDataFormat("Unknown tag in EPICS bank in DEVIOWorkerThread::ParseEPICSbank() ", __FILE__, __LINE__);
+			//throw JExceptionDataFormat("Unknown tag in EPICS bank in DEVIOWorkerThread::ParseEPICSbank() ", __FILE__, __LINE__);
+			if (pe) {
+	                  pe->NEW_DBadHit(0,3);
+                        }
+
 		}
 		
 		iptr = &iptr[bank_len];
@@ -1067,12 +1084,15 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 
 			default:
 				jerr<<"Unknown module type ("<<det_id<<" = 0x" << hex << det_id << dec << " ) encountered" << endl;
+				ParseUnknownBank(rocid,iptr,iend_data_block_bank);
 //				if(VERBOSE>5){
 					cout << "----- First few words to help with debugging -----" << endl;
 					cout.flush(); cerr.flush();
 					DumpBinary(&iptr[-2], iend, 32, &iptr[-1]);
 //				}
-				throw JExceptionDataFormat("DEVIOWorkerThread::ParseDataBank(): Unknown bank type in EVIO", __FILE__, __LINE__);
+				jerr<<"Created BadHit and cleared physics triggers" << endl; 
+
+				 //throw JExceptionDataFormat("DEVIOWorkerThread::ParseDataBank(): Unknown bank type in EVIO", __FILE__, __LINE__);
 
 		}
 
@@ -1080,6 +1100,21 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 	}
 	
 }
+
+//----------------
+// ParseUnknownBank
+//----------------
+void DEVIOWorkerThread::ParseUnknownBank(uint32_t rocid, uint32_t* &iptr, uint32_t* iend)
+{
+    DParsedEvent *pe = current_parsed_events.back();
+    if (rocid <0) rocid=0;
+    if (rocid > 120) rocid = 0;
+    pe->NEW_DBadHit(0,0);    
+    ClearBadDataFormatEventTriggers(pe);  
+    iptr = iend;
+}
+
+
 
 //----------------
 // ParseTIBank
@@ -1121,10 +1156,10 @@ void DEVIOWorkerThread::ParseCAEN1190(uint32_t rocid, uint32_t* &iptr, uint32_t 
     // encounter them in so it is maintained in the
     // "events" container. The event_id order is kept
     // in the "event_id_order" vector.
-	map<uint32_t, DParsedEvent*> events_by_event_id;
+    map<uint32_t, DParsedEvent*> events_by_event_id;
 
-	auto pe_iter = current_parsed_events.begin();
-	DParsedEvent *pe = NULL;
+    auto pe_iter = current_parsed_events.begin();
+    DParsedEvent *pe = NULL;
 
     while(iptr<iend){
 
@@ -1200,8 +1235,9 @@ void DEVIOWorkerThread::ParseCAEN1190(uint32_t rocid, uint32_t* &iptr, uint32_t 
                 break;
             default:
                 jerr << "CAEN TDC Unknown datatype: 0x" << hex << type << " full word: "<< *iptr << dec << endl;
-		if (pe) pe->NEW_DBadHit(rocid,slot);   
-		throw JExceptionDataFormat("DEVIOWorkerThread::ParseCAEN1190(): Unknown data type for CAEN1190", __FILE__, __LINE__);
+		if (pe) pe->NEW_DBadHit(rocid,slot);
+		if (pe) ClearBadDataFormatEventTriggers(pe);  
+		//throw JExceptionDataFormat("DEVIOWorkerThread::ParseCAEN1190(): Unknown data type for CAEN1190", __FILE__, __LINE__);
         }
 
         iptr++;
@@ -1388,12 +1424,13 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
       
     case DModuleType::UNKNOWN:
     default:
-      jerr<<"Unknown module type ("<<mod_id<<") iptr=0x" << hex << iptr << dec << endl;
+      jerr<<"Unknown JLab module type ("<<mod_id<<") iptr=0x" << hex << iptr << dec << endl;
+      ParseUnknownBank(rocid,iptr,iend);
       
-      while(iptr<iend && ((*iptr) & 0xF8000000) != 0x88000000) iptr++; // Skip to JLab block trailer
+      /*      while(iptr<iend && ((*iptr) & 0xF8000000) != 0x88000000) iptr++; // Skip to JLab block trailer
       iptr++; // advance past JLab block trailer
       while(iptr<iend && *iptr == 0xF8000000) iptr++; // skip filler words after block trailer
-      throw JExceptionDataFormat("DEVIOWorkerThread::ParseJLabModuleData(): Unknown JLab module type", __FILE__, __LINE__);
+      throw JExceptionDataFormat("DEVIOWorkerThread::ParseJLabModuleData(): Unknown JLab module type", __FILE__, __LINE__);*/
       break;
     }
   }
@@ -1758,9 +1795,11 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  if( (*iptr>>30) != 0x01) {
 	    jerr << "Bad f250 Pulse Data (word 1) for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
 	    if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, ((uint64_t)&iptr[3]-(uint64_t)istart_pulse_data)/4, iptr);
-
-	    if (pe) pe->NEW_DBadHit(rocid,slot);   
-	    if (pe) jerr << "Created new BadHit to store rocid and slot" << endl;
+            if (pe) {
+	      pe->NEW_DBadHit(rocid,slot);
+	      ClearBadDataFormatEventTriggers(pe);  
+	      jerr << "Created new BadHit and cleared physics triggers" << endl;
+	    }
 	    iptr = iend;
 	    return;
 	  }
@@ -1777,8 +1816,11 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  if( (*iptr>>30) != 0x00){
 	    jerr << "Bad f250 Pulse Data (word 2) for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
 	    if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, 128, iptr);
-	    if (pe) pe->NEW_DBadHit(rocid,slot);   
-	    if (pe) jerr << "Created new BadHit to store rocid and slot" << endl;
+            if (pe) {
+	      pe->NEW_DBadHit(rocid,slot);
+	      ClearBadDataFormatEventTriggers(pe);  
+	      jerr << "Created new BadHit and cleared physics triggers" << endl;
+	    }
             iptr = iend;
 	    return;
 	  }
@@ -1849,9 +1891,13 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     default:
       if(VERBOSE>7) cout << "      FADC250 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
       jerr << "FADC250 unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
-      if(pe) pe->NEW_DBadHit(rocid,slot);   
-      if(pe) jerr << "Created new BadHit to store rocid and slot" << endl;
-      // make additional debugging output for special error types
+      if (pe) {
+        pe->NEW_DBadHit(rocid,slot);
+        ClearBadDataFormatEventTriggers(pe);  
+        jerr << "Created new BadHit and cleared physics triggers" << endl;
+      }
+
+        // make additional debugging output for special error types
       if(data_type == 11) {
 	cout << "          FADC slot mask = "<<" 0x"<<hex<<*(iptr+1)<<dec<<endl;
 	cout << "          Token status = "<<" 0x"<<hex<<*(iptr+2)<<dec<<endl;
@@ -2305,8 +2351,10 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
       if (pe) {
 	 pe->NEW_DBadHit(rocid,slot);
 	 jerr << "Event " <<  pe->event_number<<" contains fa125 unknown data type.  Created a BadHit" << endl;
+      	 ClearBadDataFormatEventTriggers(pe);
       }
-      throw JExceptionDataFormat("Unexpected word type in fADC125 block!", __FILE__, __LINE__);
+
+	//throw JExceptionDataFormat("Unexpected word type in fADC125 block!", __FILE__, __LINE__);
 
       /*for(; iptr<iend; iptr++){
         cout <<  "0x"<<hex<<*iptr<<dec;
@@ -2491,8 +2539,14 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 					cerr<<endl;
 					if(iiptr > (iptr+4)) break;
 				}
-				if (pe) pe->NEW_DBadHit(rocid,slot);   				
-				throw JExceptionDataFormat("Unexpected word type in F1TDC block!", __FILE__, __LINE__);
+
+				if (pe) {
+				  pe->NEW_DBadHit(rocid,slot);
+				  jerr << "Event " <<  pe->event_number<<"  Unexpected word type in F1TDC block!" << endl;
+				  ClearBadDataFormatEventTriggers(pe);
+				}
+
+				//throw JExceptionDataFormat("Unexpected word type in F1TDC block!", __FILE__, __LINE__);
 				break;
 		}
 	}	
@@ -3015,3 +3069,28 @@ void DEVIOWorkerThread::DumpBinary(const uint32_t *iptr, const uint32_t *iend, u
 }
 
 
+//----------------
+// ResetTrigger
+//----------------
+void DEVIOWorkerThread::ClearBadDataFormatEventTriggers(DParsedEvent *pe)
+{
+
+  /// Clear the physics trigger bit, so that the event will not be used for analysis,
+  /// but any BadHits generated for debugging will reach the plugins
+  // See https://github.com/JeffersonLab/halld_recon/blob/09d3b99d2c7dd359c551fd4505536712fc7d3e94/src/libraries/TRIGGER/DL1Trigger_factory.cc#L29
+
+    if(pe->vDBadHit.size() == 0) return;
+
+
+    for (auto cri : pe->vDCODAROCInfo )  {
+      
+	// Only interested in Trigger Supervisor 
+	if(cri->rocid != 1) continue;
+	
+        cri->misc[0] = 0;  	// Global Trigger Processor latch word
+			      //cri->misc[1]; // Front Panel latch word
+    }
+
+    if(VERBOSE>7) cout << "      Cleared physics trigger bits for badly formatted event, number " << pe->event_number << endl;
+		
+ }
