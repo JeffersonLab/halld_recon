@@ -8,48 +8,45 @@
 #include "DChargedTrack_factory_PreSelect.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DChargedTrack_factory_PreSelect::init(void)
+void DChargedTrack_factory_PreSelect::Init()
 {
-	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
-		//This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.  
+	// Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory.
+	// This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.
 	SetFactoryFlag(NOT_OBJECT_OWNER);
 	dResourcePool_ChargedTrack = new DResourcePool<DChargedTrack>();
 	dResourcePool_ChargedTrack->Set_ControlParams(50, 20, 400, 4000, 0);
 
 	dMinTrackingFOM = -1.0;
 	dHasDetectorMatchFlag = true; //require tracks to have a detector match
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DChargedTrack_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DChargedTrack_factory_PreSelect::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	gPARMS->SetDefaultParameter("PRESELECT:MIN_TRACKING_FOM", dMinTrackingFOM);
-	gPARMS->SetDefaultParameter("PRESELECT:HAS_DETECTOR_MATCH_FLAG", dHasDetectorMatchFlag);
-
-	return NOERROR;
+	auto app = event->GetJApplication();
+	app->SetDefaultParameter("PRESELECT:MIN_TRACKING_FOM", dMinTrackingFOM);
+	app->SetDefaultParameter("PRESELECT:HAS_DETECTOR_MATCH_FLAG", dHasDetectorMatchFlag);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DChargedTrack_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DChargedTrack_factory_PreSelect::Process(const std::shared_ptr<const JEvent>& event)
 {
 	//Clear objects from last event
 	dResourcePool_ChargedTrack->Recycle(dCreated);
 	dCreated.clear();
-	_data.clear();
+	mData.clear();
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks);
+	event->Get(locChargedTracks);
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	event->GetSingle(locDetectorMatches);
 
 	//cut on min-tracking-FOM and has-detector-match
 	for(size_t loc_i = 0; loc_i < locChargedTracks.size(); ++loc_i)
@@ -74,14 +71,13 @@ jerror_t DChargedTrack_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, u
 
 		// keep the particle if any of the hypotheses survive
 		if(locChargedTrack_PreSelected->dChargedTrackHypotheses.size() > 0)
-			_data.push_back(const_cast<DChargedTrack*>(locChargedTrack_PreSelected));
+			Insert(const_cast<DChargedTrack*>(locChargedTrack_PreSelected));
 		else
 			delete locChargedTrack_PreSelected;
 
 	}
 
-	dCreated = _data;
-	return NOERROR;
+	dCreated = mData;
 }
 
 bool DChargedTrack_factory_PreSelect::Cut_HasDetectorMatch(const DChargedTrackHypothesis* locChargedTrackHypothesis, const DDetectorMatches* locDetectorMatches) const
@@ -100,22 +96,20 @@ bool DChargedTrack_factory_PreSelect::Cut_TrackingFOM(const DChargedTrackHypothe
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DChargedTrack_factory_PreSelect::erun(void)
+void DChargedTrack_factory_PreSelect::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DChargedTrack_factory_PreSelect::fini(void)
+void DChargedTrack_factory_PreSelect::Finish()
 {
-	for(auto locHypo : _data)
+	for(auto locHypo : mData)
 		Recycle_Hypothesis(locHypo);
-	_data.clear();
+	mData.clear();
 	delete dResourcePool_ChargedTrack;
-	return NOERROR;
 }
 

@@ -6,18 +6,18 @@
 //
 
 #include "JEventProcessor_cpp_skim.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include "DANA/DEvent.h"
 
 
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_cpp_skim());
+	app->Add(new JEventProcessor_cpp_skim());
 }
 } // "C"
 
@@ -39,29 +39,29 @@ JEventProcessor_cpp_skim::~JEventProcessor_cpp_skim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_cpp_skim::init(void)
+void JEventProcessor_cpp_skim::Init(void)
 {
 	// This is called once at program startup. 
 
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_cpp_skim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_cpp_skim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
   num_epics_events = 0;
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_cpp_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_cpp_skim::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
@@ -79,26 +79,26 @@ jerror_t JEventProcessor_cpp_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 
   const DEventWriterEVIO* locEventWriterEVIO = NULL;
-  loop->GetSingle(locEventWriterEVIO);
+  event->GetSingle(locEventWriterEVIO);
   if(locEventWriterEVIO == NULL) {
     cerr << "from JEventProcessor_cpp_skim: locEventWriterEVIO is not available" << endl;
     exit(1);
   }
 
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) { // Begin of Run event
-    locEventWriterEVIO->Write_EVIOEvent(loop,"cpp_2c");
-    return NOERROR;
+  if(GetStatusBit(event, kSTATUS_BOR_EVENT)) { // Begin of Run event
+    locEventWriterEVIO->Write_EVIOEvent(event,"cpp_2c");
+    return; //NOERROR;
   }
 
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT)) { // Epics event
-    if(num_epics_events<5) locEventWriterEVIO->Write_EVIOEvent(loop,"cpp_2c");
+  if(GetStatusBit(event, kSTATUS_EPICS_EVENT)) { // Epics event
+    if(num_epics_events<5) locEventWriterEVIO->Write_EVIOEvent(event,"cpp_2c");
      ++num_epics_events;
-    return NOERROR;
+    return; //NOERROR;
   }
 
 
 	vector<const DTrackWireBased*> tracks;
-	loop->Get(tracks);
+	event->Get(tracks);
 
   int npos = 0, nneg = 0;
 	for(unsigned int j=0; j<tracks.size(); j++) {
@@ -117,28 +117,28 @@ jerror_t JEventProcessor_cpp_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
     if(q<-0.1) ++nneg;
   }
 
-  if(npos*nneg) locEventWriterEVIO->Write_EVIOEvent(loop,"cpp_2c");
+  if(npos && nneg) locEventWriterEVIO->Write_EVIOEvent(event,"cpp_2c");
 
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_cpp_skim::erun(void)
+void JEventProcessor_cpp_skim::EndRun(void)
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_cpp_skim::fini(void)
+void JEventProcessor_cpp_skim::Finish(void)
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
+	return; //NOERROR;
 }
 

@@ -8,7 +8,6 @@
 #include "DEventProcessor_trk_profile.h"
 #include <TRACKING/DTrackFitter.h>
 #include <PID/DChargedTrack.h>
-using namespace jana;
 
 
 const DTrackFitter *fitter = NULL;
@@ -18,7 +17,7 @@ const DTrackFitter *fitter = NULL;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_trk_profile());
+	app->Add(new DEventProcessor_trk_profile());
 }
 } // "C"
 
@@ -40,41 +39,41 @@ DEventProcessor_trk_profile::~DEventProcessor_trk_profile()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_trk_profile::init(void)
+void DEventProcessor_trk_profile::Init()
 {
 	// Create histograms here
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_trk_profile::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_trk_profile::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_trk_profile::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_trk_profile::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Get DChargedTrack objects to activate tracking
 	vector<const DChargedTrack*> charged_tracks;
-	loop->Get(charged_tracks);
+	event->Get(charged_tracks);
 
 	// Get the track fitter object for use later
-	if(!fitter)loop->GetSingle(fitter);
+	if(!fitter)event->GetSingle(fitter);
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_trk_profile::erun(void)
+void DEventProcessor_trk_profile::EndRun()
 {
 	if(fitter){
 		map<string, prof_time::time_diffs> prof_times;
@@ -96,15 +95,15 @@ jerror_t DEventProcessor_trk_profile::erun(void)
 		cout<<endl;
 	}
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_trk_profile::fini(void)
+void DEventProcessor_trk_profile::Finish()
 {
 
-	return NOERROR;
+	return;
 }
 

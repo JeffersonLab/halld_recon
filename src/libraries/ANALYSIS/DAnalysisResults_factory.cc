@@ -10,23 +10,22 @@
 #endif
 
 #include "DAnalysisResults_factory.h"
+#include "DANA/DStatusBits.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DAnalysisResults_factory::init(void)
+void DAnalysisResults_factory::Init()
 {
 	dDebugLevel = 0;
 	dMinThrownMatchFOM = 5.73303E-7;
 	dResourcePool_KinFitResults.Set_ControlParams(100, 20, 300, 500, 0);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DAnalysisResults_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void DAnalysisResults_factory::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// As originally written, this function and the classes that it calls work
 	// correctly when running over just one run, but when data spanning multiple
@@ -37,10 +36,11 @@ jerror_t DAnalysisResults_factory::brun(JEventLoop *locEventLoop, int32_t runnum
 	// a JEventLoop object (i.e. most of it).  In subsequent brun() calls, only the
 	// run-dependent settings are updated
 	// - sdobbs -- 28 August 2019
-	dApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
 
-	gPARMS->SetDefaultParameter("ANALYSIS:DEBUG_LEVEL", dDebugLevel);
-	gPARMS->SetDefaultParameter("ANALYSIS:KINFIT_CONVERGENCE", dRequireKinFitConvergence);
+	auto app = locEvent->GetJApplication();
+	jLockService = app->GetService<JLockService>();
+	app->SetDefaultParameter("ANALYSIS:DEBUG_LEVEL", dDebugLevel);
+	app->SetDefaultParameter("ANALYSIS:KINFIT_CONVERGENCE", dRequireKinFitConvergence);
 
 	// Use the existence of dSourceComboer as a switch to see if this is the first time
 	// in the function
@@ -48,11 +48,11 @@ jerror_t DAnalysisResults_factory::brun(JEventLoop *locEventLoop, int32_t runnum
 	if(dSourceComboer == nullptr)
 		locInitialize = true;
 
-	auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
+	auto locReactions = DAnalysis::Get_Reactions(locEvent);
 	Check_ReactionNames(locReactions);
 
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	//MAKE CONTROL HISTOGRAMS
 	dIsMCFlag = !locMCThrowns.empty();
@@ -71,11 +71,11 @@ jerror_t DAnalysisResults_factory::brun(JEventLoop *locEventLoop, int32_t runnum
 			if(locInitialize) {
 				if(dDebugLevel > 0)
 					cout << "Initialize Action # " << loc_j + 1 << ": " << locAnalysisAction->Get_ActionName() << " of reaction: " << locReaction->Get_ReactionName() << endl;
-				locAnalysisAction->Initialize(locEventLoop);
+				locAnalysisAction->Initialize(locEvent);
 			} else {
 				if(dDebugLevel > 0)
 					cout << "Update Action # " << loc_j + 1 << ": " << locAnalysisAction->Get_ActionName() << " of reaction: " << locReaction->Get_ReactionName() << endl;
-				locAnalysisAction->Run_Update(locEventLoop);
+				locAnalysisAction->Run_Update(locEvent);
 			}
 		}
 
@@ -93,32 +93,32 @@ jerror_t DAnalysisResults_factory::brun(JEventLoop *locEventLoop, int32_t runnum
 		if(locInitialize) {
 			// only create object the first time through this function
 			dTrueComboCuts[locReactions[loc_i]] = new DCutAction_TrueCombo(locReactions[loc_i], dMinThrownMatchFOM, locExactMatchFlag);
-			dTrueComboCuts[locReactions[loc_i]]->Initialize(locEventLoop);
+			dTrueComboCuts[locReactions[loc_i]]->Initialize(locEvent);
 		} else {
-			dTrueComboCuts[locReactions[loc_i]]->Run_Update(locEventLoop);
+			dTrueComboCuts[locReactions[loc_i]]->Run_Update(locEvent);
 		}
 	}
 
 	if(locInitialize) {
 		//CREATE FIT UTILS AND FITTER
-		dKinFitUtils = new DKinFitUtils_GlueX(locEventLoop);
+		dKinFitUtils = new DKinFitUtils_GlueX(locEvent);
 		dKinFitter = new DKinFitter(dKinFitUtils);
 
-		gPARMS->SetDefaultParameter("KINFIT:DEBUG_LEVEL", dKinFitDebugLevel);
+		app->SetDefaultParameter("KINFIT:DEBUG_LEVEL", dKinFitDebugLevel);
 		dKinFitter->Set_DebugLevel(dKinFitDebugLevel);
 
 		//CREATE COMBOERS
-		dSourceComboer = new DSourceComboer(locEventLoop);
+		dSourceComboer = new DSourceComboer(locEvent);
 		dParticleComboCreator = dSourceComboer->Get_ParticleComboCreator();
 	} else {
 		// if we are returning for another round, just update the object settings
-		dKinFitUtils->Set_RunDependent_Data(locEventLoop);
-		//dKinFitter->Set_RunDependent_Data(locEventLoop);  // NO CURRENT RUN DEPENDENCE
-		dSourceComboer->Set_RunDependent_Data(locEventLoop);
-		dParticleComboCreator->Set_RunDependent_Data(locEventLoop);  // assume dSourceComber "owns" this object
+		dKinFitUtils->Set_RunDependent_Data(locEvent);
+		//dKinFitter->Set_RunDependent_Data(locEvent);  // NO CURRENT RUN DEPENDENCE
+		dSourceComboer->Set_RunDependent_Data(locEvent);
+		dParticleComboCreator->Set_RunDependent_Data(locEvent);  // assume dSourceComber "owns" this object
 	}
 	
-	return NOERROR;
+	return;
 }
 
 void DAnalysisResults_factory::Check_ReactionNames(vector<const DReaction*>& locReactions) const
@@ -151,7 +151,7 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 	TH1D* loc1DHist;
 	TH2D* loc2DHist;
 
-	dApplication->RootWriteLock(); //to prevent undefined behavior due to directory changes, etc.
+	jLockService->RootWriteLock(); //to prevent undefined behavior due to directory changes, etc.
 	{
 		TDirectory* locCurrentDir = gDirectory;
 
@@ -303,13 +303,13 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 		}
 		locCurrentDir->cd();
 	}
-	dApplication->RootUnLock(); //unlock
+	jLockService->RootUnLock(); //unlock
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
+void DAnalysisResults_factory::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 #ifdef VTRACE
 	VT_TRACER("DAnalysisResults_factory::evnt()");
@@ -321,10 +321,10 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 		return NOERROR;
 
 	if(dDebugLevel > 0)
-		cout << "Analyze event: " << eventnumber << endl;
+		cout << "Analyze event: " << locEvent->GetEventNumber() << endl;
 
 	// GET REACTION LIST
-	auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
+	auto locReactions = DAnalysis::Get_Reactions(locEvent);
 
 	// Count MC events differently - we want to keep track of the number of events which pass trigger requirements 
 	int locStartIndex = 0;
@@ -332,26 +332,26 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 
 	if(dIsMCFlag) {   // CHANGE
 		const DBeamPhoton *locBeamPhoton = nullptr;
-		locEventLoop->GetSingle(locBeamPhoton, "MCGEN");
+		locEvent->GetSingle(locBeamPhoton, "MCGEN");
 		if(locBeamPhoton != nullptr) 
 			locTrueBeamE = locBeamPhoton->energy();
 	}
 
 	//CHECK EVENT TYPE
-	if(!locEventLoop->GetJEvent().GetStatusBit(kSTATUS_PHYSICS_EVENT))
-		return NOERROR;
+	if(!locEvent->GetSingle<DStatusBits>()->GetStatusBit(kSTATUS_PHYSICS_EVENT))
+		return;
 
 	//CHECK TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
-	locEventLoop->GetSingle(locTrigger);
+	locEvent->GetSingle(locTrigger);
 	bool locIsPhysics = locTrigger->Get_IsPhysicsEvent();
 	// if we're dealing with MC events, let the non-trigger events come through so that we can
 	// see how many pass the trigger
 	if(!dIsMCFlag && !locIsPhysics)    
-		return NOERROR;
+		return;
 
 	//RESET
-	dSourceComboer->Reset_NewEvent(locEventLoop);
+	dSourceComboer->Reset_NewEvent(locEvent);
 	dKinFitUtils->Reset_NewEvent();
 	dKinFitter->Reset_NewEvent();
 	dConstraintResultsMap.clear();
@@ -361,13 +361,13 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 		decltype(dCreatedKinFitResults)().swap(dCreatedKinFitResults); //should have been reset by recycler, but just in case
 	}
 
-	//auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
+	//auto locReactions = DAnalysis::Get_Reactions(locEvent);
 	if(dDebugLevel > 0)
 		cout << "# DReactions: " << locReactions.size() << endl;
 
 	//GET VERTEX INFOS
 	vector<const DReactionVertexInfo*> locReactionVertexInfos;
-	locEventLoop->Get(locReactionVertexInfos);
+	locEvent->Get(locReactionVertexInfos);
 
 	for(auto& locReactionVertexInfo : locReactionVertexInfos)
 	{
@@ -382,10 +382,10 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 			auto& locReaction = locReactionComboPair.first;
 			auto& locCombos = locReactionComboPair.second;
 //if(!locCombos.empty())
-//cout << endl << "Event, #combos: " << locEventLoop->GetJEvent().GetEventNumber() << ", " << locCombos.size() << endl << endl;
+//cout << endl << "Event, #combos: " << locEvent->GetEventNumber() << ", " << locCombos.size() << endl << endl;
 
 			//FIND TRUE COMBO (IF MC)
-			auto locTrueParticleCombo = Find_TrueCombo(locEventLoop, locReaction, locCombos);
+			auto locTrueParticleCombo = Find_TrueCombo(locEvent, locReaction, locCombos);
 			int locLastActionTrueComboSurvives = (locTrueParticleCombo != nullptr) ? -1 : -2; //-1/-2: combo does/does-not exist
 
 			// for MC events, count events which have a combo but did not pass the trigger
@@ -411,6 +411,7 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 			auto locActions = locReaction->Get_AnalysisActions();
 			for(auto& locAction : locActions)
 				locAction->Reset_NewEvent();
+			locStartIndex = 0; // reset MC trigger studies for next reaction
 
 			if(dDebugLevel > 0)
 				cout << "Combos built, execute actions for reaction: " << locReaction->Get_ReactionName() << endl;
@@ -424,7 +425,7 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 			{
 				//EXECUTE PRE-KINFIT ACTIONS
 				size_t locActionIndex = 0;
-				if(!Execute_Actions(locEventLoop, locIsKinFit, locCombo, locTrueParticleCombo, true, locActions, locActionIndex, locNumCombosSurvived, locLastActionTrueComboSurvives))
+				if(!Execute_Actions(locEvent, locIsKinFit, locCombo, locTrueParticleCombo, true, locActions, locActionIndex, locNumCombosSurvived, locLastActionTrueComboSurvives))
 					continue; //failed: go to the next combo
 
 				//KINFIT IF REQUESTED
@@ -435,7 +436,7 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 					++(locNumCombosSurvived[locActionIndex + 1]);
 
 				//EXECUTE POST-KINFIT ACTIONS
-				if(!Execute_Actions(locEventLoop, locIsKinFit, locPostKinFitCombo, locTrueParticleCombo, false, locActions, locActionIndex, locNumCombosSurvived, locLastActionTrueComboSurvives))
+				if(!Execute_Actions(locEvent, locIsKinFit, locPostKinFitCombo, locTrueParticleCombo, false, locActions, locActionIndex, locNumCombosSurvived, locLastActionTrueComboSurvives))
 					continue; //failed: go to the next combo
 
 				//SAVE COMBO
@@ -446,7 +447,7 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 				cout << "Action loop completed, # surviving combos: " << locAnalysisResults->Get_NumPassedParticleCombos() << endl;
 
 			//FILL HISTOGRAMS
-			japp->WriteLock("DAnalysisResults");
+			jLockService->WriteLock("DAnalysisResults");
 			{
 				dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(locStartIndex); //initial: a new event
 				if(locTrueBeamE > 0.) {
@@ -507,17 +508,15 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 					}
 				}
 			}
-			japp->Unlock("DAnalysisResults");
+			jLockService->Unlock("DAnalysisResults");
 
 			//SAVE ANALYSIS RESULTS
-			_data.push_back(locAnalysisResults);
+			Insert(locAnalysisResults);
 		}
 	}
-
-	return NOERROR;
 }
 
-bool DAnalysisResults_factory::Execute_Actions(JEventLoop* locEventLoop, bool locIsKinFit, const DParticleCombo* locCombo, const DParticleCombo* locTrueCombo, bool locPreKinFitFlag, const vector<DAnalysisAction*>& locActions, size_t& locActionIndex, vector<size_t>& locNumCombosSurvived, int& locLastActionTrueComboSurvives)
+bool DAnalysisResults_factory::Execute_Actions(const std::shared_ptr<const JEvent>& locEvent, bool locIsKinFit, const DParticleCombo* locCombo, const DParticleCombo* locTrueCombo, bool locPreKinFitFlag, const vector<DAnalysisAction*>& locActions, size_t& locActionIndex, vector<size_t>& locNumCombosSurvived, int& locLastActionTrueComboSurvives)
 {
 	for(; locActionIndex < locActions.size(); ++locActionIndex)
 	{
@@ -526,7 +525,7 @@ bool DAnalysisResults_factory::Execute_Actions(JEventLoop* locEventLoop, bool lo
 			return true; //need to kinfit first!!!
 		if(dDebugLevel >= 10)
 			cout << "Execute action " << locActionIndex << ": " << locAction->Get_ActionName() << endl;
-		if(!(*locAction)(locEventLoop, locCombo))
+		if(!(*locAction)(locEvent, locCombo))
 			return false; //failed
 
 		auto locComboSurvivedIndex = (locIsKinFit && !locPreKinFitFlag) ? locActionIndex + 2 : locActionIndex + 1;
@@ -537,7 +536,7 @@ bool DAnalysisResults_factory::Execute_Actions(JEventLoop* locEventLoop, bool lo
 	return true;
 }
 
-const DParticleCombo* DAnalysisResults_factory::Find_TrueCombo(JEventLoop *locEventLoop, const DReaction* locReaction, const vector<const DParticleCombo*>& locCombos)
+const DParticleCombo* DAnalysisResults_factory::Find_TrueCombo(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, const vector<const DParticleCombo*>& locCombos)
 {
 	//find the true particle combo
 	if(dTrueComboCuts.find(locReaction) == dTrueComboCuts.end())
@@ -545,7 +544,7 @@ const DParticleCombo* DAnalysisResults_factory::Find_TrueCombo(JEventLoop *locEv
 	auto locAction = dTrueComboCuts[locReaction];
 	for(auto& locCombo : locCombos)
 	{
-		if((*locAction)(locEventLoop, locCombo))
+		if((*locAction)(locEvent, locCombo))
 			return locCombo;
 	}
 	return nullptr;

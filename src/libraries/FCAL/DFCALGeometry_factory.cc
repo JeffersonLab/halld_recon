@@ -8,33 +8,36 @@
 #include <cassert>
 
 #include "DFCALGeometry_factory.h"
+
+#include <JANA/JEvent.h>
+
 #include "DFCALGeometry.h"
 #include <HDGEOMETRY/DGeometry.h>
+#include <DANA/DGeometryManager.h>
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DFCALGeometry_factory::brun(JEventLoop *loop, int32_t runnumber)
+void DFCALGeometry_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	assert( _data.size() == 0 );
-
-	DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	const DGeometry *geom = dapp->GetDGeometry(runnumber);
-  
-	flags = PERSISTANT;
-	_data.push_back( new DFCALGeometry(geom) );
-	
-	return NOERROR;
+	assert( mData.empty() );
+	SetFactoryFlag(PERSISTENT);
+	auto runnumber = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto geo_manager = app->GetService<DGeometryManager>();
+	auto dgeom = geo_manager->GetDGeometry(runnumber);
+	Insert(new DFCALGeometry(dgeom));
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DFCALGeometry_factory::erun(void)
+void DFCALGeometry_factory::EndRun()
 {
-	for(unsigned int i=0; i<_data.size(); i++)delete _data[i];
-	_data.clear();
-	
-	return NOERROR;
+	// We have to manually clear and delete the contents of mData because PERSISTENT flag was set.
+	for (auto geom : mData) {
+		delete geom;
+	}
+	mData.clear();
 }
 

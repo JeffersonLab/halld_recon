@@ -13,22 +13,22 @@ using namespace evio;
 
 #include "DMagneticFieldMapPS2DMap.h"
 
-//class DApplication;
 #include <HDGEOMETRY/DGeometry.h>
-#include <DANA/DApplication.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/Calibrations/JResource.h>
 
 //---------------------------------
 // DMagneticFieldMapPS2DMap    (Constructor)
 //---------------------------------
-DMagneticFieldMapPS2DMap::DMagneticFieldMapPS2DMap(JApplication *japp, int32_t runnumber, string namepath)
+DMagneticFieldMapPS2DMap::DMagneticFieldMapPS2DMap(JApplication *app, int32_t runnumber, string namepath)
 {
-	jcalib = japp->GetJCalibration(runnumber);
-	jresman = japp->GetJResourceManager(runnumber);
-	DApplication *dapp = dynamic_cast<DApplication *>(japp);
-	geom = dapp->GetDGeometry(runnumber);
+
+	auto calib_svc = app->GetService<JCalibrationManager>();
+	jcalib = calib_svc->GetJCalibration(runnumber);
+	jresman = calib_svc->GetResource(runnumber);
+	geom = app->GetService<DGeometryManager>()->GetDGeometry(runnumber);
 	
-	JParameterManager *jparms = japp->GetJParameterManager();
-	jparms->SetDefaultParameter("PSBFIELD_MAP", namepath);
+	app->SetDefaultParameter("PSBFIELD_MAP", namepath);
 	
 	int Npoints = ReadMap(namepath, runnumber); 
 	if(Npoints==0){
@@ -75,20 +75,20 @@ int DMagneticFieldMapPS2DMap::ReadMap(string namepath, int32_t runnumber, string
   // built into a run-dependent geometry framework, but for now
   // we do it this way. 
   if(!jcalib){
-    jerr << "ERROR: jcalib pointer is NULL in DMagneticFieldMapPS2DMap::ReadMap() !" << endl;
+    jerr << "ERROR: jcalib pointer is NULL in DMagneticFieldMapPS2DMap::ReadMap() !" << jendl;
     return 0;
   }
   if(!jresman){
-    jerr << "ERROR: jresman pointer is NULL in DMagneticFieldMapPS2DMap::ReadMap() !" << endl;
+    jerr << "ERROR: jresman pointer is NULL in DMagneticFieldMapPS2DMap::ReadMap() !" << jendl;
     return 0;
   }
   if(!geom){
-    jerr << "ERROR: geom pointer is NULL in DMagneticFieldMapPS2DMap::ReadMap() !" << endl;
+    jerr << "ERROR: geom pointer is NULL in DMagneticFieldMapPS2DMap::ReadMap() !" << jendl;
     return 0;
   }
   
-  jout<<endl;
-  jout<<"Reading Pair Spectrometer Magnetic field map from "<<namepath<<" ..."<<endl;
+  jout<<jendl;
+  jout<<"Reading Pair Spectrometer Magnetic field map from "<<namepath<<" ..."<<jendl;
   vector< vector<float> > Bmap;
 
   // Try getting it as a JANA resource.

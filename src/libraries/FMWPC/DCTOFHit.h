@@ -9,9 +9,8 @@
 #define _DCTOFHit_
 
 #include "JANA/JObject.h"
-#include "JANA/JFactory.h"
 
-class DCTOFHit:public jana::JObject{
+class DCTOFHit:public JObject{
  public:
   JOBJECT_PUBLIC(DCTOFHit);
 
@@ -21,12 +20,12 @@ class DCTOFHit:public jana::JObject{
   double t; ///< time in ns
   double t_adc;///< time in ns from FADC
    
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "bar", "%d", bar);
-    AddString(items, "end", "%d", end);
-    AddString(items, "dE", "%12.4f", dE);
-    AddString(items, "t", "%12.4f", t);
-    AddString(items, "t_adc", "%12.4f", t_adc);
+  void Summarize(JObjectSummary& summary) const {
+    summary.add(bar, "bar", "%d");
+    summary.add(end, "end", "%d");
+    summary.add(dE, "dE", "%12.4f");
+    summary.add(t, "t", "%12.4f");
+    summary.add(t_adc, "t_adc", "%12.4f");
   }
 };
 

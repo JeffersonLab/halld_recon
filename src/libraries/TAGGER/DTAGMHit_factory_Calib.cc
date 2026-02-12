@@ -18,7 +18,9 @@ using namespace std;
 #include <DAQ/Df250PulsePedestal.h>
 #include <DAQ/Df250Config.h>
 
-using namespace jana;
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 
 const int DTAGMHit_factory_Calib::k_fiber_dead;
 const int DTAGMHit_factory_Calib::k_fiber_good;
@@ -26,23 +28,25 @@ const int DTAGMHit_factory_Calib::k_fiber_bad;
 const int DTAGMHit_factory_Calib::k_fiber_noisy;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTAGMHit_factory_Calib::init(void)
+void DTAGMHit_factory_Calib::Init()
 {
+	auto app = GetApplication();
+
     DELTA_T_ADC_TDC_MAX = 10.0; // ns
     USE_ADC = 0;
     CUT_FACTOR = 1;
-    gPARMS->SetDefaultParameter("TAGMHit:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX,
+    app->SetDefaultParameter("TAGMHit:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX,
                 "Maximum difference in ns between a (calibrated) fADC time and"
                 " F1TDC time for them to be matched in a single hit");
-    gPARMS->SetDefaultParameter("TAGMHit:CUT_FACTOR", CUT_FACTOR, "TAGM pulse integral cut factor, 0 = no cut");
-    gPARMS->SetDefaultParameter("TAGMHit:USE_ADC", USE_ADC, "Use ADC times in TAGM");
+    app->SetDefaultParameter("TAGMHit:CUT_FACTOR", CUT_FACTOR, "TAGM pulse integral cut factor, 0 = no cut");
+    app->SetDefaultParameter("TAGMHit:USE_ADC", USE_ADC, "Use ADC times in TAGM");
 
     CHECK_FADC_ERRORS = true;
-    gPARMS->SetDefaultParameter("TAGMHit:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
+    app->SetDefaultParameter("TAGMHit:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
 
-    // initialize calibration constants
+    // Initialize calibration constants
     fadc_a_scale = 0;
     fadc_t_scale = 0;
     t_base = 0;
@@ -59,14 +63,18 @@ jerror_t DTAGMHit_factory_Calib::init(void)
         }
     }
 
-    return NOERROR;
+    return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTAGMHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTAGMHit_factory_Calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	auto runnumber = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
     static set<int> runs_announced;
@@ -84,34 +92,34 @@ jerror_t DTAGMHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnu
     t_base           = 0.;      // ns
 
     pthread_mutex_unlock(&print_mutex);
-    if(print_messages) jout << "In DTAGMHit_factory_Calib, loading constants..." << std::endl;
+    if(print_messages) jout << "In DTAGMHit_factory_Calib, loading constants..." << jendl;
 
     // load base time offset
     map<string,double> base_time_offset;
-    if (eventLoop->GetCalib("/PHOTON_BEAM/microscope/base_time_offset",base_time_offset))
-        jout << "Error loading /PHOTON_BEAM/microscope/base_time_offset !" << endl;
+    if (calibration->Get("/PHOTON_BEAM/microscope/base_time_offset",base_time_offset))
+        jout << "Error loading /PHOTON_BEAM/microscope/base_time_offset !" << jendl;
     if (base_time_offset.find("TAGM_BASE_TIME_OFFSET") != base_time_offset.end())
         t_base = base_time_offset["TAGM_BASE_TIME_OFFSET"];
     else
-        jerr << "Unable to get TAGM_BASE_TIME_OFFSET from /PHOTON_BEAM/microscope/base_time_offset !" << endl;
+        jerr << "Unable to get TAGM_BASE_TIME_OFFSET from /PHOTON_BEAM/microscope/base_time_offset !" << jendl;
     if (base_time_offset.find("TAGM_TDC_BASE_TIME_OFFSET") != base_time_offset.end())
         t_tdc_base = base_time_offset["TAGM_TDC_BASE_TIME_OFFSET"];
     else
-        jerr << "Unable to get TAGM_TDC_BASE_TIME_OFFSET from /PHOTON_BEAM/microscope/base_time_offset !" << endl;
+        jerr << "Unable to get TAGM_TDC_BASE_TIME_OFFSET from /PHOTON_BEAM/microscope/base_time_offset !" << jendl;
 
-    if (load_ccdb_constants("fadc_gains", "gain", fadc_gains) &&
-    load_ccdb_constants("fadc_pedestals", "pedestal", fadc_pedestals) &&
-    load_ccdb_constants("fadc_time_offsets", "offset", fadc_time_offsets) &&
-    load_ccdb_constants("tdc_time_offsets", "offset", tdc_time_offsets) &&
-    load_ccdb_constants("fiber_quality", "code", fiber_quality) &&
-    load_ccdb_constants("tdc_timewalk_corrections", "c0", tw_c0) &&
-    load_ccdb_constants("tdc_timewalk_corrections", "c1", tw_c1) &&
-    load_ccdb_constants("tdc_timewalk_corrections", "c2", tw_c2) &&
-    load_ccdb_constants("tdc_timewalk_corrections", "threshold", tw_c3) &&
-    load_ccdb_constants("tdc_timewalk_corrections", "reference", ref) &&
-    load_ccdb_constants("integral_cuts", "integral", int_cuts))
+    if (load_ccdb_constants(calibration, "fadc_gains", "gain", fadc_gains) &&
+    load_ccdb_constants(calibration, "fadc_pedestals", "pedestal", fadc_pedestals) &&
+    load_ccdb_constants(calibration, "fadc_time_offsets", "offset", fadc_time_offsets) &&
+    load_ccdb_constants(calibration, "tdc_time_offsets", "offset", tdc_time_offsets) &&
+    load_ccdb_constants(calibration, "fiber_quality", "code", fiber_quality) &&
+    load_ccdb_constants(calibration, "tdc_timewalk_corrections", "c0", tw_c0) &&
+    load_ccdb_constants(calibration, "tdc_timewalk_corrections", "c1", tw_c1) &&
+    load_ccdb_constants(calibration, "tdc_timewalk_corrections", "c2", tw_c2) &&
+    load_ccdb_constants(calibration, "tdc_timewalk_corrections", "threshold", tw_c3) &&
+    load_ccdb_constants(calibration, "tdc_timewalk_corrections", "reference", ref) &&
+    load_ccdb_constants(calibration, "integral_cuts", "integral", int_cuts))
     {
-        return NOERROR;
+        return;
     }
 
     // The meaning of the integral_cuts table is as follows.
@@ -134,13 +142,14 @@ jerror_t DTAGMHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnu
     // the above logic is applied, which makes it possible to suspend
     // or reverse the logic of the above cuts at reconstruction time.
 
-    return UNRECOVERABLE_ERROR;
+    // return UNRECOVERABLE_ERROR;
+    throw JException("DTAGMHit_factory_Calib: Unrecoverable error");
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTAGMHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 {
     /// Generate DTAGMHit object for each DTAGMDigiHit object.
     /// This is where the first set of calibration constants
@@ -150,20 +159,22 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// Note that this code does NOT get called for simulated
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
+    
+    vector<DTAGMHit *> results, filtered_results;
 
     // extract the TAGM geometry
     vector<const DTAGMGeometry*> tagmGeomVect;
-    eventLoop->Get( tagmGeomVect );
+    event->Get( tagmGeomVect );
     if (tagmGeomVect.size() < 1)
-        return OBJECT_NOT_AVAILABLE;
+        return; // OBJECT_NOT_AVAILABLE;
     const DTAGMGeometry& tagmGeom = *(tagmGeomVect[0]);
 
     const DTTabUtilities* locTTabUtilities = nullptr;
-    loop->GetSingle(locTTabUtilities);
+    event->GetSingle(locTTabUtilities);
 
     // First loop over all TAGMDigiHits and make DTAGMHits out of them
     vector<const DTAGMDigiHit*> digihits;
-    loop->Get(digihits);
+    event->Get(digihits);
     for (unsigned int i=0; i < digihits.size(); i++) {
         const DTAGMDigiHit *digihit = digihits[i];
 
@@ -179,7 +190,7 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
 
         // nsamples_pedestal should always be positive for valid data - err on the side of caution for now
         if(nsamples_pedestal == 0) {
-            jerr << "DTAGMDigiHit with nsamples_pedestal == 0 !   Event = " << eventnumber << endl;
+            jerr << "DTAGMDigiHit with nsamples_pedestal == 0 !   Event = " << event->GetEventNumber() << jendl;
             continue;
         }
 
@@ -231,17 +242,22 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
            hit->has_fADC=true;
 
         hit->AddAssociatedObject(digihit);
-        _data.push_back(hit);
+        results.push_back(hit);
     }
 
     // Next, loop over TDC hits, matching them to the existing fADC hits
     // where possible and updating their time information. If no match is
     // found, then create a new hit with just the TDC info.
     vector<const DTAGMTDCDigiHit*> tdcdigihits;
-    loop->Get(tdcdigihits);
+    event->Get(tdcdigihits);
     for (unsigned int i=0; i < tdcdigihits.size(); i++) {
         const DTAGMTDCDigiHit *digihit = tdcdigihits[i];
 
+        // throw away hits from bad or noisy fibers
+        int quality = fiber_quality[digihit->row][digihit->column];
+        if (quality == k_fiber_dead || quality == k_fiber_bad || quality == k_fiber_noisy)
+            continue;
+        
         // Apply calibration constants here
         int row = digihit->row;
         int column = digihit->column;
@@ -250,12 +266,12 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         // Look for existing hits to see if there is a match
         // or create new one if there is no match
         DTAGMHit *hit = nullptr;
-        for (unsigned int j=0; j < _data.size(); ++j) {
-            if (_data[j]->row == row && _data[j]->column == column &&
-                _data[j]->time_fadc != 0 && _data[j]->integral != 0 &&
-                fabs(T - _data[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
+        for (unsigned int j=0; j < results.size(); ++j) {
+            if (results[j]->row == row && results[j]->column == column &&
+                results[j]->time_fadc != 0 && results[j]->integral != 0 &&
+                fabs(T - results[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
             {
-                hit = _data[j];
+                hit = results[j];
             }
         }
         if (hit == nullptr) {
@@ -270,7 +286,8 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
             hit->integral = 0;
             hit->pulse_peak = 0;
             hit->has_fADC=false;
-            _data.push_back(hit);
+            
+        	results.push_back(hit);
         }
         // Interpret a negative value on the integral cut to require
         // an associated tdc hit in place of an the pulse integral cut.
@@ -290,7 +307,7 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         double c3 = tw_c3[row][column];
         double t0 = ref[row][column];
         //pp_0 = TH*pow((pp_0-c0)/c1,1/c2);
-        if (P > 0) {
+        if (P+c3 > 0) {
            //T -= c1*(pow(P/TH,c2)-pow(pp_0/TH,c2));
            T -= c1*pow(1/(P+c3),c2) - (t0 - c0);
         }
@@ -301,39 +318,46 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         
         hit->AddAssociatedObject(digihit);
     }
+    
+    for(auto hit : results)
+    	if(hit->has_fADC==true || hit->has_TDC==true)
+    		filtered_results.push_back(hit);
 
-    return NOERROR;
+    Set(filtered_results);
+
+    return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTAGMHit_factory_Calib::erun(void)
+void DTAGMHit_factory_Calib::EndRun()
 {
-    return NOERROR;
+    return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTAGMHit_factory_Calib::fini(void)
+void DTAGMHit_factory_Calib::Finish()
 {
-    return NOERROR;
+    return;
 }
 
 //---------------------
 // load_ccdb_constants
 //---------------------
 bool DTAGMHit_factory_Calib::load_ccdb_constants(
+		JCalibration* calibration,
         std::string table_name,
         std::string column_name,
         double result[TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1])
 {
     std::vector< std::map<std::string, double> > table;
     std::string ccdb_key = "/PHOTON_BEAM/microscope/" + table_name;
-    if (eventLoop->GetCalib(ccdb_key, table))
+    if (calibration->Get(ccdb_key, table))
     {
-        jout << "Error loading " << ccdb_key << " from ccdb!" << std::endl;
+        jout << "Error loading " << ccdb_key << " from ccdb!" << jendl;
         return false;
     }
     for (unsigned int i=0; i < table.size(); ++i) {

@@ -13,36 +13,35 @@ using namespace std;
 #include "DTrackWireBased_factory_StraightLine.h"
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h>
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrackWireBased_factory_StraightLine::init(void)
+void DTrackWireBased_factory_StraightLine::Init()
 {
+  auto app = GetApplication();
   CDC_MATCH_CUT=2.;
-  gPARMS->SetDefaultParameter("TRKFIT:CDC_MATCH_CUT",CDC_MATCH_CUT); 
+  app->SetDefaultParameter("TRKFIT:CDC_MATCH_CUT",CDC_MATCH_CUT); 
   FDC_MATCH_CUT=1.25;
-  gPARMS->SetDefaultParameter("TRKFIT:FDC_MATCH_CUT",FDC_MATCH_CUT); 
-
-  return NOERROR;
+  app->SetDefaultParameter("TRKFIT:FDC_MATCH_CUT",FDC_MATCH_CUT); 
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackWireBased_factory_StraightLine::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTrackWireBased_factory_StraightLine::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // Get the particle ID algorithms
-  eventLoop->GetSingle(dPIDAlgorithm);
+  event->GetSingle(dPIDAlgorithm);
   
   // Get pointer to TrackFinder object 
   vector<const DTrackFinder *> finders;
-  eventLoop->Get(finders);
+  event->Get(finders);
   
   if(finders.size()<1){
     _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-    return RESOURCE_UNAVAILABLE;
+    return; // RESOURCE_UNAVAILABLE;
   }
   
    // Drop the const qualifier from the DTrackFinder pointer
@@ -50,40 +49,38 @@ jerror_t DTrackWireBased_factory_StraightLine::brun(jana::JEventLoop *eventLoop,
   
   // Get pointer to DTrackFitter object that actually fits a track
   vector<const DTrackFitter *> fitters;
-  eventLoop->Get(fitters,"StraightTrack");
+  event->Get(fitters,"StraightTrack");
   if(fitters.size()<1){
     _DBG_<<"Unable to get a DTrackFitter object!"<<endl;
-    return RESOURCE_UNAVAILABLE;
+    return; // RESOURCE_UNAVAILABLE;
   }
   
   // Drop the const qualifier from the DTrackFitter pointer
   fitter = const_cast<DTrackFitter*>(fitters[0]);
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackWireBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrackWireBased_factory_StraightLine::Process(const std::shared_ptr<const JEvent>& event)
 {
   // Get candidates
    vector<const DTrackCandidate*> candidates;
-   loop->Get(candidates);
+   event->Get(candidates);
 
    // Get hits
    vector<const DCDCTrackHit *>cdchits;
-   loop->Get(cdchits);
+   event->Get(cdchits);
    vector<const DFDCPseudo *>fdchits;
-   loop->Get(fdchits);
+   event->Get(fdchits);
   
    for (unsigned int i=0;i<candidates.size();i++){
      // Reset the fitter
      fitter->Reset();
 
      const DTrackCandidate *cand=candidates[i];
-     DVector3 pos=cand->position();
-     DVector3 dir=cand->momentum();
+     DVector3 pos=cand->dPosition;
+     DVector3 dir=cand->dMomentum;
      // Select hits that belong to the track
      for (unsigned int j=0;j<cdchits.size();j++){
        double d=finder->FindDoca(pos,dir,cdchits[j]->wire->origin,
@@ -143,26 +140,22 @@ jerror_t DTrackWireBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
        track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(cdchits_on_track);
        track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(fdchits_on_track);
 
-       _data.push_back(track);
+       Insert(track);
      }
    }
-
-   return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrackWireBased_factory_StraightLine::erun(void)
+void DTrackWireBased_factory_StraightLine::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTrackWireBased_factory_StraightLine::fini(void)
+void DTrackWireBased_factory_StraightLine::Finish()
 {
-	return NOERROR;
 }
 

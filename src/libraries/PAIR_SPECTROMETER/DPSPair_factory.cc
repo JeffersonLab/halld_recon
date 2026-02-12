@@ -16,7 +16,7 @@ using namespace std;
 
 #include "DPSPair_factory.h"
 #include "DPSHit.h"
-using namespace jana;
+
 
 inline bool SortByTimeDifference(const DPSPair* pair1, const DPSPair* pair2)
 {
@@ -28,42 +28,41 @@ inline bool SortByTimeDifference(const DPSPair* pair1, const DPSPair* pair2)
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DPSPair_factory::init(void)
+void DPSPair_factory::Init()
 {
+  auto app = GetApplication();
+
   DELTA_T_CLUST_MAX  =  10.0; // ns
   DELTA_T_PAIR_MAX   =  10.0; // ns
 
-  gPARMS->SetDefaultParameter("PSPair:DELTA_T_CLUST_MAX",DELTA_T_CLUST_MAX,
+  app->SetDefaultParameter("PSPair:DELTA_T_CLUST_MAX",DELTA_T_CLUST_MAX,
 			      "Maximum difference in ns between hits in a cluster"
 			      " in left and right arm of fine PS");
 
-  gPARMS->SetDefaultParameter("PSPair:DELTA_T_PAIR_MAX",DELTA_T_PAIR_MAX,
+  app->SetDefaultParameter("PSPair:DELTA_T_PAIR_MAX",DELTA_T_PAIR_MAX,
 			      "Maximum difference in ns between a pair of hits"
 			      " in left and right arm of fine PS");  
-  
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DPSPair_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DPSPair_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DPSPair_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DPSPair_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 
   // get fine pair spectrometer hits
   vector<const DPSHit*> hits;
-  loop->Get(hits);
+  event->Get(hits);
 
   int debug = 0;
 
@@ -357,7 +356,7 @@ jerror_t DPSPair_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 			clust_right[jj].column, clust_right[jj].pulse_peak, clust_right[jj].integral, clust_right[jj].time_tile, 
 			clust_right[jj].hit_index.size(), clust_right[jj].energy, clust_right[jj].time );
 	  
-	  _data.push_back(pair);
+	  Insert(pair);
 	  	  
 	}
 	
@@ -366,25 +365,21 @@ jerror_t DPSPair_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     }    
   } 
 
-  sort(_data.begin(),_data.end(), SortByTimeDifference);
-
-  return NOERROR;
+  sort(mData.begin(),mData.end(), SortByTimeDifference);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DPSPair_factory::erun(void)
+void DPSPair_factory::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DPSPair_factory::fini(void)
+void DPSPair_factory::Finish()
 {
-  return NOERROR;
 }
 
 bool  DPSPair_factory::SortByTile(const tile &tile1, const tile &tile2)

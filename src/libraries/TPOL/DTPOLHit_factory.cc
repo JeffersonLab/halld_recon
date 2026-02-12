@@ -14,19 +14,17 @@
  */
 
 #include <iostream>
-#include <iomanip>
 #include <limits>
-#include <cmath>
+
+#include <JANA/JEvent.h>
 
 #include <TRIGGER/DL1Trigger.h>
 #include <TPOL/DTPOLSectorDigiHit.h>
 #include <TPOL/DTPOLRingDigiHit.h>
-#include <DAQ/Df250PulsePedestal.h>
-#include <DAQ/Df250Config.h>
 #include "DTPOLHit_factory.h"
 
 using namespace std;
-using namespace jana;
+
 
 // static consts need initialization
 const double DTPOLHit_factory::SECTOR_DIVISION = 360. / DTPOLHit_factory::NSECTORS;  ///< hardcoded! should be read from CCDB
@@ -46,12 +44,13 @@ bool DTPOLRingHit_fadc_cmp(const DTPOLRingDigiHit *a,const DTPOLRingDigiHit *b){
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTPOLHit_factory::init(void)
+void DTPOLHit_factory::Init()
 {
+  auto app = GetApplication();
   ADC_THRESHOLD = 40.0;
-  gPARMS->SetDefaultParameter("TPOLHit:ADC_THRESHOLD", ADC_THRESHOLD,
+  app->SetDefaultParameter("TPOLHit:ADC_THRESHOLD", ADC_THRESHOLD,
 			      "ADC pulse-height threshold");
   
   /// set the base conversion scales
@@ -59,13 +58,12 @@ jerror_t DTPOLHit_factory::init(void)
   a_scale    = 0.0001;
   t_scale    = 0.0625; // 62.5 ps/count
   
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTPOLHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTPOLHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   /// Read in calibration constants: ALL THE CODE IS COMMENTED OUT!
 
@@ -106,16 +104,14 @@ jerror_t DTPOLHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   // adc_time_offsets (adc_timing_offsets)
   if (eventLoop->GetCalib("/TPOL/adc_timing_offsets", adc_time_offsets))
   jout << "Error loading /TPOL/adc_timing_offsets !" << endl;*/
-
-  return NOERROR;
 }
 
 
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTPOLHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTPOLHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   
   /// Generate DTPOLHit object for each DTPOLSectorDigiHit
@@ -133,7 +129,7 @@ jerror_t DTPOLHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     loop->Get(sectordigihits);
     sort(sectordigihits.begin(),sectordigihits.end(),DTPOLSectorHit_fadc_cmp);
     vector<const DTPOLRingDigiHit*> ringdigihits;
-    loop->Get(ringdigihits);
+    event->Get(ringdigihits);
     sort(ringdigihits.begin(),ringdigihits.end(),DTPOLRingHit_fadc_cmp);
     char str[256];
     // Loop over SECTOR hits
@@ -195,7 +191,7 @@ jerror_t DTPOLHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   const DL1Trigger *trig_words = NULL;
   uint32_t trig_mask, fp_trig_mask;
   try {
-    loop->GetSingle(trig_words);
+    event->GetSingle(trig_words);
   } catch(...) {};
   if (trig_words) {
     trig_mask = trig_words->trig_mask;
@@ -209,12 +205,12 @@ jerror_t DTPOLHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   /// skim PS triggers is by default applied and hardcoded!!!! what for?
   if (trig_bits!=8) {
-    return NOERROR;
+    return; // NOERROR;
   }
   
   // get raw samples and make TPOL hits
   vector<const DTPOLSectorDigiHit*> sectordigihits;
-  loop->Get(sectordigihits);
+  event->Get(sectordigihits);
   sort(sectordigihits.begin(),sectordigihits.end(),DTPOLSectorHit_fadc_cmp);
   
   // Loop over SECTOR hits
@@ -272,25 +268,22 @@ jerror_t DTPOLHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->dE = pulse_height;
     hit->t = t_scale*GetPulseTime(samplesvector,w_min,w_max,ADC_THRESHOLD);
     hit->AddAssociatedObject(windowraw);
-    _data.push_back(hit);
+    Insert(hit);
   }
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTPOLHit_factory::erun(void)
+void DTPOLHit_factory::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTPOLHit_factory::fini(void)
+void DTPOLHit_factory::Finish()
 {
-  return NOERROR;
 }
 
 double DTPOLHit_factory::GetPhi(int sector)

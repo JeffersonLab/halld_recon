@@ -9,7 +9,6 @@
 using namespace std;
 
 #include "ECAL/DECALDigiHit.h"
-#include "ECAL/DECALGeometry.h"
 #include "ECAL/DECALHit_factory.h"
 
 #include "DAQ/Df250PulseIntegral.h"
@@ -17,39 +16,56 @@ using namespace std;
 
 #include "DAQ/Df250Config.h"
 #include "TTAB/DTTabUtilities.h"
+#include "DANA/DEvent.h"
 
-using namespace jana;
+
 
 //----------------
 // Constructor
 //----------------
-DECALHit_factory::DECALHit_factory(){
-
-  HIT_DEBUG    =  0;
-  DB_PEDESTAL  =  1;    //   1  -  take from DB
-                        //   0  -  event-by-event pedestal subtraction
-  
-  gPARMS->SetDefaultParameter("ECAL:HIT_DEBUG",    HIT_DEBUG);
-  gPARMS->SetDefaultParameter("ECAL:DB_PEDESTAL",  DB_PEDESTAL);
-
+DECALHit_factory::DECALHit_factory()
+{
 }
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DECALHit_factory::init(void)
+void DECALHit_factory::Init(void)
 {
-    // initialize calibration tables
-    vector< vector<double > > gains_tmp(DECALGeometry::kECALBlocksTall, 
-            vector<double>(DECALGeometry::kECALBlocksWide));
-    vector< vector<double > > pedestals_tmp(DECALGeometry::kECALBlocksTall, 
-            vector<double>(DECALGeometry::kECALBlocksWide));
+    auto app = GetApplication();
+    HIT_DEBUG    =  0;
+    DB_PEDESTAL  =  1;    //   1  -  take from DB
+                          //   0  -  event-by-event pedestal subtraction
 
-    vector< vector<double > > time_offsets_tmp(DECALGeometry::kECALBlocksTall, 
-            vector<double>(DECALGeometry::kECALBlocksWide));
-    vector< vector<double > > adc_offsets_tmp(DECALGeometry::kECALBlocksTall, 
-            vector<double>(DECALGeometry::kECALBlocksWide));
+    app->SetDefaultParameter("ECAL:HIT_DEBUG",    HIT_DEBUG);
+    app->SetDefaultParameter("ECAL:DB_PEDESTAL",  DB_PEDESTAL);
+
+    unsigned int ch=0;
+    for (int row=0;row<kECALBlocksTall;row++){
+      for (int col=0;col<kECALBlocksWide;col++){
+	m_row[ch]=row;
+	m_column[ch]=col;
+	m_channelNumber[row][col]=ch;
+	m_activeBlock[row][col]=true;
+	if (col>=kECALMidBlock-1 && col<=kECALMidBlock
+	    && row>=kECALMidBlock-1 && row<=kECALMidBlock){
+	  m_activeBlock[row][col]=false;
+        }
+	ch++;
+      }
+    }
+  
+    // initialize calibration tables
+    vector< vector<double > > gains_tmp(kECALBlocksTall, 
+            vector<double>(kECALBlocksWide));
+    vector< vector<double > > pedestals_tmp(kECALBlocksTall, 
+            vector<double>(kECALBlocksWide));
+
+    vector< vector<double > > time_offsets_tmp(kECALBlocksTall, 
+            vector<double>(kECALBlocksWide));
+    vector< vector<double > > adc_offsets_tmp(kECALBlocksTall, 
+            vector<double>(kECALBlocksWide));
 
     gains         =   gains_tmp;
     pedestals     =   pedestals_tmp;
@@ -62,18 +78,32 @@ jerror_t DECALHit_factory::init(void)
     
     base_time  = 0;
     
+    INSTALLED = false;
 
-    return NOERROR;
+    APPLY_WALK_CORRECTION=true;
+    app->SetDefaultParameter("ECAL:APPLY_WALK_CORRECTION",
+			     APPLY_WALK_CORRECTION);
+
+    return; //NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DECALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DECALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/ECAL/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		INSTALLED = false;
+	else
+		INSTALLED = true;
+		
+	if(!INSTALLED) return;
 
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+    int runnumber = event->GetRunNumber();
     static set<int> runs_announced;
     pthread_mutex_lock(&print_mutex);
     //    bool print_messages = false;
@@ -83,14 +113,6 @@ jerror_t DECALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     }
     pthread_mutex_unlock(&print_mutex);
 
-    // extract the ECAL Geometry
-    vector<const DECALGeometry*> ecalGeomVect;
-    eventLoop->Get( ecalGeomVect );
-    if (ecalGeomVect.size() < 1)
-      return OBJECT_NOT_AVAILABLE;
-    const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
-
-
     vector< double > ecal_gains_ch;
     vector< double > ecal_pedestals_ch;
     vector< double > time_offsets_ch;
@@ -99,7 +121,7 @@ jerror_t DECALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     // load scale factors
     map<string,double> scale_factors;
 
-    if (eventLoop->GetCalib("/ECAL/digi_scales", scale_factors))
+    if (DEvent::GetCalib(event, "/ECAL/digi_scales", scale_factors))
         jout << "Error loading /ECAL/digi_scales !" << endl;
     if (scale_factors.find("ADC_EN_SCALE") != scale_factors.end())
         adc_en_scale = scale_factors["ADC_EN_SCALE"];
@@ -111,29 +133,44 @@ jerror_t DECALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
         jerr << "Unable to get ADC_TIME_SCALE from /ECAL/digi_scales !" << endl;
 
     map<string,double> base_time_offset;
-    if (eventLoop->GetCalib("/ECAL/base_time_offset",base_time_offset))
+    if (DEvent::GetCalib(event, "/ECAL/base_time_offset",base_time_offset))
         jout << "Error loading /ECAL/base_time_offset !" << endl;
     if (base_time_offset.find("BASE_TIME") != base_time_offset.end())
         base_time = base_time_offset["BASE_TIME"];
     else
         jerr << "Unable to get BASE_TIME from /ECAL/base_time_offset !" << endl;
 
+    // load time walk parameters
+    map<string,double> time_walk_parms;
 
-    if (eventLoop->GetCalib("/ECAL/gains", ecal_gains_ch))
+    if (DEvent::GetCalib(event, "/ECAL/time_walk", time_walk_parms))
+        jout << "Error loading /ECAL/time_walk !" << endl;
+    if (time_walk_parms.find("par1") != time_walk_parms.end()){
+      time_walk_par1 = time_walk_parms["par1"];
+    }
+    else
+        jerr << "Unable to get par1 from /ECAL/time_walk !" << endl;
+    if (scale_factors.find("par2") != time_walk_parms.end()){
+      time_walk_par2 = time_walk_parms["par2"];
+    }
+    else
+        jerr << "Unable to get par2 from /ECAL/time_walk !" << endl;
+
+    if (DEvent::GetCalib(event, "/ECAL/gains", ecal_gains_ch))
       jout << "DECALHit_factory: Error loading /ECAL/gains !" << endl;
-    if (eventLoop->GetCalib("/ECAL/pedestals", ecal_pedestals_ch))
+    if (DEvent::GetCalib(event, "/ECAL/pedestals", ecal_pedestals_ch))
       jout << "DECALHit_factory: Error loading /ECAL/pedestals !" << endl;
 
-    if (eventLoop->GetCalib("/ECAL/timing_offsets", time_offsets_ch))
+    if (DEvent::GetCalib(event, "/ECAL/timing_offsets", time_offsets_ch))
         jout << "Error loading /ECAL/timing_offsets !" << endl;
-    if (eventLoop->GetCalib("/ECAL/adc_offsets", adc_offsets_ch))
+    if (DEvent::GetCalib(event, "/ECAL/adc_offsets", adc_offsets_ch))
         jout << "Error loading /ECAL/adc_offsets !" << endl;
 
 
-    LoadECALConst(gains, ecal_gains_ch, ecalGeom);
-    LoadECALConst(pedestals, ecal_pedestals_ch, ecalGeom);
-    LoadECALConst(time_offsets, time_offsets_ch, ecalGeom);
-    LoadECALConst(adc_offsets, adc_offsets_ch, ecalGeom);
+    LoadECALConst(gains, ecal_gains_ch);
+    LoadECALConst(pedestals, ecal_pedestals_ch);
+    LoadECALConst(time_offsets, time_offsets_ch);
+    LoadECALConst(adc_offsets, adc_offsets_ch);
 
     
     if(HIT_DEBUG  == 1){
@@ -191,13 +228,13 @@ jerror_t DECALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
     }     
     
-    return NOERROR;
+    return; //NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DECALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DECALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
     /// Generate DECALHit object for each DECALDigiHit object.
     /// This is where the first set of calibration constants
@@ -208,18 +245,11 @@ jerror_t DECALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
 
-
-    // extract the ECAL Geometry
-    vector<const DECALGeometry*> ecalGeomVect;
-    eventLoop->Get( ecalGeomVect );
-    if (ecalGeomVect.size() < 1)
-      return OBJECT_NOT_AVAILABLE;
-    const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
-
+	if(!INSTALLED) return;
 
     vector<const DECALDigiHit*> digihits;
 
-    loop->Get(digihits);
+    event->Get(digihits);
 
     for (unsigned int i = 0; i < digihits.size(); i++) {
 
@@ -249,7 +279,7 @@ jerror_t DECALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 
 	if(HIT_DEBUG == 1)
-	  cout << "Row = " << digihit->row << "Column = " << digihit->column << 
+	  cout << "Row = " << digihit->row << " Column = " << digihit->column << 
 	    "  pulse_int =  "   << pulse_int <<  "  integratedPedestal = " << integratedPedestal << 
 	    "  Pedestal  =  " << pedestal <<  endl;
 	
@@ -268,78 +298,49 @@ jerror_t DECALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  
 	  hit->E = pulse_int_ped_subt;
 	  hit->t = pulse_time_correct;
-	  
-	  // Get position of blocks on front face. (This should really come from
-	  // hdgeant directly so the poisitions can be shifted in mcsmear.)
-	  DVector2 pos = ecalGeom.positionOnFace(hit->row, hit->column);
-	  hit->x = pos.X();
-	  hit->y = pos.Y();
-	  
+
+	  if (APPLY_WALK_CORRECTION){
+	    hit->t -= time_walk_par1*pow(pulse_amplitude,time_walk_par2);
+	  }
+
 	  if(pulse_amplitude > 0){
 	    hit->intOverPeak = (pulse_int - integratedPedestal)/pulse_amplitude;	    
 	  } else 
 	    hit->intOverPeak = 0;
 
 	  hit->AddAssociatedObject(digihit);
-	  _data.push_back(hit);
+	  Insert(hit);
 
 	}   // Good hit
 
     }
     
-    return NOERROR;
+    return; //NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DECALHit_factory::erun(void)
+void DECALHit_factory::EndRun(void)
 {
-    return NOERROR;
+    return; //NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DECALHit_factory::fini(void)
+void DECALHit_factory::Finish(void)
 {
-    return NOERROR;
+    return; //NOERROR;
 }
 
 
-void  DECALHit_factory::LoadECALConst(ecal_constants_t &table, const vector<double> &ecal_const_ch, 
-                                         const DECALGeometry  &ecalGeom){
-  
-  char str[256];
-  
-  //  if (ecalGeom.numActiveBlocks() != ECAL_MAX_CHANNELS) {
-  //    sprintf(str, "ECAL geometry is wrong size! channels=%d (should be %d)", 
-  //            ecalGeom.numActiveBlocks(), ECAL_MAX_CHANNELS);
-  //    throw JException(str);
-  //  }
-  
-  
+void  DECALHit_factory::LoadECALConst(ecal_constants_t &table, const vector<double> &ecal_const_ch){
   for (int ch = 0; ch < static_cast<int>(ecal_const_ch.size()); ch++) {
-    
-    // make sure that we don't try to load info for channels that don't exist
-    if (ch == ecalGeom.numActiveBlocks())
-      break;
-    
-    int row = ecalGeom.row(ch);
-    int col = ecalGeom.column(ch);
-    
-    // results from DECALGeometry should be self consistent, but add in some
-    // sanity checking just to be sure
-
-    if (ecalGeom.isBlockActive(row,col) == false) {
-      sprintf(str, "DECALHit: Loading ECAL constant for inactive channel!  "
-              "row=%d, col=%d", row, col);
-      throw JException(str);
-    }    
-    
+    int row = m_row[ch];
+    int col = m_column[ch];
     table[row][col] = ecal_const_ch[ch];
   }
-  
 }
 
 

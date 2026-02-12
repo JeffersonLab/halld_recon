@@ -27,9 +27,10 @@
 // hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/TAGM - RFBunch 1D Time
 // hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Tagger - RFBunch 1D Time
 // hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/SC - RF Time
-// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/FCAL - RF Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/FCAL - RF Time (Neutral)
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/ECAL - RF Time (Neutral)
 // hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/TOF - RF Time
-// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/BCAL - RF Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/BCAL - RF Time  (Neutral)
 //
 // e-mail: aaustreg@jlab.org
 // e-mail: sdobbs@jlab.org
@@ -47,9 +48,13 @@
 	TH1I* TAGM_RF_Timing     = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/TAGM - RFBunch 1D Time");
 	TH1I* Tagger_RF_Timing     = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/Tagger - RFBunch 1D Time");
 	TH1I* SC_RF_Timing  = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/SC - RF Time");
-	TH1I* FCAL_RF_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/FCAL - RF Time");
+// 	TH1I* FCAL_RF_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/FCAL - RF Time");
+// 	TH1I* ECAL_RF_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/ECAL - RF Time");
+//	TH1I* BCAL_RF_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/BCAL - RF Time");
+	TH1I* FCAL_RF_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/FCAL - RF Time (Neutral)");
+	TH1I* ECAL_RF_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/ECAL - RF Time (Neutral)");
+	TH1I* BCAL_RF_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/BCAL - RF Time  (Neutral)");
 	TH1I* TOF_RF_Timing  = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/TOF - RF Time");
-	TH1I* BCAL_RF_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/BCAL - RF Time");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -126,21 +131,21 @@
 	}
 	else{
 	  TPaveText *text = new TPaveText(0.1, 0.4, 0.9, 0.6);
-	  text->AddText("No Matches to SC and TOF with reasonable FOM");
+	  text->AddText("No Tagger matches with reasonable FOM");
 	  text->Draw();
 	}
 	
 	locCanvas->cd(6);
 	gPad->SetTicks();
 	gPad->SetGrid();
-	if(TAGM_RF_Timing != NULL)
+	if(ECAL_RF_Timing != NULL)
 	{
-	  TAGM_RF_Timing->Draw();
-	  TAGM_RF_Timing->SetFillColor(kGray);
+	  ECAL_RF_Timing->Draw();
+	  ECAL_RF_Timing->SetFillColor(kGray);
 	}
 	else{
 	  TPaveText *text = new TPaveText(0.1, 0.4, 0.9, 0.6);
-	  text->AddText("No Matches to SC and BCAL with reasonable FOM");
+	  text->AddText("No Matches to ECAL with reasonable FOM");
 	  text->Draw();
 	}
 }

@@ -8,11 +8,7 @@
 #ifndef DFACTORY_DFDCPSEUDO_H
 #define DFACTORY_DFDCPSEUDO_H
 
-#include <JANA/JFactory.h>
-#include <JANA/JObject.h>
-#include <JANA/JException.h>
-#include <JANA/JStreamLog.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
 #include "DFDCPseudo.h"
 #include "DFDCCathodeCluster.h"
@@ -36,7 +32,7 @@ using namespace jana;
 /// produces pseudopoints from anode hits and DFDCCathodeClusters.
 /// For now, it is purely geometry-based.
 /// 
-class DFDCPseudo_factory : public JFactory<DFDCPseudo> {
+class DFDCPseudo_factory : public JFactoryT<DFDCPseudo> {
 	public:
 		
 		///
@@ -61,10 +57,10 @@ class DFDCPseudo_factory : public JFactory<DFDCPseudo> {
 		/// information. See also
 		/// DFDCPseudo_factory::makePseudo().
 		///
-		jerror_t init(void);
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);
-		jerror_t brun(JEventLoop *loop, int32_t runnumber);
-		jerror_t erun(void);
+		void Init() override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
 
 		/// 
 		/// DFDCPseudo_factory::makePseudo():
@@ -91,12 +87,6 @@ class DFDCPseudo_factory : public JFactory<DFDCPseudo> {
 		jerror_t FindCentroid(const vector<const DFDCHit*>& H, 
 				      vector<const DFDCHit *>::const_iterator peak,
 				      vector<centroid_t> &centroids);
-		// Backtracking routine needed by FindCentroid 
-		jerror_t FindNewParmVec(const DMatrix3x1 &N,const DMatrix3x1 &X,
-					const DMatrix3x1 &F,const DMatrix3x3 &J,
-					const DMatrix3x1 &par,
-					DMatrix3x1 &newpar);
-		
 		///
 		/// DFDCPseudo_factory::TwoStripCluster()
 		/// Calculates the center-of-gravity of two adjacent strips
@@ -126,8 +116,7 @@ class DFDCPseudo_factory : public JFactory<DFDCPseudo> {
 		double r2_out,r2_in;
 		double STRIP_ANODE_TIME_CUT;
 		unsigned int MAX_ALLOWED_FDC_HITS;
-//		bool DEBUG_HISTS,USE_FDC,MATCH_TRUTH_HITS;
-		bool DEBUG_HISTS,USE_FDC;
+  bool DEBUG_HISTS,USE_FDC, MATCH_TRUTH_HITS,ALIGNMENT;
 		double MIDDLE_STRIP_THRESHOLD;
 		double FDC_RES_PAR1,FDC_RES_PAR2;
 		double CHARGE_THRESHOLD;
@@ -141,7 +130,6 @@ class DFDCPseudo_factory : public JFactory<DFDCPseudo> {
 		TH1F *u_cl_size, *v_cl_size, *u_cl_n, *v_cl_n, *x_dist_2, *x_dist_3, *x_dist_23, *x_dist_33;
 		TH1F *d_uv;
 
-//		JStreamLog* _log;
 };
 
 #endif // DFACTORY_DFDCPSEUDO_H

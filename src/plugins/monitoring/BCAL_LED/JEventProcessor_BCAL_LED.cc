@@ -21,7 +21,7 @@
 extern "C"{
 	void InitPlugin(JApplication *app){
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_BCAL_LED());
+		app->Add(new JEventProcessor_BCAL_LED());
 	}
 
 }
@@ -33,6 +33,7 @@ extern "C"{
 
 
 JEventProcessor_BCAL_LED::JEventProcessor_BCAL_LED() {
+	SetTypeName("JEventProcessor_BCAL_LED");
 }
 
 
@@ -45,13 +46,16 @@ JEventProcessor_BCAL_LED::~JEventProcessor_BCAL_LED() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_BCAL_LED::init(void) {
-	
+void JEventProcessor_BCAL_LED::Init() {
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	// First thread to get here makes all histograms. If one pointer is
 	// already not NULL, assume all histograms are defined and return now
 // 	if(bcal_peak != NULL){
-// 		japp->RootUnLock();
-// 		return NOERROR;
+// 		lockService->RootUnLock();
+// 		return;
 // 	}
 	
         //int up_trigger_count = 0;
@@ -137,10 +141,7 @@ jerror_t JEventProcessor_BCAL_LED::init(void) {
     
     //REGISTER BRANCHES
      dTreeInterface->Create_Branches(locTreeBranchRegister);
-    
-    	// lock all root operations
-   	japp->RootWriteLock();
- 
+     
  	bcal_vevent = new TProfile("bcal_vevent","Avg BCAL peak vs event;event num;peak",48,0.0,48.0);
 	
 	low_up_1 = new TProfile("low_bias_up_sector_1_peak_vchannel","Avg BCAL peak vs channel;channel ID;peak",1536,0,1536);
@@ -221,20 +222,17 @@ jerror_t JEventProcessor_BCAL_LED::init(void) {
 	dHist_quad_occ_down  = new TH1F("dHist_quad_occ_down", "Quadrants triggered -  Downstream Pulser", 4, 0.5, 4.5);
 	// back to main dir
 	main->cd();
-	// unlock
-	japp->RootUnLock();
 	
-	
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LED::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_BCAL_LED::BeginRun(const std::shared_ptr<const JEvent>& event) {
   	// This is called whenever the run number changes
-	
+
+  	auto runnumber = event->GetRunNumber();
 	adccount = 1700; //default threshold
 	
 	if (runnumber > 50742)
@@ -242,19 +240,20 @@ jerror_t JEventProcessor_BCAL_LED::brun(JEventLoop *eventLoop, int32_t runnumber
 	
 	simultaneous = 1;
 	}
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void JEventProcessor_BCAL_LED::Process(const std::shared_ptr<const JEvent>& event) {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
 	// loop-Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
+
+	auto eventnumber = event->GetEventNumber();
 	
 	int chcounter[1536] = { 0 } ;
 	  
@@ -269,7 +268,7 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 	
 	const DL1Trigger *trig = NULL;
 	try {
-		loop->GetSingle(trig);
+		event->GetSingle(trig);
 	} catch (...) {}
 	if (trig) {
 
@@ -304,9 +303,6 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 	} else {
 		//NOtrig++;
 	}	
-	// Lock ROOT
-	japp->RootWriteLock();
-
 	float ledup_sector = 0;
 	//int ledup_sector_int = 0;
 	float ledup_mean = 0;
@@ -321,9 +317,13 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 		
 		dTreeFillData.Fill_Single<ULong64_t>("EventNumber", eventnumber); 
 
-		loop->Get(dbcalhits);
-		loop->Get(bcaldigihits);
-		loop->Get(dbcalpoints);
+		event->Get(dbcalhits);
+		event->Get(bcaldigihits);
+		event->Get(dbcalpoints);
+
+		// Lock ROOT
+		lockService->RootFillLock(this);
+
 		
       if (LED_US || LED_DS || dbcalhits.size() >= 1200.) {
 	        // float apedsubtime[1536] = { 0. };
@@ -877,17 +877,17 @@ else if (simultaneous == 1){//Pulsing all sectors simultaneously starting run 50
 		 
 	}//if LEDUP || LEDDOWN || 1200 hits   
 	// Unlock ROOT
-	japp->RootUnLock();
+	lockService->RootFillUnLock(this);
 	
 
-    return NOERROR;
+    return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LED::erun(void) {
+void JEventProcessor_BCAL_LED::EndRun() {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
@@ -925,14 +925,14 @@ jerror_t JEventProcessor_BCAL_LED::erun(void) {
 	
 	printf("%20s: %10i\n","Unidentified",unidentified);*/
 	
-	return NOERROR;
+	return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LED::fini(void) {
+void JEventProcessor_BCAL_LED::Finish() {
 	// Called before program exit after event processing is finished.
 
 //	int quad_count_up = dHist_quad_occ_up->GetMaximum();
@@ -1025,7 +1025,7 @@ if (simultaneous == 1){
 	delete dTreeInterface; //saves trees to file, closes file	
 	delete bcal_vevent;
 
-return NOERROR;
+return;
 }
 
 

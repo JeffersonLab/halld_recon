@@ -8,69 +8,72 @@
 #include "DDetectorMatches_factory.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DDetectorMatches_factory::init(void)
+void DDetectorMatches_factory::Init()
 {
   ENABLE_FCAL_SINGLE_HITS = false;
-  gPARMS->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);	
+  GetApplication()->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);
 
-
-	return NOERROR;
+  ENABLE_ECAL_SINGLE_HITS = false;
+  GetApplication()->SetDefaultParameter("PID:ENABLE_ECAL_SINGLE_HITS",ENABLE_ECAL_SINGLE_HITS);
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DDetectorMatches_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DDetectorMatches_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	//LEAVE THIS EMPTY!!! OR ELSE WON'T BE INITIALIZED PROPERLY WHEN "COMBO" FACTORY CALLS Create_DDetectorMatches ON REST DATA!!
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DDetectorMatches_factory::evnt(jana::JEventLoop* locEventLoop, uint64_t eventnumber)
+void DDetectorMatches_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	locEventLoop->Get(locTrackTimeBasedVector);
+	event->Get(locTrackTimeBasedVector);
 
-	DDetectorMatches* locDetectorMatches = Create_DDetectorMatches(locEventLoop, locTrackTimeBasedVector);
-	_data.push_back(locDetectorMatches);
-
-	return NOERROR;
+	DDetectorMatches* locDetectorMatches = Create_DDetectorMatches(event, locTrackTimeBasedVector);
+	Insert(locDetectorMatches);
 }
 
-DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locTrackTimeBasedVector)
+DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::shared_ptr<const JEvent>& event, vector<const DTrackTimeBased*>& locTrackTimeBasedVector)
 {
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	event->GetSingle(locParticleID);
 
 	vector<const DSCHit*> locSCHits;
-	locEventLoop->Get(locSCHits);
+	event->Get(locSCHits);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	event->Get(locTOFPoints);
 
 	vector<const DFCALShower*> locFCALShowers;
-	locEventLoop->Get(locFCALShowers);
+	event->Get(locFCALShowers);
+
+	vector<const DECALShower*> locECALShowers;
+	event->Get(locECALShowers);
 
 	vector<const DBCALShower*> locBCALShowers;
-	locEventLoop->Get(locBCALShowers);
+	event->Get(locBCALShowers);
 
 	vector<const DDIRCPmtHit*> locDIRCHits;
-	locEventLoop->Get(locDIRCHits);
+	event->Get(locDIRCHits);
 
 	// cheat and get truth info of track at bar
 	vector<const DDIRCTruthBarHit*> locDIRCBarHits;
-	locEventLoop->Get(locDIRCBarHits);
+	event->Get(locDIRCBarHits);
 
 	vector<const DCTOFPoint*> locCTOFPoints;
-	locEventLoop->Get(locCTOFPoints);
+	event->Get(locCTOFPoints);
 
 	vector<const DFMWPCCluster *> locFMWPCClusters;
-	locEventLoop->Get(locFMWPCClusters);
+	event->Get(locFMWPCClusters);
+
+	vector<const DTRDSegment *> locTRDSegments;
+	event->Get(locTRDSegments);
 
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches();
 
@@ -86,6 +89,8 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 		  MatchToCTOF(locParticleID, locTrackTimeBasedVector[loc_i], locCTOFPoints, locDetectorMatches);
 		  MatchToFMWPC(locTrackTimeBasedVector[loc_i], locFMWPCClusters, locDetectorMatches);
 		}
+		MatchToTRD(locParticleID, locTrackTimeBasedVector[loc_i], locTRDSegments, locDetectorMatches);
+		MatchToECAL(locParticleID, locTrackTimeBasedVector[loc_i], locECALShowers, locDetectorMatches);
 	}
 
 	//Find nearest tracks to showers
@@ -93,11 +98,13 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 		MatchToTrack(locParticleID, locBCALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
 	for(size_t loc_i = 0; loc_i < locFCALShowers.size(); ++loc_i)
 		MatchToTrack(locParticleID, locFCALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
+	for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i)
+		MatchToTrack(locParticleID, locECALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
 
 	// Try to find matches between tracks and single hits in FCAL
 	if (ENABLE_FCAL_SINGLE_HITS){
 	  vector<const DFCALHit*> locFCALHits;
-	  locEventLoop->Get(locFCALHits);
+	  event->Get(locFCALHits);
 	  if (locFCALHits.size()>0){
 	    vector<const DFCALHit*>locSingleHits;
 	    locParticleID->GetSingleFCALHits(locFCALShowers,locFCALHits,
@@ -105,6 +112,22 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 	    
 	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
 	      MatchToFCAL(locParticleID,locTrackTimeBasedVector[loc_j],
+			  locSingleHits,locDetectorMatches);
+	    }
+	  }
+	}
+
+	// Try to find matches between tracks and single hits in ECAL
+	if (ENABLE_ECAL_SINGLE_HITS){
+	  vector<const DECALHit*> locECALHits;
+	  event->Get(locECALHits);
+	  if (locECALHits.size()>0){
+	    vector<const DECALHit*>locSingleHits;
+	    locParticleID->GetSingleECALHits(locECALShowers,locECALHits,
+					     locSingleHits);
+	    
+	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
+	      MatchToECAL(locParticleID,locTrackTimeBasedVector[loc_j],
 			  locSingleHits,locDetectorMatches);
 	    }
 	  }
@@ -261,6 +284,20 @@ void DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID, con
 	}
 }
 
+void DDetectorMatches_factory::MatchToECAL(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DECALShower*>& locECALShowers, DDetectorMatches* locDetectorMatches) const
+{
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_ECAL);
+  if (extrapolations.size()==0) return;
+
+  double locInputStartTime = locTrackTimeBased->t0();
+  for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i)
+    {
+      shared_ptr<DECALShowerMatchParams>locShowerMatchParams;
+      if(locParticleID->Cut_MatchDistance(extrapolations, locECALShowers[loc_i], locInputStartTime, locShowerMatchParams))
+	    locDetectorMatches->Add_Match(locTrackTimeBased, locECALShowers[loc_i], locShowerMatchParams);
+	}
+}
+
 void DDetectorMatches_factory::MatchToSC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DSCHit*>& locSCHits, DDetectorMatches* locDetectorMatches) const
 {
   vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_START);
@@ -290,6 +327,18 @@ void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, con
 	// run DIRC LUT algorithm and add detector match
 	if(locParticleID->Cut_MatchDIRC(extrapolations, locDIRCHits, locInputStartTime, locTrackTimeBased->PID(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams))
 		locDetectorMatches->Add_Match(locTrackTimeBased, locDIRCMatchParams);
+}
+
+void DDetectorMatches_factory::MatchToTRD(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DTRDSegment*>& locTRDSegments, DDetectorMatches* locDetectorMatches) const
+{
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_TRD);
+  if (extrapolations.size()==0) return;
+
+  for(size_t loc_i = 0; loc_i < locTRDSegments.size(); ++loc_i){
+    shared_ptr<DTRDMatchParams> locTRDMatchParams;
+    if(locParticleID->Cut_MatchDistance(extrapolations, locTRDSegments[loc_i], locTRDMatchParams))
+      locDetectorMatches->Add_Match(locTrackTimeBased, locTRDMatchParams);
+  }
 }
 
 void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, const DBCALShower* locBCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const
@@ -339,6 +388,24 @@ void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, co
 	locDetectorMatches->Set_DistanceToNearestTrack(locFCALShower, locMinDistance);
 }
 
+void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, const DECALShower* locECALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const
+{
+  double locMinDistance = 999.0;
+  for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
+    {
+      map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations=locTrackTimeBasedVector[loc_i]->extrapolations;
+      if (extrapolations.size()==0) return;
+      
+      shared_ptr<DECALShowerMatchParams> locShowerMatchParams;
+      double locInputStartTime = locTrackTimeBasedVector[loc_i]->t0();
+      if(!locParticleID->Distance_ToTrack(extrapolations.at(SYS_ECAL), locECALShower, locInputStartTime, locShowerMatchParams))
+	continue;
+      if(locShowerMatchParams->dDOCAToShower < locMinDistance)
+	locMinDistance = locShowerMatchParams->dDOCAToShower;
+    }
+  locDetectorMatches->Set_DistanceToNearestTrack(locECALShower, locMinDistance);
+}
+
 // Try to find matches between a track and a single hit in FCAL
 void 
 DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID,
@@ -366,4 +433,33 @@ DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID,
     }
   }
 }
+
+// Try to find matches between a track and a single hit in ECAL
+void 
+DDetectorMatches_factory::MatchToECAL(const DParticleID* locParticleID,
+				      const DTrackTimeBased *locTrackTimeBased,
+				      vector<const DECALHit *>&locSingleHits,
+				      DDetectorMatches* locDetectorMatches) const {
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_ECAL);
+  if (extrapolations.size()==0) return;
+
+  for (unsigned int i=0;i<locSingleHits.size();i++){
+    double locDOCA=0.,locHitTime;
+    if (locParticleID->Distance_ToTrack(locTrackTimeBased->t0(),
+					extrapolations[0],locSingleHits[i],
+					locDOCA,locHitTime)){
+      shared_ptr<DECALSingleHitMatchParams> locMatchParams=std::make_shared<DECALSingleHitMatchParams>();
+      
+      locMatchParams->dEHit=locSingleHits[i]->E;
+      locMatchParams->dTHit=locHitTime;
+      locMatchParams->dFlightTime = extrapolations[0].t;
+      locMatchParams->dFlightTimeVariance = 0.; // Fill this in!
+      locMatchParams->dPathLength = extrapolations[0].s;
+      locMatchParams->dDOCAToHit = locDOCA;
+      
+      locDetectorMatches->Add_Match(locTrackTimeBased,locMatchParams);
+    }
+  }
+}
+
 

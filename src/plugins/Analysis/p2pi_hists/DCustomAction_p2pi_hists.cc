@@ -6,11 +6,11 @@
 //
 
 #include "DCustomAction_p2pi_hists.h"
+#include <DAQ/DBeamHelicity.h>
 
-void DCustomAction_p2pi_hists::Run_Update(JEventLoop* locEventLoop)
+void DCustomAction_p2pi_hists::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	JCalibration *jcalib = dapp->GetJCalibration((locEventLoop->GetJEvent()).GetRunNumber());
+	JCalibration *jcalib = DEvent::GetJCalibration(locEvent);
 
 	// Parameters for event selection to fill histograms
 	endpoint_energy = 12.;
@@ -36,14 +36,14 @@ void DCustomAction_p2pi_hists::Run_Update(JEventLoop* locEventLoop)
 
 	// get PID algos
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 	dParticleID = locParticleID;
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 }
 
-void DCustomAction_p2pi_hists::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_p2pi_hists::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	dEdxCut = 2.2;
 	minMMCut = 0.8;
@@ -54,22 +54,26 @@ void DCustomAction_p2pi_hists::Initialize(JEventLoop* locEventLoop)
 	minRhoMassCut = 0.6;
 	maxRhoMassCut = 0.88;
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	// check if a particle is missing
 	auto locMissingPIDs = Get_Reaction()->Get_MissingPIDs();
-	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : Unknown;
+	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : UnknownParticle;
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
 		CreateAndChangeTo_ActionDirectory();
 		
 		dEgamma = GetOrCreate_Histogram<TH1I>("Egamma", "TAGGER photon energy; E_{#gamma}", endpoint_energy_bins, 0., endpoint_energy);
-		
+		dHist_rhoDecPhi_pp = GetOrCreate_Histogram<TH1F>("rhoDecPhipp", "Azimuthal Decay Angle of rho with hel=+1, cos(#theta)>0", 40, -TMath::Pi(),TMath::Pi());
+		dHist_rhoDecPhi_pm = GetOrCreate_Histogram<TH1F>("rhoDecPhipm", "Azimuthal Decay Angle of rho with hel=+1, cos(#theta)<0", 40, -TMath::Pi(),TMath::Pi());
+		dHist_rhoDecPhi_mp = GetOrCreate_Histogram<TH1F>("rhoDecPhimp", "Azimuthal Decay Angle of rho with hel=-1, cos(#theta)>0", 40, -TMath::Pi(),TMath::Pi());	
+		dHist_rhoDecPhi_mm = GetOrCreate_Histogram<TH1F>("rhoDecPhimm", "Azimuthal Decay Angle of rho with hel=-1, cos(#theta)<0", 40, -TMath::Pi(),TMath::Pi());
+
 		if(dMissingPID == Proton) {
 			dMM_M2pi = GetOrCreate_Histogram<TH2I>("MM_M2pi", "MM off #pi^{+}#pi^{-} vs M_{#pi^{+}#pi^{-}}; M_{#pi^{+}#pi^{-}}; MM", 200, 0.0, 2.0, 200, 0., 4.);
 			dMM_M2pi_noEle = GetOrCreate_Histogram<TH2I>("MM_M2pi_noEle", "MM off #pi^{+}#pi^{-} vs M_{#pi^{+}#pi^{-}}; M_{#pi^{+}#pi^{-}}; MM", 200, 0.0, 2.0, 200, 0., 4.);
@@ -101,14 +105,14 @@ void DCustomAction_p2pi_hists::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_p2pi_hists::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_p2pi_hists::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-        locEventLoop->GetSingle(locDetectorMatches);
+        locEvent->GetSingle(locDetectorMatches);
 
 	// should only have one reaction step
 	const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(0);
@@ -117,6 +121,10 @@ bool DCustomAction_p2pi_hists::Perform_Action(JEventLoop* locEventLoop, const DP
 	auto locBeamPhoton = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_InitialParticle() : locParticleComboStep->Get_InitialParticle_Measured();
 	auto locParticles = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_FinalParticles() : locParticleComboStep->Get_FinalParticles_Measured();
         double locBeamPhotonEnergy = locBeamPhoton->energy();
+
+	//beam helicity for event
+	std::vector<const DBeamHelicity*> locBeamHelicities;
+	locEvent->Get(locBeamHelicities);
 
 	// calculate 2pi P4
 	DLorentzVector locP4_2pi;
@@ -198,7 +206,25 @@ bool DCustomAction_p2pi_hists::Perform_Action(JEventLoop* locEventLoop, const DP
 						}	
 					}
 				}
-			}				
+			}
+			//no coherent peak cut
+			//fill circular polarisation monitor hists
+			if(locParticles[1]->lorentzMomentum().Theta()*180/TMath::Pi() > 2. && locParticles[2]->lorentzMomentum().Theta()*180/TMath::Pi() > 2.) {
+			  
+			  if(locMissingP4.M() > minMMCut && locMissingP4.M() < maxMMCut) {
+		       				
+			    if(locP4_2pi.M() > minRhoMassCut && locP4_2pi.M() < maxRhoMassCut){
+			      short beam_helicity =  locBeamHelicities.empty() ? 0 : static_cast<short>(locBeamHelicities[0]->helicity)*2 - 1;
+
+			      if(beam_helicity==1&&cosTheta>0)dHist_rhoDecPhi_pp->Fill(phi);	
+			      else if(beam_helicity==1&&cosTheta<0)dHist_rhoDecPhi_pm->Fill(-phi);//note -ve phi	
+			      else if(beam_helicity==-1&&cosTheta>0)dHist_rhoDecPhi_mp->Fill(phi);//note +ve phi	
+			      else if(beam_helicity==-1&&cosTheta<0)dHist_rhoDecPhi_mm->Fill(-phi);//note -ve
+			    }//rho mass cut	
+
+			  }//miss mass cut
+			}//theta cut
+		
 		}
 		else {
 			dMM2_M2pi->Fill(locP4_2pi.M(), locMissingP4.M2());
@@ -242,6 +268,21 @@ bool DCustomAction_p2pi_hists::Perform_Action(JEventLoop* locEventLoop, const DP
 					}	
 				}	
 			}
+			//no coherent peak cut
+			//fill circular polarisation monitor hists
+			if(locMissingP4.M2() > minMM2Cut && locMissingP4.M2() < maxMM2Cut && fabs(locMissingP4.E()) < missingEnergyCut){
+			  if(dEdx > dEdxCut) {
+			    if(locP4_2pi.M() > minRhoMassCut && locP4_2pi.M() < maxRhoMassCut){
+				  short beam_helicity =  locBeamHelicities.empty() ? 0 : static_cast<short>(locBeamHelicities[0]->helicity)*2 - 1;
+
+				  if(beam_helicity==1&&cosTheta>0)dHist_rhoDecPhi_pp->Fill(phi);
+				  else if(beam_helicity==1&&cosTheta<0)dHist_rhoDecPhi_pm->Fill(-phi);//note -ve
+				  else if(beam_helicity==-1&&cosTheta>0)dHist_rhoDecPhi_mp->Fill(phi);//note +ve
+				  else if(beam_helicity==-1&&cosTheta<0)dHist_rhoDecPhi_mm->Fill(-phi);//note -ve
+			    }
+			  }
+			}
+	
 		}
 	}
 	Unlock_Action(); //RELEASE ROOT LOCK!!

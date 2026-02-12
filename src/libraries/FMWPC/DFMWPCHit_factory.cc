@@ -13,18 +13,19 @@ using namespace std;
 #include <DAQ/Df125PulseIntegral.h>
 #include <DAQ/Df125Config.h>
 #include <DAQ/Df125CDCPulse.h>
+#include "DANA/DEvent.h"
 
-using namespace jana;
 
 //#define ENABLE_UPSAMPLING
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DFMWPCHit_factory::init(void)
+void DFMWPCHit_factory::Init()
 {
   
-  hit_threshold = 0.;
+  hit_amp_threshold = 0.;
+  hit_int_threshold = 0.;
 
   t_raw_min = -10000.;
   t_raw_max = 10000.;
@@ -46,15 +47,28 @@ jerror_t DFMWPCHit_factory::init(void)
   amp_a_scale = a_scale*28.8;
   t_scale = 8.0/10.0;    // 8 ns/count and integer time is in 1/10th of sample
   t_base  = 0.;       // ns
-  
-  return NOERROR;
+
+  INSTALLED = false;
+    
 }
 
 //------------------
 // brun
 //------------------
-jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DFMWPCHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
+  map<string,string> installed;
+  DEvent::GetCalib(event, "/FMWPC/install_status", installed);
+  if(atoi(installed["status"].data()) == 0)
+	INSTALLED = false;
+  else
+	INSTALLED = true;
+	
+  if(!INSTALLED) return;
+
+
+  auto runnumber = event->GetRunNumber();
+  auto app = GetApplication();
   // Only print messages for one thread whenever run number change
   static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
   static set<int> runs_announced;
@@ -70,19 +84,25 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
   if(print_messages) jout << "In DFMWPCHit_factory, loading constants..." << std::endl;
 
-  if (eventLoop->GetCalib("/FMWPC/hit_threshold", hit_threshold)){
-    hit_threshold = 0.;
+  vector<double> fmwpc_hit_thresholds;
+
+  if (GetCalib(event, "/FMWPC/hit_threshold", hit_amp_threshold)){
+    hit_amp_threshold = 0.;
+    hit_int_threshold = 0.;
     jout << "Error loading /FMWPC/hit_threshold ! set default value to 0." << endl;
   } else {
-    jout << "FMWPC Hit Threshold: " << hit_threshold << endl;
+    hit_amp_threshold = fmwpc_hit_thresholds[0];
+    hit_int_threshold = fmwpc_hit_thresholds[1];
+    jout << "FMWPC Hit Thresholds:  Amplitude = " << hit_amp_threshold << "  Integral = " << hit_int_threshold << endl;
   }
-
-  gPARMS->SetDefaultParameter("FMWPC:FMWPC_HIT_THRESHOLD", hit_threshold,
-                              "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_HIT_THRESHOLD");
+  app->SetDefaultParameter("FMWPC:FMWPC_hit_amp_threshold", hit_amp_threshold,
+                              "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_hit_amp_threshold");
+  app->SetDefaultParameter("FMWPC:FMWPC_hit_int_threshold", hit_amp_threshold,
+                              "Remove FMWPC Hits with total integral smaller than FMWPC_hit_int_threshold");
 
   vector<double> fmwpc_timing_cuts;
 
-  if (eventLoop->GetCalib("/FMWPC/timing_cut", fmwpc_timing_cuts)){
+  if (GetCalib(event, "/FMWPC/timing_cut", fmwpc_timing_cuts)){
     t_raw_min = -60.;
     t_raw_max = 900.;
     jout << "Error loading /FMWPC/timing_cut ! set default values -60. and 900." << endl;
@@ -92,13 +112,13 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     jout << "FMWPC Timing Cuts: " << t_raw_min << " ... " << t_raw_max << endl;
   }
 
-  gPARMS->SetDefaultParameter("FMWPCHit:t_raw_min", t_raw_min,"Minimum acceptable FMWPC hit time");
-  gPARMS->SetDefaultParameter("FMWPCHit:t_raw_max", t_raw_max, "Maximum acceptable FMWPC hit time");
 
+  GetApplication()->SetDefaultParameter("FMWPCHit:t_raw_min", t_raw_min,"Minimum acceptable FMWPC hit time");
+  GetApplication()->SetDefaultParameter("FMWPCHit:t_raw_max", t_raw_max, "Maximum acceptable FMWPC hit time");
   
   // load scale factors
   map<string,double> scale_factors;
-  if (eventLoop->GetCalib("/FMWPC/digi_scales", scale_factors))
+  if (DEvent::GetCalib(event, "/FMWPC/digi_scales", scale_factors))
     jout << "Error loading /FMWPC/digi_scales !" << endl;
   if (scale_factors.find("FMWPC_ADC_ASCALE") != scale_factors.end())
     a_scale = scale_factors["FMWPC_ADC_ASCALE"];
@@ -117,7 +137,7 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   
   // load base time offset
   map<string,double> base_time_offset;
-  if (eventLoop->GetCalib("/FMWPC/base_time_offset",base_time_offset))
+  if (DEvent::GetCalib(event, "/FMWPC/base_time_offset",base_time_offset))
     jout << "Error loading /FMWPC/base_time_offset !" << endl;
   if (base_time_offset.find("FMWPC_BASE_TIME_OFFSET") != base_time_offset.end())
     t_base = base_time_offset["FMWPC_BASE_TIME_OFFSET"];
@@ -125,11 +145,11 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     jerr << "Unable to get FMWPC_BASE_TIME_OFFSET from /FMWPC/base_time_offset !" << endl;
   
   // load constant tables
-  if (eventLoop->GetCalib("/FMWPC/wire_gains", gains))
+  if (DEvent::GetCalib(event, "/FMWPC/wire_gains", gains))
     jout << "Error loading /FMWPC/wire_gains !" << endl;
-  if (eventLoop->GetCalib("/FMWPC/pedestals", pedestals))
+  if (DEvent::GetCalib(event, "/FMWPC/pedestals", pedestals))
     jout << "Error loading /FMWPC/pedestals !" << endl;
-  if (eventLoop->GetCalib("/FMWPC/timing_offsets", time_offsets))
+  if (DEvent::GetCalib(event, "/FMWPC/timing_offsets", time_offsets))
     jout << "Error loading /FMWPC/timing_offsets !" << endl;
   
 
@@ -176,14 +196,12 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
       throw JException(str);
     }
   }
-
-  return NOERROR;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DFMWPCHit_factory::Process(const std::shared_ptr<const JEvent> &event)
 {
   /// Generate DCDCHit object for each DCDCDigiHit object.
   /// This is where the first set of calibration constants
@@ -194,10 +212,12 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   /// data in HDDM format. The HDDM event source will copy
   /// the precalibrated values directly into the _data vector.
   
+  if(!INSTALLED) return;
+
   /// In order to use the new Flash125 data types and maintain compatibility with the old code, what is below is a bit of a mess
 
   vector<const DFMWPCDigiHit*> digihits;
-  loop->Get(digihits);
+  event->Get(digihits);
 
   char str[256];
   for (unsigned int i=0; i < digihits.size(); i++) {
@@ -263,8 +283,12 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     maxamp = maxamp - scaled_ped;
     */
-    
-    if (maxamp<hit_threshold) {
+
+    // apply different thresholds to the amplitude and the integral
+    if (maxamp < hit_amp_threshold) {
+      continue;
+    }
+    if (digihit->pulse_integral < hit_int_threshold) {  
       continue;
     }
 
@@ -310,28 +334,24 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     hit->AddAssociatedObject(digihit);
 
-    _data.push_back(hit);
+    mData.push_back(hit);
     
   }
-  
-  return NOERROR;
 }
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DFMWPCHit_factory::erun(void)
+void DFMWPCHit_factory::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t DFMWPCHit_factory::fini(void)
+void DFMWPCHit_factory::Finish()
 {
-  return NOERROR;
 }
 
 //------------------------------------

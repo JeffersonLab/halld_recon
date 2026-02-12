@@ -10,6 +10,12 @@ using namespace std;
 
 #include <TROOT.h>
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/Services/JLockService.h>
+
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
 #include <TRACKING/DReferenceTrajectory.h>
 
 #include "DTrackHitSelectorALT2.h"
@@ -39,16 +45,8 @@ bool static DTrackHitSelector_fdchit_cmp(pair<double,const DFDCPseudo *>a,
     return (a.second->wire->layer>b.second->wire->layer);
   return (a.first>b.first);
 }
-bool static DTrackHitSelector_gemhit_cmp(pair<double,const DGEMPoint *>a,
-				      pair<double,const DGEMPoint *>b){
-  if (a.second->detector!=b.second->detector) 
-    return (a.second->detector>b.second->detector);
-  return (a.first>b.first);
-}
 bool static DTrackHitSelector_trdhit_cmp(pair<double,const DTRDPoint *>a,
 				      pair<double,const DTRDPoint *>b){
-  if (a.second->detector!=b.second->detector) 
-    return (a.second->detector>b.second->detector);
   return (a.first>b.first);
 }
 
@@ -66,36 +64,40 @@ bool static DTrackHitSelector_fdchit_in_cmp(const DFDCPseudo *a, const DFDCPseud
 //---------------------------------
 // DTrackHitSelectorALT2    (Constructor)
 //---------------------------------
-DTrackHitSelectorALT2::DTrackHitSelectorALT2(jana::JEventLoop *loop, int32_t runnumber):DTrackHitSelector(loop)
+DTrackHitSelectorALT2::DTrackHitSelectorALT2(const std::shared_ptr<const JEvent>& event):DTrackHitSelector(event)
 {
+	auto runnumber = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto root_lock = app->GetService<JLockService>();
+	auto geo_manager = app->GetService<DGeometryManager>();
+
 	HS_DEBUG_LEVEL = 0;
 	MAKE_DEBUG_TREES = false;
 	MIN_HIT_PROB_CDC = 0.01;
 	MIN_HIT_PROB_FDC = 0.01;
 	MIN_HIT_PROB_TRD = 0.01;
-	MIN_HIT_PROB_GEM = 0.01;
 	MIN_FDC_SIGMA_ANODE_CANDIDATE = 0.1000;
 	MIN_FDC_SIGMA_CATHODE_CANDIDATE = 0.1000;
 	MIN_FDC_SIGMA_ANODE_WIREBASED = 0.0100;
 	MIN_FDC_SIGMA_CATHODE_WIREBASED = 0.0100;
 	MAX_DOCA=2.5;
 
-	gPARMS->SetDefaultParameter("TRKFIT:MAX_DOCA",MAX_DOCA,"Maximum doca for associating hit with track");
+	app->SetDefaultParameter("TRKFIT:MAX_DOCA",MAX_DOCA,"Maximum doca for associating hit with track");
 
-	gPARMS->SetDefaultParameter("TRKFIT:HS_DEBUG_LEVEL", HS_DEBUG_LEVEL, "Debug verbosity level for hit selector used in track fitting (0=no debug messages)");
-	gPARMS->SetDefaultParameter("TRKFIT:MAKE_DEBUG_TREES", MAKE_DEBUG_TREES, "Create a TTree with debugging info on hit selection for the FDC and CDC");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_HIT_PROB_CDC", MIN_HIT_PROB_CDC, "Minimum probability a CDC hit may have to be associated with a track to be included in list passed to fitter");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_HIT_PROB_FDC", MIN_HIT_PROB_FDC, "Minimum probability a FDC hit may have to be associated with a track to be included in list passed to fitter");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_ANODE_CANDIDATE", MIN_FDC_SIGMA_ANODE_CANDIDATE, "Minimum sigma used for FDC anode hits on track candidates");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_CATHODE_CANDIDATE", MIN_FDC_SIGMA_CATHODE_CANDIDATE, "Minimum sigma used for FDC cathode hits on track candidates");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_ANODE_WIREBASED", MIN_FDC_SIGMA_ANODE_WIREBASED, "Minimum sigma used for FDC anode hits on wire-based tracks");
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_CATHODE_WIREBASED", MIN_FDC_SIGMA_CATHODE_WIREBASED, "Minimum sigma used for FDC cathode hits on wire-based tracks");
+	app->SetDefaultParameter("TRKFIT:HS_DEBUG_LEVEL", HS_DEBUG_LEVEL, "Debug verbosity level for hit selector used in track fitting (0=no debug messages)");
+	app->SetDefaultParameter("TRKFIT:MAKE_DEBUG_TREES", MAKE_DEBUG_TREES, "Create a TTree with debugging info on hit selection for the FDC and CDC");
+	app->SetDefaultParameter("TRKFIT:MIN_HIT_PROB_CDC", MIN_HIT_PROB_CDC, "Minimum probability a CDC hit may have to be associated with a track to be included in list passed to fitter");
+	app->SetDefaultParameter("TRKFIT:MIN_HIT_PROB_FDC", MIN_HIT_PROB_FDC, "Minimum probability a FDC hit may have to be associated with a track to be included in list passed to fitter");
+	app->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_ANODE_CANDIDATE", MIN_FDC_SIGMA_ANODE_CANDIDATE, "Minimum sigma used for FDC anode hits on track candidates");
+	app->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_CATHODE_CANDIDATE", MIN_FDC_SIGMA_CATHODE_CANDIDATE, "Minimum sigma used for FDC cathode hits on track candidates");
+	app->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_ANODE_WIREBASED", MIN_FDC_SIGMA_ANODE_WIREBASED, "Minimum sigma used for FDC anode hits on wire-based tracks");
+	app->SetDefaultParameter("TRKFIT:MIN_FDC_SIGMA_CATHODE_WIREBASED", MIN_FDC_SIGMA_CATHODE_WIREBASED, "Minimum sigma used for FDC cathode hits on wire-based tracks");
 	
 	cdchitsel = NULL;
 	fdchitsel = NULL;
 	if(MAKE_DEBUG_TREES){
-		loop->GetJApplication()->Lock();
-		
+		root_lock->RootWriteLock();
+
 		cdchitsel= (TTree*)gROOT->FindObject("cdchitsel");
 		if(!cdchitsel){
 			cdchitsel = new TTree("cdchitsel", "CDC Hit Selector");
@@ -126,11 +128,10 @@ DTrackHitSelectorALT2::DTrackHitSelectorALT2(jana::JEventLoop *loop, int32_t run
 			fdchitsel = NULL;
 		}
 
-		loop->GetJApplication()->Unlock();
+		root_lock->RootUnLock();
 	}
 
-	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-        bfield = dapp->GetBfield(runnumber); // this should be run number based!
+	bfield = geo_manager->GetBfield(runnumber); // this should be run number based!
 	
 }
 
@@ -154,75 +155,24 @@ void DTrackHitSelectorALT2::GetTRDHits(const vector<DTrackFitter::Extrapolation_
     DVector3 pos=extrapolations[k].position;
     for (unsigned int j=0;j<trdhits_in.size();j++){  
       const DTRDPoint *hit=trdhits_in[j];
-      if (int(k)==hit->detector){
 	double dx=hit->x-pos.X();
 	double dy=hit->y-pos.Y();
 	double varx=1.,vary=1.;
 	double chisq=dx*dx/varx+dy*dy/vary;
 	// Use chi-sq probability function with Ndof=2 to calculate probability
 	double probability = TMath::Prob(chisq, 2); 
-	if(probability>=MIN_HIT_PROB_GEM){
+	if(probability>=MIN_HIT_PROB_TRD){
 	  pair<double,const DTRDPoint*>myhit;
 	  myhit.first=probability;
 	  myhit.second=hit;
 	  trdhits_tmp.push_back(myhit);
-	}
       }
     }
   }
   // Order according to layer number and probability,then put the hits in the 
   // output list with the following algorithm:  put hits with the highest 
-  // probability in a given layer in the output list. 
+  // probability in a given layer in the output list. -- NOTE - no longer using multiple "layers"
   sort(trdhits_tmp.begin(),trdhits_tmp.end(),DTrackHitSelector_trdhit_cmp);
-  int old_layer=1000;
-  for (unsigned int i=0;i<trdhits_tmp.size();i++){
-    if (trdhits_tmp[i].second->detector!=old_layer){
-      trdhits_out.push_back(trdhits_tmp[i].second);   
-    }
-    old_layer=trdhits_tmp[i].second->detector;
-  }
-}
-
-//---------------------------------
-// GetGEMHits
-//---------------------------------
-void DTrackHitSelectorALT2::GetGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DGEMPoint*> &gemhits_in, vector<const DGEMPoint*> &gemhits_out) const {
-  // Vector of pairs storing the hit with the probability it is on the track
-  vector<pair<double,const DGEMPoint*> >gemhits_tmp;
-
-  for (unsigned int k=0;k<extrapolations.size();k++){
-    DVector3 pos=extrapolations[k].position;
-    for (unsigned int j=0;j<gemhits_in.size();j++){
-      const DGEMPoint *hit=gemhits_in[j];
-      if (int(k)==hit->detector){
-	double dx=hit->x-pos.X();
-	double dy=hit->y-pos.Y();
-	double varx=1.,vary=1.;
-	double chisq=dx*dx/varx+dy*dy/vary;
-	// Use chi-sq probability function with Ndof=2 to calculate probability
-	double probability = TMath::Prob(chisq, 2);
-	if(probability>=MIN_HIT_PROB_GEM){
-	  pair<double,const DGEMPoint*>myhit;
-	  myhit.first=probability;
-	  myhit.second=hit;
-	  gemhits_tmp.push_back(myhit);
-	}
-      }
-    }
-
-  }
-  // Order according to layer number and probability,then put the hits in the 
-  // output list with the following algorithm:  put hits with the highest 
-  // probability in a given layer in the output list. 
-  sort(gemhits_tmp.begin(),gemhits_tmp.end(),DTrackHitSelector_gemhit_cmp);
-  int old_layer=1000;
-  for (unsigned int i=0;i<gemhits_tmp.size();i++){
-    if (gemhits_tmp[i].second->detector!=old_layer){
-      gemhits_out.push_back(gemhits_tmp[i].second);   
-    }
-    old_layer=gemhits_tmp[i].second->detector;
-  }
-  
 }
 
 //---------------------------------
@@ -259,7 +209,6 @@ void DTrackHitSelectorALT2::GetCDCHits(double Bz,double q,
 
   // variances
   double var_lambda_res=0.;
-  double var_phi_radial=0.;
   double var_x0=0.0,var_y0=0.0;
   double var_k=0.;
 
@@ -321,18 +270,10 @@ void DTrackHitSelectorALT2::GetCDCHits(double Bz,double q,
 	    var_lambda_res=12.0*var*double(N-1)/double(N*(N+1))
 	      *sinl2*sinl2/s_sq;
 	    
-	    // Variance in phi, crude approximation
-	    double tan_s_2R=tan(s*cosl/(2.*pt_over_a));
-	    var_phi_radial=tan_s_2R*tan_s_2R*pt_over_a*pt_over_a*var_k;
-	    
 	    outermost_hit=false;
 	  } 
 	  // Include error in lambda due to measurements
 	  var_lambda+=var_lambda_res;
-
-	  // Include uncertainty in phi due to uncertainty in the center of 
-	  // the circle
-	  var_phi+=var_phi_radial;
 
 	  // Variance in position due to multiple scattering
 	  double var_pos_ms=extrapolations[i].s_theta_ms_sum/3.;
@@ -817,9 +758,6 @@ void DTrackHitSelectorALT2::GetFDCHits(fit_type_t fit_type, const DReferenceTraj
     // Include uncertainty in phi due to uncertainty in the center of 
     // the circle
     var_phi+=var_phi_radial;
-
-    var_phi=0.;
-    var_lambda=0.;
     
     // Variance in position due to multiple scattering
     double var_pos_ms=last_step->itheta02s2/3.;
@@ -972,7 +910,6 @@ void DTrackHitSelectorALT2::GetFDCHits(double Bz,double q,
   double z0=extrapolations[0].position.z();
   // variances
   double var_lambda=0.,var_phi=0.,var_lambda_res=0.,var_k=0.;
-  double var_phi_radial=0.;
   double var_x0=0.0,var_y0=0.0; 
   double var_z0=2.*tanl2*(var_tot)*double(2*N-1)/double(N*(N+1));
 
@@ -991,7 +928,7 @@ void DTrackHitSelectorALT2::GetFDCHits(double Bz,double q,
 	// Variance in dip angle due to multiple scattering
 	var_lambda = extrapolations[k].theta2ms_sum/3.;
 	// the above expression seems to lead to overestimation of  the uncertainty in the dip angle after the wire-based pass..
-	var_lambda*=0.01;
+	//var_lambda*=0.01;
 	// Variance in phi due to multiple scattering
 	var_phi=var_lambda*(1.+tanl2); 
 
@@ -1013,18 +950,10 @@ void DTrackHitSelectorALT2::GetFDCHits(double Bz,double q,
 	  var_lambda_res=12.0*var_tot*double(N-1)/double(N*(N+1))
 	    *sinl2*sinl2/s_sq;
 
-	  // Variance in phi, crude approximation
-	  double tan_s_2R=tan(s*cosl/(2.*pt_over_a));
-	  var_phi_radial=tan_s_2R*tan_s_2R*pt_over_a*pt_over_a*var_k;
-	  
 	  most_downstream_hit=false;
 	}
 	// Include error in lambda due to measurements
 	var_lambda+=var_lambda_res;	
-
-	// Include uncertainty in phi due to uncertainty in the center of 
-	// the circle
-	var_phi+=var_phi_radial;
 
 	// Variance in position due to multiple scattering
 	double var_pos_ms=extrapolations[k].s_theta_ms_sum/3.;

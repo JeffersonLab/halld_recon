@@ -9,13 +9,11 @@
 #define _DTrackFitter_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
 #ifdef PROFILE_TRK_TIMES
 #include <prof_time.h>
 #endif
-#include <DANA/DApplication.h>
 #include <TRACKING/DTrackingData.h>
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 #include "HDGEOMETRY/DLorentzMapCalibDB.h"
@@ -23,11 +21,10 @@
 #include <FDC/DFDCPseudo.h>
 #include <TRACKING/DReferenceTrajectory.h>
 #include <TRD/DTRDPoint.h>
-#include <TRD/DGEMPoint.h>
 
 using namespace std;
 
-#define QuietNaN std::numeric_limits<double>::quiet_NaN()
+#define Quiet_NaN std::numeric_limits<double>::quiet_NaN()
 
 
 class DReferenceTrajectory;
@@ -60,7 +57,7 @@ class DGeometry;
 /// and will turn off the the WRITE_TO_OUTPUT bit by default.
 //////////////////////////////////////////////////////////////////////////////////
 
-class DTrackFitter:public jana::JObject{
+class DTrackFitter: public JObject{
 	public:
 		JOBJECT_PUBLIC(DTrackFitter);
 		
@@ -106,7 +103,7 @@ class DTrackFitter:public jana::JObject{
 		       const DCDCTrackHit *cdc_hit=NULL,
 		       const DFDCPseudo *fdc_hit=NULL, double docaphi=0.0,
 		       double z=0.0, double cosThetaRel=0.0,double tcorr=0.0,double resic=0.0,
-		       double errc=0.0):resi(resi),err(err),s(s),tdrift(tdrift),d(d),cdc_hit(cdc_hit),fdc_hit(fdc_hit),docaphi(docaphi),z(z),cosThetaRel(cosThetaRel),tcorr(tcorr),resic(resic),errc(errc){}
+		       double errc=0.0, int left_right=0):resi(resi),err(err),s(s),tdrift(tdrift),d(d),cdc_hit(cdc_hit),fdc_hit(fdc_hit),docaphi(docaphi),z(z),cosThetaRel(cosThetaRel),tcorr(tcorr),resic(resic),errc(errc),left_right(left_right){}
 		    double resi;	// residual of measurement
 		    double err;		// estimated error of measurement
 		    double s;
@@ -127,7 +124,7 @@ class DTrackFitter:public jana::JObject{
 		};
 		
 		// Constructor and destructor
-		DTrackFitter(JEventLoop *loop);	// require JEventLoop in constructor
+		DTrackFitter(const std::shared_ptr<const JEvent>& event);  // TODO: Let's move this logic somewhere else please
 		virtual ~DTrackFitter();
 		
 		void Reset(void);
@@ -139,8 +136,6 @@ class DTrackFitter:public jana::JObject{
 		void AddHits(vector<const DFDCPseudo*> fdchits);
 		void AddHit(const DTRDPoint* trdhit);
 		void AddHits(vector<const DTRDPoint*> trdhits);
-		void AddHit(const DGEMPoint* gemhit);
-		void AddHits(vector<const DGEMPoint*> gemhits);
 		const vector<const DCDCTrackHit*>& GetCDCInputHits(void) const {return cdchits;}
 		const vector<const DFDCPseudo*>&   GetFDCInputHits(void) const {return fdchits;}
 		const vector<const DCDCTrackHit*>& GetCDCFitHits(void) const {return cdchits_used_in_fit;}
@@ -157,6 +152,7 @@ class DTrackFitter:public jana::JObject{
 		  extrapolations[SYS_TRD].clear();
 		  extrapolations[SYS_FMWPC].clear();
 		  extrapolations[SYS_CTOF].clear();
+		  extrapolations[SYS_ECAL].clear();
 		};
 		
 		// Fit parameter accessor methods
@@ -182,22 +178,22 @@ class DTrackFitter:public jana::JObject{
 		void SetInputParameters(const DTrackingData &starting_params){input_params=starting_params;}
 		
 		// Wrappers
-		fit_status_t FitTrack(const DVector3 &pos, const DVector3 &mom, double q, double mass,double t0=QuietNaN,DetectorSystem_t t0_det=SYS_NULL);
+		fit_status_t FitTrack(const DVector3 &pos, const DVector3 &mom, double q, double mass,double t0=Quiet_NaN,DetectorSystem_t t0_det=SYS_NULL);
 		fit_status_t FitTrack(const DTrackingData &starting_params);
 		
 		// Methods that actually do something
 		fit_status_t 
 		  FindHitsAndFitTrack(const DKinematicData &starting_params, 
 				      const DReferenceTrajectory *rt, 
-				      JEventLoop *loop, double mass=-1.0,
+				      const std::shared_ptr<const JEvent> &loop, double mass=-1.0,
 				      int N=0,
-				      double t0=QuietNaN,
+				      double t0=Quiet_NaN,
 				      DetectorSystem_t t0_det=SYS_NULL
 				      ); ///< mass<0 means get it from starting_params
 		fit_status_t 
 		  FindHitsAndFitTrack(const DKinematicData &starting_params, 
 				      const map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >&extrapolations,
-				      JEventLoop *loop, 
+				      const std::shared_ptr<const JEvent>& loop,
 				      double mass,int N,double t0,
 				      DetectorSystem_t t0_det);
 		
@@ -235,14 +231,14 @@ class DTrackFitter:public jana::JObject{
 		vector<const DCDCTrackHit*> cdchits;	//< Hits in the CDC
 		vector<const DFDCPseudo*> fdchits;		//< Hits in the FDC
 		vector<const DTRDPoint*> trdhits;
-		vector<const DGEMPoint*> gemhits;
 
 	DTrackingData input_params;				//< Starting parameters for the fit
 		fit_type_t fit_type;							//< kWireBased or kTimeBased
 		const DMagneticFieldMap *bfield;			//< Magnetic field map for current event (acquired through loop)
 		const DGeometry *geom;						//< DGeometry pointer used to access materials through calibDB maps for eloss
 		const DRootGeom *RootGeom;					//< ROOT geometry used for accessing material for MULS, energy loss
-		JEventLoop *loop;								//< Pointer to JEventLoop object handling the current event
+		std::shared_ptr<const JEvent> event;	    //< Pointer to JEventLoop object handling the current event
+													// TODO: Delete me completely if at all possible!
 
 		// The following should be set as outputs by FitTrack(void)
 		DTrackingData fit_params;									//< Results of last fit

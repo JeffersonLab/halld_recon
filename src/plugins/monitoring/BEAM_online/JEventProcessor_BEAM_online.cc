@@ -6,16 +6,18 @@
 //
 
 #include "JEventProcessor_BEAM_online.h"
-using namespace jana;
+
+#include "DANA/DEvent.h"
 
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_BEAM_online());
+    app->Add(new JEventProcessor_BEAM_online());
   }
 } // "C"
 
@@ -25,7 +27,7 @@ extern "C"{
 //------------------
 JEventProcessor_BEAM_online::JEventProcessor_BEAM_online()
 {
-  
+	SetTypeName("JEventProcessor_BEAM_online");
 }
 
 //------------------
@@ -37,9 +39,9 @@ JEventProcessor_BEAM_online::~JEventProcessor_BEAM_online()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BEAM_online::init(void)
+void JEventProcessor_BEAM_online::Init()
 {
   // This is called once at program startup. 
   // create root folder for BEAM histograms
@@ -88,47 +90,45 @@ jerror_t JEventProcessor_BEAM_online::init(void)
   MICdeltaT = new TH2D("MICdeltaT", "dT = Tmic-Tref vs Microscope counter for random triggers", 130, 0., 130., 8000, -200., 200. );
   
   main->cd();
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BEAM_online::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_BEAM_online::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
   BlockStart = 1;
   RFWidth = 4.008; // 249.5MHz correspondes to 4.008ns
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_BEAM_online::Process(const std::shared_ptr<const JEvent>& event)
 {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
-  // loop->Get(...) to get reconstructed objects (and thereby activating the
+  // event->Get(...) to get reconstructed objects (and thereby activating the
   // reconstruction algorithm) should be done outside of any mutex lock
   // since multiple threads may call this method at the same time.
   // Here's an example:
   //
   // vector<const MyDataClass*> mydataclasses;
-  // loop->Get(mydataclasses);
+  // event->Get(mydataclasses);
   //
-  // japp->RootFillLock(this);
+  // lockService->RootWriteLock();
   //  ... fill historgrams or trees ...
-  // japp->RootFillUnLock(this);
+  // lockService->RootUnLock();
 
+  auto eventnumber = event->GetEventNumber();
 
   vector <const DL1Trigger*> trig;
-  loop->Get(trig);
+  event->Get(trig);
 
   if (trig.size() == 0){
     //cout<<"no trigger found"<<endl;
-    return NOERROR;     
+    return;     
   }
 
   if (!eventnumber%40){
@@ -153,13 +153,13 @@ jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumbe
   if (trig[0]->trig_mask & 0x8){ 
    
     vector <const DBeamPhoton*> Beam;
-    loop->Get(Beam);
+    event->Get(Beam);
     int NBeamPhotons = Beam.size();
     vector <const DPSPair*> PSPairs;
-    loop->Get(PSPairs);
+    event->Get(PSPairs);
     
     if (PSPairs.size() < 1){
-      return NOERROR;
+      return;
     }
     
     vector <const DPSPair*> OutOfTimePairsM;
@@ -171,6 +171,8 @@ jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumbe
     double Width = RFWidth; // 249.5MHz correspondes to 4.008ns
     double tpair = (PSPairs[0]->ee.first->t + PSPairs[0]->ee.second->t) / 2.;
     double epair = (PSPairs[0]->ee.first->E + PSPairs[0]->ee.second->E);
+
+    DEvent::GetLockService(event)->RootFillLock(this); 
 
     // loop over beam photons
     for (int k=0; k<NBeamPhotons; k++){
@@ -185,6 +187,7 @@ jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  OutOfTimeBeamH.push_back(Beam[k]);
 	}
       }
+      
       
       if (Beam[k]->dSystem == SYS_TAGM){
 	
@@ -383,15 +386,19 @@ jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 	
       }
     }
+    
+    DEvent::GetLockService(event)->RootFillUnLock(this); 
   }
 
 
   // Any front pannel trigger is random like LED, clock, etc.
   if (trig[0]->fp_trig_mask > 1){ 
     vector <const DBeamPhoton*> Beam;
-    loop->Get(Beam);
+    event->Get(Beam);
     int NBeamPhotons = Beam.size();
 
+	DEvent::GetLockService(event)->RootFillLock(this); 
+        
     for (int j=0; j<50; j++) {
       
       double TIME = -16.*RFWidth + j*RFWidth;
@@ -438,28 +445,26 @@ jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
       }	
     }
+    
+    DEvent::GetLockService(event)->RootFillUnLock(this); 
   }
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BEAM_online::erun(void)
+void JEventProcessor_BEAM_online::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BEAM_online::fini(void)
+void JEventProcessor_BEAM_online::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

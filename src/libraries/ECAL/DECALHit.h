@@ -8,11 +8,9 @@
 #ifndef _DECALHit_
 #define _DECALHit_
 
-#include <JANA/jerror.h>
-#include <JANA/JFactory.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
-class DECALHit:public jana::JObject{
+class DECALHit:public JObject{
 	public:
   
                JOBJECT_PUBLIC(DECALHit);
@@ -21,21 +19,18 @@ class DECALHit:public jana::JObject{
 		
 		int row;
 		int column;
-		float x;
-		float y;
 		float E;
 		float t;
+		int id;
 		float intOverPeak;		
 		
 
-		void toStrings(vector<pair<string,string> > &items)const{
-		  AddString(items, "row", "%4d", row);
-			AddString(items, "column", "%4d", column);
-			AddString(items, "x(cm)", "%3.1f", x);
-			AddString(items, "y(cm)", "%3.1f", y);
-			AddString(items, "E(MeV)", "%2.3f", E);
-			AddString(items, "t(ns)", "%2.3f", t);
-			AddString(items, "integral over peak",  "%2.3f", intOverPeak);
+		void Summarize(JObjectSummary& summary) const{
+		  	summary.add(row, "row", "%4d");
+			summary.add(column, "column", "%4d");
+			summary.add(E, "E(MeV)", "%2.3f");
+			summary.add(t, "t(ns)", "%2.3f");
+			summary.add(intOverPeak, "integral over peak",  "%2.3f");
 		}
 };
 

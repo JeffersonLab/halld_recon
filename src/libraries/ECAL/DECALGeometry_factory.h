@@ -1,59 +1,48 @@
 // $Id$
 /*
- *  File: DECALHit_factory.h
+ *  File: DECALGeometry_factory.h
  *
- *  Created on 01/16/2024 by A.S.  
+ *  Created on 03/26/2025 by S.T.
  */
 
 #ifndef _DECALGeometry_factory_
 #define _DECALGeometry_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DECALGeometry.h"
+#include <HDGEOMETRY/DGeometry.h>
+#include <DANA/DGeometryManager.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 
-class DECALGeometry_factory:public jana::JFactory<DECALGeometry>{
-	public:
-		DECALGeometry_factory(){};
-		~DECALGeometry_factory(){};
-
-		DECALGeometry *ecalgeometry = nullptr;
-
-		//------------------
-		// brun
-		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
-		{
-			SetFactoryFlag(NOT_OBJECT_OWNER);
-			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			
-			if( ecalgeometry ) delete ecalgeometry;
-
-			ecalgeometry = new DECALGeometry();
-
-			return NOERROR;
-		}
-
-		//------------------
-		// evnt
-		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
-		 {
-			// Reuse existing DBCALGeometry object.
-			if( ecalgeometry ) _data.push_back( ecalgeometry );
-			 
-			 return NOERROR;
-		 }
-
-		//------------------
-		// erun
-		//------------------
-		jerror_t erun(void)
-		{
-			if( ecalgeometry ) delete ecalgeometry;
-			ecalgeometry = NULL;
-			
-			return NOERROR;
-		}
+class DECALGeometry_factory:public JFactoryT<DECALGeometry>{
+public:
+  DECALGeometry_factory() = default;
+  ~DECALGeometry_factory() override = default;
+private:
+  //------------------
+  // BeginRun
+  //------------------
+  void BeginRun(const std::shared_ptr<const JEvent>& event){
+    SetFactoryFlag(PERSISTENT);
+    auto runnumber = event->GetRunNumber();
+    auto app = event->GetJApplication();
+    auto geo_manager = app->GetService<DGeometryManager>();
+    auto dgeom = geo_manager->GetDGeometry(runnumber);
+    if (dgeom->HaveInsert()){
+      auto jcalib =  app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+      Insert(new DECALGeometry(dgeom,jcalib));
+    }
+  } 
+  //------------------
+  // EndRun
+  //------------------
+  void EndRun(){
+    // We have to manually clear and delete the contents of mData because PERSISTENT flag was set.
+    for (auto geom : mData) {
+      delete geom;
+    }
+    mData.clear();
+  }
 };
 
 #endif // _DECALGeometry_factory_

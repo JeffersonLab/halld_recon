@@ -12,12 +12,10 @@
 #include <chrono>
 #include <cinttypes>
 
-#include <JANA/jerror.h>
 #include <JANA/JApplication.h>
 #include <JANA/JEventSource.h>
 #include <JANA/JEvent.h>
-#include <JANA/JFactory.h>
-#include <JANA/JStreamLog.h>
+#include <JANA/JLogger.h>
 
 #include <DAQ/HDEVIO.h>
 #include <DAQ/HDET.h>
@@ -31,6 +29,7 @@
 
 #include <DANA/DApplication.h>
 #include <DANA/DStatusBits.h>
+#include <DANA/jerror.h>
 
 /// How this Event Source Works
 /// ===================================================================
@@ -104,7 +103,7 @@
 ///    events are rare.
 ///
 
-class JEventSource_EVIOpp: public jana::JEventSource{
+class JEventSource_EVIOpp: public JEventSource{
 	public:
 
 		enum EVIOSourceType{
@@ -120,69 +119,68 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		};
 
 
-		                    JEventSource_EVIOpp(const char* source_name);
+		                    JEventSource_EVIOpp();
 		           virtual ~JEventSource_EVIOpp();
-		virtual const char* className(void){return static_className();}
-		 static const char* static_className(void){return "JEventSource_EVIOpp";}
-		
+				  
 		               void Dispatcher(void);
 		           jerror_t SkipEVIOBlocks(uint32_t N);
 		
-		           jerror_t GetEvent(jana::JEvent &event);
-		               void FreeEvent(jana::JEvent &event);
-		           jerror_t GetObjects(jana::JEvent &event, jana::JFactory_base *factory);
+				   void Init(); // called in order to register parameters and services
+		           void Open(); // called when JANA is ready to accept events from this event source
+				   Result Emit(JEvent &event) override;
+				   void FinishEvent(JEvent &event) override;
+		           bool GetObjects(const std::shared_ptr<const JEvent> &event, JFactory* factory) override;
 
 		               void LinkBORassociations(DParsedEvent *pe);
 		           uint64_t SearchFileForRunNumber(void);
 		               void EmulateDf250Firmware(DParsedEvent *pe);
 		               void EmulateDf125Firmware(DParsedEvent *pe, const DTranslationTable *ttab);
-		               void AddToCallStack(DParsedEvent *pe, JEventLoop *loop);
-		               void AddSourceObjectsToCallStack(JEventLoop *loop, string className);
-		               void AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee);
+		               void AddToCallStack(DParsedEvent *pe, const std::shared_ptr<const JEvent>& event);
+		               void AddSourceObjectsToCallStack(const std::shared_ptr<const JEvent>& event, string className);
+		               void AddEmulatedObjectsToCallStack(const std::shared_ptr<const JEvent>& event, string caller, string callee);
 		               void AddROCIDtoParseList(uint32_t rocid){ ROCIDS_TO_PARSE.insert(rocid); }
 		      set<uint32_t> GetROCIDParseList(uint32_t rocid){ return ROCIDS_TO_PARSE; }
 		               void DumpBinary(const uint32_t *iptr, const uint32_t *iend, uint32_t MaxWords=0, const uint32_t *imark=NULL);
 
 
-		DApplication *dapp = NULL;
 		bool DONE;
 		bool DISPATCHER_END;
 		std::chrono::high_resolution_clock::time_point tstart;
 		std::chrono::high_resolution_clock::time_point tend;
 
-		uint32_t BLOCKS_TO_SKIP;
-		uint32_t PHYSICS_BLOCKS_TO_SKIP;
-		uint32_t PHYSICS_BLOCKS_SKIPPED;
-        uint32_t PHYSICS_BLOCKS_TO_KEEP;
-        uint32_t PHYSICS_BLOCKS_KEPT;
-		uint32_t MAX_PARSED_EVENTS;
+		uint32_t BLOCKS_TO_SKIP = 0;
+		uint32_t PHYSICS_BLOCKS_TO_SKIP = 0;
+		uint32_t PHYSICS_BLOCKS_SKIPPED = 0;
+        uint32_t PHYSICS_BLOCKS_TO_KEEP = 0;
+        uint32_t PHYSICS_BLOCKS_KEPT = 0;
+		uint32_t MAX_PARSED_EVENTS = 0;
 		mutex PARSED_EVENTS_MUTEX;
 		condition_variable PARSED_EVENTS_CV;
 		list<DParsedEvent*> parsed_events;
 
-		std::atomic<uint_fast64_t> NEVENTS_PROCESSED;
-		std::atomic<uint_fast64_t> NDISPATCHER_STALLED;
-		std::atomic<uint_fast64_t> NPARSER_STALLED;
-		std::atomic<uint_fast64_t> NEVENTBUFF_STALLED;
+		std::atomic<uint_fast64_t> NEVENTS_PROCESSED {0};
+		std::atomic<uint_fast64_t> NDISPATCHER_STALLED {0};
+		std::atomic<uint_fast64_t> NPARSER_STALLED {0};
+		std::atomic<uint_fast64_t> NEVENTBUFF_STALLED {0};
 		
 		uint64_t MAX_EVENT_RECYCLES;
 		uint64_t MAX_OBJECT_RECYCLES;
 
 		EVIOSourceType source_type;
-		HDEVIO *hdevio;
-		HDET   *hdet;
+		HDEVIO *hdevio = nullptr;
+		HDET   *hdet = nullptr;
 		bool et_quit_next_timeout;
 
 		vector<DEVIOWorkerThread*> worker_threads;
-		thread *dispatcher_thread;
+		thread *dispatcher_thread = nullptr;
 
-		JStreamLog evioout;
+		JLogger evioout;
 		
 		uint32_t F250_EMULATION_MODE; // (EmulationModeType)
 		uint32_t F125_EMULATION_MODE; // (EmulationModeType)
 		uint32_t F250_EMULATION_VERSION;
-		Df250EmulatorAlgorithm *f250Emulator;
-		Df125EmulatorAlgorithm *f125Emulator;
+		Df250EmulatorAlgorithm *f250Emulator = nullptr;
+		Df125EmulatorAlgorithm *f125Emulator = nullptr;
 		
 		bool RECORD_CALL_STACK;
 		set<uint32_t> ROCIDS_TO_PARSE;
@@ -201,7 +199,9 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		bool     PARSE_EVENTTAG;
 		bool     PARSE_TRIGGER;
 		bool     PARSE_SSP;
+	        bool     SKIP_SSP_FORMAT_ERROR;
 		bool     PARSE_GEMSRS;
+		bool     PARSE_HELICITY;
                 int      NSAMPLES_GEMSRS;
 		bool     APPLY_TRANSLATION_TABLE;
 		int      ET_STATION_NEVENTS;

@@ -17,8 +17,10 @@
 // End Guidance: ----------------------------------------
 
 {
+	bool debug = false;
+
 	TDirectory *locTopDirectory = gDirectory;
-	std::cout << "HistMacro_fa125_itrig: Entering..." << std::endl;
+	if (debug) std::cout << "HistMacro_fa125_itrig: Entering..." << std::endl;
 
 	//Goto Beam Path
 	TDirectory *locDirectory = (TDirectory*)gDirectory->FindObjectAny("fa125_itrig");
@@ -43,7 +45,7 @@
 		locCanvas = gPad->GetCanvas();
 
 	//Draw
-	std::cout << "HistMacro_fa125_itrig: Drawing Canvas" << std::endl;
+	if (debug) std::cout << "HistMacro_fa125_itrig: Drawing Canvas" << std::endl;
 	locCanvas->cd();
         gStyle->SetPalette(kCool);
         gStyle->SetOptStat(0);
@@ -54,13 +56,14 @@
 
 	if(locHist != NULL)
 	{
-      std::cout << "HistMacro_fa125_itrig: Drawing Hist" << std::endl;
+		if (debug) std::cout << "HistMacro_fa125_itrig: Drawing Hist" << std::endl;
 		locHist->GetXaxis()->SetTitleSize(0.05);
 		locHist->GetYaxis()->SetTitleSize(0.05);
 		locHist->GetXaxis()->SetLabelSize(0.05);
 		locHist->GetYaxis()->SetLabelSize(0.035);
 		locHist->GetYaxis()->SetNdivisions(17);
 		locHist->GetYaxis()->CenterLabels(1);
+		locHist->SetStats(0);
 		locHist->Draw("colz");  // don't use colz2, it is buggy in -b mode
 	}
 
@@ -69,15 +72,15 @@
 	// ------ The following is used by RSAI --------
 	if( rs_GetFlag("Is_RSAI")==1 ){
 
-          std::cout << "HistMacro_fa125_itrig: RSAI block" << std::endl;
+          if (debug) std::cout << "HistMacro_fa125_itrig: RSAI block" << std::endl;
 
           double Nevents = 1.0;
 
           TH1I *hevents = (TH1I*)gDirectory->Get("num_events");
 
           if(hevents){
-             Nevents = (double)num_events->GetBinContent(1);
-             std::cout << "HistMacro_fa125_itrig: Nevents=" << Nevents << std::endl;
+             Nevents = (double)hevents->GetBinContent(1);
+             if (debug) std::cout << "HistMacro_fa125_itrig: Nevents=" << Nevents << std::endl;
           }else{
              std::cout << "HistMacro_fa125_itrig: unable to find /fa125_itrig/num_events !" << std::endl;
           }

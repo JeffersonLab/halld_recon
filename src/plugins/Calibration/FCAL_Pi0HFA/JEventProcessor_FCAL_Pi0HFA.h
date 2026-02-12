@@ -18,24 +18,21 @@
 #include "DLorentzVector.h"
 #include "DVector3.h"
 #include "HistogramTools.h"
-#include "DANA/DApplication.h"
-#include "DANA/DStatusBits.h"
 #include "TProfile.h"
 
 using namespace std;
 
-class JEventProcessor_FCAL_Pi0HFA:public jana::JEventProcessor{
+class JEventProcessor_FCAL_Pi0HFA:public JEventProcessor{
 	public:
 		JEventProcessor_FCAL_Pi0HFA();
 		~JEventProcessor_FCAL_Pi0HFA();
-		const char* className(void){return "JEventProcessor_FCAL_Pi0HFA";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
     double m_targetZ;
 

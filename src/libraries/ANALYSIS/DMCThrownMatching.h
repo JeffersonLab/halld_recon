@@ -21,7 +21,6 @@
 #include "FCAL/DFCALTruthShower.h"
 
 using namespace std;
-using namespace jana;
 
 class DMCThrownMatching : public JObject
 {

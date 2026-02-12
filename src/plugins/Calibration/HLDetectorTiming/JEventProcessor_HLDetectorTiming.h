@@ -15,6 +15,7 @@
 #include <BCAL/DBCALUnifiedHit.h>
 #include <CDC/DCDCHit.h>
 #include <FCAL/DFCALHit.h>
+#include <ECAL/DECALHit.h>
 #include <FDC/DFDCHit.h>
 #include <TOF/DTOFHit.h>
 #include <TOF/DTOFPoint.h>
@@ -48,19 +49,20 @@ using std::function;
 
 //#include "HistogramTools.h"
 
-//class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor, public HistogramTools{
-class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
+//class JEventProcessor_HLDetectorTiming:public JEventProcessor, public HistogramTools{
+class JEventProcessor_HLDetectorTiming:public JEventProcessor{
     public:
 		JEventProcessor_HLDetectorTiming();
 		~JEventProcessor_HLDetectorTiming();
-		const char* className(void){return "JEventProcessor_HLDetectorTiming";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::shared_ptr<JLockService> lockService;
 
         //HistogramTools *histoTools;     
         
@@ -76,9 +78,9 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
         int GetCCDBIndexCDC(const DCDCHit *);
         int GetCCDBIndexCDC(int, int);
         
-        map< string, function<bool(jana::JEventLoop *eventLoop)> > dCutFunctions;
+        map< string, function<bool(const std::shared_ptr<const JEvent>& event)> > dCutFunctions;
         
-        double BEAM_CURRENT;
+		double BEAM_CURRENT;
         double Z_TARGET;
         int DO_ROUGH_TIMING, DO_TDC_ADC_ALIGN, DO_TRACK_BASED, DO_VERIFY, REQUIRE_BEAM, BEAM_EVENTS_TO_KEEP, DO_CDC_TIMING, DO_OPTIONAL, DO_FITS, DO_REACTION, USE_RF_BUNCH;
 		int DO_HIGH_RESOLUTION;
@@ -152,6 +154,12 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 		map<string, TH2F*> dFCALHitTimesPerChannel;
 		map<string, TH1F*> dFCALTotalEnergy;
 
+		map<string, TH1F*> dECALHitTimes;
+		map<string, TH2F*> dECALHitOccupancy;
+		map<string, TH2F*> dECALHitLocalTimes;
+		map<string, TH2F*> dECALHitTimesPerChannel;
+		map<string, TH1F*> dECALTotalEnergy;
+
 		map<string, TH1F*> dCCALHitTimes;
 		map<string, TH2F*> dCCALHitOccupancy;
 		map<string, TH2F*> dCCALHitLocalTimes;
@@ -214,7 +222,11 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 		map<string, TH1F*> dCDCSCTime;
 		map<string, TH1F*> dCDCBCALTime;
 		map<string, TH1F*> dTOFRFTime;
-		map<string, TH1F*> dTOFSCTime;
+		map<string, TH2F*> dTOFRFTimeVSBCALRFTime;
+		map<string, TH2F*> dTOFRFTimeVSFCALRFTime;
+		map<string, TH2F*> dTOFRFTimeVSECALRFTime;
+
+                map<string, TH1F*> dTOFSCTime;
 		map<string, TH1F*> dEarliestCDCTime;
 		map<string, TH1F*> dEarliestFDCTime;
 		map<string, TH1F*> dBCALShowerRFTime;
@@ -222,12 +234,16 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 		map<string, TH2F*> dBCALShowerSCTimeVsCorrection;
 		map<string, TH1F*> dFCALShowerRFTime;
 		map<string, TH1F*> dFCALShowerSCTime;
+		map<string, TH1F*> dECALShowerRFTime;
+		map<string, TH1F*> dECALShowerSCTime;
 
 		
 		map<string, TH1F*> dBCALShowerRFTime_NoTracks;
 		map<string, TH2F*> dBCALShowerRFTimeVsEnergy_NoTracks;
 		map<string, TH1F*> dFCALShowerRFTime_NoTracks;
 		map<string, TH2F*> dFCALShowerRFTimeVsEnergy_NoTracks;
+		map<string, TH1F*> dECALShowerRFTime_NoTracks;
+		map<string, TH2F*> dECALShowerRFTimeVsEnergy_NoTracks;
 		map<string, TH1F*> dCCALShowerRFTime_NoTracks;
 		map<string, TH2F*> dCCALShowerRFTimeVsEnergy_NoTracks;
 		map<string, TH1F*> dTOFShowerRFTime_NoTracks;

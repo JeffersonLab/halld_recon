@@ -2,6 +2,7 @@
 #define _JEventProcessor_highlevel_online_
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Services/JLockService.h>
 
 #include <TDirectory.h>
 #include <TH2.h>
@@ -24,20 +25,20 @@
 #include <TAGGER/DTAGHHit.h>
 #include <BCAL/DBCALDigiHit.h>
 #include <FCAL/DFCALDigiHit.h>
-#include <CCAL/DCCALDigiHit.h>
+#include <ECAL/DECALDigiHit.h>
 #include <DAQ/Df250PulsePedestal.h>
 #include <PAIR_SPECTROMETER/DPSPair.h>
 #include <PAIR_SPECTROMETER/DPSCPair.h>
 
-using namespace jana;
 using namespace std;
 
-class JEventProcessor_highlevel_online:public jana::JEventProcessor
+class JEventProcessor_highlevel_online:public JEventProcessor
 {
 	public:
-		JEventProcessor_highlevel_online(){};
+		JEventProcessor_highlevel_online(){
+			SetTypeName("JEventProcessor_highlevel_online");
+		};
 		~JEventProcessor_highlevel_online(){};
-		const char* className(void){return "JEventProcessor_highlevel_online";}
 
 		TH1D* dHist_EventInfo;
 
@@ -45,8 +46,10 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 		TH1F* dHist_BeamBunchPeriod_DFT;
 
 		TH2I* dHist_NumTriggers;
-		TH2I* dHist_BCALVsFCAL_TrigBit1;
-		TH2I* dHist_CCALVsFCAL_TrigBit1;
+		TH2I* dHist_BCALVsFCAL2_TrigBit1;
+	        TH2I* dHist_BCALVsFCAL_TrigBit1;
+	        TH2I* dHist_BCALVsECAL_TrigBit1;
+		TH2I* dHist_ECALVsFCAL_TrigBit1;
 		TH1I* dHist_L1bits_gtp;
 		TH1I* dHist_L1bits_fp;
                 TH1I* dHist_L1bits_fp_twelvehundhits; // BCAL LED Pseudo Trigger(1200 hits in BCAL)
@@ -54,6 +57,7 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 		TH2I* dHist_NumHighLevelObjects;
 
 		TH1I* dHist_BeamEnergy;
+		TH1I* dHist_BeamEnergy_amo;
 		TH1I* dHist_PSPairEnergy;
 
 		TH2I* dHist_PVsTheta_Tracks;
@@ -61,32 +65,42 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 
 		TH1I* dEventVertexZ;
 		TH2I* dEventVertexYVsX;
+		TH2I* dEventVertexXVsZ;
+		TH2I* dEventVertexYVsZ;
 
 		TH1I* d2gamma;
 		TH1I *dpip_pim;
 		TH1I *dKp_Km;
 		TH1I *dpip_pim_pi0;
 		TH2I *dbeta_vs_p;
+		TH2I *dbeta_vs_p_BCAL;
+		TH2I *dbeta_vs_p_TOF;
 		TH1I *dptrans;
 		TH1I *dme_rho;
 		TH1I *dme_omega;
-		
-		TH2D *dF1TDC_fADC_tdiff;
+
+                TH2I *dHist_heli_asym_gtp;
+
+                TH2D *dF1TDC_fADC_tdiff;
 		map<pair<int,int>, double> f1tdc_bin_map; // key=<rocid,slot> val=bin
 		
 		template<typename T> void FillF1Hist(vector<const T*> hits);
 
 	private:
-		jerror_t init(void);
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);
-		jerror_t erun(void);
-		jerror_t fini(void);
+
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::shared_ptr<JLockService> lockService;
 
 		int fcal_cell_thr;
 		int bcal_cell_thr;
-		int ccal_cell_thr;
+		int ecal_cell_thr;
 		int fcal_row_mask_min, fcal_row_mask_max, fcal_col_mask_min, fcal_col_mask_max;
+	        int ecal_row_mask_min, ecal_row_mask_max, ecal_col_mask_min, ecal_col_mask_max;
 
 		vector<double> dNumHadronicTriggers_CoherentPeak_RFSignal;
 		vector<double> dNumHadronicTriggers_CoherentPeak_RFSideband;

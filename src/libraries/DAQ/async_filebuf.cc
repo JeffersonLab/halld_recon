@@ -15,7 +15,7 @@
 #include <string.h>
 #include <stdexcept>
 
-#include <async_filebuf.h>
+#include "async_filebuf.h"
 
 async_filebuf::async_filebuf(int segsize, int segcount, int lookback)
  : segment_size(segsize), 
@@ -79,13 +79,16 @@ int async_filebuf::readloop_terminate()
    if (readloop_active) {
       std::streampos pos = getpos();
       if (readloop_thread) {
-         std::unique_lock<std::mutex> lk(readloop_lock);
-         readloop_active = 0;
-         readloop_wake.notify_one();
+         {  // scope the lock
+            std::unique_lock<std::mutex> lk(readloop_lock);
+            readloop_active = 0;
+            readloop_wake.notify_one();
+         }
+         readloop_thread->join();
+         delete readloop_thread;
+         readloop_thread = nullptr;
       }
-      readloop_thread->join();
-      delete readloop_thread;
-      readloop_thread = 0;
+      
       std::filebuf::seekpos(pos, std::ios::in);
       buffer_eback = buffer_end;
       buffer_gptr = buffer_end;
@@ -272,4 +275,3 @@ std::streamsize async_filebuf::xsgetn(char* s, std::streamsize n)
 #else  // __APPLE__
 int async_filebuff_disable_for_mac_osx = 0; // symbol so compiled object isn't empty
 #endif // __APPLE__
-

@@ -1,13 +1,11 @@
 #ifndef _Df125EmulatorAlgorithm_
 #define _Df125EmulatorAlgorithm_
 #include <JANA/JObject.h>
-#include <JANA/JEventLoop.h>
 
 #include <stdint.h>
 #include <vector>
 #include <iostream>
 using namespace std;
-using namespace jana;
 #include <Rtypes.h>
 
 #include <DAQ/Df125WindowRawData.h>
@@ -21,7 +19,7 @@ using namespace jana;
 // EmulateFirmware needs to be virtually overwritten by the user
 ////////////////////////////////////////////////////////////////
 
-class Df125EmulatorAlgorithm:public jana::JObject{
+class Df125EmulatorAlgorithm:public JObject{
     public:
         JOBJECT_PUBLIC(Df125EmulatorAlgorithm);
 

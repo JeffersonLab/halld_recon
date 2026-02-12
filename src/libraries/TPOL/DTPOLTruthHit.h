@@ -17,7 +17,6 @@
 #define _DTPOLTruthHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
 class DTPOLTruthHit:public JObject{
  public:
@@ -34,19 +33,19 @@ class DTPOLTruthHit:public JObject{
   float t;       ///< time of hit
   int sector;    ///< sector number
   
-  /// \fn   void toStrings(vector<pair<string,string> > &items)const
+  /// \fn   void Summarize(JObjectSummary& summary) const
   /// used by hd_dump to print all TPOL Sector truth Hit object MC data for an event.
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "track", "%d", track);
-    AddString(items, "itrack", "%d", itrack);
-    AddString(items, "primary", "%d", primary);
-    AddString(items, "ptype", "%d", ptype);
-    AddString(items, "dEdx(MeV/cm)", "%1.3f", dEdx*1.0E3);
-    AddString(items, "t", "%3.2f", t);
-    AddString(items, "r", "%3.1f", r);
-    AddString(items, "phi", "%1.3f", phi);
-    AddString(items, "z", "%3.1f", z);
-    AddString(items, "sector", "%d", sector);
+  void Summarize(JObjectSummary& summary)const{
+    summary.add(track, "track", "%d");
+    summary.add(itrack, "itrack", "%d");
+    summary.add(primary, "primary", "%d");
+    summary.add(ptype, "ptype", "%d");
+    summary.add(dEdx*1.0E3, "dEdx(MeV/cm)", "%1.3f");
+    summary.add(t, "t", "%3.2f");
+    summary.add(r, "r", "%3.1f");
+    summary.add(phi, "phi", "%1.3f");
+    summary.add(z, "z", "%3.1f");
+    summary.add(sector, "sector", "%d");
   }
 };
 

@@ -9,18 +9,18 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRACKING/DReferenceTrajectory.h"
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
-#include "HistogramTools.h"
 
-using namespace jana;
-
+#include <CDC/DCDCHit.h>
+#include "DANA/DEvent.h"
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_FDCProjectionResiduals());
+	app->Add(new JEventProcessor_FDCProjectionResiduals());
 }
 } // "C"
 
@@ -30,7 +30,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_FDCProjectionResiduals::JEventProcessor_FDCProjectionResiduals()
 {
-
+    SetTypeName("JEventProcessor_FDCProjectionResiduals");
 }
 
 //------------------
@@ -42,27 +42,81 @@ JEventProcessor_FDCProjectionResiduals::~JEventProcessor_FDCProjectionResiduals(
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FDCProjectionResiduals::init(void)
+void JEventProcessor_FDCProjectionResiduals::Init()
 {
-   // This is called once at program startup. 
+   // This is called once at program startup.
+   auto app = GetApplication();
+   lockService = app->GetService<JLockService>();
 
-   return NOERROR;
+   unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
+      135,135,146,146,158,158,170,170,182,182,197,197,
+      209,209};
+
+    TDirectory *main = gDirectory;
+    gDirectory->mkdir("FDCProjectionResiduals")->cd();
+    
+    hTrackingFOM = new TH1F( "Tracking FOM", "TrackingFOM", 200, 0.0, 1.0);
+    
+    gDirectory->mkdir("FDCReco")->cd();
+
+	hDistanceVsTime = new TH2F("Distance Vs Time","Distance Vs. Time; Time [ns]; Distance [cm]", 300, 0.0, 300., 100, 0.0, 0.5);
+	hResidualsVsTime = new TH2F("Residual Vs Time","Residual Vs. Time; Time [ns]; Residual [cm]", 200, 0.0, 200., 160, -0.2, 0.2);
+	hCathodeResiduals = new TH1F("Cathode Residuals","Cathode Residual; Residual [cm];", 160,-0.2, 0.2);
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("ResidualVsStrawNumber")->cd();
+
+    for(int ring=0; ring<28; ring++) {
+	  char name[200];
+	  char title[200];
+	  sprintf(name,"Ring %i Residual Vs. Straw Number", ring+1);
+	  sprintf(title,"Ring %i Residual Vs. Straw Number; Straw Number; Residual [cm]", ring+1);
+    	
+      hResidualVsStrawNumber.push_back( new TH2F(name, title, numstraws[ring], 0.5, numstraws[ring] + 0.5, 1000, -0.5, 0.5) );
+    }
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("ResidualVsPhi")->cd();
+
+    for(int ring=0; ring<28; ring++) {
+	  char name[200];
+	  char title[200];
+	  sprintf(name,"Ring %i rPhi Residual Vs. phi", ring+1);
+	  sprintf(title,"Ring %i #Deltar#phi Vs. #phi; Straw Number; Residual [cm]", ring+1);
+    	
+      hResidualVsPhi.push_back( new TH2F(name, title, numstraws[ring], -3.14, 3.14, 1000, -0.5, 0.5) );
+    }
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("DistanceVsTimeRing1")->cd();
+
+    for(unsigned int straw=0; straw<numstraws[0]; straw++) {
+	  char name[200];
+	  char title[200];	
+	  sprintf(name,"Ring %i Straw %i Distance Vs. Time", 1, straw+1);
+	  sprintf(title,"Ring %i Straw %i Distance Vs. Time ; Time [ns]; Distance [cm]", 1, straw+1);
+    	
+      hDistanceVsTimeRing1.push_back( new TH2F(name, title, 500, -50.0, 1000, 120, 0.0, 1.2) );
+    }
+
+
+   main->cd();
+
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FDCProjectionResiduals::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_FDCProjectionResiduals::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
    // This is called whenever the run number changes
-   // This is called whenever the run number changes
-   DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dapp->GetBfield(runnumber)) != NULL);
-   JCalibration *jcalib = dapp->GetJCalibration(runnumber);
-   dgeom  = dapp->GetDGeometry(runnumber);
-   //bfield = dapp->GetBfield();
+
+   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(DEvent::GetBfield(event)) != nullptr);
+   JCalibration *jcalib = DEvent::GetJCalibration(event);
+   dgeom = DEvent::GetDGeometry(event);
+   //bfield = DEvent::GetBfield(event);
 
    //Get Target Center Z, length
    dgeom->GetTargetZ(dTargetCenterZ);
@@ -174,35 +228,29 @@ jerror_t JEventProcessor_FDCProjectionResiduals::brun(JEventLoop *eventLoop, int
    PLANE_TO_SKIP = 0;
    //Make sure it gets initialize first, in case we want to change it:
    vector<const DTrackCandidate*> locTrackCandidates;
-   eventLoop->Get(locTrackCandidates,"StraightLine");
-   gPARMS->GetParameter("TRKFIT:PLANE_TO_SKIP", PLANE_TO_SKIP);
-
-   return NOERROR;
+   event->Get(locTrackCandidates,"StraightLine");
+   GetApplication()->GetParameter("TRKFIT:PLANE_TO_SKIP", PLANE_TO_SKIP);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FDCProjectionResiduals::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_FDCProjectionResiduals::Process(const std::shared_ptr<const JEvent>& event)
 {
    vector<const DTrackFitter *> fitters;
-   loop->Get(fitters);
+   event->Get(fitters);
    
    if(fitters.size()<1){
      _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-     return RESOURCE_UNAVAILABLE;
+     throw JException("Unable to get a DTrackFinder object!");
    }
    const DTrackFitter *fitter = fitters[0];
 
    vector <const DCDCHit *> cdcHitVector;
-   loop->Get(cdcHitVector);
+   event->Get(cdcHitVector);
 
    vector <const DChargedTrack *> chargedTrackVector;
-   loop->Get(chargedTrackVector);
-
-   unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
-      135,135,146,146,158,158,170,170,182,182,197,197,
-      209,209};
+   event->Get(chargedTrackVector);
 
    for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
 
@@ -214,11 +262,14 @@ jerror_t JEventProcessor_FDCProjectionResiduals::evnt(JEventLoop *loop, uint64_t
 
       double t0 = thisTimeBasedTrack->t0();
 
-      Fill1DHistogram("FDCProjectionResiduals", "", "Tracking FOM", thisTimeBasedTrack->FOM, "TrackingFOM", 200, 0.0, 1.0);
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	  hTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
       if (thisTimeBasedTrack->FOM < 0.0027 || thisTimeBasedTrack->Ndof < 4) continue;
 
       // Loop through the pulls to try to check on the FDC calibtrations
       vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       for (size_t iPull = 0; iPull < pulls.size(); iPull++){
          if ( pulls[iPull].fdc_hit != nullptr){
             if (PLANE_TO_SKIP == 0 || PLANE_TO_SKIP == pulls[iPull].fdc_hit->wire->layer){
@@ -226,23 +277,20 @@ jerror_t JEventProcessor_FDCProjectionResiduals::evnt(JEventLoop *loop, uint64_t
                double residual = pulls[iPull].resi;
                double cathode_resi = pulls[iPull].resic;
                double tdrift = pulls[iPull].tdrift;
-               Fill2DHistogram("FDCProjectionResiduals", "FDCReco","Distance Vs Time",
-                     tdrift, DOCA,
-                     "Distance Vs. Time; Time [ns]; Distance [cm]",
-                     300, 0.0, 300., 100, 0.0, 0.5);
-               Fill2DHistogram("FDCProjectionResiduals", "FDCReco","Residual Vs Time",
-                     tdrift, residual,
-                     "Residual Vs. Time; Time [ns]; Residual [cm]",
-                     200, 0.0, 200., 160, -0.2, 0.2); 
-               Fill1DHistogram("FDCProjectionResiduals", "FDCReco","Cathode Residuals",
-                     cathode_resi, "Cathode Residual; Residual [cm];", 160,-0.2, 0.2);
-
+               
+               hDistanceVsTime->Fill(tdrift, DOCA);
+               hResidualsVsTime->Fill(tdrift, residual);
+               hCathodeResiduals->Fill(cathode_resi);               
             }
          }
       }
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
       vector<DTrackFitter::Extrapolation_t>extrapolations=thisTimeBasedTrack->extrapolations.at(SYS_CDC);
       if (extrapolations.size()>0){
+
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      
 	for (auto ringPtr=cdcwires.begin(); ringPtr < cdcwires.end(); ringPtr++){
 	  vector< DCDCWire * > wireByNumber = (*ringPtr);
 	  for (auto wirePtr = wireByNumber.begin(); wirePtr < wireByNumber.end(); wirePtr++)
@@ -262,9 +310,9 @@ jerror_t JEventProcessor_FDCProjectionResiduals::evnt(JEventLoop *loop, uint64_t
 	      double zPOCA = POCAOnTrack.Z();
 	      DVector3 LOCA = POCAOnTrack - POCAOnWire;
 	      if(distanceToWire > 1.2 || distanceToBeamline > 1.0 || zPOCA < zVertex || POCAOnWire.Z() > endplate_z) continue;
-	      jout << " Dist = " << distanceToWire << " POCAOnTrack POCAOnWire Manual Distance = " << LOCA.Mag() << endl;
-	      POCAOnTrack.Print();
-	      POCAOnWire.Print(); 
+	      // jout << " Dist = " << distanceToWire << " POCAOnTrack POCAOnWire Manual Distance = " << LOCA.Mag() << endl;
+	      // POCAOnTrack.Print();
+	      // POCAOnWire.Print();
 	      
 	      double delta = 0.0, dz = 0.0;
 	      if(!Expect_Hit(thisTimeBasedTrack, wire, distanceToWire, delta, dz, fitter))
@@ -281,55 +329,43 @@ jerror_t JEventProcessor_FDCProjectionResiduals::evnt(JEventLoop *loop, uint64_t
                   double signedResidual = measurement - (POCAOnTrack.Phi() - POCAOnWire.Phi())*POCAOnTrack.Perp();
                   double residual = measurement - distanceToWire;
                   //jout << "evnt" << eventnumber << " ring " << wire->ring << " straw " << wire->straw << " t " << thisHit->t << " t0 " << t0 << " measurement " << measurement << " residual " << residual << endl;
-                  char name[200];
-                  char title[200];
-                  sprintf(name,"Ring %i Residual Vs. Straw Number", thisHit->ring);
-                  sprintf(title,"Ring %i Residual Vs. Straw Number; Straw Number; Residual [cm]", thisHit->ring);
-                  Fill2DHistogram("FDCProjectionResiduals","ResidualVsStrawNumber",name,
-				  thisHit->straw, residual,
-				  title,
-				  numstraws[thisHit->ring-1], 0.5, numstraws[thisHit->ring-1] + 0.5, 1000, -0.5, 0.5);
-                  sprintf(name,"Ring %i rPhi Residual Vs. phi", thisHit->ring);
-                  sprintf(title,"Ring %i #Deltar#phi Vs. #phi; Straw Number; Residual [cm]", thisHit->ring);
-                  Fill2DHistogram("FDCProjectionResiduals","ResidualVsPhi",name,
-				  thisTimeBasedTrack->momentum().Phi(), signedResidual,
-                        title,
-				  numstraws[thisHit->ring-1], -3.14, 3.14, 1000, -0.5, 0.5);
+
+				  hResidualVsStrawNumber[thisHit->ring-1]->Fill(thisHit->straw, residual);
+				  hResidualVsPhi[thisHit->ring-1]->Fill(thisTimeBasedTrack->momentum().Phi(), signedResidual);
+
                   if (thisHit->ring == 1){
-		    sprintf(name,"Ring %i Straw %i Distance Vs. Time", thisHit->ring, thisHit->straw);
-		    sprintf(title,"Ring %i Straw %i Distance Vs. Time ; Time [ns]; Distance [cm]", thisHit->ring, thisHit->straw);
-		    Fill2DHistogram("FDCProjectionResiduals","DistanceVsTimeRing1",name,
-                           tdrift, distanceToWire,
-				    title,
-				    500, -50.0, 1000, 120, 0.0, 1.2);
-                  }
-		}
-	      }
+                  	hDistanceVsTimeRing1[thisHit->straw-1]->Fill(tdrift, distanceToWire);
+                		}
+                	}
+	      		}
             }
          }
+
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
       }
+
+
    }
-   return NOERROR;
 }
 
+
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FDCProjectionResiduals::erun(void)
+void JEventProcessor_FDCProjectionResiduals::EndRun()
 {
    // This is called whenever the run number changes, before it is
    // changed to give you a chance to clean up before processing
    // events from the next run number.
-   return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FDCProjectionResiduals::fini(void)
+void JEventProcessor_FDCProjectionResiduals::Finish()
 {
    // Called before program exit after event processing is finished.
-   return NOERROR;
 }
 
 // Convert time to distance for the cdc

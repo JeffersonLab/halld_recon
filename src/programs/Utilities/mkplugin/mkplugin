@@ -91,23 +91,29 @@ sub PrintFileHeader()
 sub PrintClass()
 {
 	$content = "
+/// For more information on the syntax changes between JANA1 and JANA2, visit: https://jeffersonlab.github.io/JANA2/#/jana1to2/jana1-to-jana2
+
 \#ifndef _JEventProcessor_${pluginname}_
 \#define _JEventProcessor_${pluginname}_
 
 \#include <JANA/JEventProcessor.h>
+// \#include <JANA/Services/JLockService.h> // Required for accessing services
 
-class JEventProcessor_${pluginname}:public jana::JEventProcessor{
-	public:
-		JEventProcessor_${pluginname}();
-		~JEventProcessor_${pluginname}();
-		const char* className(void){return \"JEventProcessor_${pluginname}\";}
 
-	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+class JEventProcessor_${pluginname}:public JEventProcessor{
+    public:
+        JEventProcessor_${pluginname}();
+        ~JEventProcessor_${pluginname}();
+        const char* className(void){return \"JEventProcessor_${pluginname}\";}
+
+    private:
+        void Init() override;                       ///< Called once at program start.
+        void BeginRun(const std::shared_ptr<const JEvent>& event) override; ///< Called everytime a new run number is detected.
+        void Process(const std::shared_ptr<const JEvent>& event) override;  ///< Called every event.
+        void EndRun() override;                     ///< Called everytime run number changes, provided BeginRun has been called.
+        void Finish() override;                     ///< Called after last event of last event source has been processed.
+
+    	// std::shared_ptr<JLockService> lockService; //Used to access all the services, its value should be set inside Init()
 };
 
 \#endif // _JEventProcessor_${pluginname}_
@@ -123,17 +129,17 @@ class JEventProcessor_${pluginname}:public jana::JEventProcessor{
 sub PrintMethods
 {
 	$content = "
+/// For more information on the syntax changes between JANA1 and JANA2, visit: https://jeffersonlab.github.io/JANA2/#/jana1to2/jana1-to-jana2
+
 \#include \"JEventProcessor_${pluginname}.h\"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
 \#include \<JANA/JApplication.h\>
-\#include \<JANA/JFactory.h\>
 extern \"C\"{
 void InitPlugin(JApplication *app){
-	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_${pluginname}());
+    InitJANAPlugin(app);
+    app->Add(new JEventProcessor_${pluginname}());
 }
 } // \"C\"
 
@@ -143,7 +149,9 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_${pluginname}::JEventProcessor_${pluginname}()
 {
+	SetTypeName(NAME_OF_THIS); // Provide JANA with this class's name
 
+    // Parameters and Services should be accessed from Init() instead of here!
 }
 
 //------------------
@@ -151,69 +159,67 @@ JEventProcessor_${pluginname}::JEventProcessor_${pluginname}()
 //------------------
 JEventProcessor_${pluginname}::~JEventProcessor_${pluginname}()
 {
+}
+
+//------------------
+// Init
+//------------------
+void JEventProcessor_${pluginname}::Init()
+{
+    // This is called once at program startup. 
+    
+    auto app = GetApplication();
+    // lockService should be initialized here like this
+    // lockService = app->GetService<JLockService>();
+    
+}
+
+//------------------
+// BeginRun
+//------------------
+void JEventProcessor_${pluginname}::BeginRun(const std::shared_ptr<const JEvent> &event)
+{
+    // This is called whenever the run number changes
+}
+
+//------------------
+// Process
+//------------------
+void JEventProcessor_${pluginname}::Process(const std::shared_ptr<const JEvent> &event)
+{
+    // This is called for every event. Use of common resources like writing
+    // to a file or filling a histogram should be mutex protected. Using
+    // event->Get(...) to get reconstructed objects (and thereby activating the
+    // reconstruction algorithm) should be done outside of any mutex lock
+    // since multiple threads may call this method at the same time.
+    // Here\'s an example:
+    //
+    // vector<const MyDataClass*> mydataclasses;
+    // event->Get(mydataclasses);
+    //
+    // If you have lockService initialized in Init() then you can acquire locks like this
+    // lockService->RootFillLock(this);
+    //  ... fill historgrams or trees ...
+    // lockService->RootFillUnLock(this);
 
 }
 
 //------------------
-// init
+// EndRun
 //------------------
-jerror_t JEventProcessor_${pluginname}::init(void)
+void JEventProcessor_${pluginname}::EndRun()
 {
-	// This is called once at program startup. 
-
-	return NOERROR;
+    // This is called whenever the run number changes, before it is
+    // changed to give you a chance to clean up before processing
+    // events from the next run number.
 }
 
 //------------------
-// brun
+// Finish
 //------------------
-jerror_t JEventProcessor_${pluginname}::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_${pluginname}::Finish()
 {
-	// This is called whenever the run number changes
-	return NOERROR;
-}
-
-//------------------
-// evnt
-//------------------
-jerror_t JEventProcessor_${pluginname}::evnt(JEventLoop *loop, uint64_t eventnumber)
-{
-	// This is called for every event. Use of common resources like writing
-	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
-	// reconstruction algorithm) should be done outside of any mutex lock
-	// since multiple threads may call this method at the same time.
-	// Here\'s an example:
-	//
-	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
-	//
-	// japp->RootFillLock(this);
-	//  ... fill historgrams or trees ...
-	// japp->RootFillUnLock(this);
-
-
-	return NOERROR;
-}
-
-//------------------
-// erun
-//------------------
-jerror_t JEventProcessor_${pluginname}::erun(void)
-{
-	// This is called whenever the run number changes, before it is
-	// changed to give you a chance to clean up before processing
-	// events from the next run number.
-	return NOERROR;
-}
-
-//------------------
-// fini
-//------------------
-jerror_t JEventProcessor_${pluginname}::fini(void)
-{
-	// Called before program exit after event processing is finished.
-	return NOERROR;
+    // Called before program exit after event processing is finished.
 }
 
 ";
@@ -244,18 +250,10 @@ sub CopySConstruct()
 sub Usage()
 {
 	print "\n";
-	print "Usage:\n\t mkplugin [-b -j -d --no-root] name\n";
+	print "Usage:\n\t mkplugin name\n";
 	print "\n";
 	print "Generate the C++ source and header files to implement a new\n";
 	print "plugin for use with the JANA framework.\n";
-	print "\n";
-	print "Options:\n";
-	print "  -b         Use \"BANA\" as base Makefile package in Makefile\n";
-	print "  -j         Use \"JANA\" as base Makefile package in Makefile\n";
-	print "  -d         Use \"DANA\" as base Makefile package in Makefile\n";
-	print "             (this will be set by default if HALLD_RECON_HOME is set)\n";
-	print "  --no-root  Do not include \"ROOT\" in the PACKAGES line in Makefile\n";
-	print "\n";
 	print "This script superceeds some similar functionality in the mkprocessor\n";
 	print "script. Unlike mkprocessor, the mkplugin script will create a directory\n";
 	print "for the files and write the files to it. In addition, it will create\n";

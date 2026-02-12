@@ -17,7 +17,7 @@
 #include "TH2D.h"
 #include "TTree.h"
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "particleType.h"
 
 #include "RF/DRFTime.h"
@@ -51,6 +51,8 @@
 #include "BCAL/DBCALHit.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALHit.h"
+#include "ECAL/DECALShower.h"
+#include "ECAL/DECALHit.h"
 #include "CCAL/DCCALShower.h"
 #include "CCAL/DCCALHit.h"
 
@@ -59,7 +61,6 @@
 #include "TRACKING/DTrackCandidate.h"
 
 using namespace std;
-using namespace jana;
 
 /*
 REACTION-BASED ACTIONS:
@@ -81,10 +82,10 @@ class DHistogramAction_PID : public DAnalysisAction
 
 		DHistogramAction_PID(const DReaction* locReaction, bool locUseKinFitResultsFlag = false, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Hist_PID", locUseKinFitResultsFlag, locActionUniqueString),
-		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DCCALThetaBins(120), dNum2DThetaBins(280), dNumBetaBins(700),
+		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DECALThetaBins(120), dNum2DCCALThetaBins(120), dNum2DThetaBins(280), dNumBetaBins(700),
 		dNum2DEOverPBins(300), dNum2DDeltaBetaBins(400), dNum2DDeltadEdxBins(300), dNum2DDeltaTBins(400), dNum2DPullBins(200), dNumFOMBins(400), 
 		dNum2DFOMBins(200), dMinP(0.0), dMaxP(10.0), dMaxBCALP(3.0), dMindEdX(0.0), dMaxdEdX(25.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinBCALTheta(10.0), 
-		dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), dMinCCALTheta(0.0), dMaxCCALTheta(2.0), dMinTheta(0.0), dMaxTheta(140.0), dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), 
+		dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), dMinECALTheta(0.0), dMaxECALTheta(6.0), dMinCCALTheta(0.0), dMaxCCALTheta(2.0), dMinTheta(0.0), dMaxTheta(140.0), dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), 
 		dMaxDeltaBeta(1.0), dMinDeltadEdx(-30.0), dMaxDeltadEdx(30.0), dMinDeltaT(-10.0), dMaxDeltaT(10.0), dMinPull(-10.0), dMaxPull(10.0),
 	    dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
 		dDIRCMinNumPhotons(0), dDIRCMaxNumPhotons(100),
@@ -102,17 +103,17 @@ class DHistogramAction_PID : public DAnalysisAction
 			dAnalysisUtilities = NULL;
 		}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
 			dPreviouslyHistogrammedParticles.clear();
 		}
 
-		unsigned int dNum2DPBins, dNum2DdEdxBins, dNum2DBetaBins, dNum2DBCALThetaBins, dNum2DFCALThetaBins, dNum2DCCALThetaBins, dNum2DThetaBins, dNumBetaBins;
+		unsigned int dNum2DPBins, dNum2DdEdxBins, dNum2DBetaBins, dNum2DBCALThetaBins, dNum2DFCALThetaBins, dNum2DECALThetaBins, dNum2DCCALThetaBins, dNum2DThetaBins, dNumBetaBins;
 		unsigned int dNum2DEOverPBins, dNum2DDeltaBetaBins, dNum2DDeltadEdxBins, dNum2DDeltaTBins, dNum2DPullBins, dNumFOMBins, dNum2DFOMBins;
-		double dMinP, dMaxP, dMaxBCALP, dMindEdX, dMaxdEdX, dMinBeta, dMaxBeta, dMinBCALTheta, dMaxBCALTheta, dMinFCALTheta, dMaxFCALTheta, dMinCCALTheta, dMaxCCALTheta, dMinTheta, dMaxTheta;
+		double dMinP, dMaxP, dMaxBCALP, dMindEdX, dMaxdEdX, dMinBeta, dMaxBeta, dMinBCALTheta, dMaxBCALTheta, dMinFCALTheta, dMaxFCALTheta, dMinECALTheta, dMaxECALTheta, dMinCCALTheta, dMaxCCALTheta, dMinTheta, dMaxTheta;
 		double dMinEOverP, dMaxEOverP, dMinDeltaBeta, dMaxDeltaBeta, dMinDeltadEdx, dMaxDeltadEdx, dMinDeltaT, dMaxDeltaT, dMinPull, dMaxPull;
 		unsigned int dDIRCNumPhotonsBins, dDIRCThetaCBins, dDIRCLikelihoodBins, dDIRCMinNumPhotons, dDIRCMaxNumPhotons;
                 double dDIRCMinThetaC, dDIRCMaxThetaC;
@@ -124,7 +125,7 @@ class DHistogramAction_PID : public DAnalysisAction
 		deque<Particle_t> dThrownPIDs;
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		void Fill_ChargedHists(const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching, const DEventRFBunch* locEventRFBunch);
 		void Fill_NeutralHists(const DNeutralParticleHypothesis* locNeutralParticleHypothesis, const DMCThrownMatching* locMCThrownMatching, const DEventRFBunch* locEventRFBunch);
@@ -150,8 +151,8 @@ class DHistogramAction_PID : public DAnalysisAction
 		map<Particle_t, map<DetectorSystem_t, TH2I*> > dHistMap_TimePullVsP;
 		map<Particle_t, map<DetectorSystem_t, TH2I*> > dHistMap_TimeFOMVsP;
 
-		map<Particle_t, map<DetectorSystem_t, TH1I*> > dHistMap_Beta; //for BCAL/FCAL/CCAL neutrals only
-		map<Particle_t, map<DetectorSystem_t, TH1I*> > dHistMap_CalE; //for BCAL/FCAL/CCAL neutrals only
+		map<Particle_t, map<DetectorSystem_t, TH1I*> > dHistMap_Beta; //for BCAL/ECAL/FCAL/CCAL neutrals only
+		map<Particle_t, map<DetectorSystem_t, TH1I*> > dHistMap_CalE; //for BCAL/ECAL/FCAL/CCAL neutrals only
 
 		map<Particle_t, TH1I*> dHistMap_PIDFOM; //overall
 
@@ -190,11 +191,11 @@ class DHistogramAction_TrackVertexComparison : public DAnalysisAction
 		unsigned int dNumDeltaVertexZBins, dNumDeltaVertexTBins, dNumDOCABins, dNum2DPBins, dNumThetaBins;
 		double dMinDeltaVertexZ, dMaxDeltaVertexZ, dMinDeltaVertexT, dMaxDeltaVertexT, dMinDOCA, dMaxDOCA, dMinP, dMaxP, dMinTheta, dMaxTheta;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		const DAnalysisUtilities* dAnalysisUtilities;
 
@@ -232,8 +233,8 @@ class DHistogramAction_ParticleComboKinematics : public DAnalysisAction
 		double dMinP, dMaxP, dMinTheta, dMaxTheta, dMinPhi, dMaxPhi, dMinVertexZ, dMaxVertexZ, dMinVertexXY, dMaxVertexXY;
 		double dMinBeta, dMaxBeta, dMinDeltaBeta, dMaxDeltaBeta, dMinDeltaTRF, dMaxDeltaTRF, dMaxPathLength, dMaxLifetime;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -242,9 +243,9 @@ class DHistogramAction_ParticleComboKinematics : public DAnalysisAction
 		}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
-		void Fill_Hists(JEventLoop* locEventLoop, const DKinematicData* locKinematicData, bool locIsMissingFlag, size_t locStepIndex);
+		void Fill_Hists(const std::shared_ptr<const JEvent>& locEvent, const DKinematicData* locKinematicData, bool locIsMissingFlag, size_t locStepIndex);
 		void Fill_BeamHists(const DKinematicData* locKinematicData, const DEventRFBunch* locEventRFBunch);
 
 		const DParticleID* dParticleID;
@@ -301,11 +302,11 @@ class DHistogramAction_InvariantMass : public DAnalysisAction
 			//call with step = 0, PIDs = pi+, pi-, and will histogram rho mass
 		DHistogramAction_InvariantMass(const DReaction* locReaction, size_t locStepIndex, deque<Particle_t> locToIncludePIDs, bool locUseKinFitResultsFlag, unsigned int locNumMassBins, double locMinMass, double locMaxMass, string locActionUniqueString = "", bool locSubtractAccidentals = false) :
 		DAnalysisAction(locReaction, "Hist_InvariantMass", locUseKinFitResultsFlag, locActionUniqueString),
-		dInitialPID(Unknown), dStepIndex(locStepIndex), dToIncludePIDs(locToIncludePIDs),
+		dInitialPID(UnknownParticle), dStepIndex(locStepIndex), dToIncludePIDs(locToIncludePIDs),
 		dNumMassBins(locNumMassBins), dMinMass(locMinMass), dMaxMass(locMaxMass), dNum2DMassBins(locNumMassBins/2), dNum2DBeamEBins(600), dMinBeamE(0.0), dMaxBeamE(12.0), dSubtractAccidentals(locSubtractAccidentals) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -314,7 +315,7 @@ class DHistogramAction_InvariantMass : public DAnalysisAction
 		}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		Particle_t dInitialPID;
 		int dStepIndex;
@@ -383,8 +384,8 @@ class DHistogramAction_MissingMass : public DAnalysisAction
 			dAnalysisUtilities = NULL;
 		}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -392,7 +393,7 @@ class DHistogramAction_MissingMass : public DAnalysisAction
 		}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		unsigned int dNumMassBins;
 		double dMinMass, dMaxMass;
@@ -459,8 +460,8 @@ class DHistogramAction_MissingMassSquared : public DAnalysisAction
 			dAnalysisUtilities = NULL;
 		}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -468,7 +469,7 @@ class DHistogramAction_MissingMassSquared : public DAnalysisAction
 		}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		unsigned int dNumMassBins;
 		double dMinMassSq, dMaxMassSq;
@@ -500,8 +501,8 @@ class DHistogramAction_2DInvariantMass : public DAnalysisAction
 		dStepIndex(locStepIndex), dXPIDs(locXPIDs), dYPIDs(locYPIDs), dNumXBins(locNumXBins), dNumYBins(locNumYBins), 
 		dMinX(locMinX), dMaxX(locMaxX), dMinY(locMinY), dMaxY(locMaxY), dSubtractAccidentals(locSubtractAccidentals), dAnalysisUtilities(NULL) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -509,7 +510,7 @@ class DHistogramAction_2DInvariantMass : public DAnalysisAction
 		}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		int dStepIndex;
 		deque<Particle_t> dXPIDs, dYPIDs;
@@ -535,8 +536,8 @@ class DHistogramAction_Dalitz : public DAnalysisAction
 		dStepIndex(locStepIndex), dXPIDs(locXPIDs), dYPIDs(locYPIDs), dNumXBins(locNumXBins), dNumYBins(locNumYBins), 
 		dMinX(locMinX), dMaxX(locMaxX), dMinY(locMinY), dMaxY(locMaxY), dAnalysisUtilities(NULL) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -544,7 +545,7 @@ class DHistogramAction_Dalitz : public DAnalysisAction
 		}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		int dStepIndex;
 		deque<Particle_t> dXPIDs, dYPIDs;
@@ -579,11 +580,11 @@ class DHistogramAction_KinFitResults : public DAnalysisAction
 		unsigned int dNumConfidenceLevelBins, dNumChiSqBins, dNumPullBins, dNum2DPBins, dNum2DThetaBins, dNum2DPhiBins, dNum2DPullBins, dNum2DConfidenceLevelBins, dNum2DBeamEBins;
 		double dMinPull, dMaxPull, dMinP, dMaxP, dMinTheta, dMaxTheta, dMinPhi, dMaxPhi, dMinBeamE, dMaxBeamE, dMaxChiSq;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		void Create_ParticlePulls(string locFullROOTName, bool locIsChargedFlag, bool locIsInVertexFitFlag, bool locIsNeutralShowerFlag, int locStepIndex, Particle_t locPID);
 		void Get_DeltaBinningParams(DKinFitPullType locPullType, bool loc2DFlag, int& locNumBins, double& locMax);
@@ -629,8 +630,8 @@ class DHistogramAction_MissingTransverseMomentum : public DAnalysisAction
 			dAnalysisUtilities = NULL;
 		}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -638,7 +639,7 @@ class DHistogramAction_MissingTransverseMomentum : public DAnalysisAction
 		}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		unsigned int dNumPtBins;
 		double dMinPt, dMaxPt;

@@ -26,8 +26,8 @@ class DChargedTrackHypothesis : public DKinematicData
 		DChargedTrackHypothesis(const DTrackTimeBased* locSourceData);
 		DChargedTrackHypothesis& operator=(const DChargedTrackHypothesis& locSourceData);
 
-		void Reset(void);
-		void Release(void);
+		void Reset(void) override;
+		void Release(void) override;
 
 		//SHARE RESOURCES
 		void Share_FromInput(const DChargedTrackHypothesis* locSourceData, bool locShareTrackingFlag, bool locShareTimingFlag, bool locShareEOverPFlag, bool locShareKinematicsFlag);
@@ -70,6 +70,9 @@ class DChargedTrackHypothesis : public DKinematicData
 		shared_ptr<const DDIRCMatchParams> Get_DIRCMatchParams(void) const{return dTrackingInfo->dDIRCMatchParams;}
 		shared_ptr<const DCTOFHitMatchParams> Get_CTOFHitMatchParams(void) const{return dTrackingInfo->dCTOFHitMatchParams;}
 		shared_ptr<const DFMWPCMatchParams> Get_FMWPCMatchParams(void) const{return dTrackingInfo->dFMWPCMatchParams;}
+  		shared_ptr<const DTRDMatchParams> Get_TRDMatchParams(void) const{return dTrackingInfo->dTRDMatchParams;}
+  		shared_ptr<const DECALShowerMatchParams> Get_ECALShowerMatchParams(void) const{return dTrackingInfo->dECALShowerMatchParams;}
+  shared_ptr<const DECALSingleHitMatchParams> Get_ECALSingleHitMatchParams(void) const{return dTrackingInfo->dECALSingleHitMatchParams;}
 
 		//SETTERS
 
@@ -95,17 +98,20 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_DIRCMatchParams(shared_ptr<const DDIRCMatchParams> locMatchParams){dTrackingInfo->dDIRCMatchParams = locMatchParams;}	
 		void Set_CTOFHitMatchParams(shared_ptr<const DCTOFHitMatchParams> locMatchParams){dTrackingInfo->dCTOFHitMatchParams = locMatchParams;}
 		void Set_FMWPCMatchParams(shared_ptr<const DFMWPCMatchParams> locMatchParams){dTrackingInfo->dFMWPCMatchParams = locMatchParams;}
-
-		void toStrings(vector<pair<string,string> > &items) const
+  		void Set_TRDMatchParams(shared_ptr<const DTRDMatchParams> locMatchParams){dTrackingInfo->dTRDMatchParams = locMatchParams;}
+  		void Set_ECALShowerMatchParams(shared_ptr<const DECALShowerMatchParams> locMatchParams){dTrackingInfo->dECALShowerMatchParams = locMatchParams;}
+  void Set_ECALSingleHitMatchParams(shared_ptr<const DECALSingleHitMatchParams> locMatchParams){dTrackingInfo->dECALSingleHitMatchParams = locMatchParams;}
+  
+		void Summarize(JObjectSummary& summary) const override
 		{
-			AddString(items, "candidate","%d", dTrackingInfo->dTrackTimeBased->candidateid);
-			DKinematicData::toStrings(items);
-			AddString(items, "Track_ChiSq", "%f", dTrackingInfo->dTrackTimeBased->chisq);
-			AddString(items, "dEdx_ChiSq", "%f", dTrackingInfo->dChiSq_DCdEdx);
-			AddString(items, "TOF_ChiSq", "%f", dTimingInfo->dChiSq_Timing);
-			AddString(items, "EOverP_ChiSq", "%f", dEOverPInfo->dChiSq_EoverP);
-			AddString(items, "PID_ChiSq", "%f", dTimingInfo->dChiSq);
-			AddString(items, "PID_FOM", "%f", dTimingInfo->dFOM);
+			summary.add(dTrackingInfo->dTrackTimeBased->candidateid, "candidate", "%d");
+			DKinematicData::Summarize(summary);
+			summary.add(dTrackingInfo->dTrackTimeBased->chisq, "Track_ChiSq", "%f");
+			summary.add(dTrackingInfo->dChiSq_DCdEdx, "dEdx_ChiSq", "%f");
+			summary.add(dTimingInfo->dChiSq_Timing, "TOF_ChiSq", "%f");
+			summary.add(dEOverPInfo->dChiSq_EoverP, "EOverP_ChiSq", "%f");
+			summary.add(dTimingInfo->dChiSq, "PID_ChiSq", "%f");
+			summary.add(dTimingInfo->dFOM, "PID_FOM", "%f");
 		}
 
 		class DTimingInfo : public DResettable
@@ -174,6 +180,9 @@ class DChargedTrackHypothesis : public DKinematicData
 				shared_ptr<const DDIRCMatchParams> dDIRCMatchParams = nullptr;	
 				shared_ptr<const DCTOFHitMatchParams> dCTOFHitMatchParams = nullptr;
 				shared_ptr<const DFMWPCMatchParams> dFMWPCMatchParams=nullptr;
+		  		shared_ptr<const DTRDMatchParams> dTRDMatchParams=nullptr;
+		  		shared_ptr<const DECALShowerMatchParams> dECALShowerMatchParams = nullptr;
+		  shared_ptr<const DECALSingleHitMatchParams> dECALSingleHitMatchParams = nullptr;
 		};
 
 	private:
@@ -262,6 +271,8 @@ inline DetectorSystem_t DChargedTrackHypothesis::t1_detector(void) const
 		return SYS_TOF;
 	else if(Get_FCALShowerMatchParams() != nullptr)
 		return SYS_FCAL;
+	else if(Get_ECALShowerMatchParams() != nullptr)
+		return SYS_ECAL;
 	else if(Get_SCHitMatchParams() != nullptr)
 		return SYS_START;
 	return SYS_NULL;
@@ -275,7 +286,9 @@ inline double DChargedTrackHypothesis::Get_PathLength(void) const
 	else if(Get_TOFHitMatchParams() != nullptr)
 		locPathLength = Get_TOFHitMatchParams()->dPathLength;
 	else if(Get_FCALShowerMatchParams() != nullptr)
-		locPathLength = Get_FCALShowerMatchParams()->dPathLength;
+	  locPathLength = Get_FCALShowerMatchParams()->dPathLength;
+	else if(Get_ECALShowerMatchParams() != nullptr)
+		locPathLength = Get_ECALShowerMatchParams()->dPathLength;
 	else if(Get_SCHitMatchParams() != nullptr)
 		locPathLength = Get_SCHitMatchParams()->dPathLength;
 	else
@@ -294,6 +307,8 @@ inline double DChargedTrackHypothesis::t1(void) const
 		return Get_TOFHitMatchParams()->dTOFPoint->t;
 	else if(locDetector == SYS_FCAL)
 		return Get_FCALShowerMatchParams()->dFCALShower->getTime();
+	else if(locDetector == SYS_ECAL)
+		return Get_ECALShowerMatchParams()->dECALShower->t;
 	else if(locDetector == SYS_START)
 		return Get_SCHitMatchParams()->dHitTime;
 	return std::numeric_limits<double>::quiet_NaN();
@@ -308,7 +323,9 @@ inline double DChargedTrackHypothesis::t1_err(void) const
 		return Get_TOFHitMatchParams()->dTOFPoint->tErr;
 	else if(locDetector == SYS_FCAL)
 		return sqrt(Get_FCALShowerMatchParams()->dFCALShower->ExyztCovariance(4, 4));
-	else if(locDetector == SYS_FCAL)
+	else if(locDetector == SYS_ECAL)
+		return sqrt(Get_ECALShowerMatchParams()->dECALShower->ExyztCovariance(4, 4));
+	else if(locDetector == SYS_START)
 		return sqrt(Get_SCHitMatchParams()->dHitTimeVariance);
 	return std::numeric_limits<double>::quiet_NaN();
 }
@@ -414,6 +431,9 @@ inline void DChargedTrackHypothesis::DTrackingInfo::Reset(void)
 	dFCALSingleHitMatchParams = nullptr;
 	dDIRCMatchParams = nullptr;
 	dFMWPCMatchParams = nullptr;
+	dTRDMatchParams = nullptr;
+	dECALShowerMatchParams = nullptr;
+	dECALSingleHitMatchParams = nullptr;
 }
 
 inline void DChargedTrackHypothesis::DEOverPInfo::Reset(void)

@@ -11,12 +11,11 @@ using namespace std;
 #include <TThread.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 extern JApplication *japp;
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 
 #include "DEventProcessor_radlen_hists.h"
 #include "TRACKING/DMCTrajectoryPoint.h"
@@ -30,7 +29,7 @@ extern JApplication *japp;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_radlen_hists());
+	app->Add(new DEventProcessor_radlen_hists());
 }
 }
 
@@ -50,9 +49,9 @@ DEventProcessor_radlen_hists::~DEventProcessor_radlen_hists()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_radlen_hists::init(void)
+void DEventProcessor_radlen_hists::Init()
 {
 	// open ROOT file (if needed)
 	//if(ROOTfile != NULL) ROOTfile->cd();
@@ -111,41 +110,38 @@ jerror_t DEventProcessor_radlen_hists::init(void)
 	
 	bfield = NULL;
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_radlen_hists::brun(JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_radlen_hists::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	DApplication *dapp = dynamic_cast<DApplication*>(japp);
-	bfield = dapp->GetBfield(runnumber);
-
-	return NOERROR;
+	bfield = GetBfield(event);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_radlen_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_radlen_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DMCTrajectoryPoint*> trajpoints;
 	vector<const DMCThrown*> throwns;
-	loop->Get(trajpoints);
-	loop->Get(throwns);
+	event->Get(trajpoints);
+	event->Get(throwns);
 	
 	// Get theta of thrown particle
 	double theta = 0.0;
 	if(throwns.size()!=1){
 		_DBG_<<"Event doesn't have exactly 1 thrown (has"<<throwns.size()<<"). Skipping..."<<endl;
-		return NOERROR;
+		return;
 	}
 	theta = throwns[0]->momentum().Theta()*57.3;
 	theta_nevents->Fill(theta);
 	
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	rstep.stot = 0.0;
 	rstep.ix_over_Xo = 0.0;
@@ -185,13 +181,13 @@ jerror_t DEventProcessor_radlen_hists::evnt(JEventLoop *loop, uint64_t eventnumb
 	}
 	pthread_mutex_unlock(&mutex);
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_radlen_hists::erun(void)
+void DEventProcessor_radlen_hists::EndRun()
 {
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -241,7 +237,7 @@ _DBG_<<"N="<<N<<endl;
 
 	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	
-	return NOERROR;
+	return;
 }
 
 
@@ -287,9 +283,9 @@ void DEventProcessor_radlen_hists::GapIntegration(TH1F *hin, TH1F *hout)
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_radlen_hists::fini(void)
+void DEventProcessor_radlen_hists::Finish()
 {
-	return NOERROR;
+	return;
 }

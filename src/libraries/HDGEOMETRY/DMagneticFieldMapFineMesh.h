@@ -5,7 +5,6 @@
 #ifndef _DMagneticFieldMapFineMesh_
 #define _DMagneticFieldMapFineMesh_
 
-#include <JANA/jerror.h>
 
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 
@@ -15,8 +14,8 @@ using std::vector;
 using std::string;
 
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-using namespace jana;
+#include <JANA/Calibrations/JCalibration.h>
+#include <JANA/Calibrations/JResource.h>
 
 class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
  public:
@@ -47,6 +46,8 @@ class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
 			   double &dBydz,
 			   double &dBzdx, double &dBzdy,
 			   double &dBzdz) const;
+  void GetFieldAndGradient(double x,double y,double z,
+			   DBfieldCartesian_t &Bdata) const;
   void GetFineMeshMap(string namepath,int32_t runnumber);
   void WriteEvioFile(string evioFileName);	
   void ReadEvioFile(string evioFileName);
@@ -60,17 +61,18 @@ class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
     double dBxdxdy,dBxdxdz,dBxdydz;
     double dBydxdy,dBydxdz,dBydydz;
     double dBzdxdy,dBzdxdz,dBzdydz;
+    double Bmag;
   }DBfieldPoint_t;
   
   typedef struct{
-    double Br,Bz;
+    double Br,Bz,Bmag;
     double dBrdr,dBrdz,dBzdr,dBzdz;
   }DBfieldCylindrical_t;
   
  protected:
   
   JCalibration *jcalib;
-  JResourceManager *jresman;
+  JResource *jresman;
 
   vector< vector< vector<DBfieldPoint_t> > > Btable;
   

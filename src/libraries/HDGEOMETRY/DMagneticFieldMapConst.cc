@@ -8,6 +8,7 @@
 #include <cmath>
 using namespace std;
 
+#include <JANA/Calibrations/JCalibrationManager.h>
 #include "DMagneticFieldMapConst.h"
 
 
@@ -18,7 +19,7 @@ using namespace std;
 DMagneticFieldMapConst::DMagneticFieldMapConst(JApplication *japp, string namepath)
 {
 	int32_t runnumber = 1;
-	jcalib = japp->GetJCalibration(runnumber);
+	jcalib = japp->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
 	if(GetValues(namepath, runnumber)==0){
 		_DBG_<<"Error getting JCalibration object for magnetic field!"<<endl;
 		japp->Quit();

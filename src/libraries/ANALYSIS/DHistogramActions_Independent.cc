@@ -4,8 +4,9 @@
 #include "ANALYSIS/DHistogramActions.h"
 #include "TOF/DTOFGeometry.h"
 #include "PID/DBeamKLong.h"
+#include "DANA/DEvent.h"
 
-void DHistogramAction_ObjectMemory::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_ObjectMemory::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//setup binning
 	vector<string> locBinLabels = {"TMatrixFSym", "DKinematicInfo", "Charged DTimingInfo", "DTrackingInfo", "Neutral DTimingInfo", "KinematicDatas", "Charged Hypos", "Neutral Hypos", "Beam Photons",
@@ -16,7 +17,7 @@ void DHistogramAction_ObjectMemory::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -45,10 +46,10 @@ void DHistogramAction_ObjectMemory::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DHistogramAction_ObjectMemory::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_ObjectMemory::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	if(Get_CalledPriorWithComboFlag())
 		return true; //else double-counting!
@@ -65,7 +66,7 @@ bool DHistogramAction_ObjectMemory::Perform_Action(JEventLoop* locEventLoop, con
 		//This action should only be used directly in an event processsor
 	//This casuses the analysis to run, generating the objects needed for histogramming below. 
 	vector<const DAnalysisResults*> locAnalysisResults;
-	locEventLoop->Get(locAnalysisResults);
+	locEvent->Get(locAnalysisResults);
 
 	map<int, size_t> locNumObjectsMap; //int is bin
 	map<int, double> locMemoryMap; //int is bin
@@ -297,7 +298,7 @@ void DHistogramAction_ObjectMemory::Read_MemoryUsage(double& vm_usage, double& r
 	resident_set = rss * page_size_kb;
 }
 
-void DHistogramAction_Reconstruction::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_Reconstruction::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Create any histograms/trees/etc. within a ROOT lock.
 		//This is so that when running multithreaded, only one thread is writing to the ROOT file at a time.
@@ -308,16 +309,16 @@ void DHistogramAction_Reconstruction::Initialize(JEventLoop* locEventLoop)
 	string locHistName, locHistTitle;
 
 	//Check if is REST event (high-level objects only)
-	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
+	bool locIsRESTEvent = locEvent->GetSingleStrict<DStatusBits>()->GetStatusBit(kSTATUS_REST);
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it.
@@ -328,6 +329,12 @@ void DHistogramAction_Reconstruction::Initialize(JEventLoop* locEventLoop)
 		dHist_FCALShowerYVsX = GetOrCreate_Histogram<TH2I>(locHistName, ";FCAL Shower X (cm);FCAL Shower Y (cm)", dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
 		locHistName = "FCALShowerEnergy";
 		dHist_FCALShowerEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";FCAL Shower Energy (GeV)", dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
+
+		//ECAL
+		locHistName = "ECALShowerYVsX";
+		dHist_ECALShowerYVsX = GetOrCreate_Histogram<TH2I>(locHistName, ";ECAL Shower X (cm);ECAL Shower Y (cm)", dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
+		locHistName = "ECALShowerEnergy";
+		dHist_ECALShowerEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";ECAL Shower Energy (GeV)", dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
 
 		//CCAL
 		locHistName = "CCALShowerYVsX";
@@ -487,13 +494,12 @@ void DHistogramAction_Reconstruction::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_Reconstruction::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_Reconstruction::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = DEvent::GetDGeometry(locEvent);
 	double locTargetZCenter = 0.0;
 	locGeometry->GetTargetZ(locTargetZCenter);
 	
@@ -501,50 +507,53 @@ void DHistogramAction_Reconstruction::Run_Update(JEventLoop* locEventLoop)
 		dTargetCenter.SetXYZ(0.0, 0.0, locTargetZCenter);
 }
 
-bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//Expect locParticleCombo to be NULL since this is a reaction-independent action.
 
 	if(Get_CalledPriorWithComboFlag())
 		return true; //else double-counting!
 
-	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
+	bool locIsRESTEvent = locEvent->GetSingleStrict<DStatusBits>()->GetStatusBit(kSTATUS_REST);
 
 	vector<const DBCALShower*> locBCALShowers;
-	locEventLoop->Get(locBCALShowers);
+	locEvent->Get(locBCALShowers);
 
 	vector<const DFCALShower*> locFCALShowers;
-	locEventLoop->Get(locFCALShowers);
+	locEvent->Get(locFCALShowers);
+
+	vector<const DECALShower*> locECALShowers;
+	locEvent->Get(locECALShowers);
 
 	vector<const DCCALShower*> locCCALShowers;
-	locEventLoop->Get(locCCALShowers);
+	locEvent->Get(locCCALShowers);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	locEvent->Get(locTOFPoints);
 
 	vector<const DSCHit*> locSCHits;
-	locEventLoop->Get(locSCHits);
+	locEvent->Get(locSCHits);
 
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons);
+	locEvent->Get(locBeamPhotons);
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	locEventLoop->Get(locTrackTimeBasedVector);
+	locEvent->Get(locTrackTimeBasedVector);
 
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns, "FinalState");
+	locEvent->Get(locMCThrowns, "FinalState");
 
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 
 	const DDetectorMatches* locDetectorMatches_WireBased = NULL;
 	vector<const DTrackCandidate*> locTrackCandidates;
@@ -552,18 +561,18 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 	if(!locIsRESTEvent)
 	{
 		vector<const DDetectorMatches*> locDetectorMatchesVector_WireBased;
-		locEventLoop->Get(locDetectorMatchesVector_WireBased, "WireBased");
+		locEvent->Get(locDetectorMatchesVector_WireBased, "WireBased");
 		if(!locDetectorMatchesVector_WireBased.empty())
 			locDetectorMatches_WireBased = locDetectorMatchesVector_WireBased[0];
-		locEventLoop->Get(locTrackCandidates);
-		locEventLoop->Get(locTrackWireBasedVector);
+		locEvent->Get(locTrackCandidates);
+		locEvent->Get(locTrackWireBasedVector);
 	}
 
 	//select the best DTrackWireBased for each track: use best tracking FOM
-	map<JObject::oid_t, const DTrackWireBased*> locBestTrackWireBasedMap; //lowest tracking FOM for each candidate id
+	map<oid_t, const DTrackWireBased*> locBestTrackWireBasedMap; //lowest tracking FOM for each candidate id
 	for(size_t loc_i = 0; loc_i < locTrackWireBasedVector.size(); ++loc_i)
 	{
-		JObject::oid_t locCandidateID = locTrackWireBasedVector[loc_i]->candidateid;
+		oid_t locCandidateID = locTrackWireBasedVector[loc_i]->candidateid;
 		if(locBestTrackWireBasedMap.find(locCandidateID) == locBestTrackWireBasedMap.end())
 			locBestTrackWireBasedMap[locCandidateID] = locTrackWireBasedVector[loc_i];
 		else if(locTrackWireBasedVector[loc_i]->FOM > locBestTrackWireBasedMap[locCandidateID]->FOM)
@@ -573,7 +582,7 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 	//select the best DTrackTimeBased for each track: use best tracking FOM
 		//also, make map from WBT -> TBT (if not rest)
 		//also, select best sc matches for each track
-	map<JObject::oid_t, const DTrackTimeBased*> locBestTrackTimeBasedMap; //lowest tracking FOM for each candidate id
+	map<oid_t, const DTrackTimeBased*> locBestTrackTimeBasedMap; //lowest tracking FOM for each candidate id
 	map<const DTrackWireBased*, const DTrackTimeBased*> locWireToTimeBasedTrackMap;
 	map<const DTrackTimeBased*, shared_ptr<const DSCHitMatchParams>> locTimeBasedToBestSCMatchMap;
 	for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
@@ -583,7 +592,7 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 		if(locParticleID->Get_BestSCMatchParams(locTrackTimeBasedVector[loc_i], locDetectorMatches, locSCHitMatchParams))
 			locTimeBasedToBestSCMatchMap[locTrackTimeBasedVector[loc_i]] = locSCHitMatchParams;
 
-		JObject::oid_t locCandidateID = locTrackTimeBasedVector[loc_i]->candidateid;
+		oid_t locCandidateID = locTrackTimeBasedVector[loc_i]->candidateid;
 		if(locBestTrackTimeBasedMap.find(locCandidateID) == locBestTrackTimeBasedMap.end())
 			locBestTrackTimeBasedMap[locCandidateID] = locTrackTimeBasedVector[loc_i];
 		else if(locTrackTimeBasedVector[loc_i]->FOM > locBestTrackTimeBasedMap[locCandidateID]->FOM)
@@ -607,6 +616,14 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 			dHist_FCALShowerYVsX->Fill(locFCALShowers[loc_i]->getPosition().X(), locFCALShowers[loc_i]->getPosition().Y());
 		}
 
+		//ECAL
+		for(size_t loc_i = 0; loc_i < locECALShowers.size(); ++loc_i)
+		{
+		  dHist_ECALShowerEnergy->Fill(locECALShowers[loc_i]->E);
+		  dHist_ECALShowerYVsX->Fill(locECALShowers[loc_i]->pos.X(),
+					     locECALShowers[loc_i]->pos.Y());
+		}
+		
 		//CCAL
 		for(size_t loc_i = 0; loc_i < locCCALShowers.size(); ++loc_i)
 		{
@@ -655,24 +672,32 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 		//TRACK CANDIDATES
 		for(size_t loc_i = 0; loc_i < locTrackCandidates.size(); ++loc_i)
 		{
-			int locCharge = (locTrackCandidates[loc_i]->charge() > 0.0) ? 1 : -1;
-			double locTheta = locTrackCandidates[loc_i]->momentum().Theta()*180.0/TMath::Pi();
-			double locP = locTrackCandidates[loc_i]->momentum().Mag();
+			int locCharge = (locTrackCandidates[loc_i]->dCharge > 0.0) ? 1 : -1;
+			double locTheta = locTrackCandidates[loc_i]->dMomentum.Theta()*180.0/TMath::Pi();
+			double locP = locTrackCandidates[loc_i]->dMomentum.Mag();
 			dHistMap_PVsTheta_Candidates[locCharge]->Fill(locTheta, locP);
-
+			
+			// Get the hits from the candidate
+			vector<const DFDCPseudo*>locFDCPseudos=locTrackCandidates[loc_i]->fdchits;
+			vector<const DCDCTrackHit *>locCDCTrackHits=locTrackCandidates[loc_i]->cdchits;
+			
+			unsigned int locCDCRingPattern=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+			unsigned int locFDCPlanePattern=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+			
 			set<int> locCDCRings;
-			locParticleID->Get_CDCRings(locTrackCandidates[loc_i]->dCDCRings, locCDCRings);
+			locParticleID->Get_CDCRings(locCDCRingPattern, locCDCRings);
 			for(set<int>::iterator locIterator = locCDCRings.begin(); locIterator != locCDCRings.end(); ++locIterator)
 				dHist_CDCRingVsTheta_Candidates->Fill(locTheta, *locIterator);
 
 			set<int> locFDCPlanes;
-			locParticleID->Get_FDCPlanes(locTrackCandidates[loc_i]->dFDCPlanes, locFDCPlanes);
+			locParticleID->Get_FDCPlanes(locFDCPlanePattern, locFDCPlanes);
 			for(set<int>::iterator locIterator = locFDCPlanes.begin(); locIterator != locFDCPlanes.end(); ++locIterator)
 				dHist_FDCPlaneVsTheta_Candidates->Fill(locTheta, *locIterator);
+			
 		}
 
 		//WIRE-BASED TRACKS
-		map<JObject::oid_t, const DTrackWireBased*>::iterator locWireBasedIterator = locBestTrackWireBasedMap.begin();
+		map<oid_t, const DTrackWireBased*>::iterator locWireBasedIterator = locBestTrackWireBasedMap.begin();
 		for(; locWireBasedIterator != locBestTrackWireBasedMap.end(); ++locWireBasedIterator)
 		{
 			const DTrackWireBased* locTrackWireBased = locWireBasedIterator->second;
@@ -695,7 +720,7 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 		}
 
 		//TIME-BASED TRACKS
-		map<JObject::oid_t, const DTrackTimeBased*>::iterator locTimeBasedIterator = locBestTrackTimeBasedMap.begin();
+		map<oid_t, const DTrackTimeBased*>::iterator locTimeBasedIterator = locBestTrackTimeBasedMap.begin();
 		for(; locTimeBasedIterator != locBestTrackTimeBasedMap.end(); ++locTimeBasedIterator)
 		{
 			const DTrackTimeBased* locTrackTimeBased = locTimeBasedIterator->second;
@@ -809,7 +834,7 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 	return true; //return false if you want to use this action to apply a cut (and it fails the cut!)
 }
 
-void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_DetectorMatching::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Create any histograms/trees/etc. within a ROOT lock. 
 		//This is so that when running multithreaded, only one thread is writing to the ROOT file at a time. 
@@ -818,18 +843,19 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 		//Objects created within a plugin (such as reaction-independent actions) can be accessed by many threads simultaneously. 
 	string locHistName, locHistTitle;
 
-	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
+	bool locIsRESTEvent = locEvent->GetSingleStrict<DStatusBits>()->GetStatusBit(kSTATUS_REST);
 
-    IGNORE_START_COUNTER = false;
-	if(gPARMS->Exists("MATCHING:IGNORE_START_COUNTER"))
-		gPARMS->GetParameter("MATCHING:IGNORE_START_COUNTER", IGNORE_START_COUNTER);
+  auto parms = locEvent->GetJApplication()->GetJParameterManager();
+  IGNORE_START_COUNTER = false;
+	if(parms->Exists("MATCHING:IGNORE_START_COUNTER"))
+		parms->GetParameter("MATCHING:IGNORE_START_COUNTER", IGNORE_START_COUNTER);
 
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
@@ -849,14 +875,18 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 
 			//Kinematics of has (no) hit
 			vector<DetectorSystem_t> locDetectorSystems;
-			locDetectorSystems.push_back(SYS_START);  locDetectorSystems.push_back(SYS_BCAL);
-			locDetectorSystems.push_back(SYS_TOF);  locDetectorSystems.push_back(SYS_FCAL);
+			locDetectorSystems.push_back(SYS_START);
+			locDetectorSystems.push_back(SYS_BCAL);
+			locDetectorSystems.push_back(SYS_TOF);
+			locDetectorSystems.push_back(SYS_FCAL);
+			locDetectorSystems.push_back(SYS_ECAL);
 			//locDetectorSystems.push_back(SYS_CCAL);
 			for(size_t loc_i = 0; loc_i < locDetectorSystems.size(); ++loc_i)
 			{
 				DetectorSystem_t locSystem = locDetectorSystems[loc_i];
 
-				double locMaxTheta = ((locSystem == SYS_FCAL) || (locSystem == SYS_TOF) /*|| (locSystem == SYS_CCAL)*/) ? 12.0 : dMaxTheta;
+				//double locMaxTheta = ((locSystem == SYS_FCAL) || (locSystem == SYS_TOF) /*|| (locSystem == SYS_CCAL)*/) ? 12.0 : dMaxTheta;
+				double locMaxTheta = ((locSystem == SYS_FCAL) || (locSystem == SYS_TOF) || (locSystem == SYS_ECAL)) ? 12.0 : dMaxTheta;
 				double locMaxP = (locSystem == SYS_BCAL) ? 3.0 : dMaxP;
 
 				string locSystemName = SystemName(locSystem);
@@ -1074,7 +1104,49 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 			locHistTitle = locTrackString + string(";#theta#circ;FCAL / Track Distance (cm)");
 			dHistMap_FCALTrackDistanceVsTheta[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DThetaBins, dMinTheta, 20.0, dNum2DTrackDOCABins, dMinTrackDOCA, dMaxTrackMatchDOCA);
 			gDirectory->cd("..");
-			
+
+			//ECAL
+			CreateAndChangeTo_Directory("ECAL", "ECAL");
+			locHistName = "TrackECALYVsX_HasHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL Has Hit;Projected ECAL Hit X (cm);Projected ECAL Hit Y (cm)");
+			dHistMap_TrackECALYVsX_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
+
+			locHistName = "TrackECALYVsX_NoHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL No Hit;Projected ECAL Hit X (cm);Projected ECAL Hit Y (cm)");
+			dHistMap_TrackECALYVsX_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
+
+			locHistName = "TrackECALP_HasHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL Has Hit;p (GeV/c)");
+			dHistMap_TrackECALP_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumPBins, dMinP, dMaxP);
+
+			locHistName = "TrackECALP_NoHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL No Hit;p (GeV/c)");
+			dHistMap_TrackECALP_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumPBins, dMinP, dMaxP);
+
+			locHistName = "TrackECALR_HasHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL Has Hit;Projected ECAL Hit R (cm)");
+			dHistMap_TrackECALR_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumFCALTOFXYBins, 0.0, 60);
+
+			locHistName = "TrackECALR_NoHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL No Hit;Projected ECAL Hit R (cm)");
+			dHistMap_TrackECALR_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumFCALTOFXYBins, 0.0, 60);
+
+			locHistName = "TrackECALRowVsColumn_HasHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL Has Hit;Projected ECAL Hit Column;Projected ECAL Hit Row");
+			dHistMap_TrackECALRowVsColumn_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 40, -0.5, 39.5, 40, -0.5, 39.5);
+
+			locHistName = "TrackECALRowVsColumn_NoHit";
+			locHistTitle = locTrackString + string(", Has Other Match, ECAL No Hit;Projected ECAL Hit Column;Projected ECAL Hit Row");
+			dHistMap_TrackECALRowVsColumn_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 40, -0.5, 39.5, 40, -0.5, 39.5);
+
+			locHistName = "ECALTrackDistanceVsP";
+			locHistTitle = locTrackString + string(";p (GeV/c);ECAL / Track Distance (cm)");
+			dHistMap_ECALTrackDistanceVsP[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DTrackDOCABins, dMinTrackDOCA, dMaxTrackMatchDOCA);
+
+			locHistName = "ECALTrackDistanceVsTheta";
+			locHistTitle = locTrackString + string(";#theta#circ;ECAL / Track Distance (cm)");
+			dHistMap_ECALTrackDistanceVsTheta[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DThetaBins, dMinTheta, 20.0, dNum2DTrackDOCABins, dMinTrackDOCA, dMaxTrackMatchDOCA);
+			gDirectory->cd("..");
 			
 			//BCAL
 			CreateAndChangeTo_Directory("BCAL", "BCAL");
@@ -1126,50 +1198,50 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_DetectorMatching::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_DetectorMatching::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
 	map<string, double> tofparms;
 	const DTOFGeometry *locTOFGeometry = nullptr;
-	locEventLoop->GetSingle(locTOFGeometry);
+	locEvent->GetSingle(locTOFGeometry);
 	string locTOFParmsTable = locTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
-	locEventLoop->GetCalib(locTOFParmsTable.c_str(), tofparms);
+	DEvent::GetCalib(locEvent, locTOFParmsTable.c_str(), tofparms);
 	TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
 }
 
-bool DHistogramAction_DetectorMatching::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_DetectorMatching::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//Expect locParticleCombo to be NULL since this is a reaction-independent action.
 
 	if(Get_CalledPriorWithComboFlag())
 		return true; //else double-counting!
 
-	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
+	bool locIsRESTEvent = locEvent->GetSingleStrict<DStatusBits>()->GetStatusBit(kSTATUS_REST);
 
-	Fill_MatchingHists(locEventLoop, true); //Time-based tracks
+	Fill_MatchingHists(locEvent, true); //Time-based tracks
 	if(!locIsRESTEvent)
-		Fill_MatchingHists(locEventLoop, false); //Wire-based tracks
+		Fill_MatchingHists(locEvent, false); //Wire-based tracks
 
 	return true; //return false if you want to use this action to apply a cut (and it fails the cut!)
 }
 
-void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventLoop, bool locIsTimeBased)
+void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr<const JEvent>& locEvent, bool locIsTimeBased)
 {
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 
 	//can't make this a class member: may cause race condition
 	DCutAction_TrackHitPattern locCutAction_TrackHitPattern(NULL, dMinHitRingsPerCDCSuperlayer, dMinHitPlanesPerFDCPackage);
-	locCutAction_TrackHitPattern.Initialize(locEventLoop);
+	locCutAction_TrackHitPattern.Initialize(locEvent);
 
 	//get the best tracks for each candidate id, based on good hit pattern & tracking FOM
-	map<JObject::oid_t, const DTrackingData*> locBestTrackMap; //lowest tracking FOM for each candidate id
+	map<oid_t, const DTrackingData*> locBestTrackMap; //lowest tracking FOM for each candidate id
 	if(locIsTimeBased)
 	{
 		vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-		locEventLoop->Get(locTrackTimeBasedVector);
+		locEvent->Get(locTrackTimeBasedVector);
 
 		//select the best DTrackTimeBased for each track: of tracks with good hit pattern, use best tracking FOM
 		for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
@@ -1178,7 +1250,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 				continue;
 			if(!locCutAction_TrackHitPattern.Cut_TrackHitPattern(locParticleID, locTrackTimeBasedVector[loc_i]))
 				continue;
-			JObject::oid_t locCandidateID = locTrackTimeBasedVector[loc_i]->candidateid;
+			oid_t locCandidateID = locTrackTimeBasedVector[loc_i]->candidateid;
 			if(locBestTrackMap.find(locCandidateID) == locBestTrackMap.end())
 				locBestTrackMap[locCandidateID] = locTrackTimeBasedVector[loc_i];
 			else if(locTrackTimeBasedVector[loc_i]->FOM > (dynamic_cast<const DTrackTimeBased*>(locBestTrackMap[locCandidateID]))->FOM)
@@ -1188,7 +1260,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	else
 	{
 		vector<const DTrackWireBased*> locTrackWireBasedVector;
-		locEventLoop->Get(locTrackWireBasedVector);
+		locEvent->Get(locTrackWireBasedVector);
 
 		//select the best DTrackWireBased for each track: of tracks with good hit pattern, use best tracking FOM
 		for(size_t loc_i = 0; loc_i < locTrackWireBasedVector.size(); ++loc_i)
@@ -1197,7 +1269,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 				continue;
 			if(!locCutAction_TrackHitPattern.Cut_TrackHitPattern(locParticleID, locTrackWireBasedVector[loc_i]))
 				continue;
-			JObject::oid_t locCandidateID = locTrackWireBasedVector[loc_i]->candidateid;
+			oid_t locCandidateID = locTrackWireBasedVector[loc_i]->candidateid;
 			if(locBestTrackMap.find(locCandidateID) == locBestTrackMap.end())
 				locBestTrackMap[locCandidateID] = locTrackWireBasedVector[loc_i];
 			else if(locTrackWireBasedVector[loc_i]->FOM > (dynamic_cast<const DTrackWireBased*>(locBestTrackMap[locCandidateID]))->FOM)
@@ -1206,36 +1278,39 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	}
 	
 	vector<const DBCALShower*> locBCALShowers;
-	locEventLoop->Get(locBCALShowers);
+	locEvent->Get(locBCALShowers);
 
 	vector<const DFCALShower*> locFCALShowers;
-	locEventLoop->Get(locFCALShowers);
+	locEvent->Get(locFCALShowers);
+	
+	vector<const DECALShower*> locECALShowers;
+	locEvent->Get(locECALShowers);
 
 	vector<const DCCALShower*> locCCALShowers;
-	locEventLoop->Get(locCCALShowers);
+	locEvent->Get(locCCALShowers);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	locEvent->Get(locTOFPoints);
 
 	vector<const DTOFPaddleHit*> locTOFPaddleHits;
-	locEventLoop->Get(locTOFPaddleHits);
+	locEvent->Get(locTOFPaddleHits);
 
 	vector<const DSCHit*> locSCHits;
-	locEventLoop->Get(locSCHits);
+	locEvent->Get(locSCHits);
 
 	const DEventRFBunch* locEventRFBunch = nullptr;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 
 	double beam_velocity = SPEED_OF_LIGHT;
 	vector<const DBeamKLong *> locBeamKLongs;
-	locEventLoop->Get(locBeamKLongs);
+	locEvent->Get(locBeamKLongs);
 	if(locBeamKLongs.size() > 0) {
 		beam_velocity *= locBeamKLongs[0]->pmag() / locBeamKLongs[0]->energy();
 	}
 
 	string locDetectorMatchesTag = locIsTimeBased ? "" : "WireBased";
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches, locDetectorMatchesTag.c_str());
+	locEvent->GetSingle(locDetectorMatches, locDetectorMatchesTag.c_str());
 
 	//TRACK / BCAL CLOSEST MATCHES
 	map<const DTrackingData*, pair<shared_ptr<const DBCALShowerMatchParams>, double> > locBCALTrackDistanceMap; //double = z
@@ -1246,14 +1321,16 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 		
 	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
-	
-	  double locStartTime = locTrackIterator->second->t0();
-	  double locStartTimeVariance = 0.0;
-	  DVector3 locProjPos, locProjMom;
 
-	  shared_ptr<const DBCALShowerMatchParams> locBestMatchParams;
-	  if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_BCAL), locBCALShowers, false, locStartTime, locBestMatchParams, &locStartTimeVariance, &locProjPos, &locProjMom))
-	    locBCALTrackDistanceMap[locTrackIterator->second] = std::make_pair(locBestMatchParams, locProjPos.Z());
+	  if (extrapolations[SYS_BCAL].size()>0){
+	    double locStartTime = locTrackIterator->second->t0();
+	    double locStartTimeVariance = 0.0;
+	    DVector3 locProjPos, locProjMom;
+	    
+	    shared_ptr<const DBCALShowerMatchParams> locBestMatchParams;
+	    if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_BCAL), locBCALShowers, false, locStartTime, locBestMatchParams, &locStartTimeVariance, &locProjPos, &locProjMom))
+	      locBCALTrackDistanceMap[locTrackIterator->second] = std::make_pair(locBestMatchParams, locProjPos.Z());
+	  }
 	}
 
 	//TRACK / FCAL CLOSEST MATCHES
@@ -1265,11 +1342,31 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 
 	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
+	  
+	  if (extrapolations[SYS_FCAL].size()>0){
+	    double locStartTime = locTrackIterator->second->t0();
+	    shared_ptr<const DFCALShowerMatchParams> locBestMatchParams;
+	    if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_FCAL), locFCALShowers, false, locStartTime, locBestMatchParams))
+	      locFCALTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
+	  }
+	}
 
-	  double locStartTime = locTrackIterator->second->t0();
-	  shared_ptr<const DFCALShowerMatchParams> locBestMatchParams;
-	  if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_FCAL), locFCALShowers, false, locStartTime, locBestMatchParams))
-	    locFCALTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
+	//TRACK / ECAL CLOSEST MATCHES
+	map<const DTrackingData*, shared_ptr<const DECALShowerMatchParams>> locECALTrackDistanceMap;
+	for(auto locTrackIterator = locBestTrackMap.begin(); locTrackIterator != locBestTrackMap.end(); ++locTrackIterator)
+	{
+	  map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations;
+	  Get_Extrapolations(locTrackIterator->second,extrapolations);
+
+	  if(extrapolations.size()<2)
+	    break; //e.g. REST data: no trajectory
+	  
+	  if (extrapolations[SYS_ECAL].size()>0){
+	    double locStartTime = locTrackIterator->second->t0();
+	    shared_ptr<const DECALShowerMatchParams> locBestMatchParams;
+	    if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_ECAL), locECALShowers, false, locStartTime, locBestMatchParams))
+	      locECALTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
+	  }
 	}
 	
 	//TRACK / SC CLOSEST MATCHES
@@ -1282,13 +1379,15 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
 
-	  double locStartTime = locTrackIterator->second->t0();
-	  double locStartTimeVariance = 0.0;
-	  DVector3 locProjPos, locProjMom;
-	  
-	  shared_ptr<const DSCHitMatchParams> locBestMatchParams;
-	  if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_START), locSCHits, locIsTimeBased, false, locStartTime, locBestMatchParams, &locStartTimeVariance, &locProjPos, &locProjMom))
-	    locSCTrackDistanceMap[locTrackIterator->second] = std::make_pair(locBestMatchParams, locProjPos.Z());
+	  if (extrapolations[SYS_START].size()>0){
+	    double locStartTime = locTrackIterator->second->t0();
+	    double locStartTimeVariance = 0.0;
+	    DVector3 locProjPos, locProjMom;
+	    
+	    shared_ptr<const DSCHitMatchParams> locBestMatchParams;
+	    if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_START), locSCHits, locIsTimeBased, false, locStartTime, locBestMatchParams, &locStartTimeVariance, &locProjPos, &locProjMom))
+	      locSCTrackDistanceMap[locTrackIterator->second] = std::make_pair(locBestMatchParams, locProjPos.Z());
+	  }
 	}
 	
 	//TRACK / TOF POINT CLOSEST MATCHES
@@ -1300,11 +1399,13 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  
 	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
-
-	  double locStartTime = locTrackIterator->second->t0();
-	  shared_ptr<const DTOFHitMatchParams> locBestMatchParams;
-	  if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_TOF), locTOFPoints, false, locStartTime, locBestMatchParams))
-	    locTOFPointTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
+	  
+	  if (extrapolations[SYS_TOF].size()>0){
+	    double locStartTime = locTrackIterator->second->t0();
+	    shared_ptr<const DTOFHitMatchParams> locBestMatchParams;
+	    if(locParticleID->Get_ClosestToTrack(extrapolations.at(SYS_TOF), locTOFPoints, false, locStartTime, locBestMatchParams))
+	      locTOFPointTrackDistanceMap.emplace(locTrackIterator->second, locBestMatchParams);
+	  }
 	}
 
 	//TRACK / TOF PADDLE CLOSEST MATCHES
@@ -1319,18 +1420,34 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
 
-	  double locBestDeltaX = 999.9, locBestDeltaY = 999.9, locBestDistance_Vertical = 999.9, locBestDistance_Horizontal = 999.9;
-	  double locStartTime = locParticleID->Calc_PropagatedRFTime(locKinematicData, locEventRFBunch, beam_velocity);
-	  
-	  const DTOFPaddleHit* locClosestTOFPaddleHit_Vertical = locParticleID->Get_ClosestTOFPaddleHit_Vertical(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaX, locBestDistance_Vertical);
-	  pair<double, double> locDistancePair_Vertical(locBestDeltaX, locBestDistance_Vertical);
-	  if(locClosestTOFPaddleHit_Vertical != NULL)
-	    locVerticalTOFPaddleTrackDistanceMap[locTrackIterator->second] = pair<const DTOFPaddleHit*, pair<double, double> >(locClosestTOFPaddleHit_Vertical, locDistancePair_Vertical);
-	  
-	  const DTOFPaddleHit* locClosestTOFPaddleHit_Horizontal = locParticleID->Get_ClosestTOFPaddleHit_Horizontal(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaY, locBestDistance_Horizontal);
-	  pair<double, double> locDistancePair_Horizontal(locBestDeltaY, locBestDistance_Horizontal);
-	  if(locClosestTOFPaddleHit_Horizontal != NULL)
-	    locHorizontalTOFPaddleTrackDistanceMap[locTrackIterator->second] = pair<const DTOFPaddleHit*, pair<double, double> >(locClosestTOFPaddleHit_Horizontal, locDistancePair_Horizontal);
+// 	  double locBestDeltaX = 999.9, locBestDeltaY = 999.9, locBestDistance_Vertical = 999.9, locBestDistance_Horizontal = 999.9;
+// 	  double locStartTime = locParticleID->Calc_PropagatedRFTime(locKinematicData, locEventRFBunch, beam_velocity);
+// 	  
+// 	  const DTOFPaddleHit* locClosestTOFPaddleHit_Vertical = locParticleID->Get_ClosestTOFPaddleHit_Vertical(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaX, locBestDistance_Vertical);
+// 	  pair<double, double> locDistancePair_Vertical(locBestDeltaX, locBestDistance_Vertical);
+// 	  if(locClosestTOFPaddleHit_Vertical != NULL)
+// 	    locVerticalTOFPaddleTrackDistanceMap[locTrackIterator->second] = pair<const DTOFPaddleHit*, pair<double, double> >(locClosestTOFPaddleHit_Vertical, locDistancePair_Vertical);
+// 	  
+// 	  const DTOFPaddleHit* locClosestTOFPaddleHit_Horizontal = locParticleID->Get_ClosestTOFPaddleHit_Horizontal(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaY, locBestDistance_Horizontal);
+// 	  pair<double, double> locDistancePair_Horizontal(locBestDeltaY, locBestDistance_Horizontal);
+// 	  if(locClosestTOFPaddleHit_Horizontal != NULL)
+// 	    locHorizontalTOFPaddleTrackDistanceMap[locTrackIterator->second] = pair<const DTOFPaddleHit*, pair<double, double> >(locClosestTOFPaddleHit_Horizontal, locDistancePair_Horizontal);
+
+	  if (extrapolations[SYS_TOF].size()>0){
+	    double locBestDeltaX = 999.9, locBestDeltaY = 999.9, locBestDistance_Vertical = 999.9, locBestDistance_Horizontal = 999.9;
+	    double locStartTime = locParticleID->Calc_PropagatedRFTime(locKinematicData, locEventRFBunch);
+	    
+	    const DTOFPaddleHit* locClosestTOFPaddleHit_Vertical = locParticleID->Get_ClosestTOFPaddleHit_Vertical(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaX, locBestDistance_Vertical);
+	    pair<double, double> locDistancePair_Vertical(locBestDeltaX, locBestDistance_Vertical);
+	    if(locClosestTOFPaddleHit_Vertical != NULL)
+	      locVerticalTOFPaddleTrackDistanceMap[locTrackIterator->second] = pair<const DTOFPaddleHit*, pair<double, double> >(locClosestTOFPaddleHit_Vertical, locDistancePair_Vertical);
+	    
+	    const DTOFPaddleHit* locClosestTOFPaddleHit_Horizontal = locParticleID->Get_ClosestTOFPaddleHit_Horizontal(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaY, locBestDistance_Horizontal);
+	    pair<double, double> locDistancePair_Horizontal(locBestDeltaY, locBestDistance_Horizontal);
+	    if(locClosestTOFPaddleHit_Horizontal != NULL)
+	      locHorizontalTOFPaddleTrackDistanceMap[locTrackIterator->second] = pair<const DTOFPaddleHit*, pair<double, double> >(locClosestTOFPaddleHit_Horizontal, locDistancePair_Horizontal);
+	  }
+
 	}
 
 	//PROJECTED HIT POSITIONS
@@ -1339,6 +1456,8 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	map<const DTrackingData*, pair<float, float> > locProjectedTOFXYMap; //pair: x, y
 	map<const DTrackingData*, pair<int, int> > locProjectedFCALRowColumnMap; //pair: column, row
 	map<const DTrackingData*, pair<float, float> > locProjectedFCALXYMap; //pair: x, y
+	map<const DTrackingData*, pair<int, int> > locProjectedECALRowColumnMap; //pair: column, row
+	map<const DTrackingData*, pair<float, float> > locProjectedECALXYMap; //pair: x, y
 	map<const DTrackingData*, pair<float, int> > locProjectedBCALModuleSectorMap; //pair: z, module
 	map<const DTrackingData*, pair<float, float> > locProjectedBCALPhiZMap; //pair: z, phi
 	for(auto locTrackIterator = locBestTrackMap.begin(); locTrackIterator != locBestTrackMap.end(); ++locTrackIterator)
@@ -1351,40 +1470,59 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	    break; //e.g. REST data: no trajectory
 
 	  //SC
-	  DVector3 locSCIntersection;
-	  bool locProjBarrelFlag = false;
-	  unsigned int locProjectedSCPaddle = locParticleID->PredictSCSector(extrapolations.at(SYS_START), &locSCIntersection, &locProjBarrelFlag);
-	  if(locProjectedSCPaddle != 0)
-	    locProjectedSCPaddleMap[locTrack] = pair<int, bool>(locProjectedSCPaddle, locProjBarrelFlag);
-
+	  if (extrapolations[SYS_START].size()>0){
+	    DVector3 locSCIntersection;
+	    bool locProjBarrelFlag = false;
+	    unsigned int locProjectedSCPaddle = locParticleID->PredictSCSector(extrapolations.at(SYS_START), &locSCIntersection, &locProjBarrelFlag);
+	    if(locProjectedSCPaddle != 0)
+	      locProjectedSCPaddleMap[locTrack] = pair<int, bool>(locProjectedSCPaddle, locProjBarrelFlag);
+	  }
+	    
 	  //TOF
-	  DVector3 locTOFIntersection;
-	  unsigned int locHorizontalBar = 0, locVerticalBar = 0;
-	  if(locParticleID->PredictTOFPaddles(extrapolations.at(SYS_TOF), locHorizontalBar, locVerticalBar, &locTOFIntersection))
-	    {
-	      locProjectedTOF2DPaddlesMap[locTrack] = pair<int, int>(locVerticalBar, locHorizontalBar);
-	      locProjectedTOFXYMap[locTrack] = pair<float, float>(locTOFIntersection.X(), locTOFIntersection.Y());
-	    }
+	  if (extrapolations[SYS_TOF].size()>0){
+	    DVector3 locTOFIntersection;
+	    unsigned int locHorizontalBar = 0, locVerticalBar = 0;
+	    if(locParticleID->PredictTOFPaddles(extrapolations.at(SYS_TOF), locHorizontalBar, locVerticalBar, &locTOFIntersection))
+	      {
+		locProjectedTOF2DPaddlesMap[locTrack] = pair<int, int>(locVerticalBar, locHorizontalBar);
+		locProjectedTOFXYMap[locTrack] = pair<float, float>(locTOFIntersection.X(), locTOFIntersection.Y());
+	      }
+	  }
 	  
 	  //FCAL
-	  DVector3 locFCALIntersection;
-	  unsigned int locRow = 0, locColumn = 0;
-	  if(locParticleID->PredictFCALHit(extrapolations.at(SYS_FCAL), locRow, locColumn, &locFCALIntersection))
-	    {
-	      locProjectedFCALRowColumnMap[locTrack] = pair<int, int>(locColumn, locRow);
-	      locProjectedFCALXYMap[locTrack] = pair<float, float>(locFCALIntersection.X(), locFCALIntersection.Y());
-	    }
+	  if (extrapolations[SYS_FCAL].size()>0){
+	    DVector3 locFCALIntersection;
+	    unsigned int locRow = 0, locColumn = 0;
+	    if(locParticleID->PredictFCALHit(extrapolations.at(SYS_FCAL), locRow, locColumn, &locFCALIntersection))
+	      {
+		locProjectedFCALRowColumnMap[locTrack] = pair<int, int>(locColumn, locRow);
+		locProjectedFCALXYMap[locTrack] = pair<float, float>(locFCALIntersection.X(), locFCALIntersection.Y());
+	      }
+	  }
+
+	  //ECAL
+	  if (extrapolations[SYS_ECAL].size()>0){
+	    DVector3 locECALIntersection;
+	    unsigned int locRow = 0, locColumn = 0;
+	    if(locParticleID->PredictECALHit(extrapolations.at(SYS_ECAL), locRow, locColumn, &locECALIntersection))
+	      {
+		locProjectedECALRowColumnMap[locTrack] = pair<int, int>(locColumn, locRow);
+		locProjectedECALXYMap[locTrack] = pair<float, float>(locECALIntersection.X(), locECALIntersection.Y());
+	      }
+	  }
 	  
 	  //BCAL
-	  DVector3 locBCALIntersection;
-	  unsigned int locModule = 0, locSector = 0;
-	  if(locParticleID->PredictBCALWedge(extrapolations.at(SYS_BCAL), locModule, locSector, &locBCALIntersection))
-	    {
-	      locProjectedBCALModuleSectorMap[locTrack] = pair<float, int>(locBCALIntersection.Z(), locModule);
-	      locProjectedBCALPhiZMap[locTrack] = pair<float, float>(locBCALIntersection.Z(), locBCALIntersection.Phi()*180.0/TMath::Pi());
-	    }
+	  if (extrapolations[SYS_BCAL].size()>0){
+	    DVector3 locBCALIntersection;
+	    unsigned int locModule = 0, locSector = 0;
+	    if(locParticleID->PredictBCALWedge(extrapolations.at(SYS_BCAL), locModule, locSector, &locBCALIntersection))
+	      {
+		locProjectedBCALModuleSectorMap[locTrack] = pair<float, int>(locBCALIntersection.Z(), locModule);
+		locProjectedBCALPhiZMap[locTrack] = pair<float, float>(locBCALIntersection.Z(), locBCALIntersection.Phi()*180.0/TMath::Pi());
+	      }
+	  }
 	}
-	
+	  
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
@@ -1412,6 +1550,14 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 			auto locTrack = locMapPair.first;
 			dHistMap_FCALTrackDistanceVsP[locIsTimeBased]->Fill(locTrack->momentum().Mag(), locMapPair.second->dDOCAToShower);
 			dHistMap_FCALTrackDistanceVsTheta[locIsTimeBased]->Fill(locTrack->momentum().Theta()*180.0/TMath::Pi(), locMapPair.second->dDOCAToShower);
+		}
+
+		//ECAL
+		for(auto locMapPair : locECALTrackDistanceMap)
+		{
+			auto locTrack = locMapPair.first;
+			dHistMap_ECALTrackDistanceVsP[locIsTimeBased]->Fill(locTrack->momentum().Mag(), locMapPair.second->dDOCAToShower);
+			dHistMap_ECALTrackDistanceVsTheta[locIsTimeBased]->Fill(locTrack->momentum().Theta()*180.0/TMath::Pi(), locMapPair.second->dDOCAToShower);
 		}
 
 		//TOF Paddle
@@ -1509,6 +1655,46 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 					}
 				}
 			}
+
+			//ECAL
+			if(locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_ECAL))
+			  {
+			    dHistMap_PVsTheta_HasHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locP);
+			    if(locP > 1.0)
+			      dHistMap_PhiVsTheta_HasHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locPhi);
+			    if(locProjectedECALRowColumnMap.find(locTrack) != locProjectedECALRowColumnMap.end())
+			      {
+				dHistMap_TrackECALP_HasHit[locIsTimeBased]->Fill(locP);
+				if(locP > 1.0)
+				  {
+				    pair<float, float>& locPositionPair = locProjectedECALXYMap[locTrack];
+				    dHistMap_TrackECALYVsX_HasHit[locIsTimeBased]->Fill(locPositionPair.first, locPositionPair.second);
+				    float locECALR = sqrt(locPositionPair.first*locPositionPair.first + locPositionPair.second*locPositionPair.second);
+				    dHistMap_TrackECALR_HasHit[locIsTimeBased]->Fill(locECALR);
+				    pair<int, int>& locElementPair = locProjectedECALRowColumnMap[locTrack];
+				    dHistMap_TrackECALRowVsColumn_HasHit[locIsTimeBased]->Fill(locElementPair.first, locElementPair.second);
+				  }
+			      }
+			  }
+			else
+			  {
+			    dHistMap_PVsTheta_NoHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locP);
+			    if(locP > 1.0)
+			      dHistMap_PhiVsTheta_NoHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locPhi);
+			    if(locProjectedECALRowColumnMap.find(locTrack) != locProjectedECALRowColumnMap.end())
+			      {
+				dHistMap_TrackECALP_NoHit[locIsTimeBased]->Fill(locP);
+				if(locP > 1.0)
+				  {
+				    pair<float, float>& locPositionPair = locProjectedECALXYMap[locTrack];
+				    dHistMap_TrackECALYVsX_NoHit[locIsTimeBased]->Fill(locPositionPair.first, locPositionPair.second);
+				    float locECALR = sqrt(locPositionPair.first*locPositionPair.first + locPositionPair.second*locPositionPair.second);
+				    dHistMap_TrackECALR_NoHit[locIsTimeBased]->Fill(locECALR);
+				    pair<int, int>& locElementPair = locProjectedECALRowColumnMap[locTrack];
+				    dHistMap_TrackECALRowVsColumn_NoHit[locIsTimeBased]->Fill(locElementPair.first, locElementPair.second);
+				  }
+			      }
+			  }
 
 			//FCAL
 			if(locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_FCAL))
@@ -1684,7 +1870,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	Unlock_Action(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_DetectorPID::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_DetectorPID::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Create any histograms/trees/etc. within a ROOT lock.
 		//This is so that when running multithreaded, only one thread is writing to the ROOT file at a time.
@@ -1694,15 +1880,14 @@ void DHistogramAction_DetectorPID::Initialize(JEventLoop* locEventLoop)
 
 	string locHistName, locHistTitle, locParticleROOTName;
 
+	auto app = locEvent->GetJApplication();
 	string locTrackSelectionTag = "NotATag", locShowerSelectionTag = "NotATag";
-	if(gPARMS->Exists("COMBO:TRACK_SELECT_TAG"))
-		gPARMS->GetParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
-	if(gPARMS->Exists("COMBO:SHOWER_SELECT_TAG"))
-		gPARMS->GetParameter("COMBO:SHOWER_SELECT_TAG", locShowerSelectionTag);
+	app->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
+	app->SetDefaultParameter("COMBO:SHOWER_SELECT_TAG", locShowerSelectionTag);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//So: Default tag is "", User can set it to something else
 		//In here, if tag is "", get from gparms, if not, leave it alone
@@ -1751,6 +1936,30 @@ void DHistogramAction_DetectorPID::Initialize(JEventLoop* locEventLoop)
 		locHistName = "DeltaTVsShowerE_Photon";
 		locHistTitle = string("FCAL ") + locParticleROOTName + string(";Shower Energy (GeV);#Deltat_{FCAL - RF}");
 		dHistMap_DeltaTVsP[SYS_FCAL][Gamma] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
+
+/*
+		//Uncomment when ready!
+		locHistName = "TimePullVsShowerE_Photon";
+		locHistTitle = string("FCAL ") + locParticleROOTName + string(";Shower Energy (GeV);#Deltat/#sigma_{#Deltat}");
+		dHistMap_TimePullVsP[SYS_FCAL][Gamma] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DPullBins, dMinPull, dMaxPull);
+
+		locHistName = "TimeFOMVsShowerE_Photon";
+		locHistTitle = string("FCAL ") + locParticleROOTName + string(";Shower Energy (GeV);Timing PID Confidence Level");
+		dHistMap_TimeFOMVsP[SYS_FCAL][Gamma] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DFOMBins, 0.0, 1.0);
+*/
+
+		gDirectory->cd("..");
+
+		//ECAL
+		CreateAndChangeTo_Directory("ECAL", "ECAL");
+
+		locHistName = "BetaVsP_q0";
+		locHistTitle = "ECAL q^{0};Shower Energy (GeV);#beta";
+		dHistMap_BetaVsP[SYS_ECAL][0] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DBetaBins, dMinBeta, dMaxBeta);
+
+		locHistName = "DeltaTVsShowerE_Photon";
+		locHistTitle = string("ECAL ") + locParticleROOTName + string(";Shower Energy (GeV);#Deltat_{FCAL - RF}");
+		dHistMap_DeltaTVsP[SYS_ECAL][Gamma] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
 
 /*
 		//Uncomment when ready!
@@ -1824,6 +2033,23 @@ void DHistogramAction_DetectorPID::Initialize(JEventLoop* locEventLoop)
 			locHistName = string("EOverPVsTheta_") + locParticleName;
 			locHistTitle = string("BCAL ") + locParticleROOTName + string(";#theta#circ;E_{Shower}/p_{Track} (c);");
 			dHistMap_BCALEOverPVsTheta[locCharge] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DBCALThetaBins, dMinBCALTheta, dMaxBCALTheta, dNum2DEOverPBins, dMinEOverP, dMaxEOverP);
+
+			gDirectory->cd("..");
+
+			//ECAL
+			CreateAndChangeTo_Directory("ECAL", "ECAL");
+
+			locHistName = string("BetaVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(";p (GeV/c);#beta");
+			dHistMap_BetaVsP[SYS_ECAL][locCharge] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DBetaBins, dMinBeta, dMaxBeta);
+
+			locHistName = string("EOverPVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(";p (GeV/c);E_{Shower}/p_{Track} (c);");
+			dHistMap_ECALEOverPVsP[locCharge] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DEOverPBins, dMinEOverP, dMaxEOverP);
+
+			locHistName = string("EOverPVsTheta_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(";#theta#circ;E_{Shower}/p_{Track} (c);");
+			dHistMap_ECALEOverPVsTheta[locCharge] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DFCALThetaBins, dMinFCALTheta, dMaxFCALTheta, dNum2DEOverPBins, dMinEOverP, dMaxEOverP);
 
 			gDirectory->cd("..");
 
@@ -1974,6 +2200,30 @@ void DHistogramAction_DetectorPID::Initialize(JEventLoop* locEventLoop)
 
 			gDirectory->cd("..");
 
+			//ECAL
+			CreateAndChangeTo_Directory("ECAL", "ECAL");
+
+			locHistName = string("DeltaBetaVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);#Delta#beta");
+			dHistMap_DeltaBetaVsP[SYS_ECAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaBetaBins, dMinDeltaBeta, dMaxDeltaBeta);
+
+			locHistName = string("DeltaTVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);#Deltat_{ECAL - RF}");
+			dHistMap_DeltaTVsP[SYS_ECAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
+
+/*
+			//Uncomment when ready!
+			locHistName = string("TimePullVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);#Deltat/#sigma_{#Deltat}");
+			dHistMap_TimePullVsP[SYS_ECAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DPullBins, dMinPull, dMaxPull);
+
+			locHistName = string("TimeFOMVsP_") + locParticleName;
+			locHistTitle = string("ECAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);Timing PID Confidence Level");
+			dHistMap_TimeFOMVsP[SYS_ECAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DFOMBins, 0.0, 1.0);
+*/
+
+			gDirectory->cd("..");
+
 			//CCAL
 			CreateAndChangeTo_Directory("CCAL", "CCAL");
 
@@ -2054,10 +2304,10 @@ void DHistogramAction_DetectorPID::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_DetectorPID::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//Expect locParticleCombo to be NULL since this is a reaction-independent action.
 
@@ -2067,23 +2317,23 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 		return true; //else double-counting!
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks, dTrackSelectionTag.c_str());
+	locEvent->Get(locChargedTracks, dTrackSelectionTag.c_str());
 
 	vector<const DNeutralParticle*> locNeutralParticles;
-	locEventLoop->Get(locNeutralParticles, dShowerSelectionTag.c_str());
+	locEvent->Get(locNeutralParticles, dShowerSelectionTag.c_str());
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 	
 	double beam_velocity = SPEED_OF_LIGHT;
 	vector<const DBeamKLong *> locBeamKLongs;
-	locEventLoop->Get(locBeamKLongs);
+	locEvent->Get(locBeamKLongs);
 	if(locBeamKLongs.size() > 0) {
 		beam_velocity *= locBeamKLongs[0]->pmag() / locBeamKLongs[0]->energy();
 	}
@@ -2115,6 +2365,11 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 					dHistMap_BetaVsP[SYS_FCAL][0]->Fill(locShowerEnergy, locBeta_Timing);
 					dHistMap_DeltaTVsP[SYS_FCAL][Gamma]->Fill(locShowerEnergy, locDeltaT);
 				}
+				else if(locNeutralShower->dDetectorSystem == SYS_ECAL)
+				{
+					dHistMap_BetaVsP[SYS_ECAL][0]->Fill(locShowerEnergy, locBeta_Timing);
+					dHistMap_DeltaTVsP[SYS_ECAL][Gamma]->Fill(locShowerEnergy, locDeltaT);
+				}
 				else if(locNeutralShower->dDetectorSystem == SYS_CCAL)
 				{
 					dHistMap_BetaVsP[SYS_CCAL][0]->Fill(locShowerEnergy, locBeta_Timing);
@@ -2139,6 +2394,7 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 
 			//if RF time is indeterminate, start time will be NaN
 			auto locBCALShowerMatchParams = locChargedTrackHypothesis->Get_BCALShowerMatchParams();
+			auto locECALShowerMatchParams = locChargedTrackHypothesis->Get_ECALShowerMatchParams();
 			auto locFCALShowerMatchParams = locChargedTrackHypothesis->Get_FCALShowerMatchParams();
 			auto locTOFHitMatchParams = locChargedTrackHypothesis->Get_TOFHitMatchParams();
 			auto locSCHitMatchParams = locChargedTrackHypothesis->Get_SCHitMatchParams();
@@ -2221,6 +2477,25 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 					}
 				//}
 			}
+			if(locECALShowerMatchParams != NULL)
+			{
+				const DECALShower* locECALShower = locECALShowerMatchParams->dECALShower;
+				double locEOverP = locECALShower->E/locP;
+				dHistMap_ECALEOverPVsP[locCharge]->Fill(locP, locEOverP);
+				dHistMap_ECALEOverPVsTheta[locCharge]->Fill(locTheta, locEOverP);
+				if(locEventRFBunch->dNumParticleVotes > 1)
+				{
+					double locBeta_Timing = locECALShowerMatchParams->dPathLength/(29.9792458*(locECALShower->t - locChargedTrackHypothesis->t0()));
+					dHistMap_BetaVsP[SYS_ECAL][locCharge]->Fill(locP, locBeta_Timing);
+					if(dHistMap_DeltaBetaVsP[SYS_ECAL].find(locPID) != dHistMap_DeltaBetaVsP[SYS_ECAL].end())
+					{
+						double locDeltaBeta = locChargedTrackHypothesis->lorentzMomentum().Beta() - locBeta_Timing;
+						dHistMap_DeltaBetaVsP[SYS_ECAL][locPID]->Fill(locP, locDeltaBeta);
+						double locDeltaT = locECALShower->t - locECALShowerMatchParams->dFlightTime - locStartTime;
+						dHistMap_DeltaTVsP[SYS_ECAL][locPID]->Fill(locP, locDeltaT);
+					}
+				}
+			}
 			if(locFCALShowerMatchParams != NULL)
 			{
 				const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
@@ -2283,7 +2558,7 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 	return true; //return false if you want to use this action to apply a cut (and it fails the cut!)
 }
 
-void DHistogramAction_Neutrals::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_Neutrals::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Create any histograms/trees/etc. within a ROOT lock.
 		//This is so that when running multithreaded, only one thread is writing to the ROOT file at a time.
@@ -2291,13 +2566,13 @@ void DHistogramAction_Neutrals::Initialize(JEventLoop* locEventLoop)
 	//When creating a reaction-independent action, only modify member variables within a ROOT lock.
 		//Objects created within a plugin (such as reaction-independent actions) can be accessed by many threads simultaneously.
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	string locHistName;
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it.
@@ -2330,6 +2605,15 @@ void DHistogramAction_Neutrals::Initialize(JEventLoop* locEventLoop)
 		locHistName = "FCALNeutralShowerDeltaTVsE";
 		dHist_FCALNeutralShowerDeltaTVsE = GetOrCreate_Histogram<TH2I>(locHistName, ";FCAL Neutral Shower Energy (GeV);FCAL Neutral Shower #Deltat (ns)", dNum2DShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
 
+		//ECAL
+		locHistName = "ECALTrackDOCA";
+		dHist_ECALTrackDOCA = GetOrCreate_Histogram<TH1I>(locHistName, ";ECAL Shower Distance to Nearest Track (cm)", dNumTrackDOCABins, dMinTrackDOCA, dMaxTrackDOCA);
+		locHistName = "ECALNeutralShowerEnergy";
+		dHist_ECALNeutralShowerEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";ECAL Neutral Shower Energy (GeV)", dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
+		locHistName = "ECALNeutralShowerDeltaT";
+		dHist_ECALNeutralShowerDeltaT = GetOrCreate_Histogram<TH1I>(locHistName, ";ECAL Neutral Shower #Deltat (Propagated - RF) (ns)", dNumDeltaTBins, dMinDeltaT, dMaxDeltaT);
+		locHistName = "ECALNeutralShowerDeltaTVsE";
+		dHist_ECALNeutralShowerDeltaTVsE = GetOrCreate_Histogram<TH2I>(locHistName, ";ECAL Neutral Shower Energy (GeV);ECAL Neutral Shower #Deltat (ns)", dNum2DShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
 
 		//CCAL
 		//locHistName = "CCALTrackDOCA";
@@ -2344,13 +2628,12 @@ void DHistogramAction_Neutrals::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_Neutrals::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_Neutrals::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = DEvent::GetDGeometry(locEvent);
 	double locTargetZCenter = 0.0;
 	locGeometry->GetTargetZ(locTargetZCenter);
 
@@ -2358,7 +2641,7 @@ void DHistogramAction_Neutrals::Run_Update(JEventLoop* locEventLoop)
 		dTargetCenter.SetXYZ(0.0, 0.0, locTargetZCenter);
 }
 
-bool DHistogramAction_Neutrals::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_Neutrals::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//Expect locParticleCombo to be NULL since this is a reaction-independent action.
 
@@ -2366,16 +2649,16 @@ bool DHistogramAction_Neutrals::Perform_Action(JEventLoop* locEventLoop, const D
 		return true; //else double-counting!
 
 	vector<const DNeutralShower*> locNeutralShowers;
-	locEventLoop->Get(locNeutralShowers);
+	locEvent->Get(locNeutralShowers);
 
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	locEventLoop->Get(locTrackTimeBasedVector);
+	locEvent->Get(locTrackTimeBasedVector);
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	vector<const DEventRFBunch*> locEventRFBunches;
-	locEventLoop->Get(locEventRFBunches);
+	locEvent->Get(locEventRFBunches);
 	double locStartTime = locEventRFBunches.empty() ? 0.0 : locEventRFBunches[0]->dTime;
 
 	//FILL HISTOGRAMS
@@ -2401,6 +2684,19 @@ bool DHistogramAction_Neutrals::Perform_Action(JEventLoop* locEventLoop, const D
 				dHist_FCALNeutralShowerEnergy->Fill(locNeutralShowers[loc_i]->dEnergy);
 				dHist_FCALNeutralShowerDeltaT->Fill(locDeltaT);
 				dHist_FCALNeutralShowerDeltaTVsE->Fill(locNeutralShowers[loc_i]->dEnergy, locDeltaT);
+			}
+			else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_ECAL)
+			  {
+				const DECALShower* locECALShower = NULL;
+				locNeutralShowers[loc_i]->GetSingle(locECALShower);
+
+				double locDistance = 9.9E9;
+				if(locDetectorMatches->Get_DistanceToNearestTrack(locECALShower, locDistance))
+					dHist_ECALTrackDOCA->Fill(locDistance);
+
+				dHist_ECALNeutralShowerEnergy->Fill(locNeutralShowers[loc_i]->dEnergy);
+				dHist_ECALNeutralShowerDeltaT->Fill(locDeltaT);
+				dHist_ECALNeutralShowerDeltaTVsE->Fill(locNeutralShowers[loc_i]->dEnergy, locDeltaT);
 			}
 			else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_BCAL)
 			{
@@ -2441,7 +2737,7 @@ bool DHistogramAction_Neutrals::Perform_Action(JEventLoop* locEventLoop, const D
 	return true; //return false if you want to use this action to apply a cut (and it fails the cut!)
 }
 
-void DHistogramAction_DetectorMatchParams::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_DetectorMatchParams::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Create any histograms/trees/etc. within a ROOT lock.
 		//This is so that when running multithreaded, only one thread is writing to the ROOT file at a time.
@@ -2451,18 +2747,18 @@ void DHistogramAction_DetectorMatchParams::Initialize(JEventLoop* locEventLoop)
 
 	string locHistName, locHistTitle;
 	
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
+	auto app = locEvent->GetJApplication();
 	string locTrackSelectionTag = "NotATag";
-	if(gPARMS->Exists("COMBO:TRACK_SELECT_TAG"))
-		gPARMS->GetParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
+	app->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//So: Default tag is "", User can set it to something else
 		//In here, if tag is "", get from gparms, if not, leave it alone
@@ -2555,13 +2851,12 @@ void DHistogramAction_DetectorMatchParams::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_DetectorMatchParams::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_DetectorMatchParams::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = DEvent::GetDGeometry(locEvent);
 	double locTargetZCenter = 0.0;
 	locGeometry->GetTargetZ(locTargetZCenter);
 	
@@ -2569,7 +2864,7 @@ void DHistogramAction_DetectorMatchParams::Run_Update(JEventLoop* locEventLoop)
 		dTargetCenterZ = locTargetZCenter; //only set if not already set
 }
 
-bool DHistogramAction_DetectorMatchParams::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_DetectorMatchParams::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//Expect locParticleCombo to be NULL since this is a reaction-independent action.
 
@@ -2577,25 +2872,25 @@ bool DHistogramAction_DetectorMatchParams::Perform_Action(JEventLoop* locEventLo
 		return true; //else double-counting!
 
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
-	Fill_Hists(locEventLoop, false);
+	Fill_Hists(locEvent, false);
 	if(!locMCThrowns.empty())
-		Fill_Hists(locEventLoop, true);
+		Fill_Hists(locEvent, true);
 
 	return true; //return false if you want to use this action to apply a cut (and it fails the cut!)
 }
 
-void DHistogramAction_DetectorMatchParams::Fill_Hists(JEventLoop* locEventLoop, bool locUseTruePIDFlag)
+void DHistogramAction_DetectorMatchParams::Fill_Hists(const std::shared_ptr<const JEvent>& locEvent, bool locUseTruePIDFlag)
 {
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks, dTrackSelectionTag.c_str());
+	locEvent->Get(locChargedTracks, dTrackSelectionTag.c_str());
 
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
@@ -2675,17 +2970,17 @@ void DHistogramAction_DetectorMatchParams::Fill_Hists(JEventLoop* locEventLoop, 
 	Unlock_Action(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_EventVertex::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_EventVertex::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle;
 
+	auto app = locEvent->GetJApplication();
 	string locTrackSelectionTag = "NotATag";
-	if(gPARMS->Exists("COMBO:TRACK_SELECT_TAG"))
-		gPARMS->GetParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
+	app->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//So: Default tag is "", User can set it to something else
 		//In here, if tag is "", get from gparms, if not, leave it alone
@@ -2789,45 +3084,46 @@ void DHistogramAction_EventVertex::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DHistogramAction_EventVertex::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_EventVertex::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	if(Get_CalledPriorWithComboFlag())
 		return true; //else double-counting!
 
 	const DVertex* locVertex = NULL;
-	locEventLoop->GetSingle(locVertex);
+	locEvent->GetSingle(locVertex);
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks, dTrackSelectionTag.c_str());
+	locEvent->Get(locChargedTracks, dTrackSelectionTag.c_str());
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 
 	double beam_velocity = SPEED_OF_LIGHT;
 	vector<const DBeamKLong *> locBeamKLongs;
-	locEventLoop->Get(locBeamKLongs);
+	locEvent->Get(locBeamKLongs);
 	if(locBeamKLongs.size() > 0) {
 		beam_velocity *= locBeamKLongs[0]->pmag() / locBeamKLongs[0]->energy();
 	}
 
 	//Make sure that brun() is called (to get rf period) before using.
-	//Cannot call JEventLoop->Get() because object may be in datastream (REST), bypassing factory brun() call.
+	//Cannot call JEvent->Get() because object may be in datastream (REST), bypassing factory brun() call.
 	//Must do here rather than in Initialize() function because this object is shared by all threads (which each have their own factory)
-	DRFTime_factory* locRFTimeFactory = static_cast<DRFTime_factory*>(locEventLoop->GetFactory("DRFTime"));
-	if(!locRFTimeFactory->brun_was_called())
-	{
-		locRFTimeFactory->brun(locEventLoop, locEventLoop->GetJEvent().GetRunNumber());
-		locRFTimeFactory->Set_brun_called();
-	}
+	DRFTime_factory* locRFTimeFactory = dynamic_cast<DRFTime_factory*>(locEvent->GetFactory<DRFTime>());
+	// if(!locRFTimeFactory->brun_was_called())
+	// {
+	// 	locRFTimeFactory->brun(locEvent, locEvent->GetJEvent().GetRunNumber());
+	// 	locRFTimeFactory->Set_brun_called();
+	// }
+	// TODO: Come back to this!
 
 	//Get time-based tracks: use best PID FOM
 		//Note that these may not be the PIDs that were used in the fit!!!
@@ -2909,20 +3205,19 @@ bool DHistogramAction_EventVertex::Perform_Action(JEventLoop* locEventLoop, cons
 	return true;
 }
 
-void DHistogramAction_DetectedParticleKinematics::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_DetectedParticleKinematics::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle, locParticleName, locParticleROOTName;
 	Particle_t locPID;
 
+	auto app = locEvent->GetJApplication();
 	string locTrackSelectionTag = "NotATag", locShowerSelectionTag = "NotATag";
-	if(gPARMS->Exists("COMBO:TRACK_SELECT_TAG"))
-		gPARMS->GetParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
-	if(gPARMS->Exists("COMBO:SHOWER_SELECT_TAG"))
-		gPARMS->GetParameter("COMBO:SHOWER_SELECT_TAG", locShowerSelectionTag);
+	app->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
+	app->SetDefaultParameter("COMBO:SHOWER_SELECT_TAG", locShowerSelectionTag);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//So: Default tag is "", User can set it to something else
 		//In here, if tag is "", get from gparms, if not, leave it alone
@@ -3028,16 +3323,16 @@ void DHistogramAction_DetectedParticleKinematics::Initialize(JEventLoop* locEven
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_DetectedParticleKinematics::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	if(Get_CalledPriorWithComboFlag())
 		return true; //else double-counting!
 
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons);
+	locEvent->Get(locBeamPhotons);
 
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
@@ -3050,7 +3345,7 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 	Unlock_Action();
 
 	vector<const DChargedTrack*> locPreSelectChargedTracks;
-	locEventLoop->Get(locPreSelectChargedTracks, dTrackSelectionTag.c_str());
+	locEvent->Get(locPreSelectChargedTracks, dTrackSelectionTag.c_str());
 
 	for(size_t loc_i = 0; loc_i < locPreSelectChargedTracks.size(); ++loc_i)
 	{
@@ -3086,7 +3381,7 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 		double locBeta_Timing = locChargedTrackHypothesis->measuredBeta();
 		double locDeltaBeta = locBeta_Timing - locChargedTrackHypothesis->lorentzMomentum().Beta();
 
-		Particle_t locPID = (locChargedTrackHypothesis->Get_FOM() < dMinPIDFOM) ? Unknown : locChargedTrackHypothesis->PID();
+		Particle_t locPID = (locChargedTrackHypothesis->Get_FOM() < dMinPIDFOM) ? UnknownParticle : locChargedTrackHypothesis->PID();
 		if(dHistMap_P.find(locPID) == dHistMap_P.end())
 			continue; //not interested in histogramming
 
@@ -3110,7 +3405,7 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 	}
 
 	vector<const DNeutralParticle*> locNeutralParticles;
-	locEventLoop->Get(locNeutralParticles, dShowerSelectionTag.c_str());
+	locEvent->Get(locNeutralParticles, dShowerSelectionTag.c_str());
 
 	for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 	{
@@ -3155,20 +3450,19 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 	return true;
 }
 
-void DHistogramAction_TrackShowerErrors::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_TrackShowerErrors::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle, locParticleName, locParticleROOTName;
 	Particle_t locPID;
 
+	auto app = locEvent->GetJApplication();
 	string locTrackSelectionTag = "NotATag", locShowerSelectionTag = "NotATag";
-	if(gPARMS->Exists("COMBO:TRACK_SELECT_TAG"))
-		gPARMS->GetParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
-	if(gPARMS->Exists("COMBO:SHOWER_SELECT_TAG"))
-		gPARMS->GetParameter("COMBO:SHOWER_SELECT_TAG", locShowerSelectionTag);
+	app->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
+	app->SetDefaultParameter("COMBO:SHOWER_SELECT_TAG", locShowerSelectionTag);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//So: Default tag is "", User can set it to something else
 		//In here, if tag is "", get from gparms, if not, leave it alone
@@ -3351,22 +3645,22 @@ void DHistogramAction_TrackShowerErrors::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DHistogramAction_TrackShowerErrors::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_TrackShowerErrors::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	if(Get_CalledPriorWithComboFlag())
 		return true; //else double-counting!
 
 	vector<const DChargedTrack*> locPreSelectChargedTracks;
-	locEventLoop->Get(locPreSelectChargedTracks, dTrackSelectionTag.c_str());
+	locEvent->Get(locPreSelectChargedTracks, dTrackSelectionTag.c_str());
 
 	for(size_t loc_i = 0; loc_i < locPreSelectChargedTracks.size(); ++loc_i)
 	{
 		const DChargedTrackHypothesis* locChargedTrackHypothesis = locPreSelectChargedTracks[loc_i]->Get_BestFOM();
 
-		Particle_t locPID = (locChargedTrackHypothesis->Get_FOM() < dMinPIDFOM) ? Unknown : locChargedTrackHypothesis->PID();
+		Particle_t locPID = (locChargedTrackHypothesis->Get_FOM() < dMinPIDFOM) ? UnknownParticle : locChargedTrackHypothesis->PID();
 		if(dHistMap_TrackPxErrorVsP.find(locPID) == dHistMap_TrackPxErrorVsP.end())
 			continue; //not interested in histogramming
 
@@ -3416,7 +3710,7 @@ bool DHistogramAction_TrackShowerErrors::Perform_Action(JEventLoop* locEventLoop
 	}
 
 	vector<const DNeutralParticle*> locNeutralParticles;
-	locEventLoop->Get(locNeutralParticles, dShowerSelectionTag.c_str());
+	locEvent->Get(locNeutralParticles, dShowerSelectionTag.c_str());
 
 	for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 	{
@@ -3472,15 +3766,15 @@ bool DHistogramAction_TrackShowerErrors::Perform_Action(JEventLoop* locEventLoop
 	return true;
 }
 
-void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_NumReconstructedObjects::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName;
 
-	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
+	bool locIsRESTEvent = locEvent->GetSingleStrict<DStatusBits>()->GetStatusBit(kSTATUS_REST);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -3562,6 +3856,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLo
 		//Showers / Neutrals / TOF / SC
 		locHistName = "NumFCALShowers";
 		dHist_NumFCALShowers = GetOrCreate_Histogram<TH1D>(locHistName, ";# DFCALShower", dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
+		locHistName = "NumECALShowers";
+		dHist_NumECALShowers = GetOrCreate_Histogram<TH1D>(locHistName, ";# DECALShower", dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
 		locHistName = "NumCCALShowers";
 		dHist_NumCCALShowers = GetOrCreate_Histogram<TH1D>(locHistName, ";# DCCALShower", dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
 		locHistName = "NumBCALShowers";
@@ -3586,6 +3882,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLo
 		dHist_NumTrackBCALMatches = GetOrCreate_Histogram<TH1D>(locHistName, ";# Track-BCAL Matches", dMaxNumMatchObjects + 1, -0.5, (float)dMaxNumMatchObjects + 0.5);
 		locHistName = "NumTrackFCALMatches";
 		dHist_NumTrackFCALMatches = GetOrCreate_Histogram<TH1D>(locHistName, ";# Track-FCAL Matches", dMaxNumMatchObjects + 1, -0.5, (float)dMaxNumMatchObjects + 0.5);
+		locHistName = "NumTrackECALMatches";
+		dHist_NumTrackECALMatches = GetOrCreate_Histogram<TH1D>(locHistName, ";# Track-ECAL Matches", dMaxNumMatchObjects + 1, -0.5, (float)dMaxNumMatchObjects + 0.5);
 		locHistName = "NumTrackTOFMatches";
 		dHist_NumTrackTOFMatches = GetOrCreate_Histogram<TH1D>(locHistName, ";# Track-TOF Matches", dMaxNumMatchObjects + 1, -0.5, (float)dMaxNumMatchObjects + 0.5);
 		locHistName = "NumTrackSCMatches";
@@ -3610,6 +3908,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLo
 			dHist_NumBCALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DBCALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
 			locHistName = "NumFCALHits";
 			dHist_NumFCALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DFCALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
+			locHistName = "NumECALHits";
+			dHist_NumECALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DECALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
 			locHistName = "NumCCALHits";
 			dHist_NumCCALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DFCALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
 
@@ -3620,48 +3920,51 @@ void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLo
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	if(Get_CalledPriorWithComboFlag())
 		return true; //else double-counting!
 
-	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
+	bool locIsRESTEvent = locEvent->GetSingleStrict<DStatusBits>()->GetStatusBit(kSTATUS_REST);
 
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	locEventLoop->Get(locTrackTimeBasedVector);
+	locEvent->Get(locTrackTimeBasedVector);
 
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons);
+	locEvent->Get(locBeamPhotons);
 
 	vector<const DFCALShower*> locFCALShowers;
-	locEventLoop->Get(locFCALShowers);
+	locEvent->Get(locFCALShowers);
 
+	vector<const DECALShower*> locECALShowers;
+	locEvent->Get(locECALShowers);
+	
 	vector<const DCCALShower*> locCCALShowers;
-	locEventLoop->Get(locCCALShowers);
+	locEvent->Get(locCCALShowers);
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks);
+	locEvent->Get(locChargedTracks);
 
 	vector<const DBCALShower*> locBCALShowers;
-	locEventLoop->Get(locBCALShowers);
+	locEvent->Get(locBCALShowers);
 
 	vector<const DNeutralShower*> locNeutralShowers;
-	locEventLoop->Get(locNeutralShowers);
+	locEvent->Get(locNeutralShowers);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	locEvent->Get(locTOFPoints);
 
 	vector<const DSCHit*> locSCHits;
-	locEventLoop->Get(locSCHits);
+	locEvent->Get(locSCHits);
 
 	vector<const DRFTime*> locRFTimes;
-	locEventLoop->Get(locRFTimes);
+	locEvent->Get(locRFTimes);
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	//if not REST
 	vector<const DTrackWireBased*> locTrackWireBasedVector;
@@ -3674,6 +3977,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 	vector<const DTOFHit*> locTOFHits;
 	vector<const DBCALHit*> locBCALHits;
 	vector<const DFCALHit*> locFCALHits;
+	vector<const DECALHit*> locECALHits;
 	vector<const DCCALHit*> locCCALHits;
 	vector<const DTAGMHit*> locTAGMHits;
 	vector<const DTAGHHit*> locTAGHHits;
@@ -3684,22 +3988,23 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 	size_t locNumFDCWireHits = 0, locNumFDCCathodeHits = 0;
 	if(!locIsRESTEvent)
 	{
-		locEventLoop->Get(locTrackWireBasedVector);
-		locEventLoop->Get(locTrackCandidates);
-		locEventLoop->Get(locTrackCandidates_CDC, "CDC");
-		locEventLoop->Get(locTrackCandidates_FDC, "FDCCathodes");
-		locEventLoop->Get(locCDCHits);
-		locEventLoop->Get(locFDCHits);
-		locEventLoop->Get(locFDCPseudoHits);
-		locEventLoop->Get(locFMWPCHits);
-		locEventLoop->Get(locTOFHits);
-		locEventLoop->Get(locBCALHits);
-		locEventLoop->Get(locFCALHits);
-		locEventLoop->Get(locCCALHits);
-		locEventLoop->Get(locTAGHHits);
-		locEventLoop->Get(locTAGMHits);
-		locEventLoop->Get(locRFDigiTimes);
-		locEventLoop->Get(locRFTDCDigiTimes);
+		locEvent->Get(locTrackWireBasedVector);
+		locEvent->Get(locTrackCandidates);
+		locEvent->Get(locTrackCandidates_CDC, "CDC");
+		locEvent->Get(locTrackCandidates_FDC, "FDCCathodes");
+		locEvent->Get(locCDCHits);
+		locEvent->Get(locFDCHits);
+		locEvent->Get(locFDCPseudoHits);
+		locEvent->Get(locFMWPCHits);
+		locEvent->Get(locTOFHits);
+		locEvent->Get(locBCALHits);
+		locEvent->Get(locFCALHits);
+		locEvent->Get(locECALHits);
+		locEvent->Get(locCCALHits);
+		locEvent->Get(locTAGHHits);
+		locEvent->Get(locTAGMHits);
+		locEvent->Get(locRFDigiTimes);
+		locEvent->Get(locRFTDCDigiTimes);
 
 		for(size_t loc_i = 0; loc_i < locFDCHits.size(); ++loc_i)
 		{
@@ -3775,7 +4080,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates.size(); ++loc_i)
 			{
-				if(locTrackCandidates[loc_i]->charge() > 0.0)
+				if(locTrackCandidates[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
@@ -3788,7 +4093,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates_CDC.size(); ++loc_i)
 			{
-				if(locTrackCandidates_CDC[loc_i]->charge() > 0.0)
+				if(locTrackCandidates_CDC[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
@@ -3800,7 +4105,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates_FDC.size(); ++loc_i)
 			{
-				if(locTrackCandidates_FDC[loc_i]->charge() > 0.0)
+				if(locTrackCandidates_FDC[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
@@ -3814,6 +4119,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 
 		//Showers
 		dHist_NumFCALShowers->Fill((Double_t)locFCALShowers.size());
+		dHist_NumECALShowers->Fill((Double_t)locECALShowers.size());
 		dHist_NumCCALShowers->Fill((Double_t)locCCALShowers.size());
 		dHist_NumBCALShowers->Fill((Double_t)locBCALShowers.size());
 		dHist_NumNeutralShowers->Fill((Double_t)locNeutralShowers.size());
@@ -3832,6 +4138,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 		//Matches
 		dHist_NumTrackBCALMatches->Fill((Double_t)locDetectorMatches->Get_NumTrackBCALMatches());
 		dHist_NumTrackFCALMatches->Fill((Double_t)locDetectorMatches->Get_NumTrackFCALMatches());
+		dHist_NumTrackECALMatches->Fill((Double_t)locDetectorMatches->Get_NumTrackECALMatches());
 		dHist_NumTrackTOFMatches->Fill((Double_t)locDetectorMatches->Get_NumTrackTOFMatches());
 		dHist_NumTrackSCMatches->Fill((Double_t)locDetectorMatches->Get_NumTrackSCMatches());
 
@@ -3846,6 +4153,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 			dHist_NumTOFHits->Fill((Double_t)locTOFHits.size());
 			dHist_NumBCALHits->Fill((Double_t)locBCALHits.size());
 			dHist_NumFCALHits->Fill((Double_t)locFCALHits.size());
+			dHist_NumECALHits->Fill((Double_t)locECALHits.size());
 			dHist_NumCCALHits->Fill((Double_t)locCCALHits.size());
 			dHist_NumRFSignals->Fill((Double_t)(locRFDigiTimes.size() + locRFTDCDigiTimes.size()));
 		}
@@ -3855,17 +4163,17 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 	return true;
 }
 
-void DHistogramAction_TrackMultiplicity::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_TrackMultiplicity::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
+	auto app = locEvent->GetJApplication();
+
 	string locTrackSelectionTag = "NotATag", locShowerSelectionTag = "NotATag";
-	if(gPARMS->Exists("COMBO:TRACK_SELECT_TAG"))
-		gPARMS->GetParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
-	if(gPARMS->Exists("COMBO:SHOWER_SELECT_TAG"))
-		gPARMS->GetParameter("COMBO:SHOWER_SELECT_TAG", locShowerSelectionTag);
+	app->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", locTrackSelectionTag);
+	app->SetDefaultParameter("COMBO:SHOWER_SELECT_TAG", locShowerSelectionTag);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//So: Default tag is "", User can set it to something else
 		//In here, if tag is "", get from gparms, if not, leave it alone
@@ -3916,19 +4224,19 @@ void DHistogramAction_TrackMultiplicity::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DHistogramAction_TrackMultiplicity::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_TrackMultiplicity::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	if(Get_CalledPriorWithComboFlag())
 		return true; //else double-counting!
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks);
+	locEvent->Get(locChargedTracks);
 
 	vector<const DChargedTrack*> locGoodChargedTracks;
-	locEventLoop->Get(locGoodChargedTracks, dTrackSelectionTag.c_str());
+	locEvent->Get(locGoodChargedTracks, dTrackSelectionTag.c_str());
 
 	// get #tracks by PID/q type 
 	size_t locNumPositiveTracks = 0, locNumNegativeTracks = 0; 
@@ -3974,10 +4282,10 @@ bool DHistogramAction_TrackMultiplicity::Perform_Action(JEventLoop* locEventLoop
 	}
 
 	vector<const DNeutralParticle*> locNeutralParticles;
-	locEventLoop->Get(locNeutralParticles);
+	locEvent->Get(locNeutralParticles);
 
 	vector<const DNeutralParticle*> locGoodNeutralParticles;
-	locEventLoop->Get(locGoodNeutralParticles, dShowerSelectionTag.c_str());
+	locEvent->Get(locGoodNeutralParticles, dShowerSelectionTag.c_str());
 
 	// neutrals by pid
 	for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
@@ -4038,12 +4346,12 @@ bool DHistogramAction_TrackMultiplicity::Perform_Action(JEventLoop* locEventLoop
 // DHistogramAction_TriggerStudies
 // dHist_Trigger_FCALBCAL_Energy
 
-void DHistogramAction_TriggerStudies::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_TriggerStudies::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -4058,17 +4366,17 @@ void DHistogramAction_TriggerStudies::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DHistogramAction_TriggerStudies::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_TriggerStudies::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	if(Get_CalledPriorWithComboFlag())
 		return true; //else double-counting!
 
 	//CHECK TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
-	locEventLoop->GetSingle(locTrigger);
+	locEvent->GetSingle(locTrigger);
 	if(locTrigger == nullptr)
 		return true;
 		
@@ -4090,7 +4398,7 @@ bool DHistogramAction_TriggerStudies::Perform_Action(JEventLoop* locEventLoop, c
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action();
 	{
-		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCALEnergy(), locTrigger->Get_GTP_BCALEnergy());
+		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCAL2Energy(), locTrigger->Get_GTP_BCALEnergy());
 	}
 	Unlock_Action();
 

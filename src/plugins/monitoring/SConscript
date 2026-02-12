@@ -13,6 +13,7 @@ subdirs = [
 'CDC_online',
 'DAQ_online',
 'fa125_itrig',
+'fa125_temp',
 'FCAL_online',
 'FCAL_invmass',
 'FCAL_cpp',
@@ -52,13 +53,14 @@ subdirs = [
 'highlevel_online',
 'BCAL_Hadronic_Eff',
 'FCAL_Hadronic_Eff',
+'ECAL_Hadronic_Eff',
 'SC_Eff','TOF_Eff',
 'TS_scaler',
 'TrackingPulls',
 'TrackingPulls_straight',
-'timing_online',
 'DIRC_online',
 'TRD_online',
+'TRDTrack',
 'RSAI_KO',
 'BEAM_online',
 'lumi_mon',
@@ -67,7 +69,7 @@ subdirs = [
 ,'cppFMWPC_ana'
 ,'cpp_itrig'
 ,'primex-online'
-
+,'HELI_online'
 ]
 
 #'L3_online',

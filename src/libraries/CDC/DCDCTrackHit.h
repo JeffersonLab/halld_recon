@@ -9,8 +9,6 @@
 #define _DCDCTrackHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
 #include "DCDCWire.h"
 
@@ -41,16 +39,16 @@ class DCDCTrackHit:public JObject{
       float dE; // Energy deposition in GeV, using integral
       float dE_amp; // same, but using amplitude
 
-      void toStrings(vector<pair<string,string> > &items)const{
-         AddString(items, "ring", "%d", wire->ring);
-         AddString(items, "straw", "%d", wire->straw);
-         AddString(items, "x(cm)", "%3.1f", wire->origin.x());
-         AddString(items, "y(cm)", "%3.1f", wire->origin.y());
-         AddString(items, "stereo(rad)", "%1.4f", wire->stereo);
-         AddString(items, "tdrift(ns)", "%3.1f", tdrift);
-         AddString(items, "dist(cm)", "%1.3f", dist);
-         AddString(items, "dE(GeV)","%3.1g",dE);
-         AddString(items, "dE_amp(GeV)","%3.1g",dE_amp);
+      void Summarize(JObjectSummary& summary) const override {
+         summary.add(wire->ring, "ring", "%d");
+         summary.add(wire->straw, "straw", "%d");
+         summary.add(wire->origin.x(), "x(cm)", "%3.1f");
+         summary.add(wire->origin.y(), "y(cm)", "%3.1f");
+         summary.add(wire->stereo, "stereo(rad)", "%1.4f");
+         summary.add(tdrift, "tdrift(ns)", "%3.1f");
+         summary.add(dist, "dist(cm)", "%1.3f");
+         summary.add(dE, "dE(GeV)", "%3.1g");
+         summary.add(dE_amp, "dE_amp(GeV)", "%3.1g");
       }
 
 };

@@ -16,7 +16,6 @@
 
 
 using namespace std;
-using namespace jana;
 
 
 #include "CDC/DCDCHit.h"
@@ -27,8 +26,9 @@ using namespace jana;
 #include "DAQ/Df125CDCPulse.h"
 #include "DAQ/Df125Config.h"
 #include "TRIGGER/DTrigger.h"
+#include "DANA/DEvent.h"
 
-#include <JANA/JCalibration.h>
+#include <JANA/Calibrations/JCalibration.h>
 
 #include <TDirectory.h>
 #include <TH2.h>
@@ -70,7 +70,7 @@ static TH2I *cdc_windata_ped_vs_n = NULL;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_CDC_online());
+    app->Add(new JEventProcessor_CDC_online());
   }
 }
 
@@ -79,6 +79,7 @@ extern "C"{
 
 
 JEventProcessor_CDC_online::JEventProcessor_CDC_online() {
+	SetTypeName("JEventProcessor_CDC_online");
 	initialized_histograms = false;
 }
 
@@ -92,18 +93,15 @@ JEventProcessor_CDC_online::~JEventProcessor_CDC_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_CDC_online::init(void) {
+void JEventProcessor_CDC_online::Init() {
 
-  // I moved all the histogram setup into the brun so that I can use different
-  // scales for the later runs using the new firmware
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 
 
   WG_OCC = false;
-    if(gPARMS){
-      gPARMS->SetDefaultParameter("CDC_ONLINE:WG_OCC", WG_OCC, "Fill occupancy only if wire_gain > 0");
-    }  
+  app->SetDefaultParameter("CDC_ONLINE:WG_OCC", WG_OCC, "Fill occupancy only if wire_gain > 0");
 
-  
   // create root folder for cdc and cd to it, store main dir
   TDirectory *main = gDirectory;
   gDirectory->mkdir("CDC")->cd();
@@ -112,7 +110,42 @@ jerror_t JEventProcessor_CDC_online::init(void) {
   cdc_num_events = new TH1I("cdc_num_events","CDC number of events",1, 0.5, 1.5);
 
   cdc_o = new TH2I("cdc_o","CDC occupancy by straw, ring;straw;ring",209,0.5,209.5,28,0.5,28.5);
+   
+  // max values for histogram scales, assuming fa125 format firmware, from 11 Sept 2015
+ 
+    // raw quantities for read out (125 format) are
+    //   time                    field max 2047   scaled x 1, units 0.8ns
+    //   time qf                 field max 1 
+    //   overflow count          field max 7
+    //   pedestal                field max 255    scaled x 1/1 initially
+    //   max amplitude 9 bits,   field max 511    scaled x 1/8
+    //   integral                field max 16383  scaled x 1/16
 
+
+  cdc_raw_amp   = new TH1I("cdc_raw_amp","CDC amplitude (ADC units, scaled); ADC units",512,0,512);
+
+  cdc_raw_amp_vs_n   = new TH2I("cdc_raw_amp_vs_n","CDC amplitude (ADC units, scaled) vs straw number;straw;ADC units",3522,0.5,3522.5,128,0,512);
+
+  cdc_raw_t = new TH1I("cdc_raw_t","CDC raw time (units of 0.8ns); raw time (0.8ns)",200,0,2048);
+
+  cdc_raw_t_vs_n = new TH2I("cdc_raw_t_vs_n","CDC raw time (units of 0.8ns) vs straw number;straw;time (0.8ns)",3522,0.5,3522.5,100,0,2048);
+
+  cdc_raw_int   = new TH1I("cdc_raw_int","CDC integral (ADC units, scaled), pedestal subtracted; ADC units",200,0,16384);
+
+  cdc_raw_int_vs_n   = new TH2I("cdc_raw_int_vs_n","CDC integral (ADC units,scaled), pedestal subtracted, vs straw number;straw;ADC units",3522,0.5,3522.5,100,0,16384);
+
+  cdc_raw_intpp   = new TH1I("cdc_raw_intpp","CDC integral (ADC units, scaled), includes pedestal; ADC units",200,0,16384);
+
+  cdc_raw_intpp_vs_n   = new TH2I("cdc_raw_intpp_vs_n","CDC integral (ADC units, scaled), including pedestal, vs straw number;straw;ADC units",3522,0.5,3522.5,100,0,16384);
+
+  cdc_ped   = new TH1I("cdc_ped","CDC pedestal (ADC units);pedestal (ADC units)",128,0,256);
+
+  cdc_ped_vs_n   = new TH2I("cdc_ped_vs_n","CDC pedestal (ADC units) vs straw number;straw;pedestal (ADC units)",3522,0.5,3522.5,64,0,256);
+
+  cdc_windata_ped   = new TH1I("cdc_windata_ped","CDC pedestal (ADC units) from raw window data;pedestal (ADC units)",128,0,256);
+
+  cdc_windata_ped_vs_n   = new TH2I("cdc_windata_ped_vs_n","CDC pedestal (ADC units) from raw window data vs straw number;straw;pedestal (ADC units)",3522,0.5,3522.5,64,0,256);
+  
 
   gDirectory->mkdir("rings_occupancy","CDC rings: occupancy")->cd();
 
@@ -134,108 +167,24 @@ jerror_t JEventProcessor_CDC_online::init(void) {
 	cdc_occ_ring[iring+1] = new TH2D(hname, "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
   }
   
+
+
   
   // back to main dir
   main->cd();
-
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_CDC_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
   // This is called whenever the run number changes
- 
-    jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
-   
-  // max values for histogram scales, modified fa250-format readout
 
 
-    Int_t AMAX = 4096;    //max for amplitude, fa250-format, 12 bits
-  
-    //  Int_t IMAX = 524288;  //max for raw integral, fa250-format, 19 bits
-    Int_t IMAX = 400000;  //max for raw integral, fa250-format, 19 bits
+  JCalibration *jcalib = DEvent::GetJCalibration(event);
 
-    Int_t PMAX = 512;     //max for pedestal, fa250-format max is 512
-    //  Int_t RTMAX = 32768;   //max for raw time, fa250-format, 15 bits
-    Int_t RTMAX = 12000; //max for raw time, less than full field width
-
-    Char_t rtunits[8] = "0.125ns";  //raw time is in units of sample/64 = ns/8
-
-
-
-  if (runnumber > 3675) { //new fa125 format firmware, from 11 Sept 2015
-
- 
-    // raw quantities for read out (125 format) are
-    //   time                    field max 2047   scaled x 1, units 0.8ns
-    //   time qf                 field max 1 
-    //   overflow count          field max 7
-    //   pedestal                field max 255    scaled x 1/1 initially
-    //   max amplitude 9 bits,   field max 511    scaled x 1/8
-    //   integral                field max 16383  scaled x 1/16
-
-    // max values for histogram scales, fa125-format readout
-
-    IMAX = 16384; //max for raw integral, fa125-format, 14 bits
-    PMAX = 256;   //max for pedestal, fa125-format, 8 bits
-    RTMAX = 2048;  //max for raw time, fa125-format, 11 bits
-    AMAX = 512;    //max for amplitude, fa125-format, 9 bits
-
-    sprintf(rtunits,"0.8ns");  //raw time is in units of sample/10 = 0.8ns
-
-  }
-
-
-  const Int_t NSTRAWS = 3522;
-  const Float_t HALF = 0.5;
-  const Float_t NSTRAWSPH = 3522.5;
-
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
-
-  if(initialized_histograms) //don't init twice!
-  {
-	  japp->RootUnLock(); //RELEASE ROOT LOCK
-	  return NOERROR;
-  }
-
-  gDirectory->cd("CDC");
-
-  // book histograms
-
-  cdc_raw_amp   = new TH1I("cdc_raw_amp","CDC amplitude (ADC units, scaled); ADC units",AMAX,0,AMAX);
-
-  cdc_raw_amp_vs_n   = new TH2I("cdc_raw_amp_vs_n","CDC amplitude (ADC units, scaled) vs straw number;straw;ADC units",NSTRAWS,HALF,NSTRAWSPH,128,0,AMAX);
-
-  cdc_raw_t = new TH1I("cdc_raw_t",Form("CDC raw time (units of %s); raw time (%s)",rtunits,rtunits),200,0,RTMAX);
-
-  cdc_raw_t_vs_n = new TH2I("cdc_raw_t_vs_n",Form("CDC raw time (units of %s) vs straw number;straw;time (%s)",rtunits,rtunits),NSTRAWS,HALF,NSTRAWSPH,100,0,RTMAX);
-
-  cdc_raw_int   = new TH1I("cdc_raw_int","CDC integral (ADC units, scaled), pedestal subtracted; ADC units",200,0,IMAX);
-
-  cdc_raw_int_vs_n   = new TH2I("cdc_raw_int_vs_n","CDC integral (ADC units,scaled), pedestal subtracted, vs straw number;straw;ADC units",NSTRAWS,HALF,NSTRAWSPH,100,0,IMAX);
-
-  cdc_raw_intpp   = new TH1I("cdc_raw_intpp","CDC integral (ADC units, scaled), includes pedestal; ADC units",200,0,IMAX);
-
-  cdc_raw_intpp_vs_n   = new TH2I("cdc_raw_intpp_vs_n","CDC integral (ADC units, scaled), including pedestal, vs straw number;straw;ADC units",NSTRAWS,HALF,NSTRAWSPH,100,0,IMAX);
-
-  cdc_ped   = new TH1I("cdc_ped","CDC pedestal (ADC units);pedestal (ADC units)",(Int_t)(PMAX/2),0,PMAX);
-
-  cdc_ped_vs_n   = new TH2I("cdc_ped_vs_n","CDC pedestal (ADC units) vs straw number;straw;pedestal (ADC units)",NSTRAWS,HALF,NSTRAWSPH,(Int_t)(PMAX/4),0,PMAX);
-
-  cdc_windata_ped   = new TH1I("cdc_windata_ped","CDC pedestal (ADC units) from raw window data;pedestal (ADC units)",(Int_t)(PMAX/2),0,PMAX);
-
-  cdc_windata_ped_vs_n   = new TH2I("cdc_windata_ped_vs_n","CDC pedestal (ADC units) from raw window data vs straw number;straw;pedestal (ADC units)",NSTRAWS,HALF,NSTRAWSPH,(Int_t)(PMAX/4),0,PMAX);
-
-  gDirectory->cd(".."); //RETURN TO MAIN FOLDER
-
-  initialized_histograms = true;
-
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-    unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
+  unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
         135,135,146,146,158,158,170,170,182,182,197,197,
         209,209};
 
@@ -265,16 +214,15 @@ jerror_t JEventProcessor_CDC_online::brun(JEventLoop *eventLoop, int32_t runnumb
    }
 
    //   for (uint i=0; i<100; i++) cout << "wire_gain[" << i << "] " << wire_gain[0][i] << endl;
-	
+  
 
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_CDC_online::Process(const std::shared_ptr<const JEvent>& event) {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
   // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -306,27 +254,27 @@ jerror_t JEventProcessor_CDC_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
 
   const DTrigger* locTrigger = NULL; 
-  eventLoop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
+    return;
   if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
-    return NOERROR;
+    return;
   }
 
 
   // get raw data for cdc
   vector<const DCDCDigiHit*> digihits;
-  eventLoop->Get(digihits);
+  event->Get(digihits);
 
   //get WRD data for new format (until it is linked to CDCPulse)
   vector<const Df125WindowRawData*> wrdvector;
-  eventLoop->Get(wrdvector);
+  event->Get(wrdvector);
 
 
 
   // FILL HISTOGRAMS
   // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   if(digihits.size() > 0)
 	  cdc_num_events->Fill(1);
@@ -469,32 +417,27 @@ jerror_t JEventProcessor_CDC_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
   } //end of loop through digihits
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_online::erun(void) {
+void JEventProcessor_CDC_online::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_online::fini(void) {
+void JEventProcessor_CDC_online::Finish() {
   // Called before program exit after event processing is finished.
 
-
-
-  return NOERROR;
 }
 
 

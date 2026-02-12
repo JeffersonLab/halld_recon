@@ -37,11 +37,7 @@ extern "C" uint32_t *swap_int32_t(uint32_t *data, unsigned int length, uint32_t 
 #include <et.h>
 #endif // HAVE_ET
 
-#include "JEventSourceGenerator_EVIO.h"
-//#include "JFactoryGenerator_DAQ.h"
 #include "JEventSource_EVIO.h"
-
-using namespace jana;
 
 #include <DANA/DStatusBits.h>
 #include <TTAB/DTranslationTable.h>
@@ -69,20 +65,20 @@ set<uint32_t> ROCIDS_TO_PARSE;
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 // If EVIO support is not available, define dummy methods
 #ifndef HAVE_EVIO
-JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(source_name){
-	cerr << endl;
-	cerr << "You are trying to use code requiring EVIO when support" << endl;
-	cerr << "for EVIO was not built into this binary. Set your" << endl;
-	cerr << "EVIOROOT *and* your ETROOT environment variables to" << endl;
-	cerr << "point to your EVIO installation and recompile." << endl;
-	cerr << endl;
-	exit(-1);
-}
-         JEventSource_EVIO::~JEventSource_EVIO(){}
-jerror_t JEventSource_EVIO::GetEvent(jana::JEvent &event){return NOERROR;}
-    void JEventSource_EVIO::FreeEvent(jana::JEvent &event){}
-jerror_t JEventSource_EVIO::GetObjects(jana::JEvent &event, jana::JFactory_base *factory){return NOERROR;}
-jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buf){return NOERROR;}
+    JEventSource_EVIO::JEventSource_EVIO(std::string source_name, JApplication* app):JEventSource(source_name) {
+        cerr << endl;
+        cerr << "You are trying to use code requiring EVIO when support" << endl;
+        cerr << "for EVIO was not built into this binary. Set your" << endl;
+        cerr << "EVIOROOT *and* your ETROOT environment variables to" << endl;
+        cerr << "point to your EVIO installation and recompile." << endl;
+        cerr << endl;
+        exit(-1);
+    }
+    JEventSource_EVIO::~JEventSource_EVIO(){}
+    void JEventSource_EVIO::GetEvent(std::shared_ptr<JEvent> event) {}
+    void JEventSource_EVIO::FinishEvent(JEvent &event) {}
+    bool JEventSource_EVIO::GetObjects(const std::shared_ptr<const JEvent> &event, JFactory *factory) {return false;}
+    jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buf){return NOERROR;}
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 #else  // HAVE_EVIO
@@ -90,7 +86,7 @@ jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buf){return NOERROR;}
 //----------------
 // Constructor
 //----------------
-JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(source_name)
+JEventSource_EVIO::JEventSource_EVIO(std::string source_name, JApplication* app):JEventSource(source_name)
 {
 	// Initialize connection objects and flags to NULL
 	Nunparsed = 0;
@@ -101,13 +97,13 @@ JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(sourc
 	source_type = kNoSource;
 	quit_on_next_ET_timeout = false;
 
-	// Initialize dedicated JStreamLog used for debugging messages
-	evioout.SetTag("--- EVIO ---: ");
-	evioout.SetTimestampFlag();
-	evioout.SetThreadstampFlag();
+	// Initialize dedicated logger
+	evioout.SetGroup("EVIO");
+	evioout.ShowTimestamp(true);
+	evioout.ShowThreadstamp(true);
 	
 	// Define base set of status bits
-	if(japp) DStatusBits::SetStatusBitDescriptions(japp);
+	DStatusBits::SetStatusBitDescriptions();
 
 	// Get configuration parameters
 	AUTODETECT_MODULE_TYPES = true;
@@ -142,56 +138,54 @@ JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(sourc
 	F125PULSE_NUMBER_FILTER = 1000;
 	F250PULSE_NUMBER_FILTER = 1000;
 	
-	if(gPARMS){
-		// JANA doesn't know about EmulationModeType so we use temporary variables
-		uint32_t f250_emulation_mode = F250_EMULATION_MODE;
-		uint32_t f125_emulation_mode = F125_EMULATION_MODE;
+	// JANA doesn't know about EmulationModeType so we use temporary variables
+	uint32_t f250_emulation_mode = F250_EMULATION_MODE;
+	uint32_t f125_emulation_mode = F125_EMULATION_MODE;
 
-		gPARMS->SetDefaultParameter("EVIO:AUTODETECT_MODULE_TYPES", AUTODETECT_MODULE_TYPES, "Try and guess the module type tag,num values for which there is no module map entry.");
-		gPARMS->SetDefaultParameter("EVIO:DUMP_MODULE_MAP", DUMP_MODULE_MAP, "Write module map used to file when source is destroyed. n.b. If more than one input file is used, the map file will be overwritten!");
-		gPARMS->SetDefaultParameter("EVIO:MAKE_DOM_TREE", MAKE_DOM_TREE, "Set this to 0 to disable generation of EVIO DOM Tree and parsing of event. (for benchmarking/debugging)");
-		gPARMS->SetDefaultParameter("EVIO:PARSE_EVIO_EVENTS", PARSE_EVIO_EVENTS, "Set this to 0 to disable parsing of event but still make the DOM tree, so long as MAKE_DOM_TREE isn't set to 0. (for benchmarking/debugging)");
-		gPARMS->SetDefaultParameter("EVIO:PARSE_F250", PARSE_F250, "Set this to 0 to disable parsing of data from F250 ADC modules (for benchmarking/debugging)");
-		gPARMS->SetDefaultParameter("EVIO:PARSE_F125", PARSE_F125, "Set this to 0 to disable parsing of data from F125 ADC modules (for benchmarking/debugging)");
-		gPARMS->SetDefaultParameter("EVIO:PARSE_F1TDC", PARSE_F1TDC, "Set this to 0 to disable parsing of data from F1TDC modules (for benchmarking/debugging)");
-		gPARMS->SetDefaultParameter("EVIO:PARSE_CAEN1290TDC", PARSE_CAEN1290TDC, "Set this to 0 to disable parsing of data from CAEN 1290 TDC modules (for benchmarking/debugging)");
-		gPARMS->SetDefaultParameter("EVIO:PARSE_CONFIG", PARSE_CONFIG, "Set this to 0 to disable parsing of ROC configuration data in the data stream (for benchmarking/debugging)");
-		gPARMS->SetDefaultParameter("EVIO:PARSE_BOR", PARSE_BOR, "Set this to 0 to disable parsing of BOR events from the data stream (for benchmarking/debugging)");
-		gPARMS->SetDefaultParameter("EVIO:PARSE_EPICS", PARSE_EPICS, "Set this to 0 to disable parsing of EPICS events from the data stream (for benchmarking/debugging)");
-		gPARMS->SetDefaultParameter("EVIO:PARSE_EVENTTAG", PARSE_EVENTTAG, "Set this to 0 to disable parsing of event tag data in the data stream (for benchmarking/debugging)");
-		gPARMS->SetDefaultParameter("EVIO:PARSE_TRIGGER", PARSE_TRIGGER, "Set this to 0 to disable parsing of the built trigger bank from CODA (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:AUTODETECT_MODULE_TYPES", AUTODETECT_MODULE_TYPES, "Try and guess the module type tag,num values for which there is no module map entry.");
+	app->SetDefaultParameter("EVIO:DUMP_MODULE_MAP", DUMP_MODULE_MAP, "Write module map used to file when source is destroyed. n.b. If more than one input file is used, the map file will be overwritten!");
+	app->SetDefaultParameter("EVIO:MAKE_DOM_TREE", MAKE_DOM_TREE, "Set this to 0 to disable generation of EVIO DOM Tree and parsing of event. (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_EVIO_EVENTS", PARSE_EVIO_EVENTS, "Set this to 0 to disable parsing of event but still make the DOM tree, so long as MAKE_DOM_TREE isn't set to 0. (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_F250", PARSE_F250, "Set this to 0 to disable parsing of data from F250 ADC modules (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_F125", PARSE_F125, "Set this to 0 to disable parsing of data from F125 ADC modules (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_F1TDC", PARSE_F1TDC, "Set this to 0 to disable parsing of data from F1TDC modules (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_CAEN1290TDC", PARSE_CAEN1290TDC, "Set this to 0 to disable parsing of data from CAEN 1290 TDC modules (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_CONFIG", PARSE_CONFIG, "Set this to 0 to disable parsing of ROC configuration data in the data stream (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_BOR", PARSE_BOR, "Set this to 0 to disable parsing of BOR events from the data stream (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_EPICS", PARSE_EPICS, "Set this to 0 to disable parsing of EPICS events from the data stream (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_EVENTTAG", PARSE_EVENTTAG, "Set this to 0 to disable parsing of event tag data in the data stream (for benchmarking/debugging)");
+	app->SetDefaultParameter("EVIO:PARSE_TRIGGER", PARSE_TRIGGER, "Set this to 0 to disable parsing of the built trigger bank from CODA (for benchmarking/debugging)");
 
-		gPARMS->SetDefaultParameter("EVIO:BUFFER_SIZE", BUFFER_SIZE, "Size in bytes to allocate for holding a single EVIO event.");
-		gPARMS->SetDefaultParameter("EVIO:ET_STATION_NEVENTS", ET_STATION_NEVENTS, "Number of events to use if we have to create the ET station. Ignored if station already exists.");
-		gPARMS->SetDefaultParameter("EVIO:ET_STATION_CREATE_BLOCKING", ET_STATION_CREATE_BLOCKING, "Set this to 0 to create station in non-blocking mode (default is to create it in blocking mode). Ignored if station already exists.");
-		gPARMS->SetDefaultParameter("EVIO:ET_DEBUG_WORDS_TO_DUMP", ET_DEBUG_WORDS_TO_DUMP, "Number of words to dump to screen from ET buffer (useful for debugging only).");
-		gPARMS->SetDefaultParameter("EVIO:LOOP_FOREVER", LOOP_FOREVER, "If reading from EVIO file, keep re-opening file and re-reading events forever (only useful for debugging) If reading from ET, this is ignored.");
-		gPARMS->SetDefaultParameter("EVIO:VERBOSE", VERBOSE, "Set verbosity level for processing and debugging statements while parsing. 0=no debugging messages. 10=all messages");
-		gPARMS->SetDefaultParameter("ET:TIMEOUT", TIMEOUT, "Set the timeout in seconds for each attempt at reading from ET system (repeated attempts will still be made indefinitely until program quits or the quit_on_et_timeout flag is set.");
-		gPARMS->SetDefaultParameter("EVIO:MODTYPE_MAP_FILENAME", MODTYPE_MAP_FILENAME, "Optional module type conversion map for use with files generated with the non-standard module types");
-		gPARMS->SetDefaultParameter("EVIO:ENABLE_DISENTANGLING", ENABLE_DISENTANGLING, "Enable/disable disentangling of multi-block events. Enabled by default. Set to 0 to disable.");
-		gPARMS->SetDefaultParameter("EVIO:SPARSE_READ", EVIO_SPARSE_READ, "Set to true to enable sparse reading of the EVIO file. This will take some time to map out the entire file prior to event processing. It is typically only useful if the EVIO:EVENT_MASK variable is set.");
-		gPARMS->SetDefaultParameter("EVIO:EVENT_MASK", EVENT_MASK, "Commas separated list used to set the mask that selects the type of events to read in. Other types will be skipped. Valid values are EPICS,BOR and PHYSICS");
+	app->SetDefaultParameter("EVIO:BUFFER_SIZE", BUFFER_SIZE, "Size in bytes to allocate for holding a single EVIO event.");
+	app->SetDefaultParameter("EVIO:ET_STATION_NEVENTS", ET_STATION_NEVENTS, "Number of events to use if we have to create the ET station. Ignored if station already exists.");
+	app->SetDefaultParameter("EVIO:ET_STATION_CREATE_BLOCKING", ET_STATION_CREATE_BLOCKING, "Set this to 0 to create station in non-blocking mode (default is to create it in blocking mode). Ignored if station already exists.");
+	app->SetDefaultParameter("EVIO:ET_DEBUG_WORDS_TO_DUMP", ET_DEBUG_WORDS_TO_DUMP, "Number of words to dump to screen from ET buffer (useful for debugging only).");
+	app->SetDefaultParameter("EVIO:LOOP_FOREVER", LOOP_FOREVER, "If reading from EVIO file, keep re-opening file and re-reading events forever (only useful for debugging) If reading from ET, this is ignored.");
+	app->SetDefaultParameter("EVIO:VERBOSE", VERBOSE, "Set verbosity level for processing and debugging statements while parsing. 0=no debugging messages. 10=all messages");
+	app->SetDefaultParameter("ET:TIMEOUT", TIMEOUT, "Set the timeout in seconds for each attempt at reading from ET system (repeated attempts will still be made indefinitely until program quits or the quit_on_et_timeout flag is set.");
+	app->SetDefaultParameter("EVIO:MODTYPE_MAP_FILENAME", MODTYPE_MAP_FILENAME, "Optional module type conversion map for use with files generated with the non-standard module types");
+	app->SetDefaultParameter("EVIO:ENABLE_DISENTANGLING", ENABLE_DISENTANGLING, "Enable/disable disentangling of multi-block events. Enabled by default. Set to 0 to disable.");
+	app->SetDefaultParameter("EVIO:SPARSE_READ", EVIO_SPARSE_READ, "Set to true to enable sparse reading of the EVIO file. This will take some time to map out the entire file prior to event processing. It is typically only useful if the EVIO:EVENT_MASK variable is set.");
+	app->SetDefaultParameter("EVIO:EVENT_MASK", EVENT_MASK, "Commas separated list used to set the mask that selects the type of events to read in. Other types will be skipped. Valid values are EPICS,BOR and PHYSICS");
 
-		gPARMS->SetDefaultParameter("EVIO:F250_EMULATION_MODE", f250_emulation_mode, "Set f250 emulation mode. 0=no emulation, 1=always, 2=auto. Default is 2 (auto).");
-		gPARMS->SetDefaultParameter("EVIO:F125_EMULATION_MODE", f125_emulation_mode, "Set f125 emulation mode. 0=no emulation, 1=always, 2=auto. Default is 2 (auto).");
+	app->SetDefaultParameter("EVIO:F250_EMULATION_MODE", f250_emulation_mode, "Set f250 emulation mode. 0=no emulation, 1=always, 2=auto. Default is 2 (auto).");
+	app->SetDefaultParameter("EVIO:F125_EMULATION_MODE", f125_emulation_mode, "Set f125 emulation mode. 0=no emulation, 1=always, 2=auto. Default is 2 (auto).");
 
-		gPARMS->SetDefaultParameter("EVIO:RUN_NUMBER", USER_RUN_NUMBER, "User-supplied run number. Override run number from other sources with this.(will be ignored if set to zero)");
-		gPARMS->SetDefaultParameter("EVIO:F125PULSE_NUMBER_FILTER", F125PULSE_NUMBER_FILTER, "Ignore data for DF125XXX objects with a pulse number equal or greater than this.");
-		gPARMS->SetDefaultParameter("EVIO:F250PULSE_NUMBER_FILTER", F250PULSE_NUMBER_FILTER, "Ignore data for DF250XXX objects with a pulse number equal or greater than this.");
+	app->SetDefaultParameter("EVIO:RUN_NUMBER", USER_RUN_NUMBER, "User-supplied run number. Override run number from other sources with this.(will be ignored if set to zero)");
+	app->SetDefaultParameter("EVIO:F125PULSE_NUMBER_FILTER", F125PULSE_NUMBER_FILTER, "Ignore data for DF125XXX objects with a pulse number equal or greater than this.");
+	app->SetDefaultParameter("EVIO:F250PULSE_NUMBER_FILTER", F250PULSE_NUMBER_FILTER, "Ignore data for DF250XXX objects with a pulse number equal or greater than this.");
 
-		F250_EMULATION_MODE = (EmulationModeType)f250_emulation_mode;
-		F125_EMULATION_MODE = (EmulationModeType)f125_emulation_mode;
-	}
-	
+	F250_EMULATION_MODE = (EmulationModeType)f250_emulation_mode;
+	F125_EMULATION_MODE = (EmulationModeType)f125_emulation_mode;
+
 	// Try to open the file.
 	try {
 
-		if(VERBOSE>0) evioout << "Attempting to open \""<<this->source_name<<"\" as EVIO file..." <<endl;
+		if(VERBOSE>0) evioout << "Attempting to open \""<<source_name<<"\" as EVIO file..." <<endl;
 
 #if USE_HDEVIO
 		//---------- HDEVIO ------------
-		hdevio = new HDEVIO(this->source_name);
+		hdevio = new HDEVIO(source_name);
 		if( ! hdevio->is_open ) throw std::exception(); // throw exception if unable to open
 		if(EVENT_MASK.length()!=0) hdevio->SetEventMask(EVENT_MASK);
 		if(EVIO_SPARSE_READ) hdevio->PrintFileSummary();
@@ -228,7 +222,7 @@ JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(sourc
 #else  // HAVE_ET
 
 		// No ET and the file didn't work so re-throw the exception
-		if(this->source_name.substr(0,3) == "ET:"){
+		if(source_name.substr(0,3) == "ET:"){
 			cerr << endl;
 			cerr << "=== ERROR: ET source specified and this was compiled without    ===" << endl;
 			cerr << "===        ET support. You need to install ET and set your      ===" << endl;
@@ -240,7 +234,7 @@ JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(sourc
 
 #endif  // HAVE_ET
 	}
-	if(VERBOSE>0) evioout << "Success opening event source \"" << this->source_name << "\"!" <<endl;
+	if(VERBOSE>0) evioout << "Success opening event source \"" << source_name << "\"!" <<endl;
 	
 
 	// Create list of data types this event source can provide
@@ -289,12 +283,12 @@ JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(sourc
 	
 	// Try extracting the run number from the filename. (This is
 	// only used if the run number is not found in the EVIO data.)
-	size_t pos2 = this->source_name.find_last_of('_');
+	size_t pos2 = source_name.find_last_of('_');
 	if(pos2 != string::npos){
-		size_t pos1 = this->source_name.find_last_of('_', pos2-1);
+		size_t pos1 = source_name.find_last_of('_', pos2-1);
 		if(pos1 != string::npos){
 			pos1++;
-			string runstr = this->source_name.substr(pos1, pos2-pos1);
+			string runstr = source_name.substr(pos1, pos2-pos1);
 			if(runstr.length()>0) filename_run_number = atoi(runstr.c_str());
 		}
 	}
@@ -326,7 +320,7 @@ JEventSource_EVIO::~JEventSource_EVIO()
 #endif
 
 	if(hdevio){
-		if(VERBOSE>0) evioout << "Closing hdevio event source \"" << this->source_name << "\"" <<endl;
+		if(VERBOSE>0) evioout << "Closing hdevio event source \"" << this->GetResourceName() << "\"" <<endl;
 		hdevio->PrintStats();
 		delete hdevio;
 	}
@@ -605,8 +599,11 @@ void JEventSource_EVIO::Cleanup(void)
 //----------------
 // GetEvent
 //----------------
-jerror_t JEventSource_EVIO::GetEvent(JEvent &event)
+void JEventSource_EVIO::GetEvent(std::shared_ptr<JEvent> event)
 {
+	auto app = event->GetJApplication();
+	DStatusBits* statusBits = new DStatusBits;
+
 	if(VERBOSE>1) evioout << "GetEvent called for &event = " << hex << &event << dec << endl;
 
 	// If we couldn't even open the source, then there's nothing to do
@@ -620,7 +617,7 @@ jerror_t JEventSource_EVIO::GetEvent(JEvent &event)
 	}
 #endif
 	if(source_type==kETSource && et_connected) no_source = false;
-	if(no_source)throw JException(string("Unable to open EVIO channel for \"") + source_name + "\"");
+	if(no_source)throw JException(string("Unable to open EVIO channel for \"") + GetResourceName() + "\"");
 
 	
 	// This may not be a long term solution, but here goes:
@@ -649,7 +646,7 @@ jerror_t JEventSource_EVIO::GetEvent(JEvent &event)
 		// If this is a stored event then it almost certainly
 		// came from a multi-event block of physics events.
 		// Set the physics event status bit.
-		event.SetStatusBit(kSTATUS_PHYSICS_EVENT);
+		statusBits->SetStatusBit(kSTATUS_PHYSICS_EVENT);
 	}
 	pthread_mutex_unlock(&stored_events_mutex);
 
@@ -668,24 +665,24 @@ jerror_t JEventSource_EVIO::GetEvent(JEvent &event)
 		if(err == NO_MORE_EVENTS_IN_SOURCE){
 			_DBG_<<endl<<"-- No more events in source. Waiting for all buffers to be parsed (" << Nunparsed<<") ..." << endl;
 			no_more_events_in_source = true;
-			while(Nunparsed>0 && !japp->GetQuittingStatus()) usleep(1000);
+			while(Nunparsed>0 && !app->IsQuitting()) usleep(1000);
 			pthread_mutex_lock(&stored_events_mutex);
 			if(stored_events.empty()){
 				pthread_mutex_unlock(&stored_events_mutex);
-				return NO_MORE_EVENTS_IN_SOURCE;
+				throw RETURN_STATUS::kNO_MORE_EVENTS;
 			}
 
 			objs_ptr = stored_events.front();
 			stored_events.pop();
-			event.SetStatusBit(kSTATUS_PHYSICS_EVENT);
+			statusBits->SetStatusBit(kSTATUS_PHYSICS_EVENT);
 
 			pthread_mutex_unlock(&stored_events_mutex);
 			
 			err = NOERROR;
 		}
-		if(err != NOERROR) return err;
+		if(err != NOERROR) throw JException("JEventSource_EVIO error %d", err);
 		if(objs_ptr == NULL){
-			if(buff == NULL) return MEMORY_ALLOCATION_ERROR;
+			if(buff == NULL) throw JException("Memory allocation error");
 			uint32_t buff_size = ((*buff) + 1)*4; // first word in EVIO buffer is total bank size in words
 
 			objs_ptr = new ObjList();
@@ -712,34 +709,32 @@ jerror_t JEventSource_EVIO::GetEvent(JEvent &event)
 	// Store a pointer to the ObjList object for this event in the
 	// JEvent as the Reference value. Parsing will be done later
 	// in GetObjects() -> ParseEvents() using the eviobuff pointer.
-	event.SetJEventSource(this);
-	event.SetEventNumber((uint64_t)objs_ptr->event_number);
-	event.SetRunNumber(objs_ptr->run_number);
-	event.SetRef(objs_ptr);
-	event.SetStatusBit(kSTATUS_EVIO);
-	if( source_type == kFileSource ) event.SetStatusBit(kSTATUS_FROM_FILE);
-	if( source_type == kETSource   ) event.SetStatusBit(kSTATUS_FROM_ET);
+	event->SetJEventSource(this);
+	event->SetEventNumber((uint64_t)objs_ptr->event_number);
+	event->SetRunNumber(objs_ptr->run_number);
+	event->Insert(objs_ptr);
+	statusBits->SetStatusBit(kSTATUS_EVIO);
+	if( source_type == kFileSource ) statusBits->SetStatusBit(kSTATUS_FROM_FILE);
+	if( source_type == kETSource   ) statusBits->SetStatusBit(kSTATUS_FROM_ET);
 	if(objs_ptr)
-		if(objs_ptr->eviobuff) FindEventType(objs_ptr->eviobuff, event);
+		if(objs_ptr->eviobuff) FindEventType(objs_ptr->eviobuff, statusBits);
 	
 	// EPICS and BOR events are barrier events
-	if(event.GetStatusBit(kSTATUS_EPICS_EVENT) || event.GetStatusBit(kSTATUS_BOR_EVENT) ){
-		event.SetSequential();
+	if(statusBits->GetStatusBit(kSTATUS_EPICS_EVENT) || statusBits->GetStatusBit(kSTATUS_BOR_EVENT) ){
+		event->SetSequential(true);
 	}
 	
 	Nevents_read++;
-
-	return NOERROR;
 }
 
 //----------------
 // FreeEvent
 //----------------
-void JEventSource_EVIO::FreeEvent(JEvent &event)
+void JEventSource_EVIO::FinishEvent(JEvent &event)
 {
 	if(VERBOSE>1) evioout << "FreeEvent called for event: " << event.GetEventNumber() << endl;
 
-	ObjList *objs_ptr = (ObjList*)event.GetRef();
+	ObjList *objs_ptr = const_cast<ObjList*>(event.GetSingle<ObjList>()); // TODO: NWB: const cast
 	if(objs_ptr){
 
 		// If a DAQ event was read in but GetObjects never called
@@ -896,9 +891,9 @@ jerror_t JEventSource_EVIO::ParseEvents(ObjList *objs_ptr)
 					double tstart = GetTime();
 					ParseEVIOEvent(evt, my_full_events);
 					time_evio_parse = GetTime() - tstart;
-				}catch(JException &jexception){
+				}catch(const JException &jexception){
 					jerr << "Exception thrown from ParseEVIOEvent!" << endl;
-					jerr << jexception.toString() << endl;
+					jerr << jexception.what() << endl;
 				}
 			}
 
@@ -1087,8 +1082,8 @@ jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buff)
 							if(hdevio) delete hdevio;
 							hdevio = NULL;
 							if(LOOP_FOREVER && Nevents_read>=1){
-								cout << "LOOP_FOREVER: reopening " << this->source_name <<endl;
-								hdevio = new HDEVIO(this->source_name);
+								cout << "LOOP_FOREVER: reopening " << GetResourceName() <<endl;
+								hdevio = new HDEVIO(GetResourceName());
 								if( hdevio->is_open ) continue;
 							}
 							return NO_MORE_EVENTS_IN_SOURCE;
@@ -1121,7 +1116,7 @@ jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buff)
 			timeout.tv_sec = (unsigned int)floor(TIMEOUT); // set ET timeout
 			timeout.tv_nsec = (unsigned int)floor(1.0E9*(TIMEOUT-(float)timeout.tv_sec));
 			et_event *pe=NULL;
-			while(! japp->GetQuittingStatus() ){
+			while(! app->IsQuitting() ){
 				int err = et_event_get(sys_id, att_id, &pe, ET_TIMED , &timeout);
 
 				if( err == ET_OK && pe!=NULL) break; // got an event. break out of while loop
@@ -1144,7 +1139,7 @@ jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buff)
 				usleep(10);
 			}
 			
-			if(japp->GetQuittingStatus() && pe==NULL) return NO_MORE_EVENTS_IN_SOURCE;
+			if(app->IsQuitting() && pe==NULL) return NO_MORE_EVENTS_IN_SOURCE;
 
 			// Get pointer to event buffer in the ET-owned memory
 			uint32_t *et_buff=NULL;
@@ -1318,7 +1313,7 @@ jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buff)
 //----------------
 // GetObjects
 //----------------
-jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
+bool JEventSource_EVIO::GetObjects(const std::shared_ptr<const JEvent> &event, JFactory *factory)
 {
 	if(VERBOSE>2) evioout << "  GetObjects() called for &event = " << hex << &event << dec << endl;
 
@@ -1337,9 +1332,8 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
 	// algorithm. We use the "own_objects" flag here to test if we have
 	// already copied the low-level objects to the factories and so
 	// should return right away.
-	ObjList *objs_ptr = (ObjList*)event.GetRef();
-	if(!objs_ptr)return RESOURCE_UNAVAILABLE;
-	if(!objs_ptr->own_objects) return OBJECT_NOT_AVAILABLE; // if objects were already copied ...
+	ObjList *objs_ptr = const_cast<ObjList*>(event->GetSingleStrict<ObjList>()); // TODO: NWB: const_cast
+	if(!objs_ptr->own_objects) return false; // if objects were already copied ... // TODO: Huh?
 	
 	// If any translation tables exist, we will use them at the end of this
 	// method. However, the TTab plugin has an option to specify parsing of
@@ -1348,19 +1342,19 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
 	// while in the brun method. The brun method won't get called until
 	// we ask for the DTranslationTable objects, thus, we must ask for them
 	// here, prior to calling ParseEvents.
-	// Note that we have to use the GetFromFactory() method here since
-	// if we just use Get() or GetSingle(), it will call us (the event
-	// source) again in an infinite loop!
-	// Also note that we use static_cast here instead of dynamic_cast
-	// since the latter requires that the type_info structure for
-	// the DTranslationTable_factory be present. It is not in this
-	// plugin (it is in the TTab plugin). Thus, with dynamic_cast there
-	// is an unresolved symbol error if the TTab plugin is not also
-	// present. (Make sense?)
+
+	// TODO: NWB: Everything below (and some above) is obsolete, delete once we verify that the new thing works
+		// Note that we have to use the GetFromFactory() method here since
+		// if we just use Get() or GetSingle(), it will call us (the event
+		// source) again in an infinite loop!
+		// Also note that we use static_cast here instead of dynamic_cast
+		// since the latter requires that the type_info structure for
+		// the DTranslationTable_factory be present. It is not in this
+		// plugin (it is in the TTab plugin). Thus, with dynamic_cast there
+		// is an unresolved symbol error if the TTab plugin is not also
+		// present. (Make sense?)
 	vector<const DTranslationTable*> translationTables;
-	JEventLoop *loop = event.GetJEventLoop();
-	DTranslationTable_factory *ttfac = static_cast<DTranslationTable_factory*>(loop->GetFactory("DTranslationTable"));
-	if(ttfac) ttfac->Get(translationTables);
+	event->Get(translationTables);
 
 	// We use a deferred parsing scheme for efficiency. If the event
 	// is not flagged as having already been parsed, then parse it
@@ -1370,7 +1364,7 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
 	if(!objs_ptr->eviobuff_parsed) ParseEvents(objs_ptr);
 	
 	// Get name of class which is actually being requested by caller
-	string dataClassName = (factory==NULL ? "N/A":factory->GetDataClassName());
+	string dataClassName = (factory==NULL ? "N/A":factory->GetObjectName());
 	
 	// Make list of data(hit) types we have. Keep list of
 	// pointers to hit objects of each type
@@ -1411,7 +1405,7 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
     }
 
     // Copy pointers to BOR objects
-    CopyBOR(loop, hit_objs_by_type);
+    CopyBOR(event, hit_objs_by_type);
 
     // In order for the janadot plugin to properly display the callgraph, we need to
     // make entries for each of the object types that we generated from data in the file.
@@ -1421,7 +1415,7 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
     // actually did find in the file. Do that here.
     map<string, vector<JObject*> >::iterator hoiter;
     for(hoiter=hit_objs_by_type.begin(); hoiter!=hit_objs_by_type.end(); hoiter++){
-        AddSourceObjectsToCallStack(loop, hoiter->first); 
+        AddSourceObjectsToCallStack(event, hoiter->first);
     }
 
     // Get references to various objects
@@ -1482,7 +1476,7 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
     set<string>::iterator siter;
     for(siter=event_source_data_types.begin(); siter!=event_source_data_types.end(); siter++){
         if(hit_objs_by_type.find(*siter) == hit_objs_by_type.end()){
-            AddSourceObjectsToCallStack(loop, *siter);
+            AddSourceObjectsToCallStack(event, *siter);
         }
     }
 
@@ -1647,22 +1641,22 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
     // Loop over types of config objects, copying to appropriate factory
     map<string, vector<JObject*> >::iterator config_iter = config_objs_by_type.begin();
     for(; config_iter!=config_objs_by_type.end(); config_iter++){
-        JFactory_base *fac = loop->GetFactory(config_iter->first, "", false); // false= don't allow default tag replacement
-        if(fac) fac->CopyTo(config_iter->second);
+        JFactory *fac = event->GetFactory(config_iter->first, "");
+        if(fac) fac->Set(config_iter->second);
     }
 
     // Loop over types of hit objects, copying to appropriate factory
     map<string, vector<JObject*> >::iterator iter = hit_objs_by_type.begin();
     for(; iter!=hit_objs_by_type.end(); iter++){
-        JFactory_base *fac = loop->GetFactory(iter->first, "", false); // false= don't allow default tag replacement
-        fac->CopyTo(iter->second);
+        JFactory *fac = event->GetFactory(iter->first, "");
+        fac->Set(iter->second);
     }
 
     // Loop over types of misc objects, copying to appropriate factory
     map<string, vector<JObject*> >::iterator misc_iter = misc_objs_by_type.begin();
     for(; misc_iter!=misc_objs_by_type.end(); misc_iter++){
-        JFactory_base *fac = loop->GetFactory(misc_iter->first, "", false); // false= don't allow default tag replacement
-        fac->CopyTo(misc_iter->second);
+        JFactory *fac = event->GetFactory(misc_iter->first, "");
+        fac->Set(misc_iter->second);
     }
     objs_ptr->own_objects = false;
 
@@ -1674,11 +1668,14 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
     // it via a factory algorithm. Returning NOERROR on the other hand
     // tells JANA that we can provide this type of object and any that
     // are present have already been copied into the appropriate factory.
+    /// TODO: NWB: GAAAAAAHHHHHH!
     jerror_t err = OBJECT_NOT_AVAILABLE;
-    if(strlen(factory->Tag()) == 0){ // We do not supply any tagged factory data here
+    if(factory->GetTag() == ""){ // We do not supply any tagged factory data here // TODO: NWB: Second-guess this
         if(event_source_data_types.find(dataClassName) != event_source_data_types.end()) err = NOERROR;
     }
 
+    // TODO: NWB: Excise all of this once possible
+    /*
     // If it turns out there are no objects of one of the types we supply
     // then the CopyTo method for that factory never gets called and subsequent
     // requests for that object type will end up calling this method again.
@@ -1688,7 +1685,7 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
     // evnt method called.
     set<string>::iterator dtiter = event_source_data_types.begin();
     for(; dtiter!=event_source_data_types.end(); dtiter++){
-        JFactory_base *fac = loop->GetFactory(*dtiter);
+        JFactory *fac = event->GetFactory(*dtiter, "");
         if(fac) {
             // The DAQ_WRD2PI plugin wants to generate some objects from
             // the waveform data, overiding anything found in the file.
@@ -1700,37 +1697,37 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
             // the use_factory flag is to have a pointer to the JFactory
             // not the JFactory_base. This means we have to check the data
             // type of the factory and make the appropriate cast
-            string dataClassName = fac->GetDataClassName();
+            string dataClassName = fac->GetObjectName();
             int checkSourceFirst = 1;
-            if(     dataClassName == "Df250Config")           checkSourceFirst = ((JFactory<Df250Config          >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df250PulseIntegral")    checkSourceFirst = ((JFactory<Df250PulseIntegral   >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df250StreamingRawData") checkSourceFirst = ((JFactory<Df250StreamingRawData>*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df250WindowSum")        checkSourceFirst = ((JFactory<Df250WindowSum       >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df250PulseRawData")     checkSourceFirst = ((JFactory<Df250PulseRawData    >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df250TriggerTime")      checkSourceFirst = ((JFactory<Df250TriggerTime     >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df250PulseTime")        checkSourceFirst = ((JFactory<Df250PulseTime       >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df250PulsePedestal")    checkSourceFirst = ((JFactory<Df250PulsePedestal   >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df250WindowRawData")    checkSourceFirst = ((JFactory<Df250WindowRawData   >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df125Config")           checkSourceFirst = ((JFactory<Df125Config          >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df125PulseIntegral")    checkSourceFirst = ((JFactory<Df125PulseIntegral   >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df125TriggerTime")      checkSourceFirst = ((JFactory<Df125TriggerTime     >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df125PulseTime")        checkSourceFirst = ((JFactory<Df125PulseTime       >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df125PulsePedestal")    checkSourceFirst = ((JFactory<Df125PulsePedestal   >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df125WindowRawData")    checkSourceFirst = ((JFactory<Df125WindowRawData   >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df125CDCPulse")         checkSourceFirst = ((JFactory<Df125CDCPulse        >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df125FDCPulse")         checkSourceFirst = ((JFactory<Df125FDCPulse        >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "DF1TDCConfig")          checkSourceFirst = ((JFactory<DF1TDCConfig         >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "DF1TDCHit")             checkSourceFirst = ((JFactory<DF1TDCHit            >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "DF1TDCTriggerTime")     checkSourceFirst = ((JFactory<DF1TDCTriggerTime    >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "DCAEN1290TDCConfig")    checkSourceFirst = ((JFactory<DCAEN1290TDCConfig   >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "DCAEN1290TDCHit")       checkSourceFirst = ((JFactory<DCAEN1290TDCHit      >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "DCODAEventInfo")        checkSourceFirst = ((JFactory<DCODAEventInfo       >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "DCODAROCInfo")          checkSourceFirst = ((JFactory<DCODAROCInfo         >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "DTSscalers")            checkSourceFirst = ((JFactory<DTSscalers           >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df250BORConfig")        checkSourceFirst = ((JFactory<Df250BORConfig       >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "Df125BORConfig")        checkSourceFirst = ((JFactory<Df125BORConfig       >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "DF1TDCBORConfig")       checkSourceFirst = ((JFactory<DF1TDCBORConfig      >*)fac)->GetCheckSourceFirst();
-            else if(dataClassName == "DCAEN1290TDCBORConfig") checkSourceFirst = ((JFactory<DCAEN1290TDCBORConfig>*)fac)->GetCheckSourceFirst();
+            if(     dataClassName == "Df250Config")           checkSourceFirst = ((JFactoryT<Df250Config          >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df250PulseIntegral")    checkSourceFirst = ((JFactoryT<Df250PulseIntegral   >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df250StreamingRawData") checkSourceFirst = ((JFactoryT<Df250StreamingRawData>*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df250WindowSum")        checkSourceFirst = ((JFactoryT<Df250WindowSum       >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df250PulseRawData")     checkSourceFirst = ((JFactoryT<Df250PulseRawData    >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df250TriggerTime")      checkSourceFirst = ((JFactoryT<Df250TriggerTime     >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df250PulseTime")        checkSourceFirst = ((JFactoryT<Df250PulseTime       >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df250PulsePedestal")    checkSourceFirst = ((JFactoryT<Df250PulsePedestal   >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df250WindowRawData")    checkSourceFirst = ((JFactoryT<Df250WindowRawData   >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df125Config")           checkSourceFirst = ((JFactoryT<Df125Config          >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df125PulseIntegral")    checkSourceFirst = ((JFactoryT<Df125PulseIntegral   >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df125TriggerTime")      checkSourceFirst = ((JFactoryT<Df125TriggerTime     >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df125PulseTime")        checkSourceFirst = ((JFactoryT<Df125PulseTime       >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df125PulsePedestal")    checkSourceFirst = ((JFactoryT<Df125PulsePedestal   >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df125WindowRawData")    checkSourceFirst = ((JFactoryT<Df125WindowRawData   >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df125CDCPulse")         checkSourceFirst = ((JFactoryT<Df125CDCPulse        >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df125FDCPulse")         checkSourceFirst = ((JFactoryT<Df125FDCPulse        >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "DF1TDCConfig")          checkSourceFirst = ((JFactoryT<DF1TDCConfig         >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "DF1TDCHit")             checkSourceFirst = ((JFactoryT<DF1TDCHit            >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "DF1TDCTriggerTime")     checkSourceFirst = ((JFactoryT<DF1TDCTriggerTime    >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "DCAEN1290TDCConfig")    checkSourceFirst = ((JFactoryT<DCAEN1290TDCConfig   >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "DCAEN1290TDCHit")       checkSourceFirst = ((JFactoryT<DCAEN1290TDCHit      >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "DCODAEventInfo")        checkSourceFirst = ((JFactoryT<DCODAEventInfo       >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "DCODAROCInfo")          checkSourceFirst = ((JFactoryT<DCODAROCInfo         >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "DTSscalers")            checkSourceFirst = ((JFactoryT<DTSscalers           >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df250BORConfig")        checkSourceFirst = ((JFactoryT<Df250BORConfig       >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "Df125BORConfig")        checkSourceFirst = ((JFactoryT<Df125BORConfig       >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "DF1TDCBORConfig")       checkSourceFirst = ((JFactoryT<DF1TDCBORConfig      >*)fac)->GetCheckSourceFirst();
+            else if(dataClassName == "DCAEN1290TDCBORConfig") checkSourceFirst = ((JFactoryT<DCAEN1290TDCBORConfig>*)fac)->GetCheckSourceFirst();
 
             if(checkSourceFirst) {
                 fac->Set_evnt_called();
@@ -1741,13 +1738,14 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
             }
         }
     }
+    */
 
     // If a translation table object is available, use it to create
     // detector hits from the low-level DAQ objects we just created.
     for(unsigned int i=0; i<translationTables.size(); i++){
-        translationTables[i]->ApplyTranslationTable(loop);
+        translationTables[i]->ApplyTranslationTable(event);
         if(translationTables[i]->IsSuppliedType(dataClassName))
-            if(strlen(factory->Tag()) == 0)err = NOERROR; // Don't allow tagged factories from Translation table
+            if(factory->GetTag() == "") err = NOERROR; // Don't allow tagged factories from Translation table
     }
 
     if(VERBOSE>2) evioout << "  Leaving GetObjects()" << endl;
@@ -1758,7 +1756,7 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
 //----------------
 // CopyBOR
 //----------------
-void JEventSource_EVIO::CopyBOR(JEventLoop *loop, map<string, vector<JObject*> > &hit_objs_by_type)
+void JEventSource_EVIO::CopyBOR(const std::shared_ptr<const JEvent>& event, map<string, vector<JObject*> > &hit_objs_by_type)
 {
     /// Copy pointers to BOR (Beginning Of Run) objects into the
     /// appropriate factories for this event. The objects are flagged
@@ -1779,10 +1777,10 @@ void JEventSource_EVIO::CopyBOR(JEventLoop *loop, map<string, vector<JObject*> >
     for(; iter!=bor_objs_by_type.end(); iter++){
         const string &bor_obj_name = iter->first;
         vector<JObject*> &bors = iter->second;
-        JFactory_base *fac = loop->GetFactory(bor_obj_name, "", false); // false= don't allow default tag replacement
+        JFactory *fac = event->GetFactory(bor_obj_name, ""); // TODO: NWB: Revisit allow_gettag=false => don't allow default tag replacement
         if(fac){
-            fac->CopyTo(bors);
-            fac->SetFactoryFlag(JFactory_base::NOT_OBJECT_OWNER);
+            fac->Set(bors);
+            fac->SetFactoryFlag(JFactory::NOT_OBJECT_OWNER);
         }
 
         // Associate with hit objects from this type of module
@@ -1814,7 +1812,7 @@ void JEventSource_EVIO::CopyBOR(JEventLoop *loop, map<string, vector<JObject*> >
 //----------------
 // AddSourceObjectsToCallStack
 //----------------
-void JEventSource_EVIO::AddSourceObjectsToCallStack(JEventLoop *loop, string className)
+void JEventSource_EVIO::AddSourceObjectsToCallStack(const std::shared_ptr<const JEvent>& event, string className)
 {
     /// This is used to give information to JANA regarding the origin of objects
     /// that *should* come from the source. We add them in explicitly because
@@ -1822,6 +1820,8 @@ void JEventSource_EVIO::AddSourceObjectsToCallStack(JEventLoop *loop, string cla
     /// links to indicate that the "0" objects in the factory came from the source
     /// so that janadot draws these objects correctly.
 
+    // TODO: NWB: Re-add this
+    /*
     JEventLoop::call_stack_t cs;
     cs.caller_name = "<ignore>"; // tells janadot this object wasn't actually requested by anybody
     cs.caller_tag = "";
@@ -1831,12 +1831,13 @@ void JEventSource_EVIO::AddSourceObjectsToCallStack(JEventLoop *loop, string cla
     cs.end_time = 0.0;
     cs.data_source = JEventLoop::DATA_FROM_SOURCE;
     loop->AddToCallStack(cs);
+    */
 }
 
 //----------------
 // AddEmulatedObjectsToCallStack
 //----------------
-void JEventSource_EVIO::AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee)
+void JEventSource_EVIO::AddEmulatedObjectsToCallStack(const std::shared_ptr<const JEvent>& event, string caller, string callee)
 {
     /// This is used to give information to JANA regarding the relationship and
     /// origin of some of these data objects. This is really just needed so that
@@ -1844,7 +1845,9 @@ void JEventSource_EVIO::AddEmulatedObjectsToCallStack(JEventLoop *loop, string c
     /// of how this plugin works, JANA can't record the correct call stack (at
     /// least not easily!) Therefore, we have to give it a little help here.
 
-    JEventLoop::call_stack_t cs;
+	// TODO: NWB: Re-add this
+	/*
+	JEventLoop::call_stack_t cs;
     cs.caller_name = caller;
     cs.callee_name = callee;
     cs.data_source = JEventLoop::DATA_FROM_SOURCE;
@@ -1853,30 +1856,22 @@ void JEventSource_EVIO::AddEmulatedObjectsToCallStack(JEventLoop *loop, string c
     cs.caller_name = "<ignore>";
     cs.data_source = JEventLoop::DATA_FROM_FACTORY;
     loop->AddToCallStack(cs);
+    */
 }
 
 //----------------
 // EmulateDf250Firmware
 //----------------
-void JEventSource_EVIO::EmulateDf250Firmware(JEvent &event, vector<JObject*> &wrd_objs, vector<JObject*> &pt_objs, vector<JObject*> &pp_objs, vector<JObject*> &pi_objs)
+void JEventSource_EVIO::EmulateDf250Firmware(const std::shared_ptr<const JEvent> &event, vector<JObject*> &wrd_objs, vector<JObject*> &pt_objs, vector<JObject*> &pp_objs, vector<JObject*> &pi_objs)
 {
     // Cant emulate without the raw data
     if(wrd_objs.size() == 0) return;
     if(VERBOSE>3) evioout << " Entering  EmulateDf250Firmware ..." <<endl;
 
-    vector <const Df250EmulatorAlgorithm*> f250Emulator_const;
-    Df250EmulatorAlgorithm *f250Emulator = NULL;
-    JEventLoop *loop = event.GetJEventLoop();
-    Df250EmulatorAlgorithm_factory *f250EmFac = static_cast<Df250EmulatorAlgorithm_factory*>(loop->GetFactory("Df250EmulatorAlgorithm"));
-    if (f250EmFac) {
-        f250EmFac->Get(f250Emulator_const);
-        // Drop const
-        if (f250Emulator_const.size() != 0) {
-	  f250Emulator = const_cast<Df250EmulatorAlgorithm*>(f250Emulator_const[0]);
-	} else {
-	  jerr << "Unable to load Df250EmulatorAlgorithm !  skipping emulation ..." << endl;
-	  return;
-	}
+    Df250EmulatorAlgorithm *f250Emulator = const_cast<Df250EmulatorAlgorithm*>(event->GetSingle<Df250EmulatorAlgorithm>());
+    if (!f250Emulator) {
+        jerr << "Unable to load Df250EmulatorAlgorithm !  skipping emulation ..." << endl;
+        return;
     }
 
     if(VERBOSE>3) evioout << " Looping over raw data ..." <<endl;
@@ -2100,7 +2095,7 @@ void JEventSource_EVIO::EmulateDf250Firmware(JEvent &event, vector<JObject*> &wr
 //----------------
 // EmulateDf125Firmware
 //----------------
-void JEventSource_EVIO::EmulateDf125Firmware( JEvent &event, vector<JObject*> &wrd_objs, vector<JObject*> &cp_objs, vector<JObject*> &fp_objs)
+void JEventSource_EVIO::EmulateDf125Firmware( const std::shared_ptr<const JEvent> &event, vector<JObject*> &wrd_objs, vector<JObject*> &cp_objs, vector<JObject*> &fp_objs)
 {
     /// This code implements an upsampling technique developed by Naomi Jarvis at
     /// CMU. This was not implemented in the firmware for the 2014-2015 commissioning
@@ -2113,19 +2108,10 @@ void JEventSource_EVIO::EmulateDf125Firmware( JEvent &event, vector<JObject*> &w
     if(wrd_objs.size() == 0) return; // Can't do anything without the raw data
     if(VERBOSE>3) evioout << " Entering  EmulateDf125Firmware ..." <<endl;
 
-    vector <const Df125EmulatorAlgorithm*> f125Emulator_const;
-    Df125EmulatorAlgorithm *f125Emulator = NULL;
-    JEventLoop *loop = event.GetJEventLoop();
-    Df125EmulatorAlgorithm_factory *f125EmFac = static_cast<Df125EmulatorAlgorithm_factory*>(loop->GetFactory("Df125EmulatorAlgorithm"));
-    if (f125EmFac) {
-        f125EmFac->Get(f125Emulator_const);
-        // Drop const
-        if (f125Emulator_const.size() != 0) {
-	  f125Emulator = const_cast<Df125EmulatorAlgorithm*>(f125Emulator_const[0]);
-	} else {
+	Df125EmulatorAlgorithm *f125Emulator = const_cast<Df125EmulatorAlgorithm*>(event->GetSingle<Df125EmulatorAlgorithm>());
+	if (!f125Emulator) {
 	  jerr << "Unable to load Df125EmulatorAlgorithm !  skipping emulation ..." << endl;
 	  return;
-	}
     }
 
     // Loop over all window raw data objects
@@ -2411,7 +2397,7 @@ int32_t JEventSource_EVIO::EpicQuestForRunNumber(void)
 
     uint32_t buff_len = 4000000;
     uint32_t *buff = new uint32_t[buff_len];
-    HDEVIO *hdevio = new HDEVIO(source_name);
+    HDEVIO *hdevio = new HDEVIO(GetResourceName());
     while(hdevio->read(buff, buff_len)){
 
         // Assume first word is number of words in bank
@@ -2549,22 +2535,22 @@ uint64_t JEventSource_EVIO::FindEventNumber(uint32_t *iptr)
 //----------------
 // FindEventType
 //----------------
-void JEventSource_EVIO::FindEventType(uint32_t *iptr, JEvent &event)
+void JEventSource_EVIO::FindEventType(uint32_t *iptr, DStatusBits *bits)
 {
     /// This is called from GetEvent to quickly determine the type of
     /// event this is (Physics, EPICS, SYNC, BOR, ...)
     uint32_t head = iptr[1];
     if( (head & 0xff000f) ==  0x600001){
-        event.SetStatusBit(kSTATUS_EPICS_EVENT);
+        bits->SetStatusBit(kSTATUS_EPICS_EVENT);
     }else if( (head & 0xffffffff) ==  0x00700E01){
-        event.SetStatusBit(kSTATUS_BOR_EVENT);
+        bits->SetStatusBit(kSTATUS_BOR_EVENT);
     }else if( (head & 0xffffff00) ==  0xff501000){
-        event.SetStatusBit(kSTATUS_PHYSICS_EVENT);
+        bits->SetStatusBit(kSTATUS_PHYSICS_EVENT);
     }else if( (head & 0xffffff00) ==  0xff701000){
-        event.SetStatusBit(kSTATUS_PHYSICS_EVENT);
+        bits->SetStatusBit(kSTATUS_PHYSICS_EVENT);
     }else if( (head & 0xfff000ff) ==  0xffd00000){
-        event.SetStatusBit(kSTATUS_CONTROL_EVENT);
-        if( (head>>16) == 0xffd0 ) event.SetStatusBit(kSTATUS_SYNC_EVENT);
+        bits->SetStatusBit(kSTATUS_CONTROL_EVENT);
+        if( (head>>16) == 0xffd0 ) bits->SetStatusBit(kSTATUS_SYNC_EVENT);
     }else{
         DumpBinary(iptr, &iptr[16]);
     }	

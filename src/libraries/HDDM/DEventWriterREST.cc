@@ -1,8 +1,8 @@
 
 #include "DEventWriterREST.h"
 
-#include <DANA/DApplication.h>
-#include <JANA/JCalibration.h>
+#include <DANA/DEvent.h>
+#include <JANA/Calibrations/JCalibration.h>
 #include <TRACKING/DTrackFitter.h>
 
 int& DEventWriterREST::Get_NumEventWriterThreads(void) const
@@ -20,58 +20,62 @@ map<string, pair<ofstream*, hddm_r::ostream*> >& DEventWriterREST::Get_RESTOutpu
 	return locRESTOutputFilePointers;
 }
 
-DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFileBaseName) : dOutputFileBaseName(locOutputFileBaseName)
+DEventWriterREST::DEventWriterREST(const std::shared_ptr<const JEvent>& locEventLoop, string locOutputFileBaseName) : dOutputFileBaseName(locOutputFileBaseName)
 {
-	japp->WriteLock("RESTWriter");
+	auto app = locEventLoop->GetJApplication();
+	lockService = app->GetService<JLockService>();
+
+	lockService->WriteLock("RESTWriter");
 	{
 		++Get_NumEventWriterThreads();
 	}
-	japp->Unlock("RESTWriter");
+	lockService->Unlock("RESTWriter");
 	
+	REST_WRITE_FDC_TRACK_POS=true;
+	app->SetDefaultParameter("REST:WRITE_FDC_TRACK_POS", REST_WRITE_FDC_TRACK_POS,"Add track positions at each FDC package");
+
 	REST_WRITE_TRACK_EXIT_PARAMS=true;
-	gPARMS->SetDefaultParameter("REST:WRITE_TRACK_EXIT_PARAMS", REST_WRITE_TRACK_EXIT_PARAMS,"Add track parameters at exit to tracking volume");
+	app->SetDefaultParameter("REST:WRITE_TRACK_EXIT_PARAMS", REST_WRITE_TRACK_EXIT_PARAMS,"Add track parameters at exit to tracking volume");
 
 	HDDM_USE_COMPRESSION = true;
 	string locCompressionString = "Turn on/off compression of the output HDDM stream. Set to \"0\" to turn off (it's on by default)";
-	gPARMS->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION, locCompressionString);
+	app->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION, locCompressionString);
 
 	HDDM_USE_INTEGRITY_CHECKS = true;
 	string locIntegrityString = "Turn on/off automatic integrity checking on the output HDDM stream. Set to \"0\" to turn off (it's on by default)";
-	gPARMS->SetDefaultParameter("HDDM:USE_INTEGRITY_CHECKS", HDDM_USE_INTEGRITY_CHECKS, locIntegrityString);
+	app->SetDefaultParameter("HDDM:USE_INTEGRITY_CHECKS", HDDM_USE_INTEGRITY_CHECKS, locIntegrityString);
 
 	HDDM_DATA_VERSION_STRING = "";
-	if(gPARMS->Exists("REST:DATAVERSIONSTRING"))
-		gPARMS->GetParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING);
+	if(app->GetJParameterManager()->Exists("REST:DATAVERSIONSTRING"))
+		app->GetParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING);
 	else
-		gPARMS->SetDefaultParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING, "");
+		app->SetDefaultParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING, "");
 
 	REST_WRITE_DIRC_HITS = true;
-	gPARMS->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
+	app->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
 
 	REST_WRITE_FMWPC_HITS = true;
-	gPARMS->SetDefaultParameter("REST:WRITE_FMWPC_HITS", REST_WRITE_FMWPC_HITS);
+	app->SetDefaultParameter("REST:WRITE_FMWPC_HITS", REST_WRITE_FMWPC_HITS);
 
 	REST_WRITE_CCAL_SHOWERS = true;
-	gPARMS->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
+	app->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
 
 	ADD_FCAL_DATA_FOR_CPP=false;
-	gPARMS->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
+	app->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
+
+	REST_WRITE_FCAL_HITS = false;
+	app->SetDefaultParameter("REST:WRITE_FCAL_HITS", REST_WRITE_FCAL_HITS);
 
 
     CCDB_CONTEXT_STRING = "";
     // if we can get the calibration context from the DANA interface, then save this as well
-    DApplication *dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-    if (dapp) {
-        JEvent& event = locEventLoop->GetJEvent();
-        JCalibration *jcalib = dapp->GetJCalibration(event.GetRunNumber());
-        if (jcalib) {
-            CCDB_CONTEXT_STRING = jcalib->GetContext();
-        }
-    }
-
+	JCalibration *jcalib = DEvent::GetJCalibration(locEventLoop);
+	if (jcalib) {
+		CCDB_CONTEXT_STRING = jcalib->GetContext();
+	}
 }
 
-bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutputFileNameSubString) const
+bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locEventLoop, string locOutputFileNameSubString) const
 {
 	std::vector<const DMCReaction*> reactions;
 	locEventLoop->Get(reactions);
@@ -88,6 +92,14 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DFCALShower*> fcalshowers;
 	locEventLoop->Get(fcalshowers);
 
+	std::vector<const DFCALHit*> fcalhits;
+	if(REST_WRITE_FCAL_HITS) {
+	    locEventLoop->Get(fcalhits);
+	}
+
+	std::vector<const DECALShower*> ecalshowers;
+	locEventLoop->Get(ecalshowers);
+	
 	std::vector<const DBCALShower*> bcalshowers;
 	locEventLoop->Get(bcalshowers);
 
@@ -125,11 +137,14 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DTrigger*> locTriggers;
 	locEventLoop->Get(locTriggers);
 
+	std::vector<const DBeamHelicity*> locBeamHelicities;
+	locEventLoop->Get(locBeamHelicities);
+
 	//Check to see if there are any objects to write out.  If so, don't write out an empty event
 	bool locOutputDataPresentFlag = false;
 	if((!reactions.empty()) || (!locBeamPhotons.empty()) || (!tracks.empty()))
 		locOutputDataPresentFlag = true;
-	else if((!fcalshowers.empty()) || (!bcalshowers.empty()) || (!tofpoints.empty()) || (!starthits.empty()))
+	else if((!ecalshowers.empty()) || (!fcalshowers.empty()) || (!bcalshowers.empty()) || (!tofpoints.empty()) || (!starthits.empty()))
 		locOutputDataPresentFlag = true;
 	//don't need to check detector matches: no matches if none of the above objects
 	if(!locOutputDataPresentFlag)
@@ -138,14 +153,14 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	string locOutputFileName = Get_OutputFileName(locOutputFileNameSubString);
 
 	hddm_r::HDDM locRecord;
+	hddm_r::threads::ID = 1;
 	hddm_r::ReconstructedPhysicsEventList res = locRecord.addReconstructedPhysicsEvents(1);
 
 	// load the run and event numbers
-	JEvent& event = locEventLoop->GetJEvent();
-	res().setRunNo(event.GetRunNumber());
+	res().setRunNo(locEventLoop->GetRunNumber());
 	//The REST type for this is int64_t, whereas the event type is uint64_t
 	//This copy is lazy: the last bit is lost.  However, we should never need the last bit.
-	res().setEventNo(event.GetEventNumber());
+	res().setEventNo(locEventLoop->GetEventNumber());
 
 	// push any DMCReaction objects to the output record
 	for (size_t i=0; i < reactions.size(); i++)
@@ -241,7 +256,33 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			locTaghChannelList().setCounter(locBeamPhotons_TAGGEDMCGEN[loc_i]->dCounter);
 		}
 	}
+	// push any DECALShower objects to the output record
+	for (size_t i=0; i < ecalshowers.size(); i++)
+	{
+	  hddm_r::EcalShowerList ecal = res().addEcalShowers(1);
+	  DVector3 pos = ecalshowers[i]->pos;
+	  ecal().setX(pos(0));
+	  ecal().setY(pos(1));
+	  ecal().setZ(pos(2));
+	  ecal().setT(ecalshowers[i]->t);
+	  ecal().setE(ecalshowers[i]->E);
+	  ecal().setXerr(ecalshowers[i]->xErr());
+	  ecal().setYerr(ecalshowers[i]->yErr());
+	  ecal().setZerr(ecalshowers[i]->zErr());
+	  ecal().setTerr(ecalshowers[i]->tErr());
+	  ecal().setEerr(ecalshowers[i]->EErr());
+	  ecal().setXycorr(ecalshowers[i]->XYcorr());
+	  ecal().setXzcorr(ecalshowers[i]->XZcorr());
+	  ecal().setYzcorr(ecalshowers[i]->YZcorr());
+	  ecal().setEzcorr(ecalshowers[i]->EZcorr());
+	  ecal().setTzcorr(ecalshowers[i]->ZTcorr());
+	  ecal().setNumBlocks(ecalshowers[i]->nBlocks);
+	  ecal().setIsNearBorder(ecalshowers[i]->isNearBorder);
 
+	  hddm_r::EcalShowerPropertiesList locEcalShowerPropertiesList = ecal().addEcalShowerPropertiesList(1);
+	  locEcalShowerPropertiesList().setE1E9(ecalshowers[i]->E1E9);
+	  locEcalShowerPropertiesList().setE9E25(ecalshowers[i]->E9E25);
+	}
 	// push any DFCALShower objects to the output record
 	for (size_t i=0; i < fcalshowers.size(); i++)
 	{
@@ -286,7 +327,8 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
         locFcalShowerPropertiesList().setE9E25(fcalshowers[i]->getE9E25());
         hddm_r::FcalShowerNBlocksList locFcalShowerNBlocksList = fcal().addFcalShowerNBlockses(1);
 	locFcalShowerNBlocksList().setNumBlocks(fcalshowers[i]->getNumBlocks());
-
+	hddm_r::FcalShowerIsNearBorderList locFcalShowerIsNearBorderList = fcal().addFcalShowerIsNearBorders(1);
+	locFcalShowerIsNearBorderList().setIsNearBorder(fcalshowers[i]->getIsNearBorder());
     }
             
 
@@ -428,6 +470,21 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	    }
 	}
 
+	if(REST_WRITE_FCAL_HITS) {
+	  // push any DFCALHit objects to the output record
+	  for (size_t i=0; i < fcalhits.size(); i++)
+	    {
+	      hddm_r::FcalHitList hit = res().addFcalHits(1);
+	      hit().setRow(fcalhits[i]->row);
+	      hit().setColumn(fcalhits[i]->column);
+	      hit().setX(fcalhits[i]->x);
+	      hit().setY(fcalhits[i]->y);
+	      hit().setE(fcalhits[i]->E);
+	      hit().setT(fcalhits[i]->t);
+	      hit().setIntOverPeak(fcalhits[i]->intOverPeak);
+	    }
+	}
+
 	// push any DTrackTimeBased objects to the output record
 	for (size_t i=0; i < tracks.size(); ++i)
 	{
@@ -526,6 +583,24 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
                elo3().setDEdxAmp(tracks[i]->ddEdx_FDC_amp_trunc[it]);
             }
 		}
+		if (REST_WRITE_FDC_TRACK_POS){
+		  if (tracks[i]->extrapolations.find(SYS_FDC) != tracks[i]->extrapolations.end()) {
+		    vector<DTrackFitter::Extrapolation_t>extraps=tracks[i]->extrapolations.at(SYS_FDC);
+		    double oldz=0.;
+		    for (unsigned int k=0;k<extraps.size();k++){
+		      DVector3 pos=extraps[k].position;
+		      // Write out one position per package
+		      if (pos.z()>oldz+20.){
+			hddm_r::FdcTrackPosList locFdcTrackPoses = tra().addFdcTrackPoses(1);
+			locFdcTrackPoses().setX(pos.x());
+			locFdcTrackPoses().setY(pos.y());
+			locFdcTrackPoses().setZ(pos.z());
+			oldz=pos.z();
+		      }
+		    }
+		  }
+		}
+
 		if (REST_WRITE_TRACK_EXIT_PARAMS){
 		  if (tracks[i]->extrapolations.find(SYS_NULL) != tracks[i]->extrapolations.end()) {
 		    vector<DTrackFitter::Extrapolation_t>extraps=tracks[i]->extrapolations.at(SYS_NULL);
@@ -577,6 +652,32 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		hddm_r::TriggerEnergySumsList triggerEnergySum = trigger().addTriggerEnergySumses(1);
 		triggerEnergySum().setBCALEnergySum(locTriggers[i]->Get_GTP_BCALEnergy());
 		triggerEnergySum().setFCALEnergySum(locTriggers[i]->Get_GTP_FCALEnergy());
+		hddm_r::TriggerFcal2EnergySumList triggerFcal2EnergySum = trigger().addTriggerFcal2EnergySums(1);
+		triggerFcal2EnergySum().setECALEnergySum(locTriggers[i]->Get_GTP_ECALEnergy());
+		triggerFcal2EnergySum().setFCAL2EnergySum(locTriggers[i]->Get_GTP_FCAL2Energy());
+	}
+	
+	// push any DBeamHelicity objects to the output record
+	if(locBeamHelicities.size() == 0) {
+		// write out data with helicity == zero if there's no object
+		// first bit says whether or not there is valid helicity data
+		hddm_r::ElectronBeamList electronBeam = res().addElectronBeams(1);
+		electronBeam().setHelicitydata(0); 
+	
+	}
+	for (size_t i=0; i < locBeamHelicities.size(); ++i)
+	{
+		hddm_r::ElectronBeamList electronBeam = res().addElectronBeams(1);
+		int flags = locBeamHelicities[i]->valid      // first bit indicates if this event has valid helicity data
+					| (locBeamHelicities[i]->helicity     << 1)
+					| (locBeamHelicities[i]->pattern_sync << 2)
+					| (locBeamHelicities[i]->t_settle     << 3)
+					| (locBeamHelicities[i]->pair_sync    << 4)
+					| (locBeamHelicities[i]->ihwp         << 5)
+					| (locBeamHelicities[i]->beam_on      << 6);
+// 					| (locBeamHelicities[i]->real_hel     << 7)
+// 					| (locBeamHelicities[i]->valid        << 8);
+		electronBeam().setHelicitydata(flags);
 
 	}
 
@@ -609,7 +710,46 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 				bcalList().setTflight(locBCALShowerMatchParamsVector[loc_k]->dFlightTime);
 				bcalList().setTflightvar(locBCALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
 			}
+			
+			vector<shared_ptr<const DECALShowerMatchParams>> locECALShowerMatchParamsVector;
+			locDetectorMatches[loc_i]->Get_ECALMatchParams(tracks[loc_j], locECALShowerMatchParamsVector);
+			for (size_t loc_k = 0; loc_k < locECALShowerMatchParamsVector.size(); ++loc_k)
+			{
+			  hddm_r::EcalMatchParamsList ecalList = matches().addEcalMatchParamses(1);
+			  ecalList().setTrack(loc_j);
+			  
+			  const DECALShower* locECALShower = locECALShowerMatchParamsVector[loc_k]->dECALShower;
+			  size_t locECALindex = 0;
+			  for(; locECALindex < ecalshowers.size(); ++locECALindex)
+			    {
+			      if(ecalshowers[locECALindex] == locECALShower)
+				break;
+			    }
+			  ecalList().setShower(locECALindex);
 
+			  ecalList().setDoca(locECALShowerMatchParamsVector[loc_k]->dDOCAToShower);
+			  ecalList().setDx(locECALShowerMatchParamsVector[loc_k]->dx);
+			  ecalList().setPathlength(locECALShowerMatchParamsVector[loc_k]->dPathLength);
+			  ecalList().setTflight(locECALShowerMatchParamsVector[loc_k]->dFlightTime);
+			  ecalList().setTflightvar(locECALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
+			}
+
+			vector<shared_ptr<const DECALSingleHitMatchParams>> locECALSingleHitMatchParamsVector;
+			locDetectorMatches[loc_i]->Get_ECALSingleHitMatchParams(tracks[loc_j], locECALSingleHitMatchParamsVector);
+			for (size_t loc_k = 0; loc_k < locECALSingleHitMatchParamsVector.size(); ++loc_k)
+			{
+			  hddm_r::EcalSingleHitMatchParamsList ecalSingleHitList = matches().addEcalSingleHitMatchParamses(1);
+			  ecalSingleHitList().setTrack(loc_j);
+			  
+			  ecalSingleHitList().setEhit(locECALSingleHitMatchParamsVector[loc_k]->dEHit);
+			  ecalSingleHitList().setThit(locECALSingleHitMatchParamsVector[loc_k]->dTHit);
+			  ecalSingleHitList().setDoca(locECALSingleHitMatchParamsVector[loc_k]->dDOCAToHit);
+			  ecalSingleHitList().setDx(locECALSingleHitMatchParamsVector[loc_k]->dx);
+			  ecalSingleHitList().setPathlength(locECALSingleHitMatchParamsVector[loc_k]->dPathLength);
+			  ecalSingleHitList().setTflight(locECALSingleHitMatchParamsVector[loc_k]->dFlightTime);
+			  ecalSingleHitList().setTflightvar(locECALSingleHitMatchParamsVector[loc_k]->dFlightTimeVariance);
+			}
+			
 			vector<shared_ptr<const DFCALShowerMatchParams>> locFCALShowerMatchParamsVector;
 			locDetectorMatches[loc_i]->Get_FCALMatchParams(tracks[loc_j], locFCALShowerMatchParamsVector);
 			for (size_t loc_k = 0; loc_k < locFCALShowerMatchParamsVector.size(); ++loc_k)
@@ -741,7 +881,6 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 					}
 				}
 
-				vector<DTrackFitter::Extrapolation_t> extrapolations=tracks[loc_j]->extrapolations.at(SYS_DIRC);
 				DVector3 locProjPos = locDIRCMatchParams->dExtrapolatedPos;
 				DVector3 locProjMom = locDIRCMatchParams->dExtrapolatedMom;
 				double locFlightTime = locDIRCMatchParams->dExtrapolatedTime;
@@ -873,15 +1012,15 @@ string DEventWriterREST::Get_OutputFileName(string locOutputFileNameSubString) c
 
 bool DEventWriterREST::Write_RESTEvent(string locOutputFileName, hddm_r::HDDM& locRecord) const
 {
-	japp->WriteLock("RESTWriter");
+	lockService->WriteLock("RESTWriter");
 	{
 		//check to see if the REST file is open
 		if(Get_RESTOutputFilePointers().find(locOutputFileName) != Get_RESTOutputFilePointers().end())
 		{
 			//open: get pointer, write event
 			hddm_r::ostream* locOutputRESTFileStream = Get_RESTOutputFilePointers()[locOutputFileName].second;
-			japp->Unlock("RESTWriter");
 			*(locOutputRESTFileStream) << locRecord;
+			lockService->Unlock("RESTWriter");
 			return true;
 		}
 
@@ -892,7 +1031,7 @@ bool DEventWriterREST::Write_RESTEvent(string locOutputFileName, hddm_r::HDDM& l
 		{
 			//failed to open
 			delete locRESTFilePointers.first;
-			japp->Unlock("RESTWriter");
+			lockService->Unlock("RESTWriter");
 			return false;
 		}
 		locRESTFilePointers.second = new hddm_r::ostream(*locRESTFilePointers.first);
@@ -917,6 +1056,7 @@ bool DEventWriterREST::Write_RESTEvent(string locOutputFileName, hddm_r::HDDM& l
 
 		// write a comment record at the head of the file
 		hddm_r::HDDM locCommentRecord;
+		hddm_r::threads::ID = 1;
 		hddm_r::ReconstructedPhysicsEventList res = locCommentRecord.addReconstructedPhysicsEvents(1);
 		hddm_r::CommentList comment = res().addComments();
 		comment().setText("This is a REST event stream...");
@@ -938,19 +1078,19 @@ bool DEventWriterREST::Write_RESTEvent(string locOutputFileName, hddm_r::HDDM& l
 		//store the stream pointers
 		Get_RESTOutputFilePointers()[locOutputFileName] = locRESTFilePointers;
 	}
-	japp->Unlock("RESTWriter");
+	lockService->Unlock("RESTWriter");
 
 	return true;
 }
 
 DEventWriterREST::~DEventWriterREST(void)
 {
-	japp->WriteLock("RESTWriter");
+	lockService->WriteLock("RESTWriter");
 	{
 		--Get_NumEventWriterThreads();
 		if(Get_NumEventWriterThreads() > 0)
 		{
-			japp->Unlock("RESTWriter");
+			lockService->Unlock("RESTWriter");
 			return; //not the last thread writing to REST files
 		}
 
@@ -967,7 +1107,7 @@ DEventWriterREST::~DEventWriterREST(void)
 		}
 		Get_RESTOutputFilePointers().clear();
 	}
-	japp->Unlock("RESTWriter");
+	lockService->Unlock("RESTWriter");
 }
 
 int32_t DEventWriterREST::Convert_UnsignedIntToSigned(uint32_t locUnsignedInt) const

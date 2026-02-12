@@ -7,7 +7,9 @@
 
 #include "DTrackCandidate_factory_CDC.h"
 #include <cmath>
-#include <JANA/JCalibration.h>
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include "DANA/DGeometryManager.h"
 
 #define BeamRMS 0.5
 #define EPS 1e-3
@@ -70,9 +72,9 @@ DTrackCandidate_factory_CDC::~DTrackCandidate_factory_CDC(){
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrackCandidate_factory_CDC::init(void)
+void DTrackCandidate_factory_CDC::Init()
 {
 	DEBUG_LEVEL = 0;
 	MAX_DCDCTrkHitPoolSize = 200;
@@ -144,46 +146,47 @@ jerror_t DTrackCandidate_factory_CDC::init(void)
 	dNumStrawsPerRing.resize(28);
 
 	dNumSeedDensityPhiBins = 360;
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackCandidate_factory_CDC::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void DTrackCandidate_factory_CDC::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	gPARMS->SetDefaultParameter("TRKFIND:DEBUG_LEVEL", DEBUG_LEVEL);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_ALLOWED_CDC_HITS", MAX_ALLOWED_CDC_HITS);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_ALLOWED_TRACK_CIRCLES", MAX_ALLOWED_TRACK_CIRCLES);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_HIT_DIST", MAX_HIT_DIST);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_NUM_RINGSEED_RINGS_SKIPABLE", MAX_NUM_RINGSEED_RINGS_SKIPABLE);
-	gPARMS->SetDefaultParameter("TRKFIND:MIN_SEED_HITS", MIN_SEED_HITS);
-	gPARMS->SetDefaultParameter("TRKFIND:MIN_STRAWS_POTENTIAL_SPIRAL_TURN", MIN_STRAWS_POTENTIAL_SPIRAL_TURN);
-	gPARMS->SetDefaultParameter("TRKFIND:MIN_STRAWS_DEFINITE_SPIRAL_TURN", MIN_STRAWS_DEFINITE_SPIRAL_TURN);
-	gPARMS->SetDefaultParameter("TRKFIND:MIN_STRAWS_ADJACENT_TO_SPIRAL_TURN", MIN_STRAWS_ADJACENT_TO_SPIRAL_TURN);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_STRAWS_BETWEEN_LINK_SPIRAL_TURN", MAX_STRAWS_BETWEEN_LINK_SPIRAL_TURN);
-	gPARMS->SetDefaultParameter("TRKFIND:SEED_DENSITY_BIN_STRAW_WIDTH", SEED_DENSITY_BIN_STRAW_WIDTH);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_SEEDS_IN_STRAW_BIN", MAX_SEEDS_IN_STRAW_BIN);
-	gPARMS->SetDefaultParameter("TRKFIND:ENABLE_DEAD_HV_BOARD_LINKING", ENABLE_DEAD_HV_BOARD_LINKING);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_SUPERLAYER_NEW_TRACK", MAX_SUPERLAYER_NEW_TRACK);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_COMMON_HIT_FRACTION", MAX_COMMON_HIT_FRACTION);
-	gPARMS->SetDefaultParameter("TRKFIND:MIN_CIRCLE_ASYMMETRY", MIN_CIRCLE_ASYMMETRY);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_DRIFT_TIME", MAX_DRIFT_TIME);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_SEED_TIME_DIFF", MAX_SEED_TIME_DIFF);
-	gPARMS->SetDefaultParameter("TRKFIND:MIN_PRUNED_STEREO_HITS", MIN_PRUNED_STEREO_HITS);
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_UNUSED_HIT_LINK_ANGLE", MAX_UNUSED_HIT_LINK_ANGLE);
-	gPARMS->SetDefaultParameter("TRKFIND:VERTEX_Z_MIN", VERTEX_Z_MIN);
-	gPARMS->SetDefaultParameter("TRKFIND:VERTEX_Z_MAX", VERTEX_Z_MAX);
+	auto run_number = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+	auto geo_manager = app->GetService<DGeometryManager>();
+	auto locGeometry = geo_manager->GetDGeometry(run_number);
+
+	app->SetDefaultParameter("TRKFIND:DEBUG_LEVEL", DEBUG_LEVEL);
+	app->SetDefaultParameter("TRKFIND:MAX_ALLOWED_CDC_HITS", MAX_ALLOWED_CDC_HITS);
+	app->SetDefaultParameter("TRKFIND:MAX_ALLOWED_TRACK_CIRCLES", MAX_ALLOWED_TRACK_CIRCLES);
+	app->SetDefaultParameter("TRKFIND:MAX_HIT_DIST", MAX_HIT_DIST);
+	app->SetDefaultParameter("TRKFIND:MAX_NUM_RINGSEED_RINGS_SKIPABLE", MAX_NUM_RINGSEED_RINGS_SKIPABLE);
+	app->SetDefaultParameter("TRKFIND:MIN_SEED_HITS", MIN_SEED_HITS);
+	app->SetDefaultParameter("TRKFIND:MIN_STRAWS_POTENTIAL_SPIRAL_TURN", MIN_STRAWS_POTENTIAL_SPIRAL_TURN);
+	app->SetDefaultParameter("TRKFIND:MIN_STRAWS_DEFINITE_SPIRAL_TURN", MIN_STRAWS_DEFINITE_SPIRAL_TURN);
+	app->SetDefaultParameter("TRKFIND:MIN_STRAWS_ADJACENT_TO_SPIRAL_TURN", MIN_STRAWS_ADJACENT_TO_SPIRAL_TURN);
+	app->SetDefaultParameter("TRKFIND:MAX_STRAWS_BETWEEN_LINK_SPIRAL_TURN", MAX_STRAWS_BETWEEN_LINK_SPIRAL_TURN);
+	app->SetDefaultParameter("TRKFIND:SEED_DENSITY_BIN_STRAW_WIDTH", SEED_DENSITY_BIN_STRAW_WIDTH);
+	app->SetDefaultParameter("TRKFIND:MAX_SEEDS_IN_STRAW_BIN", MAX_SEEDS_IN_STRAW_BIN);
+	app->SetDefaultParameter("TRKFIND:ENABLE_DEAD_HV_BOARD_LINKING", ENABLE_DEAD_HV_BOARD_LINKING);
+	app->SetDefaultParameter("TRKFIND:MAX_SUPERLAYER_NEW_TRACK", MAX_SUPERLAYER_NEW_TRACK);
+	app->SetDefaultParameter("TRKFIND:MAX_COMMON_HIT_FRACTION", MAX_COMMON_HIT_FRACTION);
+	app->SetDefaultParameter("TRKFIND:MIN_CIRCLE_ASYMMETRY", MIN_CIRCLE_ASYMMETRY);
+	app->SetDefaultParameter("TRKFIND:MAX_DRIFT_TIME", MAX_DRIFT_TIME);
+	app->SetDefaultParameter("TRKFIND:MAX_SEED_TIME_DIFF", MAX_SEED_TIME_DIFF);
+	app->SetDefaultParameter("TRKFIND:MIN_PRUNED_STEREO_HITS", MIN_PRUNED_STEREO_HITS);
+	app->SetDefaultParameter("TRKFIND:MAX_UNUSED_HIT_LINK_ANGLE", MAX_UNUSED_HIT_LINK_ANGLE);
+	app->SetDefaultParameter("TRKFIND:VERTEX_Z_MIN", VERTEX_Z_MIN);
+	app->SetDefaultParameter("TRKFIND:VERTEX_Z_MAX", VERTEX_Z_MAX);
 
 	MAX_HIT_DIST2 = MAX_HIT_DIST*MAX_HIT_DIST;
 
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	dMagneticField = locApplication->GetBfield(runnumber);
+	dMagneticField = geo_manager->GetBfield(run_number);
 	dFactorForSenseOfRotation=(dMagneticField->GetBz(0.,0.,65.)>0.)?-1.:1.;
 
-	const DGeometry *locGeometry = locApplication->GetDGeometry(runnumber);
-	JCalibration *jcalib = locApplication->GetJCalibration(runnumber);
 	map<string, double> targetparms;
 	if (jcalib->Get("TARGET/target_parms",targetparms)==false){
 	  TARGET_Z = targetparms["TARGET_Z_POSITION"];
@@ -205,13 +208,13 @@ jerror_t DTrackCandidate_factory_CDC::brun(JEventLoop *locEventLoop, int32_t run
 	  }
 	}
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackCandidate_factory_CDC::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void DTrackCandidate_factory_CDC::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Reset
 	dRejectedPhiRegions.clear();
@@ -223,10 +226,10 @@ jerror_t DTrackCandidate_factory_CDC::evnt(JEventLoop *locEventLoop, uint64_t ev
 	Reset_Pools();
 
 	// Get CDC hits
-	if(Get_CDCHits(locEventLoop) != NOERROR)
+	if(Get_CDCHits(event) != NOERROR)
 	{
 		Reset_Pools();
-		return RESOURCE_UNAVAILABLE;
+		return; // RESOURCE_UNAVAILABLE;
 	}
 
 	// Build Super Layer Seeds
@@ -252,12 +255,12 @@ jerror_t DTrackCandidate_factory_CDC::evnt(JEventLoop *locEventLoop, uint64_t ev
 	{
 		//SHOULD SET JEVENT STATUS BIT HERE!!!
 		Reset_Pools();
-		return OBJECT_NOT_AVAILABLE;
+		return; // OBJECT_NOT_AVAILABLE;
 	}
 	if(locCDCTrackCircles.empty())
 	{
 		Reset_Pools();
-		return NOERROR;
+		return;
 	}
 	Handle_StereoAndFilter(locCDCTrackCircles, false); //false: not final pass: filter seeds, don't reject seeds with no stereo hits (will add unused below), etc.
 
@@ -290,7 +293,7 @@ jerror_t DTrackCandidate_factory_CDC::evnt(JEventLoop *locEventLoop, uint64_t ev
 	// Reset memory before exiting event evaluation. 
 	Reset_Pools();
 
-	return NOERROR;
+	return;
 }
 
 //------------------
@@ -403,11 +406,11 @@ DTrackCandidate_factory_CDC::DCDCTrackCircle* DTrackCandidate_factory_CDC::Get_R
 //------------------
 // Get_CDCHits
 //------------------
-jerror_t DTrackCandidate_factory_CDC::Get_CDCHits(JEventLoop* loop)
+jerror_t DTrackCandidate_factory_CDC::Get_CDCHits(const std::shared_ptr<const JEvent>& event)
 {
 	// Get the "raw" hits. These already have the wire associated with them.
 	vector<const DCDCTrackHit*> cdctrackhits;
-	loop->Get(cdctrackhits);
+	event->Get(cdctrackhits);
 	dNumCDCHits = cdctrackhits.size();
 
 	// If there are no hits, then bail now
@@ -417,7 +420,7 @@ jerror_t DTrackCandidate_factory_CDC::Get_CDCHits(JEventLoop* loop)
 	// If there are too many hits, bail with a warning message
 	if(cdctrackhits.size() > MAX_ALLOWED_CDC_HITS)
 	{
-		cout << "Too many hits in CDC (" <<cdctrackhits.size() << ", max = " << MAX_ALLOWED_CDC_HITS << ")! Track finding in CDC bypassed for event " << loop->GetJEvent().GetEventNumber() << endl;
+		cout << "Too many hits in CDC (" <<cdctrackhits.size() << ", max = " << MAX_ALLOWED_CDC_HITS << ")! Track finding in CDC bypassed for event " << event->GetEventNumber() << endl;
 		cdctrackhits.clear();
 		return UNRECOVERABLE_ERROR;
 	}
@@ -908,8 +911,8 @@ void DTrackCandidate_factory_CDC::Reject_SuperLayerSeeds_HighSeedDensity(unsigne
 	// We use a simple array to store our histogram here. We don't want to use ROOT histograms because they are not thread safe.
 	// Setup histogram
 	unsigned int hist[dNumSeedDensityPhiBins];
-	for(unsigned int i = 0; i < dNumSeedDensityPhiBins; ++i)
-		hist[i] = 0; // clear histogram
+	fill(hist, hist + dNumSeedDensityPhiBins, 0);
+	
 	double bin_width = M_TWO_PI/(double)dNumSeedDensityPhiBins;
 	double hist_low_limit = 0.0; // lower edge of histogram limits
 
@@ -4536,22 +4539,24 @@ void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDC
 	locTrackCandidate->rc=locCDCTrackCircle->fit->r0;
 	locTrackCandidate->xc=locCDCTrackCircle->fit->x0;
 	locTrackCandidate->yc=locCDCTrackCircle->fit->y0;
-	Particle_t locPID = (locCDCTrackCircle->fit->h*dFactorForSenseOfRotation > 0.0) ? PiPlus : PiMinus;
-	locTrackCandidate->setPID(locPID);
 	locTrackCandidate->chisq = locCDCTrackCircle->fit->chisq;
 	locTrackCandidate->Ndof = locCDCTrackCircle->fit->ndof;
-	locTrackCandidate->setPosition(pos);
-	locTrackCandidate->setMomentum(mom);
+	// position, momentum, charge
+	locTrackCandidate->dPosition=pos;
+	locTrackCandidate->dMomentum=mom;
+	locTrackCandidate->dCharge=locCDCTrackCircle->fit->h*dFactorForSenseOfRotation;
 
 	// Add axial hits (if any)
 	vector<DCDCTrkHit*> locHits;
+	double minimum_drift_time=1e9;
 	for(size_t loc_i = 0; loc_i < locCDCTrackCircle->dSuperLayerSeeds_Axial.size(); ++loc_i)
 	{
 		locCDCTrackCircle->dSuperLayerSeeds_Axial[loc_i]->Get_Hits(locHits);
 		for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j)
 		{
-			locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
+		  locTrackCandidate->cdchits.push_back(locHits[loc_j]->hit);
 			locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
+			if (locHits[loc_j]->hit->tdrift<minimum_drift_time) minimum_drift_time=locHits[loc_j]->hit->tdrift;
 		}
 	}
 
@@ -4563,8 +4568,9 @@ void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDC
 			locCDCTrackCircle->dSuperLayerSeeds_InnerStereo[0][loc_i]->Get_Hits(locHits);
 			for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j)
 			{
-				locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
+			  locTrackCandidate->cdchits.push_back(locHits[loc_j]->hit);
 				locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
+				if (locHits[loc_j]->hit->tdrift<minimum_drift_time) minimum_drift_time=locHits[loc_j]->hit->tdrift;
 			}
 		}
 	}
@@ -4577,16 +4583,20 @@ void DTrackCandidate_factory_CDC::Create_TrackCandidiate(DCDCTrackCircle* locCDC
 			locCDCTrackCircle->dSuperLayerSeeds_OuterStereo[0][loc_i]->Get_Hits(locHits);
 			for(size_t loc_j = 0; loc_j < locHits.size(); ++loc_j)
 			{
-				locTrackCandidate->AddAssociatedObject(locHits[loc_j]->hit);
+			  locTrackCandidate->cdchits.push_back(locHits[loc_j]->hit);
 				locTrackCandidate->used_cdc_indexes.push_back(locHits[loc_j]->index);
+				if (locHits[loc_j]->hit->tdrift<minimum_drift_time) minimum_drift_time=locHits[loc_j]->hit->tdrift;	
 			}
 		}
 	}
 
 	if(DEBUG_LEVEL>3)
 		cout<<"Final Candidate parameters: p="<<mom.Mag()<<" theta="<<mom.Theta()<<"  phi="<<mom.Phi()<<" z="<<pos.Z()<<endl;
+
+	locTrackCandidate->dMinimumDriftTime=minimum_drift_time;
+	locTrackCandidate->dDetector=SYS_CDC;
 	
-	_data.push_back(locTrackCandidate);
+	Insert(locTrackCandidate);
 }
 
 //-------------------------
@@ -4716,17 +4726,17 @@ bool DTrackCandidate_factory_CDC::Calc_PositionAndMomentum(DCDCTrackCircle* locC
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrackCandidate_factory_CDC::erun(void)
+void DTrackCandidate_factory_CDC::EndRun()
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTrackCandidate_factory_CDC::fini(void)
+void DTrackCandidate_factory_CDC::Finish()
 {
 	// Delete memory in resource pools
 	for(size_t loc_i = 0; loc_i < dCDCTrkHitPool_All.size(); ++loc_i)
@@ -4741,7 +4751,7 @@ jerror_t DTrackCandidate_factory_CDC::fini(void)
 	for(size_t loc_i = 0; loc_i < dCDCTrackCirclePool_All.size(); ++loc_i)
 		delete dCDCTrackCirclePool_All[loc_i];
 
-	return NOERROR;
+	return;
 }
 
 void DTrackCandidate_factory_CDC::DCDCTrkHit::Reset(void)
@@ -5313,4 +5323,3 @@ double DTrackCandidate_factory_CDC::DCDCLineFit::FindMinimumChisq(double ax,doub
   xmin=x;
   return fx;
 }
-

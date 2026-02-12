@@ -6,20 +6,17 @@
 //
 
 #include "JEventProcessor_TrackingPulls.h"
-#include "HistogramTools.h"
+#include "DANA/DEvent.h"
 #include "PID/DChargedTrack.h"
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DTrigger.h"
 
-using namespace jana;
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C" {
 void InitPlugin(JApplication *app) {
   InitJANAPlugin(app);
-  app->AddProcessor(new JEventProcessor_TrackingPulls());
+  app->Add(new JEventProcessor_TrackingPulls());
 }
 }  // "C"
 
@@ -29,8 +26,9 @@ JEventProcessor_TrackingPulls::JEventProcessor_TrackingPulls() {}
 
 JEventProcessor_TrackingPulls::~JEventProcessor_TrackingPulls() {}
 
-jerror_t JEventProcessor_TrackingPulls::init(void) {
+void JEventProcessor_TrackingPulls::Init() {
   // This is called once at program startup.
+  auto app = GetApplication();
   int numlayers = 24;
   int numrings = 28;
   unsigned int numstraws[28] = {
@@ -39,15 +37,13 @@ jerror_t JEventProcessor_TrackingPulls::init(void) {
 
   // Use -PTRACKINGPULLS:MAKE_TREE=1 to produce tree output
   MAKE_TREE = 0;
-  if(gPARMS){
-    gPARMS->SetDefaultParameter("TRACKINGPULLS:MAKE_TREE", MAKE_TREE, "Make a ROOT tree file");
-  }
+  app->SetDefaultParameter("TRACKINGPULLS:MAKE_TREE", MAKE_TREE, "Make a ROOT tree file");
 
   if (MAKE_TREE){
     string treeName = "tree_tracking_pulls";
     string treeFile = "tree_tracking_pulls.root";
-    gPARMS->SetDefaultParameter("TRACKINGPULLS:TREENAME", treeName);
-    gPARMS->SetDefaultParameter("TRACKINGPULLS:TREEFILE", treeFile);
+    app->SetDefaultParameter("TRACKINGPULLS:TREENAME", treeName);
+    app->SetDefaultParameter("TRACKINGPULLS:TREEFILE", treeFile);
     dTreeInterface = DTreeInterface::Create_DTreeInterface(treeName, treeFile);
 
     //TTREE BRANCHES
@@ -282,28 +278,27 @@ jerror_t JEventProcessor_TrackingPulls::init(void) {
 	main->cd();
 	
 	
-  return NOERROR;
+  return; //NOERROR;
 }
 
-jerror_t JEventProcessor_TrackingPulls::brun(JEventLoop *eventLoop,
-                                             int32_t runnumber) {
+void JEventProcessor_TrackingPulls::BeginRun(const std::shared_ptr<const JEvent> &event) {
   // This is called whenever the run number changes
-  return NOERROR;
 }
 
-jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
-                                             uint64_t eventnumber) {
+void JEventProcessor_TrackingPulls::Process(const std::shared_ptr<const JEvent> &event) {
+  auto eventnumber = event->GetEventNumber();
   static uint32_t evntCount = 0;
   evntCount++;
   // Loop over the tracks, get the tracking pulls, and fill some histograms.
   // Easy peasy
 
   const DTrigger *locTrigger = NULL;
-  loop->GetSingle(locTrigger);
-  if (locTrigger->Get_L1FrontPanelTriggerBits() != 0) return NOERROR;
+  event->GetSingle(locTrigger);
+  if (locTrigger->Get_L1FrontPanelTriggerBits() != 0) return;
 
   vector<const DChargedTrack *> chargedTrackVector;
-  loop->Get(chargedTrackVector);
+  event->Get(chargedTrackVector);
+  DEvent::GetLockService(event)->RootFillLock(this);
 
   for (size_t i = 0; i < chargedTrackVector.size(); i++) {
     // TODO: Should be changed to use PID FOM when ready
@@ -329,13 +324,13 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
     double pmag = bestHypothesis->momentum().Mag();
 
     if (pmag < 0.5) continue;
-
+    
     // Fill some track information
     hTrackingFOM->Fill(trackingFOM);
     hTrack_PVsTheta->Fill(theta, pmag);
     hTrack_PhiVsTheta->Fill(theta, phi);
     hTrack_PVsPhi->Fill(phi, pmag);
-    
+
     // Get the pulls vector from the track
     auto track = bestHypothesis->Get_TrackTimeBased();
 
@@ -605,20 +600,17 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
     if (MAKE_TREE)
       dTreeInterface->Fill(dTreeFillData);
   }
-
-  return NOERROR;
+  DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT LOCK!!
 }
 
-jerror_t JEventProcessor_TrackingPulls::erun(void) {
+void JEventProcessor_TrackingPulls::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
-jerror_t JEventProcessor_TrackingPulls::fini(void) {
+void JEventProcessor_TrackingPulls::Finish() {
   // Called before program exit after event processing is finished.
   if (MAKE_TREE)
     delete dTreeInterface; //saves trees to file, closes file
-  return NOERROR;
 }

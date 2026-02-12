@@ -1,7 +1,7 @@
 #include "DEventWriterHDDM.h"
 
-#include <DANA/DApplication.h>
-#include <JANA/JCalibration.h>
+#include <DANA/DEvent.h>
+#include <JANA/Calibrations/JCalibration.h>
 
 int& DEventWriterHDDM::Get_NumEventWriterThreads(void) const
 {
@@ -18,50 +18,48 @@ map<string, pair<ofstream*, hddm_s::ostream*> >& DEventWriterHDDM::Get_HDDMOutpu
 	return locHDDMOutputFilePointers;
 }
 
-DEventWriterHDDM::DEventWriterHDDM(JEventLoop* locEventLoop, string locOutputFileBaseName) : dOutputFileBaseName(locOutputFileBaseName)
+DEventWriterHDDM::DEventWriterHDDM(const std::shared_ptr<const JEvent>& locEventLoop, string locOutputFileBaseName) : dOutputFileBaseName(locOutputFileBaseName)
 {
-	japp->WriteLock("HDDMWriter");
+	auto app = locEventLoop->GetJApplication();
+	lockService = DEvent::GetLockService(locEventLoop);
+	lockService->WriteLock("HDDMWriter");
 	{
 		++Get_NumEventWriterThreads();
 	}
-	japp->Unlock("HDDMWriter");
+	lockService->Unlock("HDDMWriter");
 	
 	HDDM_USE_COMPRESSION = true;
 	string locCompressionString = "Turn on/off compression of the output HDDM stream. Set to \"0\" to turn off (it's on by default)";
-	gPARMS->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION, locCompressionString);
+	app->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION, locCompressionString);
 
 	HDDM_USE_INTEGRITY_CHECKS = true;
 	string locIntegrityString = "Turn on/off automatic integrity checking on the output HDDM stream. Set to \"0\" to turn off (it's on by default)";
-	gPARMS->SetDefaultParameter("HDDM:USE_INTEGRITY_CHECKS", HDDM_USE_INTEGRITY_CHECKS, locIntegrityString);
+	app->SetDefaultParameter("HDDM:USE_INTEGRITY_CHECKS", HDDM_USE_INTEGRITY_CHECKS, locIntegrityString);
 
     HDDM_DATA_VERSION_STRING = "";
-    gPARMS->SetDefaultParameter("HDDM:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING, "");
+    app->SetDefaultParameter("HDDM:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING, "");
 
     CCDB_CONTEXT_STRING = "";
     // if we can get the calibration context from the DANA interface, then save this as well
-    DApplication *dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-    if (dapp) {
-        JEvent& event = locEventLoop->GetJEvent();
-        JCalibration *jcalib = dapp->GetJCalibration(event.GetRunNumber());
-        if (jcalib) {
-            CCDB_CONTEXT_STRING = jcalib->GetContext();
-        }
-    }
-    
+	JCalibration *jcalib = DEvent::GetJCalibration(locEventLoop);
+	if (jcalib) {
+		CCDB_CONTEXT_STRING = jcalib->GetContext();
+	}
+
     CDC_TAG = "Calib";
-    gPARMS->SetDefaultParameter("HDDMOUT:CDCTAG", CDC_TAG, "Tag (string) to use when selecting CDC hits to read out.");
+    app->SetDefaultParameter("HDDMOUT:CDCTAG", CDC_TAG, "Tag (string) to use when selecting CDC hits to read out.");
     
     FDC_TAG = "";
-    gPARMS->SetDefaultParameter("HDDMOUT:FDCTAG", FDC_TAG, "Tag (string) to use when selecting FDC hits to read out.");
+    app->SetDefaultParameter("HDDMOUT:FDCTAG", FDC_TAG, "Tag (string) to use when selecting FDC hits to read out.");
     
-    TAGM_TAG = "Calib";
-    gPARMS->SetDefaultParameter("HDDMOUT:TAGMTAG", TAGM_TAG, "Tag (string) to use when selecting TAGM hits to read out.");
+    TAGM_TAG = "";
+    app->SetDefaultParameter("HDDMOUT:TAGMTAG", TAGM_TAG, "Tag (string) to use when selecting TAGM hits to read out.");
 
-    TAGH_TAG = "Calib";
-    gPARMS->SetDefaultParameter("HDDMOUT:TAGHTAG", TAGH_TAG, "Tag (string) to use when selecting TAGH hits to read out.");
+    TAGH_TAG = "";
+    app->SetDefaultParameter("HDDMOUT:TAGHTAG", TAGH_TAG, "Tag (string) to use when selecting TAGH hits to read out.");
 }
 
-bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutputFileNameSubString) const
+bool DEventWriterHDDM::Write_HDDMEvent(const std::shared_ptr<const JEvent>& locEventLoop, string locOutputFileNameSubString) const
 {
   
 	vector<const DCDCHit*> CDCHits;
@@ -111,8 +109,8 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	hddm_s::HDDM* record = new hddm_s::HDDM;
 	record->addPhysicsEvents();
 	hddm_s::PhysicsEvent* pe = &record->getPhysicsEvent();
-	pe->setEventNo(locEventLoop->GetJEvent().GetEventNumber());
-	pe->setRunNo(locEventLoop->GetJEvent().GetRunNumber());
+	pe->setEventNo(locEventLoop->GetEventNumber());
+	pe->setRunNo(locEventLoop->GetRunNumber());
 	//add a HitView which is necessary to create and save all of the data
 	pe->addHitViews();
 	hddm_s::HitView* hitv = &pe->getHitView();
@@ -643,6 +641,51 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 
 
 
+	//========================================ECAL=========================================================
+
+
+	for(uint i=0; i<ECALHits.size(); ++i)
+	  {
+	    if(i == 0)
+	      {
+			hitv->addCrystalEcals();
+		}
+		bool found = false;
+		//ECAL only has one hit per block per event so we need not search
+		hddm_s::EcalBlockList* ECAL_BlockList = &hitv->getCrystalEcal().getEcalBlocks();
+		hddm_s::EcalBlockList::iterator ECAL_BlockIterator = ECAL_BlockList->begin();
+
+		for(ECAL_BlockIterator = ECAL_BlockList->begin(); ECAL_BlockIterator != ECAL_BlockList->end(); ECAL_BlockIterator++)
+				{
+					if(ECALHits[i]->row==ECAL_BlockIterator->getRow() && ECALHits[i]->column==ECAL_BlockIterator->getColumn())
+					{
+						found=true;
+						break;
+					}
+				}
+
+		if(found==false)
+		{
+			hitv->getCrystalEcal().addEcalBlocks();
+			ECAL_BlockIterator=ECAL_BlockList->end()-1;
+			ECAL_BlockIterator->setColumn(ECALHits[i]->column);
+			ECAL_BlockIterator->setRow(ECALHits[i]->row);            
+		}
+
+
+		ECAL_BlockIterator->addEcalHits();
+		hddm_s::EcalHitList* ECAL_HitList = &ECAL_BlockIterator->getEcalHits();
+		hddm_s::EcalHitList::iterator ECAL_HitIterator = ECAL_HitList->end()-1;
+		ECAL_HitIterator->setT(ECALHits[i]->t);
+		ECAL_HitIterator->setE(ECALHits[i]->E);
+
+
+	}
+
+
+
+
+
 	//========================================CCAL=========================================================
 
 	for(uint i=0; i<CCALHits.size(); ++i)
@@ -761,7 +804,9 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	for(uint i=0; i<RFtimes.size(); ++i)
 	{
 		hddm_s::RFtimeList nextRF = hitv->addRFtimes();
-		nextRF(0).setJtag(RFtimes[i]->GetTag());
+		// nextRF(0).setJtag(RFtimes[i]->GetTag());
+		nextRF(0).setJtag("");
+		// TODO: NWB: When would this be anything other than the empty tag?
 		nextRF(0).setTsync(RFtimes[i]->dTime);
 	}
 
@@ -772,11 +817,12 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 		for(uint it=0; it < RFtags.size(); ++it)
 		{
 			vector<const DRFTime*> RFsubsys;
-			locEventLoop->Get(RFsubsys, RFtags[it].c_str());
+			auto tag = RFtags[it];
+			locEventLoop->Get(RFsubsys, tag);
 			for(uint i=0; i < RFsubsys.size(); ++i)
 			{
 				hddm_s::RFsubsystemList nextRF = mainRF(0).addRFsubsystems();
-				nextRF(0).setJtag(RFsubsys[i]->GetTag());
+				nextRF(0).setJtag(tag);
 				nextRF(0).setTsync(RFsubsys[i]->dTime);
 			}
 		}
@@ -833,23 +879,23 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	  }
 	//=============================================FMWPC================================================
 	for(uint i=0;i<FMWPCHits.size();++i)
-	  {
+	{
 	    if(i==0)
-	      {
+	    {
 	      hitv->addForwardMWPCs();
-	      }
+	    }
 	    bool foundChamber=false;
 	    hddm_s::FmwpcChamberList* FMWPC_ChamberList = &hitv->getForwardMWPC().getFmwpcChambers();
 	    hddm_s::FmwpcChamberList::iterator FMWPC_ChamberIterator = FMWPC_ChamberList->begin();
 	    for(FMWPC_ChamberIterator = FMWPC_ChamberList->begin(); FMWPC_ChamberIterator != FMWPC_ChamberList->end(); FMWPC_ChamberIterator++)
-	      {
-		if(FMWPCHits[i]->layer == FMWPC_ChamberIterator->getLayer() &&
-		   FMWPCHits[i]->wire == FMWPC_ChamberIterator->getWire())
-		  {
-		    foundChamber = true;
-		    break;
-		  }
-	      }
+	    {
+	      if(FMWPCHits[i]->layer == FMWPC_ChamberIterator->getLayer() &&
+		 FMWPCHits[i]->wire == FMWPC_ChamberIterator->getWire())
+		{
+		  foundChamber = true;
+		  break;
+		}
+	    }
 	    if(foundChamber == false)
 	      {
 		hitv->getForwardMWPC().addFmwpcChambers();
@@ -861,7 +907,14 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	    hddm_s::FmwpcHitList* fmwpchitl=&FMWPC_ChamberIterator->getFmwpcHits();
 	    hddm_s::FmwpcHitList::iterator fmwpchitit=fmwpchitl->end()-1;
 	    fmwpchitit->setT(FMWPCHits[i]->t);
-	  }
+	    fmwpchitit->addFmwpcHitQs();
+	    fmwpchitit->getFmwpcHitQs().begin()->setQ(FMWPCHits[i]->q);
+	    fmwpchitit->addFmwpcDigiHits();
+	    fmwpchitit->getFmwpcDigiHits().begin()->setAmp(FMWPCHits[i]->amp);
+	    fmwpchitit->getFmwpcDigiHits().begin()->setPed(FMWPCHits[i]->ped);
+	    fmwpchitit->getFmwpcDigiHits().begin()->setQf(FMWPCHits[i]->QF);
+    
+	}
 	
 
 	//*fout << *record; //stream the new record into the file
@@ -875,6 +928,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	TOFHits.clear();
 	FCALHits.clear();
 	ECALHits.clear();
+	ECALHits.clear();
 	CCALHits.clear();
 	SCHits.clear();
 	BCALDigiHits.clear();
@@ -887,6 +941,8 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	TPOLHits.clear();
 	RFtimes.clear();
 	DIRCPmtHits.clear();
+	FMWPCHits.clear();
+	CTOFHits.clear();
 	FMWPCHits.clear();
 	CTOFHits.clear();
 
@@ -903,14 +959,14 @@ string DEventWriterHDDM::Get_OutputFileName(string locOutputFileNameSubString) c
 
 bool DEventWriterHDDM::Write_HDDMEvent(string locOutputFileName, hddm_s::HDDM& locRecord) const
 {
-	japp->WriteLock("HDDMWriter");
+	lockService->WriteLock("HDDMWriter");
 	{
 		//check to see if the HDDM file is open
 		if(Get_HDDMOutputFilePointers().find(locOutputFileName) != Get_HDDMOutputFilePointers().end())
 		{
 			//open: get pointer, write event
 			hddm_s::ostream* locOutputHDDMFileStream = Get_HDDMOutputFilePointers()[locOutputFileName].second;
-			japp->Unlock("HDDMWriter");
+			lockService->Unlock("HDDMWriter");
 			*(locOutputHDDMFileStream) << locRecord;
 			return true;
 		}
@@ -922,7 +978,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(string locOutputFileName, hddm_s::HDDM& l
 		{
 			//failed to open
 			delete locHDDMFilePointers.first;
-			japp->Unlock("HDDMWriter");
+			lockService->Unlock("HDDMWriter");
 			return false;
 		}
 		locHDDMFilePointers.second = new hddm_s::ostream(*locHDDMFilePointers.first);
@@ -952,19 +1008,19 @@ bool DEventWriterHDDM::Write_HDDMEvent(string locOutputFileName, hddm_s::HDDM& l
 		//store the stream pointers
 		Get_HDDMOutputFilePointers()[locOutputFileName] = locHDDMFilePointers;
 	}
-	japp->Unlock("HDDMWriter");
+	lockService->Unlock("HDDMWriter");
 
 	return true;
 }
 
 DEventWriterHDDM::~DEventWriterHDDM(void)
 {
-	japp->WriteLock("HDDMWriter");
+	lockService->WriteLock("HDDMWriter");
 	{
 		--Get_NumEventWriterThreads();
 		if(Get_NumEventWriterThreads() > 0)
 		{
-			japp->Unlock("HDDMWriter");
+			lockService->Unlock("HDDMWriter");
 			return; //not the last thread writing to HDDM files
 		}
 
@@ -981,7 +1037,7 @@ DEventWriterHDDM::~DEventWriterHDDM(void)
 		}
 		Get_HDDMOutputFilePointers().clear();
 	}
-	japp->Unlock("HDDMWriter");
+	lockService->Unlock("HDDMWriter");
 }
 
 int32_t DEventWriterHDDM::Convert_UnsignedIntToSigned(uint32_t locUnsignedInt) const

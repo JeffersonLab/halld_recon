@@ -1,0 +1,194 @@
+How to make lookup tables with beam helicities.
+Ken Livingston (kliv@jlab.org) July 2025.
+
+*Background*
+For GlueX data before 2025, delayed reporting was in operation, and the helicity
+associated with any event had to be worked out by grabbing 30 bits 
+of helicity flip data from the stream to figure out the seed of the pseudo-random generator.
+This was done using the 4 logic signals from the helicity generator
+(t_settle, helicity, pair_sync, pattern_sync).
+
+A dedicated plugin was written to make log file which could be used to generate lookup tables.
+This was intended as a temporary measure, and the aim was to move this plugin to a factory
+and have a getHelicity() function avaiable.
+
+In 2025 a helicity decoder board was installed. This provides the helicity directly, and
+obviates the need for the more complicated method. Phew!
+
+There's only one run period where the decoded information was missing - that's Jan2023.
+That one needs to be done with plugins and lookup tables.
+Later runs could also be sampled, I suppose, to confirm that there's agreement between helicities
+from the tables, and those from the decoder board.
+Here, I'll focus on how to make the tables for the 2023 data, and add some comments on how to apply to
+later data.
+
+*Concept*
+For each run we need to find the events where the helicity pair_sync changes state,
+and use the information from the helicity logic signals, together with the history, to work out the
+current helicity, which remains the same until the next pair_sync change.
+This is made complicated in the plugin, and, as it turns out, not possible in the factory
+because:
+a) data is stored simultaneously in 2 parallel files
+b) analysis is usually done muti-threaded.
+Hence events are not in order in the .evio files.
+Rather, they are mixed up a bit and overlapping between pairs of files.
+
+The easiest was to get round this is to do the following:
+1) Make log files from each .evio file
+run hd_root with the BEAM_Helicity plugin on each file in the run to make many helicity log files.
+These logs contain a line for each event where the pair_sync has flipped from it's previous state.
+Each line contains the following:
+Event No
+Trig Time
+t_settle     
+t_pattern_sync              
+t_pair_sync
+t_helicity
+HWP                         #taken from EPICS database
+HelPred                     #predicted delayed helicity (to be compared with t_helicity)         
+fHelNow                     #predicted current helicity
+fHelDiff                    #diff between predicted delayed and t_helicity     
+(int)(fEventRate/1000)      #approx relative event rate                                  
+f_beam_on                   #not reliable                                
+Helicity                    #Actual helicity, incorporating HPW.
+
+These logs can be used directly to make lookup tables, by just using Event No and Helicity.
+However, parallel pairs of files first need to be merged and sorted into event order before
+concatenating all tables into one big run table. This has the disadantage that the first 10% of each
+file is lost since it needs to be used to gather the 30 bit seed. The better alternative is
+to process all the basic data from the saved logic signals (t_xxx above) from all the log files
+in order, effectively repeating what is done in the plugin, but preserving the 30 bit seed over file
+transitions, and not losing the 10%.
+Additionally, the t_settle signal was missing in the Jan23 data, so this provides the opportunity to
+use the timing information to fake the t_settle, and set Helicty to invalid for events close to a transition.
+
+It turns out that this is not as trivial as it sounds.
+1. all the logs for a run must be avaialable, and in the same directory.
+2. parallel pairs of logs must be joined and sorted in event order
+   eg log_000.txt and log_001.txt -> log_000_001_sorted.txt  ...... however
+3. The events numbers also overlap between sets of parallel files!
+   eg some events numbers at the start of log_002_003.sorted are earlier than event
+   numbers at the end of log_000_001.sorted.
+   To get round this, parallel pairs are deal with in descending order.
+   Eg if there are 90 logs (000-089), last pair are dealt with first -> log_088_089.sorted.txt
+   The first 20,000 lines are removed from log_088_089.sorted.txt -> temp_head.txt and sorted
+   together with then next pair (86,87) ...... and so on down to 0,1.
+4. All the sorted files are processed in ascending order, by a root macro, which is similar to the plugin
+   described above, and produces an output file with lines similar to those above. The required lookup table
+   is then extracted from there.
+
+
+*How to make the lookup tables*
+The scripts, source code etc are in the git repo under halld_recon/src/plugins/monitoring/HELI_online/
+
+1. When running batch jobs, include hd_root with the appropriate plugin.
+   eg. >hd_root -PPLUGINS=HELI_online,EPICS_dump -PHELI:VERBOSE=2 ..........
+   This will produce helicity.log.
+
+2. All the log files need to be gathered in directories labelled by run number:
+   >ls -d 120*
+   120286  120326  120389  120418  120467  120538  120577  120654  120686  120722  120762  120798  120840  120892  120956
+   120287  120327  120390  120419  120472  120539  120578  120656  120687  120723  120763  120799  120842  120893  120957
+   ....
+
+   and the log files should be in the appropriated directory labelled by run and file number: like this:
+   
+   >ls 120286/*_???.log
+   120286/hd_rawdata_120286_000.log  120286/hd_rawdata_120286_096.log  120286/hd_rawdata_120286_192.log
+   120286/hd_rawdata_120286_001.log  120286/hd_rawdata_120286_097.log  120286/hd_rawdata_120286_193.log
+   120286/hd_rawdata_120286_002.log  120286/hd_rawdata_120286_098.log  120286/hd_rawdata_120286_194.log
+   ....
+   
+3. Make the tables for a single run like this:
+   ./makeDoubleLogNoSeed.sh 120286/hd_rawdata_120286 0 287
+
+   Where the arguments 0 287 are the first and last file numbers
+
+   This should produce a bunch of sorted pair files like this: hd_rawdata_120286_000_001_sorted.log
+   plus some other temporary files, and the actual helicity lookup table for the run:
+   120286/hd_rawdata_120286.HelTable.txt
+    
+4. Make a script using your unix utilities (awk,sh,bc ....) which runs all the jobs, Then edit it as needed.
+   more >more makeAllLogsBatch.sh
+   #!/bin/sh
+   # Comment out those where HWP changed mid run, or undetermined.
+   # Run 8 in parallel - hence the missing & every 8th file.
+   #./makeDoubleLogNoSeed.sh 120472/hd_rawdata_120472 0 099 > hd_rawdata_120472.stdouterr &
+   #./makeDoubleLogNoSeed.sh 120477/hd_rawdata_120477 0 035 > hd_rawdata_120477.stdouterr &
+   #./makeDoubleLogNoSeed.sh 120485/hd_rawdata_120485 0 015 > hd_rawdata_120485.stdouterr &
+   #./makeDoubleLogNoSeed.sh 120486/hd_rawdata_120486 0 003 > hd_rawdata_120486.stdouterr &
+   #./makeDoubleLogNoSeed.sh 120488/hd_rawdata_120488 0 067 > hd_rawdata_120488.stdouterr &
+   #./makeDoubleLogNoSeed.sh 120526/hd_rawdata_120526 0 083 > hd_rawdata_120526.stdouterr &
+   #./makeDoubleLogNoSeed.sh 120528/hd_rawdata_120528 0 081 > hd_rawdata_120528.stdouterr &
+   #./makeDoubleLogNoSeed.sh 120529/hd_rawdata_120529 0 081 > hd_rawdata_120529.stdouterr 
+   ./makeDoubleLogNoSeed.sh 120530/hd_rawdata_120530 0 071 > hd_rawdata_120530.stdouterr &
+   ./makeDoubleLogNoSeed.sh 120531/hd_rawdata_120531 0 091 > hd_rawdata_120531.stdouterr &
+   ./makeDoubleLogNoSeed.sh 120532/hd_rawdata_120532 0 075 > hd_rawdata_120532.stdouterr &
+   ./makeDoubleLogNoSeed.sh 120533/hd_rawdata_120533 0 153 > hd_rawdata_120533.stdouterr &
+   ./makeDoubleLogNoSeed.sh 120534/hd_rawdata_120534 0 147 > hd_rawdata_120534.stdouterr &
+   .....
+
+   I've edited to run 8 in parallel on the Glasgow computer, rather than run as a farm job.
+   It takes about 30 min to make the table from a standard length run.
+
+5. Gather all the helicity tables in one directory with sensible names: Eg in HelTables
+   >ls HelTables
+   getHel.C             HelTable_120420.txt  HelTable_120604.txt  HelTable_120737.txt  HelTable_120855.txt  HelTable_121069.txt
+   HelTable_120286.txt  HelTable_120421.txt  HelTable_120605.txt  HelTable_120739.txt  HelTable_120856.txt  HelTable_121070.txt
+   HelTable_120287.txt  HelTable_120436.txt  HelTable_120606.txt  HelTable_120740.txt  HelTable_120857.txt  HelTable_121072.txt
+   HelTable_120288.txt  HelTable_120437.txt  HelTable_120607.txt  HelTable_120741.txt  HelTable_120879.txt  HelTable_121073.txt
+   ....
+
+
+*Using the lookup tables*
+   The tables have lines corresponding to events where the helicity or pair sync changed:
+   Each line contains:
+   Event no,  helicity(-1,0,1),   HV plate (-1,0,1)
+   Where 0 represents invalid in both cases.
+   eg.
+   >more HelTables/HelTable_120286.txt
+   321040 1 -1
+   323655 0 -1
+   323666 -1 -1
+   326253 0 -1
+   326271 -1 -1
+   328953 0 -1
+   ....
+
+   The getHel.C script can be used by users to get the helicity for any event from the table.
+   eg.
+   hel  =  getHel(run, event)
+
+   The 3rd column in the table is only needed if someone wants to remove the effect of the HW plate from the helicity value
+   eg to use "naked helicity") and apply HWP later from a database.
+
+*Modifications for generating tables to check Helicity Decoded data. (ie 2025 onwards)*
+   Modifications are needed because the ordering of the 4 digital signals in ADCs is different.
+   Changes are needed to:
+   ./makeDoubleLogNoSeed.sh   - comment in / out as required
+   #For old data before decoder board                          
+   awk 'BEGIN{ls=-1}{if($5!=ls){print$1,$2;ls=$5;lt=$2}}' $(<$sortedlist) > $syncfile
+   #For new data after decoder board
+   #awk 'BEGIN{ls=-1}{if($3!=ls){print$1,$2;ls=$3;lt=$2}}' $(<$sortedlist) > $syncfile
+
+   and
+
+   makeBigTableNoSeed.C - comment in / out as required
+
+  //  For old data before decoder board.
+  f_t_settle     = locBH[0];
+  f_pattern_sync = locBH[1];               
+  f_pair_sync    = locBH[2];
+  f_helicity     = locBH[3];                  
+  f_ihwp         = locBH[4];
+  //fEventRate     = 1000*locBH[8];
+  f_beam_on      = locBH[9];
+  //For new data after decoder board ... if we ever need to do it this way
+  //f_t_settle     = locBH[2];
+  //f_pattern_sync = locBH[3];               
+  //f_pair_sync    = locBH[0];
+  //f_helicity     = locBH[1];                  
+  //f_ihwp         = locBH[4];
+  ////fEventRate     = 1000*locBH[8];
+  //f_beam_on      = locBH[9];
+

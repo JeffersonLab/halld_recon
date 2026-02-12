@@ -8,10 +8,12 @@
 #include "DVertex_factory.h"
 #include <vector>
 
+#include "DANA/DEvent.h"
+
 //------------------
-// init
+// Init
 //------------------
-jerror_t DVertex_factory::init(void)
+void DVertex_factory::Init()
 {
 	dKinFitDebugLevel = 0;
 	dMinTrackingFOM = 5.73303E-7;
@@ -19,15 +21,14 @@ jerror_t DVertex_factory::init(void)
 	dForceTargetCenter = false;
 	dUseKLongVertex = false;
 	
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DVertex_factory::brun(jana::JEventLoop* locEventLoop, int32_t runnumber)
+void DVertex_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	dKinFitUtils = new DKinFitUtils_GlueX(locEventLoop);
+	dKinFitUtils = new DKinFitUtils_GlueX(event);
 	dKinFitter = new DKinFitter(dKinFitUtils);
 	dKinFitUtils->Set_UpdateCovarianceMatricesFlag(false);
 
@@ -38,42 +39,41 @@ jerror_t DVertex_factory::brun(jana::JEventLoop* locEventLoop, int32_t runnumber
 	dTargetRadius = 1.5; //FIX: grab from database!!!
 	m_beamSpotX = 0;
 	m_beamSpotY = 0;
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	
+	DGeometry* locGeometry = DEvent::GetDGeometry(event);
 	locGeometry->GetTargetZ(dTargetZCenter);
 	locGeometry->GetTargetLength(dTargetLength);
-	jana::JCalibration *jcalib = japp->GetJCalibration(locEventLoop->GetJEvent().GetRunNumber());
+	
+	JCalibration *jcalib = DEvent::GetJCalibration(event);
 	std::map<string, float> beam_spot;
 	jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
 	m_beamSpotX = beam_spot.at("x");
 	m_beamSpotY = beam_spot.at("y");
 
-	gPARMS->SetDefaultParameter("VERTEX:USE_TARGET_CENTER", dForceTargetCenter);
-	gPARMS->SetDefaultParameter("VERTEX:NO_KINFIT_FLAG", dNoKinematicFitFlag);
-	gPARMS->SetDefaultParameter("VERTEX:DEBUGLEVEL", dKinFitDebugLevel);
-	gPARMS->SetDefaultParameter("VERTEX:USE_KLONG_VERTEX", dUseKLongVertex);
-
+	JApplication* app = event->GetJApplication();
+	app->SetDefaultParameter("VERTEX:USE_TARGET_CENTER", dForceTargetCenter);
+	app->SetDefaultParameter("VERTEX:NO_KINFIT_FLAG", dNoKinematicFitFlag);
+	app->SetDefaultParameter("VERTEX:DEBUGLEVEL", dKinFitDebugLevel);
+	app->SetDefaultParameter("VERTEX:USE_KLONG_VERTEX", dUseKLongVertex);
 
 	dKinFitter->Set_DebugLevel(dKinFitDebugLevel);
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
-
-	return NOERROR;
+	event->GetSingle(dAnalysisUtilities);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DVertex_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
+void DVertex_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	if(dUseKLongVertex) {
 		vector<const DVertex *> locKLongVertices;
-		locEventLoop->Get(locKLongVertices, "KLong");
+		event->Get(locKLongVertices, "KLong");
 		for(auto vertex : locKLongVertices) {
 			DVertex *vertexCopy = new DVertex(*vertex);
-			_data.push_back(vertexCopy);
+			Insert(vertexCopy);
 		}
-		return NOERROR;
+		return;
 	}
  
 	//preferentially (kinematic fit):
@@ -82,24 +82,26 @@ jerror_t DVertex_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
 		//if no tracks, use target center
 
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	locEventLoop->Get(locTrackTimeBasedVector);
+	event->Get(locTrackTimeBasedVector);
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	event->GetSingle(locEventRFBunch);
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	event->GetSingle(locDetectorMatches);
 
 	// give option for just using the target center, e.g. if the magnetic
 	// field is off and/or tracking is otherwise not working well
-	if(dForceTargetCenter)
-		return Create_Vertex_NoTracks(locEventRFBunch);
+	if(dForceTargetCenter) {
+		Create_Vertex_NoTracks(locEventRFBunch);
+		return; // TODO: Verify no throw needed
+	}
 
 	//select the best DTrackTimeBased for each track: use best tracking FOM
-	map<JObject::oid_t, const DTrackTimeBased*> locBestTrackTimeBasedMap; //lowest tracking chisq/ndf for each candidate id
+	map<oid_t, const DTrackTimeBased*> locBestTrackTimeBasedMap; //lowest tracking chisq/ndf for each candidate id
 	for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
 	{
-		JObject::oid_t locCandidateID = locTrackTimeBasedVector[loc_i]->candidateid;
+		oid_t locCandidateID = locTrackTimeBasedVector[loc_i]->candidateid;
 		if(locBestTrackTimeBasedMap.find(locCandidateID) == locBestTrackTimeBasedMap.end())
 			locBestTrackTimeBasedMap[locCandidateID] = locTrackTimeBasedVector[loc_i];
 		else if(locTrackTimeBasedVector[loc_i]->FOM > locBestTrackTimeBasedMap[locCandidateID]->FOM)
@@ -107,7 +109,7 @@ jerror_t DVertex_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
 	}
 
 	//separate the tracks based on high/low tracking FOM & has hit-match
-	map<JObject::oid_t, const DTrackTimeBased*>::iterator locIterator;
+	map<oid_t, const DTrackTimeBased*>::iterator locIterator;
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector_OnePerTrack, locTrackTimeBasedVector_OnePerTrack_Good;
 	for(locIterator = locBestTrackTimeBasedMap.begin(); locIterator != locBestTrackTimeBasedMap.end(); ++locIterator)
 	{
@@ -120,17 +122,23 @@ jerror_t DVertex_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
 	vector<const DTrackTimeBased*> locTrackTimeBasedVectorToUse = (locTrackTimeBasedVector_OnePerTrack_Good.size() >= 2) ? locTrackTimeBasedVector_OnePerTrack_Good : locTrackTimeBasedVector_OnePerTrack;
 
 	//handle cases of no/one track
-	if(locTrackTimeBasedVectorToUse.empty())
-		return Create_Vertex_NoTracks(locEventRFBunch);
-	if(locTrackTimeBasedVectorToUse.size() == 1)
-		return Create_Vertex_OneTrack(locTrackTimeBasedVectorToUse[0], locEventRFBunch);
+	if(locTrackTimeBasedVectorToUse.empty()) {
+		Create_Vertex_NoTracks(locEventRFBunch);
+		return; // TODO: Verify
+	}
+	if(locTrackTimeBasedVectorToUse.size() == 1) {
+		Create_Vertex_OneTrack(locTrackTimeBasedVectorToUse[0], locEventRFBunch);
+		return; // TODO: Verify
+	}
 
 	// first calculate a rough vertex
 	DVector3 locRoughPosition = dAnalysisUtilities->Calc_CrudeVertex(locTrackTimeBasedVectorToUse);
 
 	// if only want rough guess, save it and exit
-	if(dNoKinematicFitFlag || (locTrackTimeBasedVectorToUse[0]->errorMatrix() == nullptr))
-		return Create_Vertex_Rough(locRoughPosition, locEventRFBunch);
+	if(dNoKinematicFitFlag || (locTrackTimeBasedVectorToUse[0]->errorMatrix() == nullptr)) {
+		Create_Vertex_Rough(locRoughPosition, locEventRFBunch);
+		return; // TODO: Verify
+	}
 
 	//prepare for kinematic fit
 	dKinFitUtils->Reset_NewEvent();
@@ -147,11 +155,14 @@ jerror_t DVertex_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
 	dKinFitter->Add_Constraint(locVertexConstraint);
 
 	// fit, save, and return
-	if(!dKinFitter->Fit_Reaction()) //if fit fails to converge: use rough results
-		return Create_Vertex_Rough(locRoughPosition, locEventRFBunch);
+	if(!dKinFitter->Fit_Reaction()) {
+		//if fit fails to converge: use rough results
+		Create_Vertex_Rough(locRoughPosition, locEventRFBunch);
+		return; // TODO: Verify
+	}
 
 	//save kinfit results
-	return Create_Vertex_KinFit(locEventRFBunch);
+	Create_Vertex_KinFit(locEventRFBunch);
 }
 
 jerror_t DVertex_factory::Create_Vertex_NoTracks(const DEventRFBunch* locEventRFBunch)
@@ -169,7 +180,7 @@ jerror_t DVertex_factory::Create_Vertex_NoTracks(const DEventRFBunch* locEventRF
 	locVertex->dCovarianceMatrix(2, 2) = dTargetLength*dTargetLength/12.0; //z variance
 	locVertex->dCovarianceMatrix(3, 3) = locEventRFBunch->dTimeVariance; //t variance
 
-	_data.push_back(locVertex);
+	Insert(locVertex);
 	return NOERROR;
 }
 
@@ -197,7 +208,7 @@ jerror_t DVertex_factory::Create_Vertex_OneTrack(const DTrackTimeBased* locTrack
 		locVertex->dCovarianceMatrix(3, 3) = locEventRFBunch->dTimeVariance; //t variance
 	}
 
-	_data.push_back(locVertex);
+	Insert(locVertex);
 	return NOERROR;
 }
 
@@ -218,7 +229,7 @@ jerror_t DVertex_factory::Create_Vertex_Rough(DVector3 locPosition, const DEvent
 	locVertex->dCovarianceMatrix(2, 2) = 1.5; //z variance //a guess, semi-guarding against the worst case scenario //ugh
 	locVertex->dCovarianceMatrix(3, 3) = locEventRFBunch->dTimeVariance; //t variance
 
-	_data.push_back(locVertex);
+	Insert(locVertex);
 	return NOERROR;
 }
 
@@ -262,7 +273,7 @@ jerror_t DVertex_factory::Create_Vertex_KinFit(const DEventRFBunch* locEventRFBu
 		locVertex->dKinFitPulls[locSourceJObject] = locMapIterator->second;
 	}
 
-	_data.push_back(locVertex);
+	Insert(locVertex);
 
 	return NOERROR;
 }

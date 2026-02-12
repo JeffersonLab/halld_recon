@@ -8,107 +8,78 @@
 #ifndef _DFCALGeometry_
 #define _DFCALGeometry_
 
-#include <JANA/JFactory.h>
 #include <JANA/JObject.h>
-using namespace jana;
 
 #include "DVector2.h"
 #include "units.h"
 #include <HDGEOMETRY/DGeometry.h>
 
-class DFCALGeometry : public JObject {
-
-  /*
-#define kBlocksWide 59
-#define kBlocksTall 59
-#define kMaxChannels kBlocksWide * kBlocksTall
-// Do not forget to adjust below formula if number of blocks chage in any direction:
-//   this is now used to convert from row/col to coordiantes y/x and back - MK
-#define kMidBlock (kBlocksWide-1)/2 			
-#define kBeamHoleSize 3
-  */
-
+class DFCALGeometry: public JObject {
 public:
+  JOBJECT_PUBLIC(DFCALGeometry);
+  
+  DFCALGeometry(const DGeometry *geom);
+  ~DFCALGeometry(){}
+  
+  // these numbers are fixed for the FCAL as constructed
+  // it probably doesn't make sense to retrieve them
+  // from a database as they aren't going to change unless
+  // the detector is reconstructed
+  
+  enum { kBlocksWide = 59 };
+  enum { kBlocksTall = 59 };
+  enum { kMaxChannels = kBlocksWide * kBlocksTall };
+  enum { kMidBlock = ( kBlocksWide - 1 ) / 2 };
+  enum { kBeamHoleSize = 3 }; // Before adding insert for FCAL-2
+
+  static double blockSize()  { return 4.0157*k_cm; }
+  static double radius()  { return 1.20471*k_m; }
+  static double blockLength()  { return 45.0*k_cm; }
+  
+  bool isBlockActive( int row, int column ) const;
+  bool isBlockActive(int channel) const {
+    return isBlockActive(row(channel),column(channel));
+  }
+  int numChannels() const {return m_numChannels;}
 	
-	JOBJECT_PUBLIC(DFCALGeometry);
+  DVector2 positionOnFace( int row, int column ) const;
+  DVector2 positionOnFace( int channel ) const;
+  double fcalFrontZ() const {return m_FCALfront;}
 
-	DFCALGeometry(const DGeometry *geom);
-	~DFCALGeometry(){}
+  int channel( int row, int column ) const;
+  
+  int row   ( int channel ) const { return m_row[channel];    }
+  int column( int channel ) const { return m_column[channel]; }
 
-	// these numbers are fixed for the FCAL as constructed
-	// it probably doesn't make sense to retrieve them
-	// from a database as they aren't going to change unless
-	// the detector is reconstructed
+  // get row and column from x and y positions
+  int y_to_row   ( float y ) const;
+  int x_to_column( float x ) const;
 
-	enum { kBlocksWide = 59 };
-	enum { kBlocksTall = 59 };
-	enum { kMaxChannels = 4* kBlocksWide * kBlocksTall };
-	enum { kMidBlock = ( kBlocksWide - 1 ) / 2 };
-	enum { kBeamHoleSize = 3 };
-
-	static double blockSize()  { return 4.0157*k_cm; }
-	static double insertBlockSize()  { return 2.09*k_cm; }
-	static double radius()  { return 1.20471*k_m; }
-	static double blockLength()  { return 45.0*k_cm; }
-	static double insertBlockLength()  { return 20.0*k_cm; }
-	//	static double fcalFaceZ()  { return 625.3*k_cm; }
-
-	//        static double fcalMidplane() { return fcalFaceZ() + 0.5 * blockLength() ; } 
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add((int)kBlocksWide, "kBlocksWide", "%d");
+    summary.add((int)kBlocksTall, "kBlocksTall", "%d");
+    summary.add((int)kMaxChannels, "kMaxChannels", "%d");
+    summary.add((int)kBeamHoleSize, "kBeamHoleSize", "%2.3f");
+  }
 	
-	bool isBlockActive( int row, int column ) const;
-	bool isBlockActive(int channel) const {
-	  return isBlockActive(row(channel),column(channel));
-	}
-	bool isInsertBlock(int row,int column) const;
-	bool isFiducial(double x,double y) const;
-	unsigned int numChannels() const {return m_numChannels;}
-	
-	DVector2 positionOnFace( int row, int column ) const;
-	DVector2 positionOnFace( int channel ) const;
-	double fcalFrontZ() const {return m_FCALfront;}
-	double insertFrontZ() const {return m_insertFront;}
-	double insertSize() const {return m_insertSize;}
+protected:
+  bool   m_activeBlock[kBlocksTall][kBlocksWide];
+  DVector2 m_positionOnFace[kBlocksTall][kBlocksWide];
 
-	bool inInsert(int channel) const;
-	int channel( int row, int column ) const;
-	int channel(double x,double y) const;
-	bool hitPairHasInsertHit(int row1, int row2) const;
+  int    m_channelNumber[kBlocksTall][kBlocksWide];
+  int    m_row[kMaxChannels];
+  int    m_column[kMaxChannels];
+  int m_numChannels;
 
-	int row   ( int channel ) const { return m_row[channel];    }
-	int column( int channel ) const { return m_column[channel]; }
-	
-	// get row and column from x and y positions
-	int row   ( float y, bool in_insert=false ) const;
-	int column( float x, bool in_insert=false ) const;
-
-	void toStrings(vector<pair<string,string> > &items) const {
-	  AddString(items, "kBlocksWide", "%d", (int)kBlocksWide);
-	  AddString(items, "kBlocksTall", "%d", (int)kBlocksTall);
-	  AddString(items, "kMaxChannels", "%d", (int)kMaxChannels);
-	  AddString(items, "kBeamHoleSize", "%2.3f", (int)kBeamHoleSize);
-	}
-	
-
- protected:
-	bool   m_activeBlock[2*kBlocksTall][2*kBlocksWide];
-	DVector2 m_positionOnFace[2*kBlocksTall][2*kBlocksWide];
-
-	int    m_channelNumber[2*kBlocksTall][2*kBlocksWide];
-	int    m_row[kMaxChannels];
-	int    m_column[kMaxChannels];
-	int m_numChannels;
-
-	int m_insertRowSize=0,m_insertMidBlock=0;
-	double m_insertSize=0.;
-	
-	// global offsets
-	double m_FCALdX,m_FCALdY,m_FCALfront,m_insertFront;
-	// global rotation angles
-	double m_FCALthetaX,m_FCALthetaY,m_FCALthetaZ;
+  // global offsets
+  double m_FCALdX,m_FCALdY,m_FCALfront;
+  // global rotation angles
+  double m_FCALthetaX,m_FCALthetaY,m_FCALthetaZ;
 
  private:
-	DFCALGeometry(){};// force use of constructor with arguments.
-	
+  void GetGridGeometry(const DGeometry *geom);
+  void GetSurveyGeometry(const DGeometry *geom);
+  DFCALGeometry(){};// force use of constructor with arguments.
 };
 
 #endif // _DFCALGeometry_

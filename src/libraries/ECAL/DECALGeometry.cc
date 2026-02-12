@@ -1,102 +1,88 @@
 // $Id$
 //
-/*
- *  File: DECALHit_factory.h
- *
- *  Created on 01/16/2024 by A.S.  
- */
+//    File: DECALGeometry.cc
+// Created: Tue Mar 25 04:27:18 PM EDT 2025
+// Creator: staylor (on Linux ifarm2401.jlab.org 5.14.0-503.19.1.el9_5.x86_64 x86_64)
+//
 
-
-#include <cassert>
-#include <math.h>
 using namespace std;
 
 #include "DECALGeometry.h"
-#include "DVector2.h"
 
 //---------------------------------
-// DECALGeometry    (Constructor)
+// DFCALGeometry    (Constructor)
 //---------------------------------
-DECALGeometry::DECALGeometry() : 
-  m_numActiveBlocks( 0 ){
+DECALGeometry::DECALGeometry(const DGeometry *geom, JCalibration *calib){
+  // Find position of upstream face of FCAL
+  double fcal_z_front=0.;
+  geom->GetFCALPosition(m_FCALx,m_FCALy,fcal_z_front);
+
+  // Find the size of the sensitive volume of each PWO crystal
+  vector<double>block;
+  geom->Get("//box[@name='XTBL']/@X_Y_Z",block);
+  m_sensitiveBlockSize=block[0];
   
-        for( int row = 0; row < kECALBlocksTall; row++ ){
-	  for( int col = 0; col < kECALBlocksWide; col++ ){
-      
-	    // transform to beam axis
-	    m_positionOnFace[row][col] = 
-	      DVector2(  ( (double)col - kECALMidBlock  + 0.5 ) * blockSize(),
-			 ( (double)row - kECALMidBlock + 0.5 ) * blockSize() );
-	    
-	    m_activeBlock[row][col] = true;
-      
-	    // build the "channel map"
-	    m_channelNumber[row][col]    =  m_numActiveBlocks;
-	    m_row[m_numActiveBlocks]     =  row;
-	    m_column[m_numActiveBlocks]  =  col;
-	    
-	    m_numActiveBlocks++;
-	  }
-	}
-}
+  // Get the z-position of the upstream face of the insert
+  geom->GetECALZ(m_insertFrontZ);
 
-bool
-DECALGeometry::isBlockActive( int row, int column ) const
-{
-	// I'm inserting these lines to effectively disable the
-	// two assert calls below. They are causing all programs
-	// (hd_dump, hdview) to exit, even when I'm not interested
-	// in the FCAL. This does not fix the underlying problem
-	// of why we're getting invalid row/column values.
-	// 12/13/05  DL
-	if( row < 0 ||  row >= kECALBlocksTall )return false;
-	if( column < 0 ||  column >= kECALBlocksWide )return false;
+  // Get some small x and y offsets for individual blocks
+  vector<map<string,double>>xy_offsets;
+  vector<double>x_offsets,y_offsets;
+  if (calib->Get("/ECAL/alignment",xy_offsets)==false){
+    for (unsigned int i=0;i<xy_offsets.size();i++){
+      map<string,double> &row=xy_offsets[i];
+      x_offsets.push_back(row["dx"]);
+      y_offsets.push_back(row["dy"]);
+    }
+  }
+  
+  // Initialize active block map
+  int ch=0;
+  for( int row = 0; row < kECALBlocksTall; row++ ){
+    for( int col = 0; col < kECALBlocksWide; col++ ){
+      m_activeBlock[row][col]=false;
+      m_channelNumber[row][col]=ch;
+      m_row[ch]=row;
+      m_column[ch]=col;
+      ch++;
+    }
+  }
+  
+  // extract the positions of the PWO crystals
+  for( int i = 0; i < 42; i++ ){
+    string my_row_string="XTrow"+to_string(i);
+    string my_mpos_string="//composition[@name='"+my_row_string
+      +"']/mposX[@volume='XTModule']/";
+    int ncopy=0;
+    double x0=0,dx=0.;
+    geom->Get(my_mpos_string+"@ncopy",ncopy);
+    geom->Get(my_mpos_string+"@X0",x0);
+    geom->Get(my_mpos_string+"@dX",dx);
+    string my_pos_string="//posXYZ[@volume='"+my_row_string+"']/";
+    vector<double>pos;
+    geom->Get(my_pos_string+"@X_Y_Z",pos);  
+    vector<double>rot;
+    geom->Get(my_pos_string+"@rot",rot);
+    double phi=rot[2]*M_PI/180.;
+    int col0=0,my_row=i;
+    if (i>=40){ //handle right side of beam hole
+      col0=21;
+      my_row=i-21;
+    }
+    for (int col=col0;col<col0+ncopy;col++){
+      double offset_x=x_offsets[m_channelNumber[my_row][col]];
+      double offset_y=y_offsets[m_channelNumber[my_row][col]];
+      double x=m_FCALx+x0+double(col-col0)*dx-offset_x;
+      double y=m_FCALy+pos[1]+phi*x-offset_y; //use small angle approximation
 
-	assert(    row >= 0 &&    row < kECALBlocksTall );
-	assert( column >= 0 && column < kECALBlocksWide );
-	
-	return m_activeBlock[row][column];	
-}
-
-int
-DECALGeometry::row( float y ) const 
-{	
-	return static_cast<int>( y / blockSize() + kECALMidBlock );
-}
-
-int
-DECALGeometry::column( float x ) const 
-{	
-	return static_cast<int>( x / blockSize() + kECALMidBlock );
-}
-
-DVector2
-DECALGeometry::positionOnFace( int row, int column ) const
-{ 
-	assert(    row >= 0 &&    row < kECALBlocksTall );
-	assert( column >= 0 && column < kECALBlocksWide );
-	
-	return m_positionOnFace[row][column]; 
-}
-
-DVector2
-DECALGeometry::positionOnFace( int channel ) const
-{
-	assert( channel >= 0 && channel < m_numActiveBlocks );
-	
-	return positionOnFace( m_row[channel], m_column[channel] );
-}
-
-int
-DECALGeometry::channel( int row, int column ) const
-{
-	if( isBlockActive( row, column ) ){
-		
-		return m_channelNumber[row][column]; 
-	}
-	else{
-		
-		cerr << "ERROR: request for channel number of inactive block!" << endl;
-		return -1;
-	}
+      m_positionOnFace[my_row][col].Set(x,y);
+      m_activeBlock[my_row][col] = true;
+    }
+  }
+  
+  // outer dimensions
+  m_xmax=m_positionOnFace[39][39].X()+0.5*blockSize();
+  m_xmin=m_positionOnFace[0][0].X()-0.5*blockSize();
+  m_ymax=m_positionOnFace[39][39].Y()+0.5*blockSize();
+  m_ymin=m_positionOnFace[0][0].Y()-0.5*blockSize();
 }

@@ -8,18 +8,17 @@
 #include "JEventProcessor_CDC_PerStrawReco.h"
 #include "PID/DChargedTrack.h"
 #include "TRACKING/DTrackTimeBased.h"
-#include "HistogramTools.h"
+#include "DANA/DEvent.h"
 
-using namespace jana;
+#include <TDirectory.h>
+
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_CDC_PerStrawReco());
+    app->Add(new JEventProcessor_CDC_PerStrawReco());
 }
 } // "C"
 
@@ -30,7 +29,7 @@ static const double binwidth = 0.005;
 //------------------
 JEventProcessor_CDC_PerStrawReco::JEventProcessor_CDC_PerStrawReco()
 {
-
+	SetTypeName("JEventProcessor_CDC_PerStrawReco");
 }
 
 //------------------
@@ -47,28 +46,28 @@ enum {
 };
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_CDC_PerStrawReco::init(void)
+void JEventProcessor_CDC_PerStrawReco::Init()
 {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
 
     EXCLUDERING=0;
-    if (gPARMS){
-        gPARMS->SetDefaultParameter("CDCCOSMIC:EXCLUDERING", EXCLUDERING, "Ring Excluded from the fit");
-        gPARMS->SetDefaultParameter("KALMAN:RING_TO_SKIP", EXCLUDERING);
-    }
+    app->SetDefaultParameter("CDCCOSMIC:EXCLUDERING", EXCLUDERING, "Ring Excluded from the fit");
+    app->SetDefaultParameter("KALMAN:RING_TO_SKIP", EXCLUDERING);
     if(EXCLUDERING == 0 ){
         jout << "Did not set CDCCOSMIC:EXCLUDERING on the command line -- Using Biased fits" << endl;
     }
 
 
-    return NOERROR;
+    return; //NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_CDC_PerStrawReco::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 
 	int numrings = 28;
@@ -86,8 +85,7 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 //         135,135,146,146,158,158,170,170,182,182,197,197,
 //         209,209};
 
-    DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-    JCalibration *jcalib = dapp->GetJCalibration(runnumber);
+    JCalibration *jcalib = GetJCalibration(event);
     // This is called whenever the run number changes
     // Get the straw sag parameters from the database
     unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
@@ -118,7 +116,7 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
     }
 
  	// make histograms here, since we need the sag information
-    japp->RootWriteLock();
+    lockService->RootWriteLock();
     if(hResiduals.size() == 0) {
     
 		vector<TH1F*> empty_h1d;
@@ -420,27 +418,29 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 		main->cd();
 		
     }
-    japp->RootUnLock();
+    lockService->RootUnLock();
 
 
-    return NOERROR;
+    return; //NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_CDC_PerStrawReco::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_CDC_PerStrawReco::Process(const std::shared_ptr<const JEvent>& event)
 {
     // Getting the charged tracks will allow us to use the field on data
     vector <const DChargedTrack *> chargedTrackVector;
-    loop->Get(chargedTrackVector);
+    event->Get(chargedTrackVector);
 
+    lockService->RootFillLock(this);
+    
     for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
 
         const DChargedTrackHypothesis* bestHypothesis = chargedTrackVector[iTrack]->Get_BestTrackingFOM();
 
         // Require Single track events
-        //if (trackCandidateVector.size() != 1) return NOERROR;
+        //if (trackCandidateVector.size() != 1) return;
         //const DTrackCandidate* thisTrackCandidate = trackCandidateVector[0];
         // Cut very loosely on the track quality
         auto thisTimeBasedTrack = bestHypothesis->Get_TrackTimeBased();
@@ -533,27 +533,26 @@ jerror_t JEventProcessor_CDC_PerStrawReco::evnt(JEventLoop *loop, uint64_t event
 
         } 
     }
-    return NOERROR;
+
+    lockService->RootFillUnLock(this);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_CDC_PerStrawReco::erun(void)
+void JEventProcessor_CDC_PerStrawReco::EndRun()
 {
    // This is called whenever the run number changes, before it is
    // changed to give you a chance to clean up before processing
    // events from the next run number.
-   return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_CDC_PerStrawReco::fini(void)
+void JEventProcessor_CDC_PerStrawReco::Finish()
 {
    // Called before program exit after event processing is finished.
    //SortDirectories();
-   return NOERROR;
 }
 

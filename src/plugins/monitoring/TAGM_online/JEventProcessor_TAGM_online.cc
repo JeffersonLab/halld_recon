@@ -11,10 +11,8 @@
 
 
 #include "JEventProcessor_TAGM_online.h"
-#include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 #include <TAGGER/DTAGMHit.h>
 #include <TAGGER/DTAGMDigiHit.h>
@@ -142,7 +140,7 @@ static TH1F *tagmCol9, *tagmCol27, *tagmCol81, *tagmCol99;
 extern "C"{
   void InitPlugin(JApplication *app) {
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_TAGM_online());
+    app->Add(new JEventProcessor_TAGM_online());
   }
 }
 
@@ -151,6 +149,7 @@ extern "C"{
 
 
 JEventProcessor_TAGM_online::JEventProcessor_TAGM_online() {
+	SetTypeName("JEventProcessor_TAGM_online");
 }
 
 
@@ -163,8 +162,10 @@ JEventProcessor_TAGM_online::~JEventProcessor_TAGM_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_TAGM_online::init(void) {
+void JEventProcessor_TAGM_online::Init() {
 
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 
   // create root folder for tagm and cd to it, store main dir
   TDirectory *main = gDirectory;
@@ -562,23 +563,23 @@ jerror_t JEventProcessor_TAGM_online::init(void) {
   // back to main dir
   main->cd();
 
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TAGM_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_TAGM_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
   // This is called whenever the run number changes
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TAGM_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_TAGM_online::Process(const std::shared_ptr<const JEvent>& event) {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
   // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -588,13 +589,13 @@ jerror_t JEventProcessor_TAGM_online::evnt(JEventLoop *eventLoop, uint64_t event
   std::vector<const DTAGMDigiHit*> digihits;             // FADC250 DigiHits
   std::vector<const DTAGMTDCDigiHit*> tdcdigihits;       // F1TDC DigiHits
   std::vector<const DTAGMHit*> hits;                     // hits
-  eventLoop->Get(digihits);
-  eventLoop->Get(tdcdigihits);
-  eventLoop->Get(hits, "Calib");
+  event->Get(digihits);
+  event->Get(tdcdigihits);
+  event->Get(hits, "Calib");
 
-	// FILL HISTOGRAMS
-	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  // FILL HISTOGRAMS
+  // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
+  lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   // Histogram the total number of events
   if( (digihits.size()>0) || (tdcdigihits.size()>0) )
@@ -883,29 +884,29 @@ jerror_t JEventProcessor_TAGM_online::evnt(JEventLoop *eventLoop, uint64_t event
     }
   }
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TAGM_online::erun(void) {
+void JEventProcessor_TAGM_online::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TAGM_online::fini(void) {
+void JEventProcessor_TAGM_online::Finish() {
   // Called before program exit after event processing is finished.
-  return NOERROR;
+  return;
 }
 
 

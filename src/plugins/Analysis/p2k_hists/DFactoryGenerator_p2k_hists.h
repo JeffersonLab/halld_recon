@@ -8,21 +8,19 @@
 #ifndef _DFactoryGenerator_p2k_hists_
 #define _DFactoryGenerator_p2k_hists_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_p2k_hists.h"
 
-class DFactoryGenerator_p2k_hists : public jana::JFactoryGenerator
+class DFactoryGenerator_p2k_hists : public JFactoryGenerator
 {
 	public:
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DFactoryGenerator_p2k_hists";}
-		
-		jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
+
+        void GenerateFactories(JFactorySet* fs) override
 		{
-			locEventLoop->AddFactory(new DReaction_factory_p2k_hists());
-			return NOERROR;
+			fs->Add(new DReaction_factory_p2k_hists());
 		}
 };
 

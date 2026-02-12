@@ -14,15 +14,15 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_cpp_hists()); //register this plugin
-		locApplication->AddFactoryGenerator(new DFactoryGenerator_cpp_hists()); //register the factory generator
+		locApplication->Add(new DEventProcessor_cpp_hists()); //register this plugin
+		locApplication->Add(new DFactoryGenerator_cpp_hists()); //register the factory generator
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_cpp_hists::init(void)
+void DEventProcessor_cpp_hists::Init(void)
 {
 	// This is called once at program startup.
 
@@ -33,23 +33,23 @@ jerror_t DEventProcessor_cpp_hists::init(void)
 	dEventStoreSkimStream << "IDXA" << endl;
 	*/
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_cpp_hists::brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber)
+void DEventProcessor_cpp_hists::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_cpp_hists::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_cpp_hists::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
@@ -89,7 +89,7 @@ jerror_t DEventProcessor_cpp_hists::evnt(jana::JEventLoop* locEventLoop, uint64_
 		//Getting these objects triggers the analysis, if it wasn't performed already. 
 		//These objects contain the DParticleCombo objects that survived the DAnalysisAction cuts that were added to the DReactions
 	vector<const DAnalysisResults*> locAnalysisResultsVector;
-	locEventLoop->Get(locAnalysisResultsVector);
+	locEvent->Get(locAnalysisResultsVector);
        
 	  
 	/************************************************** OPTIONAL: FURTHER ANALYSIS **************************************************/
@@ -175,22 +175,22 @@ jerror_t DEventProcessor_cpp_hists::evnt(jana::JEventLoop* locEventLoop, uint64_
 	}
 	*/
 
-	return NOERROR;
+	return;
 }
 
-int DEventProcessor_cpp_hists::Get_FileNumber(JEventLoop* locEventLoop) const
+int DEventProcessor_cpp_hists::Get_FileNumber(const std::shared_ptr<const JEvent>& locEvent) const
 {
 	//Assume that the file name is in the format: *_X.ext, where:
 		//X is the file number (a string of numbers of any length)
 		//ext is the file extension (probably .evio or .hddm)
 
 	//get the event source
-	JEventSource* locEventSource = locEventLoop->GetJEvent().GetJEventSource();
+	JEventSource* locEventSource = locEvent->GetJEventSource();
 	if(locEventSource == NULL)
 		return -1;
 
 	//get the source file name (strip the path)
-	string locSourceFileName = locEventSource->GetSourceName();
+	string locSourceFileName = GetResourceName();
 
 	//find the last "_" & "." indices
 	size_t locUnderscoreIndex = locSourceFileName.rfind("_");
@@ -209,24 +209,24 @@ int DEventProcessor_cpp_hists::Get_FileNumber(JEventLoop* locEventLoop) const
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_cpp_hists::erun(void)
+void DEventProcessor_cpp_hists::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_cpp_hists::fini(void)
+void DEventProcessor_cpp_hists::Finish()
 {
 	// Called before program exit after event processing is finished.
 	if(dEventStoreSkimStream.is_open())
 		dEventStoreSkimStream.close();
-	return NOERROR;
+	return;
 }
 

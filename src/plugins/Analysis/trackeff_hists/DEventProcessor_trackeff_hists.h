@@ -17,9 +17,9 @@ using std::map;
 #include <TH1.h>
 #include <TH2.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
 #include <PID/DKinematicData.h>
 #include <TRACKING/DMCTrackHit.h>
@@ -44,11 +44,11 @@ class DEventProcessor_trackeff_hists:public JEventProcessor{
 
 
 	private:
-		jerror_t init(void);	///< Invoked via DEventProcessor virtual method
-		jerror_t brun(JEventLoop *loop, int32_t runnumber);
-		jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via DEventProcessor virtual method
-		jerror_t erun(void);					///< Invoked via DEventProcessor virtual method
-		jerror_t fini(void);					///< Invoked via DEventProcessor virtual method
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		void FillTrackInfo(const DKinematicData *kd, vector<track_info> &vti);
 		void GetTrackInfo(const DKinematicData *kd, track_info &ti, int &track_no);

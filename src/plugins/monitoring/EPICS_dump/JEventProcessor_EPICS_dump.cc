@@ -17,14 +17,13 @@
 #include "TH2I.h"
 
 #include "JEventProcessor_EPICS_dump.h"
-#include <JANA/JApplication.h>
 
 #include "TRIGGER/DL1Trigger.h"
+#include <DANA/DEvent.h>
 #include <DANA/DStatusBits.h>
 #include "DAQ/DEPICSvalue.h"
 
 using namespace std;
-using namespace jana;
 
 #include <TDirectory.h>
 #include <TH1.h>
@@ -32,6 +31,7 @@ using namespace jana;
 
 // root hist pointers
 static TH1I* h1epics_AD00 = NULL;
+static TH1I* h1epics_IHWP = NULL;
 static TH2I* h2epics_pos_inner = NULL;
 static TH2I* h2epics_pos_outer = NULL;
 static TH1F* h1epics_AD00_VSevent = NULL;
@@ -44,7 +44,7 @@ static TH1F* h1epics_entries_VSevent = NULL;
 extern "C"{
   void InitPlugin(JApplication *locApplication){
     InitJANAPlugin(locApplication);
-    locApplication->AddProcessor(new JEventProcessor_EPICS_dump());
+    locApplication->Add(new JEventProcessor_EPICS_dump());
   }
 }
 
@@ -53,6 +53,7 @@ extern "C"{
 
 
 JEventProcessor_EPICS_dump::JEventProcessor_EPICS_dump() {
+	SetTypeName("JEventProcessor_EPICS_dump");
 }
 
 
@@ -65,12 +66,15 @@ JEventProcessor_EPICS_dump::~JEventProcessor_EPICS_dump() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_EPICS_dump::init(void) {
+void JEventProcessor_EPICS_dump::Init() {
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
 	// First thread to get here makes all histograms. If one pointer is
 	// already not NULL, assume all histograms are defined and return now
 	if(h1epics_AD00 != NULL){
-		return NOERROR;
+		return;
 	}
 	
 	// create root folder for trig and cd to it, store main dir
@@ -83,6 +87,10 @@ jerror_t JEventProcessor_EPICS_dump::init(void) {
 	h1epics_AD00 = new TH1I("h1epics_AD00", "Current AD00",nbins,0,500);
 	h1epics_AD00->SetXTitle("Current AD00 (nA)");
 	h1epics_AD00->SetYTitle("counts");
+
+	h1epics_IHWP = new TH1I("h1epics_IHWP", "Insertable Halfwave Plate (IGL1I00DI24_24M)", 2, 0, 2);	
+      	h1epics_IHWP->GetXaxis()->SetBinLabel(1,"in");
+	h1epics_IHWP->GetXaxis()->SetBinLabel(2,"out");
 	
 	h2epics_pos_inner = new TH2I("h1epics_pos_inner", "Position AC inner",nbins,-10,10,nbins,-10,10);
 	h2epics_pos_inner->SetXTitle("Position AC inner x (mm)");
@@ -102,39 +110,41 @@ jerror_t JEventProcessor_EPICS_dump::init(void) {
 	// back to main dir
 	main->cd();
 	
-	return NOERROR;
+	return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_EPICS_dump::brun(jana::JEventLoop* locEventLoop, int locRunNumber) {
+void JEventProcessor_EPICS_dump::BeginRun(const std::shared_ptr<const JEvent>& t) {
   // This is called whenever the run number changes
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_EPICS_dump::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber) {
+void JEventProcessor_EPICS_dump::Process(const std::shared_ptr<const JEvent> &locEvent) {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
 	// loop-Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
+
+	auto locEventNumber = locEvent->GetEventNumber();
 	
 	vector<const DEPICSvalue*> epicsvalues;
-	locEventLoop->Get(epicsvalues);	
+	locEvent->Get(epicsvalues);	
 
-	bool isEPICS = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT);
+	bool isEPICS = GetStatusBit(locEvent, kSTATUS_EPICS_EVENT);
 	if(!isEPICS)
-	  return NOERROR;
+	  return;
 	
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	
 	// process EPICS records
 	//printf (" Event=%d is an EPICS record\n",(int)locEventNumber);
@@ -177,6 +187,9 @@ jerror_t JEventProcessor_EPICS_dump::evnt(jana::JEventLoop* locEventLoop, uint64
 			h1epics_entries_VSevent->Fill((float)locEventNumber);
 			//cout << "IBCAD00CRCUR6 " << epics_val->name << " fconv=" << fconv << endl; 
 		}
+		else if (epics_val->name == "IGL1I00DI24_24M") {
+			h1epics_IHWP->Fill(iconv);
+		}
 		else if (epics_val->name == "AC:inner:position:x") {
 			xpos_inner = fconv;
 	        }  
@@ -197,29 +210,29 @@ jerror_t JEventProcessor_EPICS_dump::evnt(jana::JEventLoop* locEventLoop, uint64
 		h2epics_pos_outer->Fill(xpos_outer,ypos_outer);
 	}
 	
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 	
-	return NOERROR;
+	return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_EPICS_dump::erun(void) {
+void JEventProcessor_EPICS_dump::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_EPICS_dump::fini(void) {
+void JEventProcessor_EPICS_dump::Finish() {
   // Called before program exit after event processing is finished.
-  return NOERROR;
+  return;
 }
 
 

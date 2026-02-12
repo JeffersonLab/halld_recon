@@ -1,7 +1,10 @@
 
 #include "DTRDStripCluster_factory.h"
 
-bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
+#include <JANA/JEvent.h>
+#include "DTRDHit.h"
+
+static bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
   if (a->plane==b->plane){
     return a->t < b->t;
   }
@@ -15,11 +18,11 @@ bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
 /// their strip (wire or strip) numbers. Typically only used for a single layer
 /// of hits.
 ///
-bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
-	if(a->strip != b->strip) return a->strip < b->strip;
-	if(a->t       != b->t      ) return a->t < b->t;
-	return a->pulse_height < b->pulse_height;
-}
+// static bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
+// 	if(a->strip != b->strip) return a->strip < b->strip;
+// 	if(a->t       != b->t      ) return a->t < b->t;
+// 	return a->pulse_height < b->pulse_height;
+// }
 
 ///
 /// DTRDHit_time_cmp()
@@ -28,18 +31,18 @@ bool DTRDHit_strip_cmp(const DTRDHit* a, const DTRDHit* b) {
 /// significant.
 ///
 
-bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) {
-  if (fabs(a->t-b->t)>HIT_TIME_DIFF_MIN && (a->t < b->t))
-    return true;
-  return false;
-}
+// static bool DTRDHit_time_cmp(const DTRDHit* a, const DTRDHit* b) {
+//   if (fabs(a->t-b->t)>HIT_TIME_DIFF_MIN && (a->t < b->t))
+//     return true;
+//   return false;
+// }
 
 ///
 /// DTRDStripCluster_gPlane_cmp():
 /// a non-member function passed to std::sort() for sorting DTRDStripCluster pointers
 /// by their gPlane (plane number over all modules, 1-74) attributes.
 ///
-bool DTRDStripCluster_gPlane_cmp(	const DTRDStripCluster* a, 
+static bool DTRDStripCluster_gPlane_cmp(	const DTRDStripCluster* a, 
 					const DTRDStripCluster* b) {
 	return a->plane < b->plane;
 }
@@ -47,123 +50,266 @@ bool DTRDStripCluster_gPlane_cmp(	const DTRDStripCluster* a,
 ///
 /// Initialization
 ///
-jerror_t DTRDStripCluster_factory::init(void){
-  TIME_SLICE=200.0; //ns
-  gPARMS->SetDefaultParameter("TRD:CLUSTER_TIME_SLICE",TIME_SLICE);
-  return NOERROR;	
+void DTRDStripCluster_factory::Init()
+{
+	auto app = GetApplication();
+
+	MINIMUM_HITS_FOR_CLUSTERING = 10;
+    app->SetDefaultParameter("TRDCLUSTER:MINIMUM_HITS_FOR_CLUSTERING",MINIMUM_HITS_FOR_CLUSTERING);
+
+	CLUSTERING_THRESHOLD = 1.2;
+    app->SetDefaultParameter("TRDCLUSTER:CLUSTERING_THRESHOLD",CLUSTERING_THRESHOLD);
+
+	eps = 20.0;
+	minPts = 6;
+	min_total_q = 0.0;
+
+	app->SetDefaultParameter("TRDCLUSTER:DBSCAN_EPS",eps,"DBSCAN epsilon value (default: 20.0)");
+	app->SetDefaultParameter("TRDCLUSTER:DBSCAN_MINPTS",minPts,"DBSCAN minimum number of points (default: 6)");
+	app->SetDefaultParameter("TRDCLUSTER:MIN_TOTAL_Q",min_total_q,"Minimum total energy for a cluster (default: 0.0)");
+
+    return;	
 }
+
+///
+/// DTRDStripCluster_factory::StripToPosition():
+/// calculate position along plane
+///
+double DTRDStripCluster_factory::StripToPosition(int iplane, const DTRDHit *hit)
+{
+  // better to pull this from CCDB, also probably the pitch as well
+  if(iplane == 0) {
+    return -1.*STRIP_PITCH*double(NUM_X_STRIPS/2-hit->strip+0.5);
+  }
+  return STRIP_PITCH*double(NUM_Y_STRIPS/2-hit->strip+0.5);
+}
+
 
 ///
 /// DTRDStripCluster_factory::evnt():
 /// This (along with DTRDStripCluster_factory::pique()) 
 /// is the place cathode hits are associated into cathode clusters.  
 ///
-jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo) {
-	vector<const DTRDHit*> allHits;
-	vector<const DTRDHit*> planeHits[3];
-	vector<vector<const DTRDHit*> >thisLayer;
-	
-	eventLoop->Get(allHits);
-	
-	if (allHits.size()>0) {
-		// Sort hits by layer number and by time
-		sort(allHits.begin(),allHits.end(),DTRDHit_cmp);
-		
-		// Sift through all hits and select out X and Y hits.
-		for (vector<const DTRDHit*>::iterator i = allHits.begin(); i != allHits.end(); ++i){
-			if ((*i)->plane == 0 || (*i)->plane == 4) continue;
-			int stripPlane = (*i)->plane - 1;
-			if(stripPlane > 2) stripPlane -= 3;
-			if( (stripPlane<0) || (stripPlane>=3) ){
-				static int Nwarn = 0;
-				if( Nwarn<10 ){
-					jerr << " stripPlane is outside of array bounds!! stripPlane="<< stripPlane << std::endl;
-					if( ++Nwarn==10 )jerr << " LAST WARNING!" << std::endl;
-				}
-				continue;
-			}
-			planeHits[stripPlane].push_back(*i);
-		} 
+void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& event) 
+{
+  vector<DTRDStripCluster*> results;
 
-		// Plane by plane, create clusters of strips
-		for(uint iplane = 0; iplane < 3; iplane++) {
-			if (planeHits[iplane].size()>0){
-				thisLayer.clear();
-				vector<const DTRDHit*>::iterator i = planeHits[iplane].begin();	      
-				vector<const DTRDHit*> hits;	
-				float old_time=(*i)->t;
-				while(i!=planeHits[iplane].end()){ 
-					// Look for hits falling within a time slice
-					if (fabs((*i)->t-old_time)>TIME_SLICE){
-						// Sort hits by strip number
-						sort(hits.begin(),hits.end(),DTRDHit_strip_cmp);
-						// put into the vector
-						thisLayer.push_back(hits);
-						hits.clear();
-						old_time=(*i)->t;
-					}
-					hits.push_back(*i);
-					
-					i++;
-				}
-				
-				// Sort hits by strip number
-				sort(hits.begin(),hits.end(),DTRDHit_strip_cmp);
-				// add the last vector of hits
-				thisLayer.push_back(hits);
-				
-				// Create clusters from these lists of hits
-				for (unsigned int k=0;k<thisLayer.size();k++) pique(thisLayer[k]);
-				
-				// Clear the hits and layer vectors for the next ones
-				thisLayer.clear();	
-				hits.clear();
-			}
-		}
-
-		// Ensure that the data are still in order of planes.
-		std::sort(_data.begin(), _data.end(), DTRDStripCluster_gPlane_cmp);
-	}
+  vector<const DTRDHit*> allHits;
+  vector<const DTRDHit*> planeHits[2];
+  
+  event->Get<DTRDHit>(allHits);
+  
+  if (allHits.size() == 0) 
+    return;
+  
+  // require a minimum number of hits
+  if (static_cast<int>(allHits.size()) < MINIMUM_HITS_FOR_CLUSTERING) {
+    return;
+  }
+  
+  // Sort hits by layer number and by time
+  sort(allHits.begin(),allHits.end(),DTRDHit_cmp);
+  
+  // Sift through all hits and select out X and Y hits.
+  // Also apply the raw hit analysis
+  for (vector<const DTRDHit*>::iterator i = allHits.begin(); i != allHits.end(); ++i) {
+    // sort hits
+    int stripPlane = (*i)->plane-1;
+    //int strip = (*i)->strip-1;
+    if( (stripPlane<0) || (stripPlane>=2) ){ // only two planes
+      static int Nwarn = 0;
+      if( Nwarn<10 ){
+		jerr << " stripPlane is outside of array bounds!! stripPlane="<< stripPlane << std::endl;
+		if( ++Nwarn==10 )jerr << " LAST WARNING!" << std::endl;
+      }
+      continue;
+    }
+    planeHits[stripPlane].push_back(*i);
+    
+  }
+  
+  // cout << "Event " << eventNo << " has " << allHits.size() << " hits" << endl;
+  // cout << "Number of hits in plane 1: " << planeHits[0].size() << endl;
+  // cout << "Number of hits in plane 2: " << planeHits[1].size() << endl;
+  
+  // do the clustering
+  
+  for(uint iplane = 0; iplane < 2; iplane++) {
+    
+    if(planeHits[iplane].size()>0){			
+      map<int,vector<Point>> time_slices;
+      
+      for(size_t ihit=0; ihit < planeHits[iplane].size(); ihit++) {
+	const DTRDHit* hit = planeHits[iplane][ihit];
+ 	
+	// const float CL_DIST=2.7; // mm
 	
-	return NOERROR;	
+	double c1 = hit->q;          // energy
+	if (c1 < CLUSTERING_THRESHOLD) continue;
+				
+	double x1=hit->t;         // UPDATE: probably need to convert
+	double y1=StripToPosition(iplane, hit);
+	int time_slice=static_cast<int>(hit->t);
+	
+	// cout << "Hit " << ihit << " in plane " << iplane+1 << " has energy " << c1 << " and position " << y1 << endl;
+	
+	time_slices[time_slice].emplace_back(hit, x1, y1, c1);
+      }
+      for (auto const& ts: time_slices){
+	vector<Point>points=ts.second;
+	DBSCAN(points, eps, minPts);
+	const int NClusters = GetNCluster(points);
+	// cout << "Number of clusters: " << NClusters << endl;
+	for (int iClusterId=1; iClusterId<=NClusters; iClusterId++) {
+	  if (GetTotalClusterEnergy(points, iClusterId) < min_total_q) continue;
+	  
+	  // make a new cluster
+	  DTRDStripCluster *new_cluster = new DTRDStripCluster;
+	  new_cluster->plane = iplane+1;
+	  new_cluster->q_tot = GetTotalClusterEnergy(points, iClusterId);
+	  pair<double,double> centroid = GetClusterCentroid(points, iClusterId);
+	  new_cluster->t_avg = centroid.first;
+	  new_cluster->num_hits = GetClusterNHits(points, iClusterId);
+	  
+	  Point p_max_q = GetMaxQPoint(points, iClusterId);
+	  new_cluster->q_max = p_max_q.weight;
+	  new_cluster->t_max = p_max_q.x;
+	  
+	  if (iplane==0)	{
+	    new_cluster->pos.SetXYZ(centroid.second, 0, 0);
+	    new_cluster->pos_max.SetXYZ(p_max_q.y, 0, 0);
+	  }
+	  else {
+	    new_cluster->pos.SetXYZ(0, centroid.second, 0);
+	    new_cluster->pos_max.SetXYZ(0, p_max_q.y, 0);
+	  }
+	  for (auto &point : points) {
+	    if (point.clusterId == iClusterId) {
+	      new_cluster->members.push_back(point.hit);
+	      new_cluster->AddAssociatedObject(point.hit);
+	    }
+	  }
+	  results.push_back(new_cluster);
+	} //----------- end  clustering loop ---------------
+      }
+    }
+  }
+    
+  // Ensure that the data are still in order of planes.
+  std::sort(results.begin(), results.end(), DTRDStripCluster_gPlane_cmp);
+  
+  Set(results);
+  
+  return;	
 }			
 
-//-----------------------------
-// pique
-//-----------------------------
-void DTRDStripCluster_factory::pique(vector<const DTRDHit*>& H)
-{
-	/// Find clusters within GEM plane.
-	///
-	/// Upon entry, the vector "H" should already be sorted
-	/// by strip number and should only contains hits from
-	/// the same plane that are in time with each other.
-	/// This will form clusters from all contiguous strips.
 
-	// Loop over hits
-	for(uint32_t istart=0; istart<H.size(); istart++){
-		const DTRDHit *first_hit = H[istart];
-		
-		// Find end of contiguous section
-		uint32_t iend=istart+1;
-		for(; iend<H.size(); iend++){
-			if(iend>=H.size()) break;
-			if( (H[iend]->strip - H[iend-1]->strip) > 1 ) break;
+void DTRDStripCluster_factory::DBSCAN(vector<Point> &points, double eps, int minPts)
+{
+	int clusterId = 1;
+	for (auto &point : points) {
+		if (!point.visited) {
+			point.visited = true;
+			ExpandCluster(points, point, clusterId, eps, minPts);
+			if (point.clusterId == clusterId) {
+				clusterId++;
+			}
 		}
-		if( (iend-istart)<2 ) continue; // don't allow single strip clusters
-		
-		// istart should now point to beginning of cluster 
-		// and iend to one past end of cluster
-		DTRDStripCluster* newCluster = new DTRDStripCluster();
-		newCluster->q_tot   = 0.0;
-		newCluster->plane   = first_hit->plane;
-		for(uint32_t i=istart; i<iend; i++){
-			newCluster->q_tot += H[i]->pulse_height;
-			newCluster->members.push_back(H[i]);
-		}
-		_data.push_back(newCluster);
-		
-		istart = iend-1;
 	}
 }
 
+void DTRDStripCluster_factory::ExpandCluster(vector<Point> &points, Point &point, int clusterId, double eps, int minPts)
+{
+	vector<Point*> seeds;
+	for (auto &p : points) {
+		if (PointsDistance(point, p) <= eps) {
+			seeds.push_back(&p);
+		}
+	}
+
+	if (seeds.size() < static_cast<size_t>(minPts)) {
+		point.clusterId = 0; // Mark as noise
+		return;
+	}
+
+	for (auto &seed : seeds) {
+		seed->clusterId = clusterId;
+	}
+
+	seeds.erase(remove(seeds.begin(), seeds.end(), &point), seeds.end());
+
+	while (!seeds.empty()) {
+		Point *current = seeds.back();
+		seeds.pop_back();
+
+		if (!current->visited) {
+			current->visited = true;
+
+			vector<Point*> result;
+			for (auto &p : points) {
+				if (PointsDistance(*current, p) <= eps) {
+					result.push_back(&p);
+				}
+			}
+
+			if (result.size() >= static_cast<size_t>(minPts)) {
+				for (auto &res : result) {
+					if (res->clusterId == -1 || res->clusterId == 0) {
+						if (res->clusterId == -1) {
+							seeds.push_back(res);
+						}
+						res->clusterId = clusterId;
+					}
+				}
+			}
+		}
+	}
+}
+
+pair<double,double> DTRDStripCluster_factory::GetClusterCentroid(vector<Point> &points, int clusterId)
+{
+	double sumX = 0;
+	double sumY = 0;
+	double count = 0;
+	for (auto &point : points) {
+		if (point.clusterId == clusterId) {
+			sumX += point.x*point.weight;
+			sumY += point.y*point.weight;
+			count+=point.weight;
+		}
+	}
+	return make_pair(sumX/count, sumY/count);
+}
+
+int DTRDStripCluster_factory::GetNCluster(vector<Point> &points)
+{
+	int nCluster = 0;
+	for (auto &point : points) {
+		if (point.clusterId > nCluster) {
+			nCluster = point.clusterId;
+		}
+	}
+	return nCluster;
+}
+
+int DTRDStripCluster_factory::GetClusterNHits(vector<Point> &points, int clusterId)
+{
+	int nHits = 0;
+	for (auto &point : points) {
+		if (point.clusterId == clusterId) {
+			nHits++;
+		}
+	}
+	return nHits;
+}
+
+float DTRDStripCluster_factory::GetTotalClusterEnergy(vector<Point> &points, int clusterId)
+{
+	float totalEnergy = 0;
+	for (auto &point : points) {
+		if (point.clusterId == clusterId) {
+			totalEnergy += point.weight;
+		}
+	}
+	return totalEnergy;
+}

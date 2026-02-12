@@ -11,21 +11,41 @@
 #include <JANA/JEventProcessor.h>
 #include "TH3I.h"
 #include "TProfile.h"
+#include "TProfile2D.h"
+#include "TH2F.h"
+#include <vector>
 
-class JEventProcessor_FDC_InternalAlignment:public jana::JEventProcessor{
+// Convenience methods for GlueX services
+#include <DANA/DEvent.h>
+
+using namespace std;
+
+class JEventProcessor_FDC_InternalAlignment:public JEventProcessor{
 	public:
 		JEventProcessor_FDC_InternalAlignment();
 		~JEventProcessor_FDC_InternalAlignment();
 		const char* className(void){return "JEventProcessor_FDC_InternalAlignment";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
       TH3I *Hist3D[24];
       TProfile *HistCurrentConstants;
+  
+  		std::shared_ptr<JLockService> lockService;
+    
+      vector<TH2F *> hWireT0s;
+      vector<TProfile2D *> hWirePositions;
+      
+      vector<TH2F *> hCathodeUProjections;
+      vector<TH2F *> hCathodeVProjections;
+      vector<TH2F *> hCathodeUProjections_Pos;
+      vector<TH2F *> hCathodeVProjections_Pos;
+      vector<TH2F *> hCathodeUProjections_Neg;
+      vector<TH2F *> hCathodeVProjections_Neg;
 };
 
 #endif // _JEventProcessor_FDC_InternalAlignment_

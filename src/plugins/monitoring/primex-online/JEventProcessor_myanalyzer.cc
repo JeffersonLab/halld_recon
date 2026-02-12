@@ -10,19 +10,20 @@
 **************************************************************************/
 
 #include "JEventProcessor_myanalyzer.h"
+#include <DANA/DEvent.h>
 
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_myanalyzer());
+	app->Add(new JEventProcessor_myanalyzer());
 }
 } // "C"
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_myanalyzer::init(void)
+void JEventProcessor_myanalyzer::Init()
 {
   combi6 = new Combination (6);
   
@@ -304,18 +305,15 @@ jerror_t JEventProcessor_myanalyzer::init(void)
   
   main->cd();
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_myanalyzer::brun(JEventLoop *eventLoop, int32_t runnumber)
-{
+void JEventProcessor_myanalyzer::BeginRun(const std::shared_ptr<const JEvent>& event){
 
-  DGeometry*   dgeom = NULL;
-  DApplication* dapp = dynamic_cast< DApplication* >( eventLoop->GetJApplication() );
-  if( dapp )   dgeom = dapp->GetDGeometry( runnumber );
+  DGeometry*   dgeom = DEvent::GetDGeometry(event);
   
   if( dgeom ){
     dgeom->GetTargetZ( m_beamZ );
@@ -323,22 +321,22 @@ jerror_t JEventProcessor_myanalyzer::brun(JEventLoop *eventLoop, int32_t runnumb
     dgeom->GetCCALPosition( m_ccalX, m_ccalY, m_ccalZ );
   } else{
     cerr << "No geometry accessbile to compton_analysis plugin." << endl;
-    return RESOURCE_UNAVAILABLE;
+    return; //RESOURCE_UNAVAILABLE;
   }
-  
-  jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+  auto app = GetApplication();
+  JCalibration *jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(event->GetRunNumber());
   std::map<string, float> beam_spot;
   jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   m_beamX  =  beam_spot.at("x");
   m_beamY  =  beam_spot.at("y");
   
-  return NOERROR;
+  return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void JEventProcessor_myanalyzer::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 
@@ -346,14 +344,15 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   Bool_t good_eta_to_2g = false;
   Bool_t good_eta_to_3pi0 = false;
   Bool_t good_eta_to_2g2pi = false;
+  auto lockService = DEvent::GetLockService(event);
   
   TLorentzVector TargetP4(0, 0, 0, massHe4);
   vector<const DMCThrown*> locDMCThrown;	
-  eventLoop->Get(locDMCThrown);  
+  event->Get(locDMCThrown);  
   vector<const DL1Trigger *> locL1Triggers;
-  eventLoop->Get(locL1Triggers);
+  event->Get(locL1Triggers);
   vector< const DFCALGeometry* > fcalGeomVec;
-  eventLoop->Get( fcalGeomVec );
+  event->Get( fcalGeomVec );
 
   
   //-----   Data Objects   -----//
@@ -364,14 +363,14 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   vector<const DChargedTrack *> locChargedTracks;
   vector<const DFCALHit *> locFCALHits;
   
-  eventLoop->Get(locFCALHits);
-  eventLoop->Get(locChargedTracks);
-  eventLoop->Get(locBeamPhotons);
-  eventLoop->Get(locVerteces);
-  eventLoop->Get(locNeutralParticles);
-  eventLoop->Get(locTrackTimeBased);
+  event->Get(locFCALHits);
+  event->Get(locChargedTracks);
+  event->Get(locBeamPhotons);
+  event->Get(locVerteces);
+  event->Get(locNeutralParticles);
+  event->Get(locTrackTimeBased);
   const DDetectorMatches *detMatches = nullptr;
-  eventLoop->GetSingle(detMatches);
+  event->GetSingle(detMatches);
     
 
   
@@ -392,7 +391,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   //uint32_t locL1Trigger_fp = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->fp_trig_mask;
   //uint32_t locL1Trigger = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->trig_mask;
   
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   int trig_bit[33];
   if (locL1Triggers.size() > 0) {
     for (unsigned int bit = 0; bit < 32; bit ++) {
@@ -406,12 +405,12 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   if (locDMCThrown.size() == 0) {
     const DL1Trigger *trig = NULL;
     try {
-      eventLoop->GetSingle(trig);
+      event->GetSingle(trig);
     } catch (...) {
     }
     if (trig == NULL) { 
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-      return NOERROR;
+     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      return;
     }
         
     trigmask = trig->trig_mask;	
@@ -421,12 +420,12 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       if(fp_trigmask & (1 << ibit)) h_fptrig1->Fill(ibit);
     }
     if( trigmask==8 ) {
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-      return NOERROR;
+     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      return;
     }
     if( fp_trigmask ) {
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-      return NOERROR;
+     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      return;
     }
   } else {
     trigmask = 1;
@@ -435,22 +434,22 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   
   h_trig2->Fill(trigmask);
   h_fptrig2->Fill(fp_trigmask);
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+ lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   //-----   RF Bunch   -----//
   
   const DEventRFBunch *locRFBunch = NULL;
   try { 
-    eventLoop->GetSingle( locRFBunch, "CalorimeterOnly" );
-  } catch (...) { return NOERROR; }
+    event->GetSingle( locRFBunch, "CalorimeterOnly" );
+  } catch (...) { return; }
   double locRFTime = locRFBunch->dTime;
-  if( locRFBunch->dNumParticleVotes < 2 ) return NOERROR;
+  if( locRFBunch->dNumParticleVotes < 2 ) return;
   
   
   //-----   Geometry   -----//
     
   if( fcalGeomVec.size() != 1 ) {
     cerr << "No FCAL geometry accessbile." << endl;
-    return RESOURCE_UNAVAILABLE;
+    return; //RESOURCE_UNAVAILABLE
   }
   
   const DFCALGeometry *fcalGeom = fcalGeomVec[0];
@@ -463,7 +462,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   double kinfitVertexY = m_beamY;
   double kinfitVertexZ = m_beamZ;
   double kinfitR = 0;
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+ lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   for (unsigned int i = 0 ; i < locVerteces.size(); i++) {
     kinfitVertexX = locVerteces[i]->dSpacetimeVertex.X();
     kinfitVertexY = locVerteces[i]->dSpacetimeVertex.Y();
@@ -480,7 +479,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   double mc_eb = 0;
   if (locDMCThrown.size() > 0) {
     const DMCReaction* locMCReactions = NULL;
-    eventLoop->GetSingle(locMCReactions);
+    event->GetSingle(locMCReactions);
     mc_eb = locMCReactions->beam.energy();
     h_mc_eb->Fill(mc_eb);
     for (unsigned int bit = 0; bit < 32; bit ++) {
@@ -645,7 +644,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       h_Esum_ccal_trg3->Fill(CCAL_Esum);
     }
   }
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+ lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   //Retrieve tracks info and assign it a pi hypo
   vector <const DTrackTimeBased *> pimsList;
   vector <const DTrackTimeBased *> pipsList;
@@ -654,7 +653,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   DLorentzVector gP4[6];
   DLorentzVector pipP4;
   DLorentzVector pimP4;
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+ lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Looking at event with 2 unmatched showers
   if (PhotonsList.size() == 2) {
     
@@ -762,9 +761,9 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     }
   }
   //Basic selection criteria
-  Bool_t Prim2g = good_eta_to_2g * (locChargedTracks.size() == 0 && n_locBCALShowers == 0 && n_locFCALTOFShowers == 2);
-  Bool_t Prim3pi0 = good_eta_to_3pi0 * (locChargedTracks.size() == 0);
-  Bool_t Prim2g2pi = good_eta_to_2g2pi * target_vtx_z * target_vtx_r * (locChargedTracks.size() == 2);
+  Bool_t Prim2g = good_eta_to_2g && (locChargedTracks.size() == 0 && n_locBCALShowers == 0 && n_locFCALTOFShowers == 2);
+  Bool_t Prim3pi0 = good_eta_to_3pi0 && (locChargedTracks.size() == 0);
+  Bool_t Prim2g2pi = good_eta_to_2g2pi && target_vtx_z && target_vtx_r && (locChargedTracks.size() == 2);
   
   //Loop over beam-photon if basic selection criteria is fullfilled
   if ((Prim2g || Prim3pi0 || Prim2g2pi) 
@@ -1003,30 +1002,30 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     }
   }
   
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_myanalyzer::erun(void)
+void JEventProcessor_myanalyzer::EndRun()
 {
 	
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_myanalyzer::fini(void)
+void JEventProcessor_myanalyzer::Finish()
 {
 	
-	return NOERROR;
+	return;
 }
 
-jerror_t JEventProcessor_myanalyzer::FillParticleVectors(vector<const DChargedTrack *>&locChargedTracks,
+void JEventProcessor_myanalyzer::FillParticleVectors(vector<const DChargedTrack *>&locChargedTracks,
 							 vector<const DTrackTimeBased *>&pims,
 							 vector<const DTrackTimeBased *>&pips) {
   
@@ -1125,7 +1124,7 @@ jerror_t JEventProcessor_myanalyzer::FillParticleVectors(vector<const DChargedTr
     }
   }
   
-  return NOERROR;
+  return;
 }
 
 void JEventProcessor_myanalyzer::Combined6g(vector<const DNeutralParticleHypothesis *>&EMList,

@@ -8,8 +8,8 @@
 #include <HDDM/hddm_r.hpp>
 
 #include <JANA/JObject.h>
-#include <JANA/JEventLoop.h>
-#include <JANA/JApplication.h>
+#include <JANA/JEvent.h>
+#include <JANA/Services/JLockService.h>
 
 #include <DVector3.h>
 #include <DMatrix.h>
@@ -17,7 +17,9 @@
 #include "PID/DMCReaction.h"
 #include "PID/DBeamPhoton.h"
 #include "TRACKING/DMCThrown.h"
+#include "ECAL/DECALShower.h"
 #include "FCAL/DFCALShower.h"
+#include "FCAL/DFCALHit.h"
 #include "CCAL/DCCALShower.h"
 #include "PID/DNeutralShower.h"
 #include <PID/DDetectorMatches.h>
@@ -30,19 +32,19 @@
 #include "FMWPC/DFMWPCHit.h"
 #include "HDDM/DEventHitStatistics.h"
 #include "RF/DRFTime.h"
+#include "DAQ/DBeamHelicity.h"
 
 using namespace std;
-using namespace jana;
 
 class DEventWriterREST : public JObject
 {
 	public:
 		JOBJECT_PUBLIC(DEventWriterREST);
 
-		DEventWriterREST(JEventLoop* locEventLoop, string locOutputFileBaseName);
+		DEventWriterREST(const std::shared_ptr<const JEvent>& locEventLoop, string locOutputFileBaseName);
 		~DEventWriterREST(void);
 
-		bool Write_RESTEvent(JEventLoop* locEventLoop, string locOutputFileNameSubString) const;
+		bool Write_RESTEvent(const std::shared_ptr<const JEvent>& locEventLoop, string locOutputFileNameSubString) const;
 		string Get_OutputFileName(string locOutputFileNameSubString) const;
 
 	private:
@@ -61,12 +63,16 @@ class DEventWriterREST : public JObject
 		bool REST_WRITE_FMWPC_HITS;
 		bool REST_WRITE_CCAL_SHOWERS;
 		bool REST_WRITE_TRACK_EXIT_PARAMS;
+		bool REST_WRITE_FDC_TRACK_POS;
 		bool ADD_FCAL_DATA_FOR_CPP;
+		bool REST_WRITE_FCAL_HITS;
 
         // metadata to save in the REST file
         // these should be consistent during program execution
         string HDDM_DATA_VERSION_STRING;
         string CCDB_CONTEXT_STRING;
+
+        std::shared_ptr<JLockService> lockService;
 };
 
 #endif //_DEventWriterREST_

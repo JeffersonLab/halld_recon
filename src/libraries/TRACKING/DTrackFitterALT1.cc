@@ -15,11 +15,9 @@ using namespace std;
 #include <DVector3.h>
 #include <DMatrix.h>
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/Services/JLockService.h>
 
 #include "GlueX.h"
-#include "DANA/DApplication.h"
 #include "PID/DParticleID.h"
 #include "DMagneticFieldStepper.h"
 #include "DTrackCandidate.h"
@@ -51,9 +49,10 @@ class greaterthan{
 //------------------
 // DTrackFitterALT1   (Constructor)
 //------------------
-DTrackFitterALT1::DTrackFitterALT1(JEventLoop *loop):DTrackFitter(loop)
+DTrackFitterALT1::DTrackFitterALT1(const std::shared_ptr<const JEvent>& event):DTrackFitter(event)
 {
-	this->loop = loop;
+	auto app = event->GetJApplication();
+	this->event = event;
 
 	// Define target center
 	target = new DCoordinateSystem();
@@ -89,27 +88,27 @@ DTrackFitterALT1::DTrackFitterALT1(JEventLoop *loop):DTrackFitter(loop)
 	USE_FDC_CATHODE = true;
 	MATERIAL_MAP_MODEL = "DGeometry";
 	
-	gPARMS->SetDefaultParameter("TRKFIT:DEBUG_HISTS",					DEBUG_HISTS);
-	gPARMS->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",					DEBUG_LEVEL);
-	gPARMS->SetDefaultParameter("TRKFIT:MAX_CHISQ_DIFF",				MAX_CHISQ_DIFF);
-	gPARMS->SetDefaultParameter("TRKFIT:MAX_FIT_ITERATIONS",			MAX_FIT_ITERATIONS);
-	gPARMS->SetDefaultParameter("TRKFIT:SIGMA_CDC",						SIGMA_CDC);
-	gPARMS->SetDefaultParameter("TRKFIT:CDC_USE_PARAMETERIZED_SIGMA",	CDC_USE_PARAMETERIZED_SIGMA);
-	gPARMS->SetDefaultParameter("TRKFIT:SIGMA_FDC_ANODE",				SIGMA_FDC_ANODE);
-	gPARMS->SetDefaultParameter("TRKFIT:SIGMA_FDC_CATHODE",			SIGMA_FDC_CATHODE);
-	gPARMS->SetDefaultParameter("TRKFIT:CHISQ_GOOD_LIMIT",			CHISQ_GOOD_LIMIT);
-	gPARMS->SetDefaultParameter("TRKFIT:LEAST_SQUARES_DP",			LEAST_SQUARES_DP);
-	gPARMS->SetDefaultParameter("TRKFIT:LEAST_SQUARES_DX",			LEAST_SQUARES_DX);
-	gPARMS->SetDefaultParameter("TRKFIT:LEAST_SQUARES_MIN_HITS",	LEAST_SQUARES_MIN_HITS);
-	gPARMS->SetDefaultParameter("TRKFIT:LEAST_SQUARES_MAX_E2NORM",	LEAST_SQUARES_MAX_E2NORM);		
-	gPARMS->SetDefaultParameter("TRKFIT:DEFAULT_MASS",					DEFAULT_MASS);
-	gPARMS->SetDefaultParameter("TRKFIT:TARGET_CONSTRAINT",			TARGET_CONSTRAINT);
-	gPARMS->SetDefaultParameter("TRKFIT:LR_FORCE_TRUTH",				LR_FORCE_TRUTH);
-	gPARMS->SetDefaultParameter("TRKFIT:USE_MULS_COVARIANCE",		USE_MULS_COVARIANCE);
-	gPARMS->SetDefaultParameter("TRKFIT:USE_FDC",						USE_FDC);
-	gPARMS->SetDefaultParameter("TRKFIT:USE_CDC",						USE_CDC);
-	gPARMS->SetDefaultParameter("TRKFIT:USE_FDC_CATHODE",				USE_FDC_CATHODE);
-	gPARMS->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL",			MATERIAL_MAP_MODEL);
+	app->SetDefaultParameter("TRKFIT:DEBUG_HISTS",					DEBUG_HISTS);
+	app->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",					DEBUG_LEVEL);
+	app->SetDefaultParameter("TRKFIT:MAX_CHISQ_DIFF",				MAX_CHISQ_DIFF);
+	app->SetDefaultParameter("TRKFIT:MAX_FIT_ITERATIONS",			MAX_FIT_ITERATIONS);
+	app->SetDefaultParameter("TRKFIT:SIGMA_CDC",						SIGMA_CDC);
+	app->SetDefaultParameter("TRKFIT:CDC_USE_PARAMETERIZED_SIGMA",	CDC_USE_PARAMETERIZED_SIGMA);
+	app->SetDefaultParameter("TRKFIT:SIGMA_FDC_ANODE",				SIGMA_FDC_ANODE);
+	app->SetDefaultParameter("TRKFIT:SIGMA_FDC_CATHODE",			SIGMA_FDC_CATHODE);
+	app->SetDefaultParameter("TRKFIT:CHISQ_GOOD_LIMIT",			CHISQ_GOOD_LIMIT);
+	app->SetDefaultParameter("TRKFIT:LEAST_SQUARES_DP",			LEAST_SQUARES_DP);
+	app->SetDefaultParameter("TRKFIT:LEAST_SQUARES_DX",			LEAST_SQUARES_DX);
+	app->SetDefaultParameter("TRKFIT:LEAST_SQUARES_MIN_HITS",	LEAST_SQUARES_MIN_HITS);
+	app->SetDefaultParameter("TRKFIT:LEAST_SQUARES_MAX_E2NORM",	LEAST_SQUARES_MAX_E2NORM);		
+	app->SetDefaultParameter("TRKFIT:DEFAULT_MASS",					DEFAULT_MASS);
+	app->SetDefaultParameter("TRKFIT:TARGET_CONSTRAINT",			TARGET_CONSTRAINT);
+	app->SetDefaultParameter("TRKFIT:LR_FORCE_TRUTH",				LR_FORCE_TRUTH);
+	app->SetDefaultParameter("TRKFIT:USE_MULS_COVARIANCE",		USE_MULS_COVARIANCE);
+	app->SetDefaultParameter("TRKFIT:USE_FDC",						USE_FDC);
+	app->SetDefaultParameter("TRKFIT:USE_CDC",						USE_CDC);
+	app->SetDefaultParameter("TRKFIT:USE_FDC_CATHODE",				USE_FDC_CATHODE);
+	app->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL",			MATERIAL_MAP_MODEL);
 	
 	// Set default mass based on configuration parameter
 	rt->SetMass(DEFAULT_MASS);
@@ -135,14 +134,10 @@ DTrackFitterALT1::DTrackFitterALT1(JEventLoop *loop):DTrackFitter(loop)
 
 	cout<<__FILE__<<":"<<__LINE__<<"-------------- Least Squares TRACKING --------------"<<endl;
 
-	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	if(!dapp){
-		_DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl;
-		return;
-	}
-	
+	auto root_lock = app->GetService<JLockService>();
+
 	if(DEBUG_HISTS){
-		dapp->Lock();
+		root_lock->RootWriteLock();
 		
 		// Histograms may already exist. (Another thread may have created them)
 		// Try and get pointers to the existing ones.
@@ -207,7 +202,7 @@ DTrackFitterALT1::DTrackFitterALT1(JEventLoop *loop):DTrackFitter(loop)
 		if(!fdc_can_resi_cath)fdc_can_resi_cath = new TH1F("fdc_can_resi_cath","Residual of FDC cathode hits with candidate tracks", 200, -1.0, 1.0);
 		if(!lambda)lambda = new TH1F("lambda","Scaling factor #lambda for Newton-Raphson calculated step", 2048, -2.0, 2.0);
 
-		dapp->Unlock();
+		root_lock->RootUnLock();
 	}
 }
 
@@ -247,7 +242,7 @@ DTrackFitter::fit_status_t DTrackFitterALT1::FitTrack(void)
 	tmprt->SetCheckMaterialBoundaries(check_material_boundaries);
 	
 	// Swim reference trajectory
-	fit_status = kFitNotDone; // initialize to a safe default
+	fit_status = kFitNotDone; // Initialize to a safe default
 	DVector3 mom = input_params.momentum();
 	if(mom.Mag()>12.0)mom.SetMag(8.0);	// limit crazy big momenta from candidates
 	rt->Swim(input_params.position(), mom, input_params.charge());
@@ -272,7 +267,7 @@ DTrackFitter::fit_status_t DTrackFitterALT1::FitTrack(void)
 		// Optionally use the truth information from the Monte Carlo
 		// to force the correct LR choice for each hit. This is
 		// for debugging (obviously).
-		if(LR_FORCE_TRUTH && fit_type==kTimeBased)ForceLRTruth(loop, rt, hinfo);
+		if(LR_FORCE_TRUTH && fit_type==kTimeBased)ForceLRTruth(event, rt, hinfo);
 	
 		switch(fit_status = LeastSquaresB(hinfo, rt)){
 			case kFitSuccess:
@@ -451,7 +446,7 @@ double DTrackFitterALT1::ChiSq(fit_type_t fit_type, DReferenceTrajectory *rt, do
 
 	hitsInfo hinfo;
 	GetHits(fit_type, rt, hinfo);
-	if(LR_FORCE_TRUTH && fit_type==kTimeBased)ForceLRTruth(loop, rt, hinfo);
+	if(LR_FORCE_TRUTH && fit_type==kTimeBased)ForceLRTruth(event, rt, hinfo);
 
 	vector<resiInfo> residuals;
 	GetResiInfo(rt, hinfo, residuals);
@@ -1338,7 +1333,7 @@ void DTrackFitterALT1::PrintChisqElements(DMatrix &resiv, DMatrix &cov_meas, DMa
 //------------------
 // ForceLRTruth
 //------------------
-void DTrackFitterALT1::ForceLRTruth(JEventLoop *loop, DReferenceTrajectory *rt, hitsInfo &hinfo)
+void DTrackFitterALT1::ForceLRTruth(const std::shared_ptr<const JEvent>& event, DReferenceTrajectory *rt, hitsInfo &hinfo)
 {
 	/// This routine is called when the TRKFIT:LR_FORCE_TRUTH parameters is
 	/// set to a non-zero value (e.g. -PTRKFIT:LR_FORCE_TRUTH=1 is passed
@@ -1352,7 +1347,7 @@ void DTrackFitterALT1::ForceLRTruth(JEventLoop *loop, DReferenceTrajectory *rt, 
 	
 	// Get Truth hits
 	vector<const DMCTrackHit*> mctrackhits;
-	loop->Get(mctrackhits);
+	event->Get(mctrackhits);
 	
 	// Loop over hits
 	for(unsigned int i=0; i<hinfo.size(); i++){

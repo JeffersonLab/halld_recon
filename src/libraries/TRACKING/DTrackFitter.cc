@@ -8,11 +8,10 @@
 #include <TRACKING/DReferenceTrajectory.h>
 #include <TRACKING/DTrackHitSelector.h>
 
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DRootGeom.h"
 
 #include "DTrackFitter.h"
-#include "PID/DParticleID.h"
-#include "HDGEOMETRY/DRootGeom.h"
-using namespace jana;
 
 // hi-res timers for profiling
 // The PROFILE_TRK_TIMES compile time option is intended to enable keeping track
@@ -28,31 +27,29 @@ extern bool CDCSortByRincreasing(const DCDCTrackHit* const &hit1, const DCDCTrac
 //-------------------
 // DTrackFitter  (Constructor)
 //-------------------
-DTrackFitter::DTrackFitter(JEventLoop *loop)
+DTrackFitter::DTrackFitter(const std::shared_ptr<const JEvent>& event)
 {
-	this->loop = loop;
+	this->event = event;  // TODO: Delete completely if possible!
+
+	auto run_number = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto geo_manager = app->GetService<DGeometryManager>();
+
 	bfield=NULL;
 	fit_status = kFitNotDone;
-	unsigned int run_number = (loop->GetJEvent()).GetRunNumber();
 	DEBUG_LEVEL=0;
 
 	CORRECT_FOR_ELOSS=true;
-	gPARMS->SetDefaultParameter("TRKFIT:CORRECT_FOR_ELOSS",CORRECT_FOR_ELOSS);
+	app->SetDefaultParameter("TRKFIT:CORRECT_FOR_ELOSS",CORRECT_FOR_ELOSS);
 
-
-	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	if(!dapp){
-		_DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl;
-		return;
-	}
-	bfield = dapp->GetBfield(run_number); 
-	geom = dapp->GetDGeometry(run_number);
+	bfield = geo_manager->GetBfield(run_number);
+	geom = geo_manager->GetDGeometry(run_number);
 
 	RootGeom=NULL;
 	MATERIAL_MAP_MODEL = "DGeometry";
-	gPARMS->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL",MATERIAL_MAP_MODEL);
+	app->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL",MATERIAL_MAP_MODEL);
 	if(MATERIAL_MAP_MODEL=="DRootGeom"){
-	  RootGeom = dapp->GetRootGeom(run_number);
+	  RootGeom = geo_manager->GetRootGeom(run_number);
 	}
 	// Create the extrapolation vectors
 	vector<Extrapolation_t>myvector;
@@ -66,6 +63,7 @@ DTrackFitter::DTrackFitter(JEventLoop *loop)
 	extrapolations.emplace(SYS_TRD,myvector);
 	extrapolations.emplace(SYS_FMWPC,myvector);
 	extrapolations.emplace(SYS_CTOF,myvector);
+	extrapolations.emplace(SYS_ECAL,myvector);
 	extrapolations.emplace(SYS_NULL,myvector);	
 
 	extrapolations[SYS_TOF].reserve(1);
@@ -75,9 +73,10 @@ DTrackFitter::DTrackFitter(JEventLoop *loop)
 	extrapolations[SYS_CDC].reserve(200);
 	extrapolations[SYS_START].reserve(1);
 	extrapolations[SYS_DIRC].reserve(1);
-	extrapolations[SYS_TRD].reserve(5);
+	extrapolations[SYS_TRD].reserve(1);
 	extrapolations[SYS_FMWPC].reserve(6);
 	extrapolations[SYS_CTOF].reserve(1);
+	extrapolations[SYS_ECAL].reserve(2);
 	extrapolations[SYS_NULL].reserve(1);
 	
 	pulls.reserve(30);
@@ -108,7 +107,6 @@ void DTrackFitter::Reset(void)
 	cdchits.clear();
 	fdchits.clear();
 	trdhits.clear();
-	gemhits.clear();
 	fit_type = kWireBased;
 	chisq = 1.0E6;
 	Ndof=0;
@@ -177,23 +175,6 @@ void DTrackFitter::AddHits(vector<const DTRDPoint*> trdhits)
   fit_status = kFitNotDone;
 }
 
-// AddHit
-//-------------------
-void DTrackFitter::AddHit(const DGEMPoint* gemhit)
-{
-  gemhits.push_back(gemhit);
-  fit_status = kFitNotDone;
-}
-
-//-------------------
-// AddHits
-//-------------------
-void DTrackFitter::AddHits(vector<const DGEMPoint*> gemhits)
-{
-  for(unsigned int i=0; i<gemhits.size(); i++)this->gemhits.push_back(gemhits[i]);
-  fit_status = kFitNotDone;
-}
-
 
 //-------------------
 // FitTrack
@@ -242,7 +223,7 @@ DTrackFitter::fit_status_t DTrackFitter::FitTrack(const DTrackingData &starting_
 DTrackFitter::fit_status_t 
 DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params, 
 				  const map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >&extrapolations,
-				  JEventLoop *loop, 
+				  const std::shared_ptr<const JEvent>& loop,
 				  double mass,int N,double t0,
 				  DetectorSystem_t t0_det){
   // Reset fitter saving the type of fit we're doing
@@ -268,11 +249,9 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
   vector<const DCDCTrackHit*> cdctrackhits;
   vector<const DFDCPseudo*> fdcpseudos;
   vector<const DTRDPoint *> trdhits_in;
-  vector<const DGEMPoint *> gemhits_in;
   loop->Get(cdctrackhits);
   loop->Get(fdcpseudos);
   loop->Get(trdhits_in);
-  loop->Get(gemhits_in);
 
   // Get Bfield at the position at the middle of the extrapolations, i.e. the 
   // region where we actually have measurements...
@@ -295,9 +274,6 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
     vector<Extrapolation_t>extraps=extrapolations.at(SYS_TRD);
     if (trdhits_in.size()>0){
       hitselector->GetTRDHits(extraps,trdhits_in,this);
-    }
-    if (gemhits_in.size()>0){
-      hitselector->GetGEMHits(extraps,gemhits_in,gemhits);
     }
   }
   if (got_hits==false){
@@ -327,7 +303,7 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
 //-------------------
 DTrackFitter::fit_status_t 
 DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
-				  const DReferenceTrajectory *rt, JEventLoop *loop, 
+				  const DReferenceTrajectory *rt, const std::shared_ptr<const JEvent>& loop,
 				  double mass,int N,double t0,
 				  DetectorSystem_t t0_det)
 {
@@ -421,14 +397,12 @@ jerror_t DTrackFitter::CorrectForELoss(const DKinematicData &starting_params, DR
 {
 	// Find first wire hit by this track
 	const DCoordinateSystem *first_wire = NULL;
-	vector<const DCDCTrackHit*> cdchits;
-	starting_params.Get(cdchits);
+	vector<const DCDCTrackHit*> cdchits = starting_params.Get<DCDCTrackHit>();
 	if(cdchits.size()>0){
 		sort(cdchits.begin(), cdchits.end(), CDCSortByRincreasing);
 		first_wire = cdchits[cdchits.size()/2]->wire;
 	}else{
-		vector<const DFDCPseudo*> fdchits;
-		starting_params.Get(fdchits);
+		vector<const DFDCPseudo*> fdchits = starting_params.Get<DFDCPseudo>();
 		if(fdchits.size()!=0){
 			sort(fdchits.begin(), fdchits.end(), FDCSortByZincreasing);
 			first_wire = fdchits[fdchits.size()/2]->wire;

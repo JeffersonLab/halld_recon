@@ -11,7 +11,6 @@
 using namespace std;
 
 #include <JANA/JApplication.h>
-using namespace jana;
 #include <DAQ/Df250WindowRawData.h>
 
 #include "Df250PulseIntegral_factory.h"
@@ -23,31 +22,31 @@ using namespace jana;
 extern "C"{
 	void InitPlugin(JApplication *app){
 		InitJANAPlugin(app);
-		app->AddFactoryGenerator(new JFactoryGenerator_Df250PulseIntegral());
+		app->Add(new JFactoryGenerator_Df250PulseIntegral());
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t Df250PulseIntegral_factory::init(void)
+void Df250PulseIntegral_factory::Init()
 {
 	printf("Df250PulseIntegral_factory::init()\n");
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t Df250PulseIntegral_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void Df250PulseIntegral_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t Df250PulseIntegral_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void Df250PulseIntegral_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 	// Code to generate factory data goes here. Add it like:
@@ -66,7 +65,7 @@ jerror_t Df250PulseIntegral_factory::evnt(JEventLoop *loop, uint64_t eventnumber
 
 	// Get a vector of objects for this event (1 object for each crate/slot/channel)
 	vector<const Df250WindowRawData*> f250WindowRawData_vec;
-	loop->Get(f250WindowRawData_vec);
+	event->Get(f250WindowRawData_vec);
 	uint32_t Nchannels = f250WindowRawData_vec.size();
 
 	// Loop over all channels in this event
@@ -104,23 +103,23 @@ jerror_t Df250PulseIntegral_factory::evnt(JEventLoop *loop, uint64_t eventnumber
 		_data.push_back(myDf250PulseIntegral);
 	}
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t Df250PulseIntegral_factory::erun(void)
+void Df250PulseIntegral_factory::EndRun()
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t Df250PulseIntegral_factory::fini(void)
+void Df250PulseIntegral_factory::Finish()
 {
-	return NOERROR;
+	return;
 }
 
 

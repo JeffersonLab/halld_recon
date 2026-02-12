@@ -19,3 +19,11 @@ The plugin adds the emulated values to its output tree for comparison with the o
 Different configuration parameters can be supplied, [find the list here](https://github.com/JeffersonLab/halld_recon/blob/master/src/libraries/DAQ/Df125EmulatorAlgorithm_v2.cc), eg -PEMULATION125:FDC_H=60 would set the emulated hit threshold to 60 for all FDC channels.   
 
 The branches in the tree with names starting m_ are emulated quantities. Branches with names starting d_ contain firmware minus emulated. The branch named diffs contains 1 if the firmware and emulated values differ.
+
+# scripts/plot_diffs.C
+This is a script to make plots showing the channels with differences between reported and emulated quantities, and to list those differences.
+Run it as
+```
+root -b -q -l hd_root.root scripts/plot_diffs.C
+```
+Both drawing the graphs and scanning the tree can be quite slow.

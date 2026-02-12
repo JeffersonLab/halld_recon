@@ -11,7 +11,6 @@ using namespace std;
 #include <TH1.h>
 
 #include "JEventProcessor_syncskim.h"
-using namespace jana;
 
 #include <DAQ/DL1Info.h>
 #include <DAQ/DCODAEventInfo.h>
@@ -21,11 +20,11 @@ using namespace jana;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_syncskim());
+	app->Add(new JEventProcessor_syncskim());
 }
 } // "C"
 
@@ -35,6 +34,8 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_syncskim::JEventProcessor_syncskim()
 {
+	SetTypeName("JEventProcessor_syncskim");
+
 	sum_n = 0.0;
 	sum_x = 0.0;
 	sum_y = 0.0;
@@ -54,15 +55,19 @@ JEventProcessor_syncskim::~JEventProcessor_syncskim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_syncskim::init(void)
+void JEventProcessor_syncskim::Init()
 {
+	auto app = GetApplication();
+	auto params = app->GetJParameterManager();
+	lockService = app->GetService<JLockService>();
+
 	bool SYNCSKIM_FAST = false;
-	gPARMS->SetDefaultParameter("SYNCSKIM:FAST", SYNCSKIM_FAST, "Set to non-zero to automatically turn off all parsing and emulation not needed by this plugin so it runs blindingly fast");
+	app->SetDefaultParameter("SYNCSKIM:FAST", SYNCSKIM_FAST, "Set to non-zero to automatically turn off all parsing and emulation not needed by this plugin so it runs blindingly fast");
 
 	SYNCSKIM_ROCID = 34;
-	gPARMS->SetDefaultParameter("SYNCSKIM:ROCID", SYNCSKIM_ROCID, "ROC id from which to use timestamp. Set to 0 to use average timestamp from CODA EB. Default is 34 (rocBCAL4)");
+	app->SetDefaultParameter("SYNCSKIM:ROCID", SYNCSKIM_ROCID, "ROC id from which to use timestamp. Set to 0 to use average timestamp from CODA EB. Default is 34 (rocBCAL4)");
 
 	// The default behavior here has changed.
 	// It used to be that these settings were always made and there
@@ -72,23 +77,23 @@ jerror_t JEventProcessor_syncskim::init(void)
 	// of these setting disabled by default.
 	// 4/17/2020 D.L.
 	if(SYNCSKIM_FAST){
-		gPARMS->SetParameter("EVIO:LINK",              false); 
-		gPARMS->SetParameter("EVIO:LINK_BORCONFIG",    false); 
-		gPARMS->SetParameter("EVIO:PARSE_F250",        false); 
-		gPARMS->SetParameter("EVIO:PARSE_F125",        false); 
-		gPARMS->SetParameter("EVIO:PARSE_F1TDC",       false); 
-		gPARMS->SetParameter("EVIO:PARSE_CAEN1290TDC", false); 
-		gPARMS->SetParameter("EVIO:PARSE_CONFIG",      false); 
-		gPARMS->SetParameter("EVIO:PARSE_BOR",         false); 
-		gPARMS->SetParameter("EVIO:PARSE_EPICS",       false); 
-		gPARMS->SetParameter("EVIO:PARSE_EVENTTAG",    false); 
-		//gPARMS->SetParameter("EVIO:PARSE_TRIGGER",     false);
-		gPARMS->SetParameter("EVIO:APPLY_TRANSLATION_TABLE", false);
-		gPARMS->SetParameter("EVIO:F250_EMULATION_MODE", 0);
-		gPARMS->SetParameter("EVIO:F125_EMULATION_MODE", 0);
+		params->SetParameter("EVIO:LINK",              false); 
+		params->SetParameter("EVIO:LINK_BORCONFIG",    false); 
+		params->SetParameter("EVIO:PARSE_F250",        false); 
+		params->SetParameter("EVIO:PARSE_F125",        false); 
+		params->SetParameter("EVIO:PARSE_F1TDC",       false); 
+		params->SetParameter("EVIO:PARSE_CAEN1290TDC", false); 
+		params->SetParameter("EVIO:PARSE_CONFIG",      false); 
+		params->SetParameter("EVIO:PARSE_BOR",         false); 
+		params->SetParameter("EVIO:PARSE_EPICS",       false); 
+		params->SetParameter("EVIO:PARSE_EVENTTAG",    false); 
+		//params->SetParameter("EVIO:PARSE_TRIGGER",     false);
+		params->SetParameter("EVIO:APPLY_TRANSLATION_TABLE", false);
+		params->SetParameter("EVIO:F250_EMULATION_MODE", 0);
+		params->SetParameter("EVIO:F125_EMULATION_MODE", 0);
 	}
 	
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 
     TDirectory *main = gDirectory;
 
@@ -129,34 +134,31 @@ jerror_t JEventProcessor_syncskim::init(void)
 	
 	main->cd();
 	
-	japp->RootUnLock();
-
-	return NOERROR;
+	lockService->RootUnLock();
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_syncskim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_syncskim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_syncskim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_syncskim::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DCODAControlEvent*> controlevents;
-	loop->Get(controlevents);
+	event->Get(controlevents);
 	if(!controlevents.empty()){
 		last_control_event_t = (double) controlevents[0]->unix_time;
 		last_physics_event_t = 0.0;
 	}
 
 	vector<const DCODAEventInfo*> codainfos;
-	loop->Get(codainfos);
-	if(codainfos.empty()) return NOERROR;
+	event->Get(codainfos);
+	if(codainfos.empty()) return;
 	const DCODAEventInfo *codainfo = codainfos[0];
 
 	uint64_t mytimestamp = 0.0;
@@ -164,8 +166,8 @@ jerror_t JEventProcessor_syncskim::evnt(JEventLoop *loop, uint64_t eventnumber)
 		mytimestamp = codainfo->avg_timestamp;
 	}else{
 		vector<const DCODAROCInfo*> codarocinfos;
-		loop->Get(codarocinfos);
-		if(codarocinfos.empty()) return NOERROR;
+		event->Get(codarocinfos);
+		if(codarocinfos.empty()) return;
 		for( auto codarocinfo : codarocinfos ){
 			if( codarocinfo->rocid == SYNCSKIM_ROCID ){
 				mytimestamp = codarocinfo->timestamp;
@@ -173,17 +175,17 @@ jerror_t JEventProcessor_syncskim::evnt(JEventLoop *loop, uint64_t eventnumber)
 			}
 		}
 	}
-	if( mytimestamp == 0.0 ) return NOERROR;
+	if( mytimestamp == 0.0 ) return;
 	
 	if( (last_control_event_t!=0.0) && (last_physics_event_t==0.0) ){
 		last_physics_event_t = (double)mytimestamp / 250.0E6;
 	}
 
 	vector<const DL1Info*> l1infos;
-	loop->Get(l1infos);
-	if(l1infos.empty()) return NOERROR;
+	event->Get(l1infos);
+	if(l1infos.empty()) return;
 
-	japp->RootFillLock(this);
+	lockService->RootWriteLock();
 	
 	for(auto l1info : l1infos){
 		
@@ -227,23 +229,20 @@ jerror_t JEventProcessor_syncskim::evnt(JEventLoop *loop, uint64_t eventnumber)
 		sum_x2 += x * x;
 	}
 	
-	japp->RootFillUnLock(this);
-
-	return NOERROR;
+	lockService->RootUnLock();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_syncskim::erun(void)
+void JEventProcessor_syncskim::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_syncskim::fini(void)
+void JEventProcessor_syncskim::Finish()
 {
 
 	double m = (sum_n*sum_xy - sum_x*sum_y)/(sum_n*sum_x2 - sum_x*sum_x);
@@ -268,7 +267,7 @@ jerror_t JEventProcessor_syncskim::fini(void)
 
 	// Write results to ROOT file, flush it and close it
 	if( file ){
-		japp->RootWriteLock();
+		lockService->RootWriteLock();
 		
 		convparms.tics_per_sec    = one_over_m;
 		convparms.unix_start_time = b;
@@ -278,9 +277,7 @@ jerror_t JEventProcessor_syncskim::fini(void)
 		file->Close();
 		delete file;
 		
-		japp->RootUnLock();
+		lockService->RootUnLock();
 	}
-
-	return NOERROR;
 }
 

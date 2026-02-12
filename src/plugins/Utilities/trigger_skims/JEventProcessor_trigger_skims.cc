@@ -10,13 +10,14 @@
 #include "TRIGGER/DL1Trigger.h"
 #include "BCAL/DBCALHit.h"
 #include "DAQ/DL1Info.h"
+#include "DANA/DEvent.h"
 
 // for initializing plugins
 extern "C" {
    void InitPlugin(JApplication *app)
 	{
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_trigger_skims(), true);
+		app->Add(new JEventProcessor_trigger_skims());
    }
 } // "extern C"
 
@@ -24,7 +25,8 @@ extern "C" {
 // variables to control which triggers get read out
 static bool write_out_bcal_led = true;
 static bool write_out_fcal_led = true;
-static bool write_out_ccal_led = true;
+static bool write_out_ecal_led = true;
+static bool write_out_ccal_led = false;
 static bool write_out_dirc_led = true;
 static bool write_out_random = true;
 static bool write_out_sync = true;
@@ -32,25 +34,28 @@ static bool write_out_ctof = true;
 
 
 //-------------------------------
-// init
+// Init
 //-------------------------------
-jerror_t JEventProcessor_trigger_skims::init(void)
+void JEventProcessor_trigger_skims::Init()
 {
+    auto app = GetApplication();
     int bcal_led_writeout_toggle = 1;
     int fcal_led_writeout_toggle = 1;
-    int ccal_led_writeout_toggle = 1;
+    int ecal_led_writeout_toggle = 1;
+    int ccal_led_writeout_toggle = 0;
     int dirc_led_writeout_toggle = 1;
     int random_writeout_toggle = 1;
     int sync_writeout_toggle = 1;
     int ctof_writeout_toggle = 1;
 
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITEBCALLED", bcal_led_writeout_toggle, "Write out BCAL LED events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITEFCALLED", fcal_led_writeout_toggle, "Write out FCAL LED events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITECCALLED", fcal_led_writeout_toggle, "Write out CCAL LED events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITEDIRCLED", fcal_led_writeout_toggle, "Write out DIRC LED events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITERANDOM", random_writeout_toggle, "Write out random pulser events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITESYNC", sync_writeout_toggle, "Write out TS sync events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITECTOF", ctof_writeout_toggle, "Write out CTOF events");
+    app->SetDefaultParameter("TRIGSKIM:WRITEBCALLED", bcal_led_writeout_toggle, "Write out BCAL LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITEFCALLED", fcal_led_writeout_toggle, "Write out FCAL LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITECCALLED", fcal_led_writeout_toggle, "Write out CCAL LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITEECALLED", ecal_led_writeout_toggle, "Write out ECAL LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITEDIRCLED", fcal_led_writeout_toggle, "Write out DIRC LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITERANDOM", random_writeout_toggle, "Write out random pulser events");
+    app->SetDefaultParameter("TRIGSKIM:WRITESYNC", sync_writeout_toggle, "Write out TS sync events");
+    app->SetDefaultParameter("TRIGSKIM:WRITECTOF", ctof_writeout_toggle, "Write out CTOF events");
 
     if(bcal_led_writeout_toggle == 0)
         write_out_bcal_led = false;
@@ -67,68 +72,72 @@ jerror_t JEventProcessor_trigger_skims::init(void)
     if(ctof_writeout_toggle == 0)
         write_out_ctof = false;
 
-    return NOERROR;
+    return;
 }
 
 //-------------------------------
-// brun
+// BeginRun
 //-------------------------------
-jerror_t JEventProcessor_trigger_skims::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void JEventProcessor_trigger_skims::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-   return NOERROR;
 }
 
 //-------------------------------
-// evnt
+// Process
 //-------------------------------
-jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
     // Get EVIO writer 
 	const DEventWriterEVIO* locEventWriterEVIO = NULL;
-	locEventLoop->GetSingle(locEventWriterEVIO);
+	locEvent->GetSingle(locEventWriterEVIO);
 
     // Save BOR events
-    if(locEventLoop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
+    if(locEvent->GetSingle<DStatusBits>()->GetStatusBit(kSTATUS_BOR_EVENT)) {
         if (write_out_bcal_led)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "BCAL-LED" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "BCAL-LED" );
         if (write_out_ccal_led)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "CCAL-LED" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "CCAL-LED" );
+        if (write_out_ecal_led)
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "ECAL-LED" );
         if (write_out_fcal_led)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "FCAL-LED" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "FCAL-LED" );
         if (write_out_dirc_led)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "DIRC-LED" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "DIRC-LED" );
         if (write_out_random)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "random" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "random" );
         if (write_out_sync)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "sync" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "sync" );
         if (write_out_ctof)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "ctof" );
-        return NOERROR;
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "ctof" );
+        return;
     }
 
 	// Save EPICS events
 	vector<const DEPICSvalue*> locEPICSValues;
-	locEventLoop->Get(locEPICSValues);
+	locEvent->Get(locEPICSValues);
 	if(!locEPICSValues.empty()) {
         if (write_out_bcal_led)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "BCAL-LED");
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "BCAL-LED");
         if (write_out_ccal_led)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "CCAL-LED");
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "CCAL-LED");
+        if (write_out_ecal_led)
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "ECAL-LED");
         if (write_out_fcal_led)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "FCAL-LED");
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "FCAL-LED");
         if (write_out_dirc_led)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "DIRC-LED");
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "DIRC-LED");
         if (write_out_random)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "random");
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "random");
         if (write_out_ctof)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "ctof");
-		return NOERROR;
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "ctof");
+		return;
 	}
 
 	//bool is_cosmic_trigger = false;
 	bool is_BCAL_LED_US_trigger = false;
 	bool is_BCAL_LED_DS_trigger = false;
 	bool is_CCAL_LED_trigger = false;
+	bool is_ECAL_LED_trigger = false;
 	bool is_FCAL_LED_trigger = false;
 	bool is_DIRC_LED_trigger = false;
 	bool is_random_trigger = false;
@@ -137,7 +146,7 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
     
 	const DL1Trigger *trig = NULL;
 	try {
-		locEventLoop->GetSingle(trig);
+		locEvent->GetSingle(trig);
 	} catch (...) {}
 
     // parse the triggers we want to save
@@ -172,18 +181,18 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
 			// FCAL LED trigger fired
 			is_FCAL_LED_trigger = true;
 		}
+		//if (trig->fp_trig_mask & 0x008) {   // Trigger front-panel bit 4
+		//	// ECAL LED trigger fired
+		//	is_ECAL_LED_trigger = true;
+		//}
 		if (trig->fp_trig_mask & 0x010) {   // Trigger front-panel bit 5
-			// CCAL LED trigger fired
-			//is_CCAL_LED_trigger = true;
-
+			// ECAL alpha trigger fired
+			is_ECAL_LED_trigger = true;
 		}
-		if (trig->fp_trig_mask & 0x020) {   // Trigger front-panel bit 6
-			// CCAL LED trigger fired
-			//is_CCAL_LED_trigger = true;
-
-            // CPP run - this is now the CTOF trigger
-            is_ctof_event = true;
-		}
+ 		if (trig->fp_trig_mask & 0x020) {   // Trigger front-panel bit 6
+ 			// ECAL LED trigger fired
+            is_ECAL_LED_trigger = true;
+ 		}
 		if (trig->fp_trig_mask & 0x4000 ) {   // Trigger front-panel bit 15
 			// DIRC LED trigger fired
 			is_DIRC_LED_trigger = true;
@@ -192,7 +201,7 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
 
     // Do some backup calculations for runs in which the BCAL LED trigger did not latch correctly
     vector<const DBCALHit *> bcal_hits;
-    locEventLoop->Get(bcal_hits);
+    locEvent->Get(bcal_hits);
     double total_bcal_energy = 0.;
     if(write_out_bcal_led) {
         for(unsigned int i=0; i<bcal_hits.size(); i++) {
@@ -202,7 +211,7 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
 
     // if there's a DL1Info object, this extra L1 info means that it's a "sync event"
     vector<const DL1Info*> l1_info;
-    locEventLoop->Get(l1_info);
+    locEvent->Get(l1_info);
     if(l1_info.size() == 1) {
         is_sync_event = true;
     }
@@ -216,43 +225,44 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
     bool save_BCAL_LED_event = is_BCAL_LED_US_trigger || is_BCAL_LED_DS_trigger
       || (bcal_hits.size() >= 1200);// || (total_bcal_energy > 12.); Diabling energy trigger
     if ( write_out_bcal_led && save_BCAL_LED_event ) {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "BCAL-LED");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "BCAL-LED");
     }
     if ( write_out_ccal_led && is_CCAL_LED_trigger ) {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "CCAL-LED");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "CCAL-LED");
+    }
+    if ( write_out_ecal_led && is_ECAL_LED_trigger ) {
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "ECAL-LED");
     }
     if ( write_out_fcal_led && is_FCAL_LED_trigger ) {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "FCAL-LED");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "FCAL-LED");
     }
     if ( write_out_dirc_led && is_DIRC_LED_trigger ) {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "DIRC-LED");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "DIRC-LED");
     }
     if ( write_out_random && is_random_trigger ) {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "random");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "random");
     }
     if ( write_out_sync && is_sync_event )  {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "sync");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "sync");
     }
     if ( write_out_ctof && is_ctof_event )  {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "ctof");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "ctof");
     }
     
-    return NOERROR;
+    return;
 }
 
 //-------------------------------
-// erun
+// EndRun
 //-------------------------------
-jerror_t JEventProcessor_trigger_skims::erun(void)
+void JEventProcessor_trigger_skims::EndRun()
 {
-   return NOERROR;
 }
 
 //-------------------------------
-// fini
+// Finish
 //-------------------------------
-jerror_t JEventProcessor_trigger_skims::fini(void)
+void JEventProcessor_trigger_skims::Finish()
 {
-   return NOERROR;
 }
 

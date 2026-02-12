@@ -8,7 +8,7 @@
 #ifndef _DTrackHitSelectorTHROWN_
 #define _DTrackHitSelectorTHROWN_
 
-#include <JANA/jerror.h>
+#include <DANA/jerror.h>
 
 #include <TRACKING/DTrackHitSelector.h>
 
@@ -16,7 +16,7 @@ class DMCTrackHit;
 
 class DTrackHitSelectorTHROWN:public DTrackHitSelector{
 	public:
-		DTrackHitSelectorTHROWN(jana::JEventLoop *loop);
+		DTrackHitSelectorTHROWN(const std::shared_ptr<const JEvent>& loop);
 		virtual ~DTrackHitSelectorTHROWN();
 		
 		void GetCDCHits(fit_type_t fit_type, const DReferenceTrajectory *rt, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out,int N=0) const;
@@ -24,7 +24,6 @@ class DTrackHitSelectorTHROWN:public DTrackHitSelector{
 		void GetCDCHits(double Bz,double q,const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out, int N=0) const {}; 
 		void GetFDCHits(double Bz,double q,
 				const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DFDCPseudo*> &fdchits_in, vector<const DFDCPseudo*> &fdchits_out,int N) const {};
-		void GetGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DGEMPoint*> &gemhits_in, vector<const DGEMPoint*> &gemhits_out) const {};
 		void GetTRDHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DTRDPoint*> &trdhits_in, vector<const DTRDPoint*> &trdhits_out) const {};
 
 		int FindTrackNumber(const DReferenceTrajectory *rt) const;

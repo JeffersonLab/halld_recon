@@ -12,9 +12,8 @@
 using namespace std;
 
 #include <JANA/JApplication.h>
-#include <JANA/jerror.h>
+#include <JANA/Services/jerror.h>
 #include <JANA/JEventSourceGenerator.h>
-using namespace jana;
 
 class DEventSourceEVIOGenerator:public JEventSourceGenerator{
 	public:

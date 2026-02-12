@@ -6,17 +6,19 @@
 //
 
 #include "JEventProcessor_FDC_InternalAlignment.h"
-using namespace jana;
-#include "HistogramTools.h"
 #include "FDC/DFDCPseudo.h"
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/Calibrations/JCalibration.h>
+
+#include "TDirectory.h"
+
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_FDC_InternalAlignment());
+	app->Add(new JEventProcessor_FDC_InternalAlignment());
 }
 } // "C"
 
@@ -38,12 +40,12 @@ JEventProcessor_FDC_InternalAlignment::~JEventProcessor_FDC_InternalAlignment()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FDC_InternalAlignment::init(void)
+void JEventProcessor_FDC_InternalAlignment::Init()
 {
 	// This is called once at program startup. 
-
+   TDirectory *main = gDirectory;
    gDirectory->mkdir("FDC_InternalAlignment");
    gDirectory->cd("FDC_InternalAlignment");
    for (int i=1; i<=24;i++){
@@ -57,20 +59,74 @@ jerror_t JEventProcessor_FDC_InternalAlignment::init(void)
    // Use a TProfile to avoid problems adding together multiple root files...
    HistCurrentConstants = new TProfile("CathodeAlignmentConstants", "Constants Used for Cathode Alignment (In CCDB Order)", 450,0.5,450.5);
 
+   gDirectory->mkdir("Wire t0")->cd();
+
+   // iterate over FDC layers
+   for(int layer=0; layer<24; layer++) {
+      char thisName[256];
+      sprintf(thisName, "Plane %.2i Wire t Vs Wire Number", layer+1);
+	  hWireT0s.push_back( new TH2F(thisName, thisName, 96, 0.5, 96.5, 250, -50.0, 200.0) );
+   }
+
+   gDirectory->cd("..");
+   gDirectory->mkdir("Profile2D")->cd();
+
+   for(int layer=0; layer<24; layer++) {
+      char thisName[256];
+      sprintf(thisName, "Plane %.2i Wire Position Vs XY", layer+1);
+	  hWirePositions.push_back( new TProfile2D(thisName, thisName, 100, -50.,50., 100,-50., 50.) );
+   }
+
+   gDirectory->cd("..");
+   gDirectory->mkdir("Cathode Projections")->cd();
+
+   for(int layer=0; layer<24; layer++) {
+          char thisName[256];
+          sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
+	  hCathodeUProjections.push_back( new TH2F(thisName, "u_res Vs. u;u_{local};u-upred", 192,-47.5,47.5,200, -0.2,0.2) );
+	  sprintf(thisName, "Plane %.2i v_res vs v", layer+1);
+	  hCathodeVProjections.push_back( new TH2F(thisName, "v_res Vs. v;v_{local};v-vpred", 192,-47.5,47.5,200, -0.2,0.2) );
+   }
+
+   gDirectory->cd("..");
+   gDirectory->mkdir("Cathode Projections Negative")->cd();
+
+   for(int layer=0; layer<24; layer++) {
+          char thisName[256];
+          sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
+	  hCathodeUProjections_Neg.push_back( new TH2F(thisName, "u_res Vs. u;u_{local};u-upred", 192,-47.5,47.5,200, -0.2,0.2) );
+	  sprintf(thisName, "Plane %.2i v_res vs v", layer+1);
+	  hCathodeVProjections_Neg.push_back( new TH2F(thisName, "v_res Vs. v;v_{local};v-vpred", 192,-47.5,47.5,200, -0.2,0.2) );
+   }
+
+   gDirectory->cd("..");
+   gDirectory->mkdir("Cathode Projections Positive")->cd();
+
+   for(int layer=0; layer<24; layer++) {
+          char thisName[256];
+          sprintf(thisName, "Plane %.2i u_res vs u", layer+1);
+	  hCathodeUProjections_Pos.push_back( new TH2F(thisName, "u_res Vs. u;u_{local};u-upred", 192,-47.5,47.5,200, -0.2,0.2) );
+	  sprintf(thisName, "Plane %.2i v_res vs v", layer+1);
+	  hCathodeVProjections_Pos.push_back( new TH2F(thisName, "v_res Vs. v;v_{local};v-vpred", 192,-47.5,47.5,200, -0.2,0.2) );
+   }
+
    gDirectory->cd("..");
 
-	return NOERROR;
+   main->cd();
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FDC_InternalAlignment::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_FDC_InternalAlignment::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
    // Get curent cathode alignment constants
 
-   JCalibration * jcalib = eventLoop->GetJCalibration();
+   JCalibration * jcalib = GetJCalibration(event);
+
+   GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+   
    vector<map<string,double> >vals;
    if (jcalib->Get("FDC/cathode_alignment",vals)==false){
       for(unsigned int i=0; i<vals.size(); i++){
@@ -109,39 +165,29 @@ jerror_t JEventProcessor_FDC_InternalAlignment::brun(JEventLoop *eventLoop, int3
       }
    }
 
-   return NOERROR;
+   GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FDC_InternalAlignment::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_FDC_InternalAlignment::Process(const std::shared_ptr<const JEvent>& event)
 {
    vector <const DFDCPseudo*> fdcPseudoVector;
-   loop->Get(fdcPseudoVector);
+   event->Get(fdcPseudoVector);
 
    for (unsigned int i = 0; i<fdcPseudoVector.size(); i++){
       const DFDCPseudo* thisPseudo = fdcPseudoVector[i];
       if (thisPseudo->status != 6) continue;
 
-      japp->RootWriteLock();
+      GetLockService(event)->RootFillLock(this);
       Hist3D[thisPseudo->wire->layer - 1]->Fill(thisPseudo->w, thisPseudo->s, thisPseudo->w_c - thisPseudo->w);
-      japp->RootUnLock();
 
       // Plot the wire times
-      char thisName[256];
-      sprintf(thisName, "Plane %.2i Wire t Vs Wire Number", thisPseudo->wire->layer);
-      Fill2DHistogram("FDC_InternalAlignment","Wire t0",thisName,
-            thisPseudo->wire->wire, thisPseudo->time,
-            thisName,
-            96, 0.5, 96.5, 250, -50.0, 200.0);
-
-      sprintf(thisName, "Plane %.2i Wire Position Vs XY", thisPseudo->wire->layer);
-      Fill2DProfile("FDC_InternalAlignment", "Profile2D", thisName,
-            thisPseudo->w, thisPseudo->s, thisPseudo->w_c - thisPseudo->w,
-            thisName,
-            100, -50.,50., 100,-50., 50.);
-
+      hWireT0s[thisPseudo->wire->layer-1]->Fill(thisPseudo->wire->wire, thisPseudo->time);
+      hWirePositions[thisPseudo->wire->layer-1]->Fill(thisPseudo->w, thisPseudo->s, thisPseudo->w_c - thisPseudo->w);
+      
       // Calculate the projection of u,w onto v
       double sinphiu = sin(thisPseudo->phi_u), sinphiv = sin(thisPseudo->phi_v);
       double sinphiumphiv = sin(thisPseudo->phi_u-thisPseudo->phi_v);
@@ -151,45 +197,20 @@ jerror_t JEventProcessor_FDC_InternalAlignment::evnt(JEventLoop *loop, uint64_t 
       double upred = ((thisPseudo->w-deltaX)*sinphiumphiv + thisPseudo->v*sinphiu)/sinphiv;
       double vpred = -((thisPseudo->w-deltaX)*sinphiumphiv-thisPseudo->u*sinphiv)/sinphiu;
 
-      sprintf(thisName, "Plane %.2i u_res vs u", thisPseudo->wire->layer);
-      Fill2DHistogram("FDC_InternalAlignment","Cathode Projections", thisName,
-            thisPseudo->u - deltaU, thisPseudo->u - upred,
-            "u_res Vs. u;u_{local};u-upred",
-            192,-47.5,47.5,200, -0.2,0.2);
-
-      sprintf(thisName, "Plane %.2i v_res vs v", thisPseudo->wire->layer);
-      Fill2DHistogram("FDC_InternalAlignment","Cathode Projections", thisName,
-            thisPseudo->v - deltaV, thisPseudo->v - vpred,
-            "v_res Vs. v;v_{local};v-vpred",
-            192,-47.5,47.5,200, -0.2,0.2);
+      hCathodeUProjections[thisPseudo->wire->layer-1]->Fill(thisPseudo->u - deltaU, thisPseudo->u - upred);
+      hCathodeVProjections[thisPseudo->wire->layer-1]->Fill(thisPseudo->v - deltaV, thisPseudo->v - vpred);
 
       // For the gains we need to break up the two halves of the cathode planes
       if((thisPseudo->w-deltaX)<0.){
-         sprintf(thisName, "Plane %.2i u_res vs u", thisPseudo->wire->layer);
-         Fill2DHistogram("FDC_InternalAlignment","Cathode Projections Negative", thisName,
-               thisPseudo->u - deltaU, thisPseudo->u - upred,
-               "u_res Vs. u;u_{local};u-upred",
-               192,-47.5,47.5,200, -0.2,0.2);
-
-         sprintf(thisName, "Plane %.2i v_res vs v", thisPseudo->wire->layer);
-         Fill2DHistogram("FDC_InternalAlignment","Cathode Projections Negative", thisName,
-               thisPseudo->v - deltaV, thisPseudo->v - vpred,
-               "v_res Vs. v;v_{local};v-vpred",
-               192,-47.5,47.5,200, -0.2,0.2);
+	      hCathodeUProjections_Neg[thisPseudo->wire->layer-1]->Fill(thisPseudo->u - deltaU, thisPseudo->u - upred);
+    	  hCathodeVProjections_Neg[thisPseudo->wire->layer-1]->Fill(thisPseudo->v - deltaV, thisPseudo->v - vpred);
       }
       else{
-         sprintf(thisName, "Plane %.2i u_res vs u", thisPseudo->wire->layer);
-         Fill2DHistogram("FDC_InternalAlignment","Cathode Projections Positive", thisName,
-               thisPseudo->u - deltaU, thisPseudo->u - upred,
-               "u_res Vs. u;u_{local};u-upred",
-               192,-47.5,47.5,200, -0.2,0.2);
-
-         sprintf(thisName, "Plane %.2i v_res vs v", thisPseudo->wire->layer);
-         Fill2DHistogram("FDC_InternalAlignment","Cathode Projections Positive", thisName,
-               thisPseudo->v - deltaV, thisPseudo->v - vpred,
-               "v_res Vs. v;v_{local};v-vpred",
-               192,-47.5,47.5,200, -0.2,0.2);
+	      hCathodeUProjections_Pos[thisPseudo->wire->layer-1]->Fill(thisPseudo->u - deltaU, thisPseudo->u - upred);
+    	  hCathodeVProjections_Pos[thisPseudo->wire->layer-1]->Fill(thisPseudo->v - deltaV, thisPseudo->v - vpred);
       }
+
+      GetLockService(event)->RootFillUnLock(this);
 
       //jout << "==upred " << upred << " u " << thisPseudo->u << endl;
       //jout << "vpred " << vpred << " v " << thisPseudo->v << endl;
@@ -264,9 +285,9 @@ float pxcl=(u*sinPhiV-v*sinPhiU)/(cosPhiV*sinPhiU-cosPhiU*sinPhiV);//-xshift;
 pycl=(u*cosPhiV-v*cosPhiU)/(cosPhiU*sinPhiV-cosPhiV*sinPhiU);//+yshift;
 
 // The wire position projected from the wire
-japp->RootWriteLock();
+GetLockService(locEvent)->RootWriteLock();
 Hist3D[layer-1]->Fill(pxwl/10.,pycl/10.,(pxwl-pxcl)/10.); 
-japp->RootUnLock();
+GetLockService(locEvent)->RootUnLock();
 
 char thisName[256];
 sprintf(thisName, "Plane %.2i Wire Position Vs XY", layer);
@@ -276,26 +297,23 @@ Fill2DProfile("FDC_InternalAlignment", "Profile2D", thisName,
       100, -50.,50., 100,-50., 50.);
 }
 */
-return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FDC_InternalAlignment::erun(void)
+void JEventProcessor_FDC_InternalAlignment::EndRun()
 {
    // This is called whenever the run number changes, before it is
    // changed to give you a chance to clean up before processing
    // events from the next run number.
-   return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FDC_InternalAlignment::fini(void)
+void JEventProcessor_FDC_InternalAlignment::Finish()
 {
    // Called before program exit after event processing is finished.
-   return NOERROR;
 }
 

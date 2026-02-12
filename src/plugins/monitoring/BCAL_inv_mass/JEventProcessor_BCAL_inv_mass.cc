@@ -10,14 +10,13 @@
 #include <TLorentzVector.h>
 #include "TMath.h"
 
-#include "JANA/JApplication.h"
-#include "DANA/DApplication.h"
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALTruthShower.h"
 #include "BCAL/DBCALCluster.h"
 #include "BCAL/DBCALPoint.h"
 #include "BCAL/DBCALHit.h"
 #include "FCAL/DFCALCluster.h"
+#include "FCAL/DFCALShower.h"
 #include "ANALYSIS/DAnalysisUtilities.h"
 #include "PID/DVertex.h"
 
@@ -54,21 +53,22 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new JEventProcessor_BCAL_inv_mass()); //register this plugin
+		locApplication->Add(new JEventProcessor_BCAL_inv_mass()); //register this plugin
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_inv_mass::init(void)
+void JEventProcessor_BCAL_inv_mass::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
-
+	auto app = GetApplication();
+  	lockService = app->GetService<JLockService>();
 	if(bcal_diphoton_mass_500 != NULL){
-	  return NOERROR;
+	  return;
 	}
 
 	TDirectory *main = gDirectory;
@@ -127,77 +127,74 @@ jerror_t JEventProcessor_BCAL_inv_mass::init(void)
 
 	main->cd();
 
-	return NOERROR;
+	return;
 }
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_inv_mass::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void JEventProcessor_BCAL_inv_mass::BeginRun(const std::shared_ptr<const JEvent>& t)
 {
-    
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
 
 
 
-
-jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void JEventProcessor_BCAL_inv_mass::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
 
         const DTrigger* locTrigger = NULL; 
-	locEventLoop->GetSingle(locTrigger); 
+	locEvent->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-	  return NOERROR;
+	  return;
 
     vector<const DTrackFitter *> fitters;
-    locEventLoop->Get(fitters);
+    locEvent->Get(fitters);
     
     if(fitters.size()<1){
       _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      throw JException("Unable to get a DTrackFinder object!");
     }
 	const DTrackFitter *fitter = fitters[0];
 
 	vector<const DBCALShower*> locBCALShowers;
-	vector<const DFCALCluster*> locFCALClusters;
+	vector<const DFCALShower*> locFCALShowers;
 	vector<const DVertex*> kinfitVertex;
 	//const DDetectorMatches* locDetectorMatches = NULL;
-	//locEventLoop->GetSingle(locDetectorMatches);
-	locEventLoop->Get(locBCALShowers);
-	locEventLoop->Get(locFCALClusters);
-	locEventLoop->Get(kinfitVertex);
+	//locEvent->GetSingle(locDetectorMatches);
+	locEvent->Get(locBCALShowers);
+	locEvent->Get(locFCALShowers);
+	locEvent->Get(kinfitVertex);
 
-	if(locBCALShowers.size() > 15) return NOERROR;
+	if(locBCALShowers.size() > 15) return;
 
 	vector<const DTrackTimeBased*> locTrackTimeBased;
-	locEventLoop->Get(locTrackTimeBased);
+	locEvent->Get(locTrackTimeBased);
 
 	vector <const DBCALShower*> matchedShowers;
-	vector <const DFCALCluster*> matchedFCALClusters;
+	vector <const DFCALShower*> matchedFCALShowers;
 	vector <const DTrackTimeBased*> matchedTracks;
 	DVector3 mypos(0.0,0.0,0.0);
 
@@ -227,17 +224,17 @@ jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uin
 	    }
 	  }
 	}
-
+	
    for(unsigned int i = 0 ; i < locTrackTimeBased.size(); ++i)
         {
 	  vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased[i]->extrapolations.at(SYS_FCAL);
 	  if (extrapolations.size()>0){  
-	    for(unsigned int j = 0 ; j < locFCALClusters.size(); ++j)
+	    for(unsigned int j = 0 ; j < locFCALShowers.size(); ++j)
                 {
-		  const DFCALCluster *c1 = locFCALClusters[j];
-		  double x = c1->getCentroid().X();
-		  double y = c1->getCentroid().Y();
-		  double z = c1->getCentroid().Z();
+		  const DFCALShower *c1 = locFCALShowers[j];
+		  double x = c1->getPosition().X();
+		  double y = c1->getPosition().Y();
+		  double z = c1->getPosition().Z();
 		  DVector3 fcalpos(x,y,z);
 		  //cout << " x = " << x << " y = " << y << endl;
 		  DVector3 pos=extrapolations[0].position;
@@ -246,7 +243,7 @@ jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uin
 		  double diffY = TMath::Abs(y - pos.Y());
 		  if(diffX < 3.0 && diffY < 3.0)
 		    {
-		      matchedFCALClusters.push_back(locFCALClusters[j]);
+		      matchedFCALShowers.push_back(locFCALShowers[j]);
 		    }
 		}
 	  }
@@ -266,7 +263,7 @@ jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uin
 	
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	for(unsigned int i=0; i<locBCALShowers.size(); i++)
 	{
@@ -308,12 +305,12 @@ jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uin
 				if(fabs(z1-z2)<100. && E1_raw>.3 && E2_raw>.3 && E1_raw<.5 && E2_raw<.5) bcal_diphoton_mass_v_z_lowE->Fill(z_avg,inv_mass_raw);
 				if(fabs(z1-z2)<100. && E1_raw>.5 && E2_raw>.5 && E1_raw<.7 && E2_raw<.7) bcal_diphoton_mass_v_z_highE->Fill(z_avg,inv_mass_raw); 
 			}		
-			for(unsigned int j=0; j<locFCALClusters.size(); j++){
-				if (find(matchedFCALClusters.begin(), matchedFCALClusters.end(),locFCALClusters[j]) != matchedFCALClusters.end()) continue;
-				const DFCALCluster *cl2 = locFCALClusters[j];
-				double dx2 = cl2->getCentroid().X()-kinfitVertexX;
-	                        double dy2 = cl2->getCentroid().Y()-kinfitVertexY;
-                                double dz2 = cl2->getCentroid().Z()-kinfitVertexZ;
+			for(unsigned int j=0; j<locFCALShowers.size(); j++){
+				if (find(matchedFCALShowers.begin(), matchedFCALShowers.end(),locFCALShowers[j]) != matchedFCALShowers.end()) continue;
+				const DFCALShower *cl2 = locFCALShowers[j];
+				double dx2 = cl2->getPosition().X()-kinfitVertexX;
+	                        double dy2 = cl2->getPosition().Y()-kinfitVertexY;
+                                double dz2 = cl2->getPosition().Z()-kinfitVertexZ;
 				double fcal_E = cl2->getEnergy();
 				double R2 = sqrt(dx2*dx2 + dy2*dy2 + dz2*dz2);
 				TLorentzVector cl2_p(fcal_E*dx2/R2, fcal_E*dy2/R2, fcal_E*dz2/R2, fcal_E);
@@ -327,35 +324,30 @@ jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uin
 	}   
 
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 
 	/*
 	//Optional: Save event to output REST file. Use this to create skims.
-	dEventWriterREST->Write_RESTEvent(locEventLoop, "BCAL_Shower"); //string is part of output file name
+	dEventWriterREST->Write_RESTEvent(locEvent, "BCAL_Shower"); //string is part of output file name
 	*/
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_inv_mass::erun(void)
+void JEventProcessor_BCAL_inv_mass::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_inv_mass::fini(void)
+void JEventProcessor_BCAL_inv_mass::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

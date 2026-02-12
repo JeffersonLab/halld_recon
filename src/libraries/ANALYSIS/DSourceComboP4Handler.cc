@@ -97,12 +97,12 @@
 * delta_m = m_g - m_g/(sin(theta_g)*sqrt(1 + (1/tan(theta_g) + z_error/dx)^2))
 *
 * For BCAL, dx = 65.
-* For the FCAL, dx = dz*tan(theta), dz = 650 - z_error (approx 650):
+* For the FCAL/ECAL, dx = dz*tan(theta), dz = 650 - z_error (approx 650):
 * delta_m = m_g - m_g/(sin(theta_g)*sqrt(1 + (1 + z_error/(650 - z_error))^2/tan^2(theta_g)))
 * delta_m = m_g - m_g/(cos(theta_g)*sqrt(tan^2(theta_g) + (1 + z_error/(650 - z_error))^2))
 *
-* delta_m Is larger at higher m_g, max at 45 degrees (and is thus small for FCAL)
-* In fact, for the FCAL, delta_m is ~25 MeV for the eta mass when the z_error is 30cm (max: center of target + detached vertex)
+* delta_m Is larger at higher m_g, max at 45 degrees (and is thus small for FCAL/ECAL)
+* In fact, for the FCAL/ECAL, delta_m is ~25 MeV for the eta mass when the z_error is 30cm (max: center of target + detached vertex)
 * Therefore, if the center of the target is used, the error is negligible compared to the width of the mass cut.
 *
 * For the BCAL:
@@ -169,11 +169,11 @@ void DSourceComboP4Handler::Define_DefaultCuts(void)
 	//DEFAULT MISSING MASS SQUARED CUT VALUES //vs p
 	//pair of vectors: params for low bound, high bound
 
-	//Unknown: None missing
-	dMissingMassSquaredCuts_TF1Params[Unknown] = std::make_pair(vector<double>{-0.1}, vector<double>{0.1});
+	//UnknownParticle: None missing
+	dMissingMassSquaredCuts_TF1Params[UnknownParticle] = std::make_pair(vector<double>{-0.1}, vector<double>{0.1});
 
 	//Photon
-	dMissingMassSquaredCuts_TF1Params.emplace(Gamma, dMissingMassSquaredCuts_TF1Params[Unknown]);
+	dMissingMassSquaredCuts_TF1Params.emplace(Gamma, dMissingMassSquaredCuts_TF1Params[UnknownParticle]);
 
 	//e+/-
 	dMissingMassSquaredCuts_TF1Params[Electron] = std::make_pair(vector<double>{-1.0}, vector<double>{1.0});
@@ -218,7 +218,7 @@ void DSourceComboP4Handler::Get_CommandLineCuts_MM2(void)
 	//COMBO_MM2CUT:High_14=3.7_0.001
 
 	map<string, string> locParameterMap; //parameter key - filter, value
-	gPARMS->GetParameters(locParameterMap, "COMBO_MM2CUT:"); //gets all parameters with this filter at the beginning of the key
+	japp->GetJParameterManager()->FilterParameters(locParameterMap, "COMBO_MM2CUT:"); //gets all parameters with this filter at the beginning of the key
 	for(auto locParamPair : locParameterMap)
 	{
 		if(dDebugLevel)
@@ -245,7 +245,7 @@ void DSourceComboP4Handler::Get_CommandLineCuts_MM2(void)
 		//get the parameter, with hack so that don't get warning message about no default
 		string locKeyValue;
 		string locFullParamName = string("COMBO_MM2CUT:") + locParamPair.first; //have to add back on the filter
-		gPARMS->SetDefaultParameter(locFullParamName, locKeyValue);
+		japp->SetDefaultParameter(locFullParamName, locKeyValue);
 
 		//If functional form, save it and continue
 		if(locFuncIndex != string::npos)
@@ -297,7 +297,7 @@ void DSourceComboP4Handler::Get_CommandLineCuts_IM(void)
 	//COMBO_IMCUT:High_7=0.3
 
 	map<string, string> locParameterMap; //parameter key - filter, value
-	gPARMS->GetParameters(locParameterMap, "COMBO_IMCUT:"); //gets all parameters with this filter at the beginning of the key
+	japp->GetJParameterManager()->FilterParameters(locParameterMap, "COMBO_IMCUT:"); //gets all parameters with this filter at the beginning of the key
 	for(auto locParamPair : locParameterMap)
 	{
 		if(dDebugLevel)
@@ -323,7 +323,7 @@ void DSourceComboP4Handler::Get_CommandLineCuts_IM(void)
 		//get the parameter, with hack so that don't get warning message about no default
 		string locKeyValue;
 		string locFullParamName = string("COMBO_IMCUT:") + locParamPair.first; //have to add back on the filter
-		gPARMS->SetDefaultParameter(locFullParamName, locKeyValue);
+		japp->SetDefaultParameter(locFullParamName, locKeyValue);
 
 		//is cut parameter: extract and save
 		istringstream locValuetream(locKeyValue);
@@ -366,7 +366,7 @@ void DSourceComboP4Handler::Get_CommandLineCuts_MissingEnergy(void)
 	//COMBO_MISSECUT:High=3.7_0.001
 
 	map<string, string> locParameterMap; //parameter key - filter, value
-	gPARMS->GetParameters(locParameterMap, "COMBO_MISSECUT:"); //gets all parameters with this filter at the beginning of the key
+	japp->GetJParameterManager()->FilterParameters(locParameterMap, "COMBO_MISSECUT:"); //gets all parameters with this filter at the beginning of the key
 	for(auto locParamPair : locParameterMap)
 	{
 		if(dDebugLevel)
@@ -382,7 +382,7 @@ void DSourceComboP4Handler::Get_CommandLineCuts_MissingEnergy(void)
 		//get the parameter, with hack so that don't get warning message about no default
 		string locKeyValue;
 		string locFullParamName = string("COMBO_MISSECUT:") + locParamPair.first; //have to add back on the filter
-		gPARMS->SetDefaultParameter(locFullParamName, locKeyValue);
+		japp->SetDefaultParameter(locFullParamName, locKeyValue);
 
 		//If functional form, save it and continue
 		auto locFuncIndex = locParamPair.first.find("_FUNC");
@@ -429,7 +429,7 @@ void DSourceComboP4Handler::Get_CommandLineCuts_MissingEnergy(void)
 void DSourceComboP4Handler::Create_CutFunctions(void)
 {
 	//No idea why this lock is necessary, but it crashes without it.  Stupid ROOT. 
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	japp->GetService<JLockService>()->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
 	//Missing mass squared
 	for(auto& locPIDPair : dMissingMassSquaredCuts_TF1Params)
@@ -513,14 +513,14 @@ void DSourceComboP4Handler::Create_CutFunctions(void)
 
 	dMissingECuts = std::make_pair(locFunc_Low, locFunc_High);
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	japp->GetService<JLockService>()->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
 DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, bool locCreateHistsFlag) : dSourceComboer(locSourceComboer)
 {
-	gPARMS->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
-	gPARMS->SetDefaultParameter("COMBO:PRINT_CUTS", dPrintCutFlag);
-	gPARMS->SetDefaultParameter("COMBO:MAX_MASSIVE_NEUTRAL_BETA", dMaxMassiveNeutralBeta);
+	japp->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
+	japp->SetDefaultParameter("COMBO:PRINT_CUTS", dPrintCutFlag);
+	japp->SetDefaultParameter("COMBO:MAX_MASSIVE_NEUTRAL_BETA", dMaxMassiveNeutralBeta);
 
 	Define_DefaultCuts();
 	Get_CommandLineCuts_IM();
@@ -532,7 +532,7 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 		return;
 
 	//MISSING MASS CUTS & MASS HISTOGRAMS
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!! //I have no idea why this is needed (for the cuts), but without it it crashes.  Sigh. 
+	japp->GetService<JLockService>()->RootWriteLock(); //ACQUIRE ROOT LOCK!! //I have no idea why this is needed (for the cuts), but without it it crashes.  Sigh.
 	{
 		//HISTOGRAMS
 		//get and change to the base (file/global) directory
@@ -566,13 +566,19 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 			locHist = gDirectory->Get(locHistName.c_str());
 			dHistMap_2GammaMass[SYS_FCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";FCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
 			
+			locHistName = "InvariantMass_2Gamma_ECAL";
+			locHist = gDirectory->Get(locHistName.c_str());
+			dHistMap_2GammaMass[SYS_ECAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";ECAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			
 			locHistName = "InvariantMass_2Gamma_CCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
 			dHistMap_2GammaMass[SYS_CCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
 
-			locHistName = "InvariantMass_2Gamma_BCALFCALCCAL";
+			//locHistName = "InvariantMass_2Gamma_BCALFCALCCAL";
+			locHistName = "InvariantMass_2Gamma_BCALFCALECAL";
 			locHist = gDirectory->Get(locHistName.c_str());
-			dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL/FCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			//dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL/FCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL/FCAL/ECAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
 			/*
 			locHistName = "InvariantMass_2Gamma_BCALCCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
@@ -617,11 +623,11 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 		{
 			auto locPID = locPIDPair.first;
 			auto& locMassPair = locPIDPair.second;
-			string locHistName = string("MissingMassVsBeamEnergy_") + ((locPID != Unknown) ? ParticleType(locPID) : "None");
+			string locHistName = string("MissingMassVsBeamEnergy_") + ((locPID != UnknownParticle) ? ParticleType(locPID) : "None");
 			auto locHist = gDirectory->Get(locHistName.c_str());
 			if(locHist == nullptr)
 			{
-				string locHistTitle = string("From All Production Mechanisms;Beam Energy (GeV);") + string((locPID != Unknown) ? ParticleName_ROOT(locPID) : "None") + string(" Missing Mass Squared (GeV/c^{2})^{2}");
+				string locHistTitle = string("From All Production Mechanisms;Beam Energy (GeV);") + string((locPID != UnknownParticle) ? ParticleName_ROOT(locPID) : "None") + string(" Missing Mass Squared (GeV/c^{2})^{2}");
 				auto locMinMass = locMassPair.first->Eval(12.0) - 0.2; //assume widest at highest energy
 				auto locMaxMass = locMassPair.second->Eval(12.0) + 0.2;
 				auto locNumBins = 1000.0*(locMaxMass - locMinMass);
@@ -679,7 +685,7 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 
 		locCurrentDir->cd();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	japp->GetService<JLockService>()->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
 DLorentzVector DSourceComboP4Handler::Get_P4_NotMassiveNeutral(Particle_t locPID, const JObject* locObject, const DVector3& locVertex, bool locAccuratePhotonsFlag) const
@@ -769,7 +775,7 @@ DLorentzVector DSourceComboP4Handler::Calc_P4_NoMassiveNeutrals(const DSourceCom
 
 		//Subtract target p4 if necessary (e.g. Lambda, p -> p, p, pi-)
 		auto locTargetPIDToSubtract = std::get<4>(locCombosByUsePair.first);
-		if(locTargetPIDToSubtract != Unknown)
+		if(locTargetPIDToSubtract != UnknownParticle)
 			locTotalP4 -= DLorentzVector(TVector3(), ParticleMass(locTargetPIDToSubtract));
 	}
 
@@ -936,7 +942,7 @@ bool DSourceComboP4Handler::Calc_P4_HasMassiveNeutrals(bool locIsProductionVerte
 
 		//Subtract target p4 if necessary (e.g. Lambda, p -> p, p, pi-)
 		auto locTargetPIDToSubtract = std::get<4>(locCombosByUsePair.first);
-		if(locTargetPIDToSubtract != Unknown)
+		if(locTargetPIDToSubtract != UnknownParticle)
 			locTotalP4 -= DLorentzVector(TVector3(), ParticleMass(locTargetPIDToSubtract));
 	}
 
@@ -976,10 +982,10 @@ bool DSourceComboP4Handler::Cut_InvariantMass_NoMassiveNeutrals(const DSourceCom
 
 	if(!locVertexCombo->Get_IsComboingZIndependent() && (locVertexZBin == DSourceComboInfo::Get_VertexZIndex_Unknown()) && !locAccuratePhotonsFlag)
 		return true; //don't cut yet: will cut later when vertex known or accurate photons
-	auto locFinalStateP4 = Calc_P4_NoMassiveNeutrals(nullptr, locVertexCombo, locVertex, locVertexZBin, nullptr, DSourceComboUse(Unknown, 0, nullptr, false, Unknown), 1, locAccuratePhotonsFlag);
+	auto locFinalStateP4 = Calc_P4_NoMassiveNeutrals(nullptr, locVertexCombo, locVertex, locVertexZBin, nullptr, DSourceComboUse(UnknownParticle, 0, nullptr, false, UnknownParticle), 1, locAccuratePhotonsFlag);
 
 	//Subtract target p4 if necessary (e.g. Lambda, p -> p, p, pi-)
-	if(locTargetPIDToSubtract != Unknown)
+	if(locTargetPIDToSubtract != UnknownParticle)
 		locFinalStateP4 -= DLorentzVector(TVector3(), ParticleMass(locTargetPIDToSubtract));
 	auto locInvariantMass = locFinalStateP4.M();
 
@@ -1030,11 +1036,11 @@ bool DSourceComboP4Handler::Cut_InvariantMass_HasMassiveNeutral(bool locIsProduc
 		}
 
 		DLorentzVector locTotalP4(0.0, 0.0, 0.0, 0.0);
-		if(!Calc_P4_HasMassiveNeutrals(locIsProductionVertex, locIsPrimaryProductionVertex, locReactionFullCombo, locVertexCombo, locVertex, locTimeOffset, locRFBunch, locRFVertexTime, DSourceComboUse(Unknown, 0, nullptr, false, Unknown), 1, locTotalP4, locBeamParticle, locAccuratePhotonsFlag))
+		if(!Calc_P4_HasMassiveNeutrals(locIsProductionVertex, locIsPrimaryProductionVertex, locReactionFullCombo, locVertexCombo, locVertex, locTimeOffset, locRFBunch, locRFVertexTime, DSourceComboUse(UnknownParticle, 0, nullptr, false, UnknownParticle), 1, locTotalP4, locBeamParticle, locAccuratePhotonsFlag))
 			return true; //can't cut it yet!
 
 		//Subtract target p4 if necessary (e.g. Lambda, p -> p, p, pi-)
-		if(locTargetPIDToSubtract != Unknown)
+		if(locTargetPIDToSubtract != UnknownParticle)
 			locTotalP4 -= DLorentzVector(TVector3(), ParticleMass(locTargetPIDToSubtract));
 
 		auto locInvariantMass = locTotalP4.M();
@@ -1112,7 +1118,7 @@ bool DSourceComboP4Handler::Cut_InvariantMass_HasMassiveNeutral_OrPhotonVertex(c
 		{
 			auto locDecayComboUse = locIterator->first;
 			auto locDecayPID = std::get<0>(locDecayComboUse);
-			if((locDecayPID == Unknown) || std::get<3>(locDecayComboUse))
+			if((locDecayPID == UnknownParticle) || std::get<3>(locDecayComboUse))
 				continue; //no mass cut to place!
 
 			auto locDecayHasMassiveNeutrals = dSourceComboer->Get_HasMassiveNeutrals(std::get<2>(locDecayComboUse));
@@ -1172,7 +1178,7 @@ bool DSourceComboP4Handler::Cut_InvariantMass_MissingMassVertex(const DReactionV
 		{
 			auto locDecayComboUse = locIterator->first;
 			auto locDecayPID = std::get<0>(locDecayComboUse);
-			if((locDecayPID == Unknown) || std::get<3>(locDecayComboUse))
+			if((locDecayPID == UnknownParticle) || std::get<3>(locDecayComboUse))
 				continue; //no mass cut to place!
 
 			auto locDecayHasMassiveNeutrals = dSourceComboer->Get_HasMassiveNeutrals(std::get<2>(locDecayComboUse));
@@ -1218,7 +1224,7 @@ bool DSourceComboP4Handler::Cut_MissingMassSquared(const DReaction* locReaction,
 	if((locNumMissingParticles == 0) && (locNumInclusiveSteps == 0))
 	{
 		DLorentzVector locMissingP4;
-		if(!Cut_MissingMassSquared(locReaction, locReactionVertexInfo, locReactionFullComboUse, locReactionFullCombo, Unknown, 0, -1, locInitialStateP4, locRFBunch, locBeamParticle, locMissingP4))
+		if(!Cut_MissingMassSquared(locReaction, locReactionVertexInfo, locReactionFullComboUse, locReactionFullCombo, UnknownParticle, 0, -1, locInitialStateP4, locRFBunch, locBeamParticle, locMissingP4))
 			return false;
 	}
 
@@ -1302,9 +1308,10 @@ bool DSourceComboP4Handler::Cut_MissingMassSquared(const DReaction* locReaction,
 	//get vertex position and time offset
 	auto locVertex = dSourceComboVertexer->Get_Vertex(locStepVertexInfo, locFullCombo, locBeamParticle, false);
 	auto locTimeOffset = dSourceComboVertexer->Get_TimeOffset(locReactionVertexInfo, locStepVertexInfo, locFullCombo, locBeamParticle);
+
 	auto locBeamVelocity = locBeamParticle->pmag() / locBeamParticle->energy();
-	auto locRFVertexTime = dSourceComboTimeHandler->Calc_PropagatedRFTime(locPrimaryVertexZ, locRFBunch, locTimeOffset, locBeamVelocity);
-	auto locToExcludeUsePair = (locDecayStepIndex > 0) ? dSourceComboer->Get_StepSourceComboUse(locReaction, locDecayStepIndex, locReactionFullComboUse, 0) : std::make_pair(DSourceComboUse(Unknown, 0, nullptr, false, Unknown), size_t(1));
+	auto locRFVertexTime = dSourceComboTimeHandler->Calc_PropagatedRFTime(locPrimaryVertexZ, locRFBunch, locTimeOffset);
+	auto locToExcludeUsePair = (locDecayStepIndex > 0) ? dSourceComboer->Get_StepSourceComboUse(locReaction, locDecayStepIndex, locReactionFullComboUse, 0) : std::make_pair(DSourceComboUse(UnknownParticle, 0, nullptr, false, UnknownParticle), size_t(1));
 
 	//compute final-state p4
 	DLorentzVector locFinalStateP4(0.0, 0.0, 0.0, 0.0);
@@ -1331,7 +1338,7 @@ bool DSourceComboP4Handler::Cut_MissingMassSquared(const DReaction* locReaction,
 	//save and cut
 	dMissingMassPairs[locMissingPID].emplace_back(locBeamEnergy, locMissingP4.M2());
 	auto locPassCutFlag = ((locMissingP4.M2() >= locMissingMassSquared_Min) && (locMissingP4.M2() <= locMissingMassSquared_Max));
-	if(locMissingPID == Unknown)
+	if(locMissingPID == UnknownParticle)
 	{
 		dMissingEVsBeamEnergy_PreMissMassSqCut.emplace_back(locBeamEnergy, locMissingP4.E());
 		dMissingPtVsMissingE_PreMissMassSqCut.emplace_back(locMissingP4.E(), locMissingP4.Perp());
@@ -1382,7 +1389,7 @@ bool DSourceComboP4Handler::Cut_InvariantMass_AccuratePhotonKinematics(const DRe
 		{
 			auto locDecayComboUse = locIterator->first;
 			auto locDecayPID = std::get<0>(locDecayComboUse);
-			if((locDecayPID == Unknown) || std::get<3>(locDecayComboUse))
+			if((locDecayPID == UnknownParticle) || std::get<3>(locDecayComboUse))
 				continue; //no mass cut to place!
 
 			auto locDecayHasMassiveNeutrals = dSourceComboer->Get_HasMassiveNeutrals(std::get<2>(locDecayComboUse));
@@ -1412,7 +1419,7 @@ bool DSourceComboP4Handler::Cut_InvariantMass_AccuratePhotonKinematics(const DRe
 
 void DSourceComboP4Handler::Fill_Histograms(void)
 {
-	japp->WriteLock("DSourceComboP4Handler");
+	japp->GetService<JLockService>()->WriteLock("DSourceComboP4Handler");
 	{
 		for(auto& locPIDPair : dInvariantMasses)
 		{
@@ -1439,7 +1446,7 @@ void DSourceComboP4Handler::Fill_Histograms(void)
 		for(auto& locMissingPair : dMissingPtVsMissingE_PostMissMassSqCut)
 			dHist_NoneMissing_MissingPtVsMissingE_PostMissMassSqCut->Fill(locMissingPair.first, locMissingPair.second);
 	}
-	japp->Unlock("DSourceComboP4Handler");
+	japp->GetService<JLockService>()->Unlock("DSourceComboP4Handler");
 
 	vector<pair<float, float>>().swap(dMissingEVsBeamEnergy_PreMissMassSqCut);
 	vector<pair<float, float>>().swap(dMissingEVsBeamEnergy_PostMissMassSqCut);

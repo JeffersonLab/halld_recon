@@ -17,7 +17,7 @@
 #include "TMath.h"
 #include "TDecompLU.h"
 
-#include "JANA/JEventLoop.h"
+#include "JANA/JEvent.h"
 
 #include "DKinFitParticle.h"
 #include "DKinFitConstraint.h"
@@ -27,7 +27,6 @@
 #include "DKinFitConstraint_Spacetime.h"
 
 using namespace std;
-using namespace jana;
 
 enum DKinFitStatus
 {
@@ -49,7 +48,7 @@ class DKinFitter //purely virtual: cannot directly instantiate class, can only i
 		//CONSTRUCTOR
 		DKinFitter(DKinFitUtils* locKinFitUtils);
 
-		void Set_RunDependent_Data(JEventLoop *locEventLoop) {}
+		void Set_RunDependent_Data(const std::shared_ptr<const JEvent>& event) {}
 
 		//RESET
 		void Reset_NewEvent(void);

@@ -12,7 +12,6 @@
  *************************************/
 
 #include "JEventProcessor_BCAL_TDC_Timing.h"
-#include "HistogramTools.h" // To make my life easier
 #include "BCAL/DBCALHit.h"
 #include "BCAL/DBCALTDCHit.h"
 #include "BCAL/DBCALCluster.h"
@@ -29,16 +28,17 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DL1Trigger.h"
 
-using namespace jana;
+#include <TDirectory.h>
 
-#include "DANA/DApplication.h"
+
+#include "DANA/DEvent.h"
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_BCAL_TDC_Timing());
+    app->Add(new JEventProcessor_BCAL_TDC_Timing());
 }
 } // "C"
 
@@ -48,17 +48,6 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_BCAL_TDC_Timing::JEventProcessor_BCAL_TDC_Timing()
 {
-	VERBOSE = 0;
-	VERBOSEHISTOGRAMS = 0;
-
-    DONT_USE_SC = false;
-
-	if(gPARMS){
-		gPARMS->SetDefaultParameter("BCAL_TDC_Timing:VERBOSE", VERBOSE, "Verbosity level");
-		gPARMS->SetDefaultParameter("BCAL_TDC_Timing:VERBOSEHISTOGRAMS", VERBOSEHISTOGRAMS, "Create more histograms (default 0 for monitoring)");
-		gPARMS->SetDefaultParameter("BCAL_TDC_Timing:DONT_USE_SC", DONT_USE_SC, "Don't require tracks to match to the start counter (default 0 to require this matching)");
-	}
-
 }
 
 //------------------
@@ -66,32 +55,460 @@ JEventProcessor_BCAL_TDC_Timing::JEventProcessor_BCAL_TDC_Timing()
 //------------------
 JEventProcessor_BCAL_TDC_Timing::~JEventProcessor_BCAL_TDC_Timing()
 {
-
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_TDC_Timing::init(void)
+void JEventProcessor_BCAL_TDC_Timing::Init()
 {
-    // This is called once at program startup on a single thread.
+	// This is called once at program startup on a single thread.
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
-    return NOERROR;
+	VERBOSE = 0;
+	VERBOSEHISTOGRAMS = 0;
+    DONT_USE_SC = false;
+
+	if(app){
+		app->SetDefaultParameter("BCAL_TDC_Timing:VERBOSE", VERBOSE, "Verbosity level");
+		app->SetDefaultParameter("BCAL_TDC_Timing:VERBOSEHISTOGRAMS", VERBOSEHISTOGRAMS, "Create more histograms (default 0 for monitoring)");
+		app->SetDefaultParameter("BCAL_TDC_Timing:DONT_USE_SC", DONT_USE_SC, "Don't require tracks to match to the start counter (default 0 to require this matching)");
+	}
+	
+	
+   double MIN_TDIFF = -10.0, MAX_TDIFF = 10.0, MAX_TDIFF_WIDE = 30.0;
+   const int ndtbins = 100;
+   // double dtbins[ndtbins+1];
+   // for (int i=0; i<=ndtbins; i++) {
+   //     dtbins[i] = MIN_TDIFF + (MAX_TDIFF-MIN_TDIFF)/ndtbins*i;
+   // }
+   const int ndtbinswide = 200;
+   double dtbinswide[ndtbinswide+1];
+   for (int i=0; i<=ndtbinswide; i++) {
+       dtbinswide[i] = MIN_TDIFF + (MAX_TDIFF_WIDE-MIN_TDIFF)/ndtbinswide*i;
+   }
+   const int npeakbins = 100;
+   double peakbins[npeakbins+1] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,20,
+                                   21,23,24,26,28,30,32,34,36,39,42,44,48,51,54,58,62,66,71,76,
+                                   81,86,92,98,105,112,120,128,137,146,156,167,178,190,203,217,
+                                   231,247,264,281,300,321,343,366,390,417,445,475,507,541,578,
+                                   617,659,703,750,801,855,913,974,1040,1110,1185,1265,1351,1442,
+                                   1539,1643,1754,1872,1998,2133,2277,2430,2594,2769,2956,3155,
+                                   3368,3595,3837,4096};
+
+	float zminhall = 0;
+	float zmaxhall = 450;
+	float zminlocal = -250;
+	float zmaxlocal = 250;
+
+
+    TDirectory *main = gDirectory;
+    gDirectory->mkdir("BCAL_TDC_Timing")->cd();
+    gDirectory->mkdir("Timewalk_All")->cd();
+
+	hUpstream_Channel_Deltat_All = new TH2I("Upstream_Channel_Deltat",
+											"BCAL Upstream t_{TDC}-t_{ADC}; cellID; t_{TDC} - t_{ADC} [ns] ",
+                             				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
+	hDownstream_Channel_Deltat_All = new TH2I("Downstream_Channel_Deltat",
+											"BCAL Downstream t_{TDC}-t_{ADC}; cellID; t_{TDC} - t_{ADC} [ns] ",
+                             				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
+	hUpstream_Channel_Deltat_All_Corrected = new TH2I("Upstream_Channel_Deltat_TimewalkCorrected",
+											"BCAL Upstream t_{TDC}-t_{ADC} corrected; cellID; t_{TDC} - t_{ADC} [ns] ",
+                             				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
+	hDownstream_Channel_Deltat_All_Corrected = new TH2I("Downstream_Channel_Deltat_TimewalkCorrected",
+											"BCAL Downstream t_{TDC}-t_{ADC} corrected; cellID; t_{TDC} - t_{ADC} [ns] ",
+                             				576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);	
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Upstream_TimewalkVsPeak")->cd();
+
+	for(int module = 0; module < NBCALMODS; module++) {
+		for(int layer = 0; layer < NBCALLAYERS; layer++) {
+			for(int sector = 0; sector < NBCALSECTORS; sector++) {
+				char name[200];
+				sprintf(name, "M%02iL%iS%i", module, layer, sector);
+
+				int the_tdc_cell = module * 12 + layer * 4 + sector + 1;
+				hUpstream_TimewalkVsPeak[the_tdc_cell] = new TH2I(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
+                             npeakbins, peakbins, ndtbinswide, dtbinswide);
+			}
+		}
+	}
+	
+    gDirectory->cd("..");
+    gDirectory->mkdir("Downstream_TimewalkVsPeak")->cd();
+
+	for(int module = 0; module < NBCALMODS; module++) {
+		for(int layer = 0; layer < NBCALLAYERS; layer++) {
+			for(int sector = 0; sector < NBCALSECTORS; sector++) {
+				char name[200];
+				sprintf(name, "M%02iL%iS%i", module, layer, sector);
+
+				int the_tdc_cell = module * 12 + layer * 4 + sector + 1;
+				hDownstream_TimewalkVsPeak[the_tdc_cell] = new TH2I(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
+                             npeakbins, peakbins, ndtbinswide, dtbinswide);
+			}
+		}
+	}
+	
+    gDirectory->cd("..");
+    gDirectory->mkdir("Upstream_TimewalkVsPeak_Corrected")->cd();
+
+	for(int module = 0; module < NBCALMODS; module++) {
+		for(int layer = 0; layer < NBCALLAYERS; layer++) {
+			for(int sector = 0; sector < NBCALSECTORS; sector++) {
+				char name[200];
+				sprintf(name, "M%02iL%iS%i", module, layer, sector);
+
+				int the_tdc_cell = module * 12 + layer * 4 + sector + 1;
+				hUpstream_TimewalkVsPeak_Corrected[the_tdc_cell] = new TH2I(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
+                             npeakbins, peakbins, ndtbinswide, dtbinswide);
+			}
+		}
+	}
+	
+    gDirectory->cd("..");
+    gDirectory->mkdir("Downstream_TimewalkVsPeak_Corrected")->cd();
+
+	for(int module = 0; module < NBCALMODS; module++) {
+		for(int layer = 0; layer < NBCALLAYERS; layer++) {
+			for(int sector = 0; sector < NBCALSECTORS; sector++) {
+				char name[200];
+				sprintf(name, "M%02iL%iS%i", module, layer, sector);
+
+				int the_tdc_cell = module * 12 + layer * 4 + sector + 1;
+				hDownstream_TimewalkVsPeak_Corrected[the_tdc_cell] = new TH2I(name,  "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
+                             npeakbins, peakbins, ndtbinswide, dtbinswide);
+			}
+		}
+	}
+	
+
+	
+	
+	main->cd();
+	gDirectory->mkdir("BCAL_Global_Offsets")->cd();
+    gDirectory->mkdir("Debug")->cd();
+
+	hDebug = new TH1I("Success", "Success profile;Step", 16, -0.5, 15.5);
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Showers")->cd();
+
+	hBCALMatch = new TH2I("BCAL Match",  "BCAL Match;#Delta Z [cm]; #Delta#phi [rad]",
+                      200, -25, 25, 200, -0.1, 0.1);
+    hPosShowers_Evst = new TH2I("AllShowers_q+",  "Charged shower; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hNegShowers_Evst = new TH2I("AllShowers_q-",  "Charged shower; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+
+    hPosPionShowers_Evst = new TH2I("PionShowers_q+",  "Pion showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hPosPionShowers_Pvst = new TH2I("PionShowersVsP_q+",  "Pion showers; P [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hPosPionShowers_zvst = new TH2I("PionShowersVsZ_q+",  "Pion showers; Z [cm]; t_{Target} - t_{RF} [ns]", 880, 0.0, 440.0, 200, -10, 10);
+    hNegPionShowers_Evst = new TH2I("PionShowers_q-",  "Pion showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hNegPionShowers_Pvst = new TH2I("PionShowersVsP_q-",  "Pion showers; P [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hNegPionShowers_zvst = new TH2I("PionShowersVsZ_q-",  "Pion showers; Z [cm]; t_{Target} - t_{RF} [ns]", 880, 0.0, 440.0, 200, -10, 10);
+
+    hNeutShowers_Evst = new TH2I("AllShowers_q0",  "Neutral Showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 5.0, 200, -10, 10);
+    hNeutShowers_zvst = new TH2I("AllShowers_q0",  "Neutral Showers; Z [cm]; t_{Target} - t_{RF} [ns]", 880, 0.0, 440.0, 200, -10, 10);
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Showers_PID")->cd();
+
+    hPosShowers_PvsdEdx = new TH2I("dEdxVsP_q+",  "CDC dE/dx vs P; P [GeV]; dE/dx [keV/cm]", 200, 0.0, 5.0, 200, 0.0, 5.0);
+    hPosShowers_dEdxvst = new TH2I("deltaTVsdEdx_q+",  "PID; dE/dx [keV/cm]; t_{Target} - t_{RF} [ns]", 200, 0.0, 5.0, 200, -10, 10);
+    hPosShowers_PvsE = new TH2I("EVsP_q+", "PID; P  [GeV]; E/P", 200, 0.0, 5.0, 200, 0, 5.0);
+    hPosShowers_PvsEP = new TH2I("EoverPVsP_q+", "PID; P  [GeV]; E  [GeV]", 200, 0.0, 5.0, 200, 0, 2);
+    hNegShowers_PvsdEdx = new TH2I("dEdxVsP_q-",  "CDC dE/dx vs P; P [GeV]; dE/dx [keV/cm]", 200, 0.0, 5.0, 200, 0.0, 5.0);
+    hNegShowers_dEdxvst = new TH2I("deltaTVsdEdx_q-",  "PID; dE/dx [keV/cm]; t_{Target} - t_{RF} [ns]", 200, 0.0, 5.0, 200, -10, 10);
+    hNegShowers_PvsE = new TH2I("EVsP_q-", "PID; P  [GeV]; E/P", 200, 0.0, 5.0, 200, 0, 5.0);
+    hNegShowers_PvsEP = new TH2I("EoverPVsP_q-", "PID; P  [GeV]; E  [GeV]", 200, 0.0, 5.0, 200, 0, 2);
+
+    hMatching_dZvsdPhi = new TH2I("Matching",  "Shower-Track position difference;dZ [cm]; d#phi [degrees]", 200, -60.0, 60.0, 200, -30, 30); 
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Points")->cd();
+
+	hNpointVsEshower_qpos = new TH2I("NpointVsEshower_q+",  "PID; E_{shower} [GeV]; N_{point}", 500, 0.0, 5.0, 50, 0, 50);
+	hNpointVsEshower_qneg = new TH2I("NpointVsEshower_q-",  "PID; E_{shower} [GeV]; N_{point}", 500, 0.0, 5.0, 50, 0, 50);
+	hEpointVsEshower_qpos = new TH2I("EpointVsEshower_q+",  "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);
+	hEpointVsEshower_qneg = new TH2I("EpointVsEshower_q-",  "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "EpointVsEshower_Layer%i_q+", layer+1);
+		hEpointVsEshower_qpos_layer[layer] = new TH2I(layername, "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);  
+		sprintf(layername, "EpointVsEshower_Layer%i_q-", layer+1);
+		hEpointVsEshower_qneg_layer[layer] = new TH2I(layername, "PID; E_{shower} [GeV]; E_{point} [GeV]", 1000, 0.0, 5.0, 1000, 0, 2);  
+	}
+
+	hNpointVsEshower_q0 = new TH2I("NpointVsEshower_q0",  "PID; E_{shower} [GeV]; N_{point}", 500, 0.0, 5.0, 50, 0, 50);
+
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Z Position")->cd();
+
+	hAllPointsVsShower_zpos = new TH2I("AllPointsVsShower", "Z_{Point} vs Z_{Shower};Z_{Shower}  [cm];Z_{Point} [cm]", 225, zminhall, zmaxhall, 225, zminhall, zmaxhall);
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Deltat")->cd();
+
+    hDeltat_corr_all = new TH1I("AllPoints",  "#Delta t (Hit) corrected for Z;#Delta t - Z_{Track}/v_{eff}", 70, -10, 14);  
+    hDeltatvscell_corr = new TH2I("VsCell",  "#Delta t (Hit) corrected for Z;#Delta t - Z_{Track}/v_{eff}", 768, 0.5, 768.5, 70, -10, 14);  
+	
+    gDirectory->cd("..");
+    gDirectory->mkdir("Deltat_raw")->cd();
+    
+    hDeltat_raw_all = new TH1I("AllPoints", "#Delta t (Hit) corrected for Z;#Delta t_{raw} - Z_{Track}/v_{eff}",  70, -10, 14);
+    hDeltat_raw_chan = new TH2I("VsCell", "#Delta t (Hit) corrected for Z;#Delta t_{raw} - Z_{Track}/v_{eff}", 768, 0.5, 768.5, 70, -10, 14);
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Target Time")->cd();
+
+    hCCDB_raw_channel_global_offset = new TH1I("CCDB_raw_channel_global_offset",  "Offsets at time of running;CCDB Index;CCDB timing offset [ns]", 769, 0.5, 769.5); 
+
+    hdeltaTVsCell_all = new TH2I("deltaTVsCell",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10); 
+    hdeltaTVsCell_qpos = new TH2I("deltaTVsCell_q+",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_qneg = new TH2I("deltaTVsCell_q-",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_q0 = new TH2I("deltaTVsCell_q-0",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_qpos_Eweight = new TH2I("deltaTVsCell_q+_Eweight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_qneg_Eweight = new TH2I("deltaTVsCell_q-_Eweight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_q0_Eweight = new TH2I("deltaTVsCell_q0_Eweight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_qpos_E2weight = new TH2I("deltaTVsCell_q+_E2weight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_qneg_E2weight = new TH2I("deltaTVsCell_q-_E2weight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsCell_q0_E2weight = new TH2I("deltaTVsCell_q0_E2weight",  "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);  
+    hdeltaTVsLayer_qpos = new TH2I("deltaTVsLayer_q+",  "Charged shower points; Layer; t_{Target} - t_{RF} [ns]", 4, 0.5, 4.5, 200, -10, 10);  
+    hdeltaTVsLayer_qneg = new TH2I("deltaTVsLayer_q-",  "Charged shower points; Layer; t_{Target} - t_{RF} [ns]", 4, 0.5, 4.5, 200, -10, 10);  
+
+	hHitDeltaTVsChannel = new TH2I("hitDeltaTVsChannel",  "Charged shower hit; CCDB Index; t_{Target} - t_{RF} [ns]", 1536, 0.5, 1536.5, 200, -10, 10);
+	hHittimediff = new TH2I("hittimediff",  "Charged shower hit; CCDB Index; t_{Target} - t_{RF} [ns]", 768, 0.5, 768.5, 200, -10, 10);
+
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Hits_deltaTVsE")->cd();
+    
+    hHits_deltaTVsE_ADC_qpos = new TH2I("AllHits_ADC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hHits_deltaTVsE_TDC_qpos = new TH2I("AllHits_TDC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hHits_deltaTVsE_Mixed_qpos = new TH2I("AllHits_Mixed_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hHits_deltaTVsE_ADC_qneg = new TH2I("AllHits_ADC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hHits_deltaTVsE_TDC_qneg = new TH2I("AllHits_TDC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hHits_deltaTVsE_Mixed_qneg = new TH2I("AllHits_Mixed_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Hits_deltaTVsPPmax")->cd();
+
+    hHits_deltaTVsPPmax_ADC_qpos = new TH2I("AllHits_ADC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmax_TDC_qpos = new TH2I("AllHits_TDC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmax_Mixed_qpos = new TH2I("AllHits_Mixed_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmax_ADC_qneg = new TH2I("AllHits_ADC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmax_TDC_qneg = new TH2I("AllHits_TDC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmax_Mixed_qneg = new TH2I("AllHits_Mixed_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    
+    gDirectory->cd("..");
+    gDirectory->mkdir("Hits_deltaTVsPPmin")->cd();
+
+    hHits_deltaTVsPPmin_ADC_qpos = new TH2I("AllHits_ADC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmin_TDC_qpos = new TH2I("AllHits_TDC_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmin_Mixed_qpos = new TH2I("AllHits_Mixed_q+",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmin_ADC_qneg = new TH2I("AllHits_ADC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmin_TDC_qneg = new TH2I("AllHits_TDC_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    hHits_deltaTVsPPmin_Mixed_qneg = new TH2I("AllHits_Mixed_q-",  "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 4000, 200, -10, 10);  
+    
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Points_deltaTVsEnergy")->cd();
+
+    hPoints_deltaTVsEnergy_qpos = new TH2I("AllPoints_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_qneg = new TH2I("AllPoints_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_q0 = new TH2I("AllPoints_q0",  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_ADC_qpos = new TH2I("AllPoints_ADC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_ADC_qneg = new TH2I("AllPoints_ADC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_TDC_qpos = new TH2I("AllPoints_TDC_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_TDC_qneg = new TH2I("AllPoints_TDC_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_Mixed_qpos = new TH2I("AllPoints_Mixed_q+",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsEnergy_Mixed_qneg = new TH2I("AllPoints_Mixed_q-",  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "Layer%i_q+", layer+1);
+		hPoints_deltaTVsEnergy_qpos_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_q-", layer+1);
+		hPoints_deltaTVsEnergy_qneg_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_q0", layer+1);
+		hPoints_deltaTVsEnergy_q0_layer[layer] = new TH2I(layername,  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+
+		sprintf(layername, "Layer%i_ADC_q+", layer+1);
+		hPoints_deltaTVsEnergy_ADC_qpos_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_ADC_q-", layer+1);
+		hPoints_deltaTVsEnergy_ADC_qneg_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_TDC_q+", layer+1);
+		hPoints_deltaTVsEnergy_TDC_qpos_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_TDC_q-", layer+1);
+		hPoints_deltaTVsEnergy_TDC_qneg_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_Mixed_q+", layer+1);
+		hPoints_deltaTVsEnergy_Mixed_qpos_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_Mixed_q-", layer+1);
+		hPoints_deltaTVsEnergy_Mixed_qneg_layer[layer] = new TH2I(layername,  "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	}
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Points_altDeltaTVsEnergy")->cd();
+
+    hPoints_altdeltaTVsEnergy_q0 = new TH2I("AllPoints_q0",  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "Layer%i_q0", layer);
+		hPoints_altdeltaTVsEnergy_q0_layer[layer] = new TH2I(layername,  "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	}
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Points_deltaTVsShowerEnergy")->cd();
+
+    hPoints_deltaTVsShowerEnergy_qpos = new TH2I("AllPoints_q+",  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsShowerEnergy_qneg = new TH2I("AllPoints_q-",  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+    hPoints_deltaTVsShowerEnergy_q0 = new TH2I("AllPoints_q0",  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "Layer%i_q+", layer+1);
+		hPoints_deltaTVsShowerEnergy_qpos_layer[layer] = new TH2I(layername,  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_q-", layer+1);
+		hPoints_deltaTVsShowerEnergy_qneg_layer[layer] = new TH2I(layername,  "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+		sprintf(layername, "Layer%i_q0", layer+1);
+		hPoints_deltaTVsShowerEnergy_q0_layer[layer] = new TH2I(layername,  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	}
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Points_altDeltaTVsShowerEnergy")->cd();
+
+    hPoints_altdeltaTVsShowerEnergy_q0 = new TH2I("AllPoints_q0",  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "Layer%i_q0", layer);
+		hPoints_altdeltaTVsShowerEnergy_q0_layer[layer] = new TH2I(layername,  "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", 1000, 0.0, 2.0, 200, -10, 10);  
+	}
+
+
+    gDirectory->cd("../..");
+    gDirectory->mkdir("BCAL_atten_gain")->cd();
+    gDirectory->mkdir("logintratiovsZtrack")->cd();
+
+    hlogintratiovsZtrack_all = new TH2I("AllPoints", "Attenuation;Z_{Track}  (cm);log of integral ratio US/DS", 250, zminlocal, zmaxlocal, 250, -3, 3);
+	for(int module = 0; module < NBCALMODS; module++) {
+		for(int layer = 0; layer < NBCALLAYERS; layer++) {
+			for(int sector = 0; sector < NBCALSECTORS; sector++) {
+				char name[200], title[200];
+				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
+                sprintf(title,"Attenuation (M%i,L%i,S%i);Z_{Track}  (cm);log of integral ratio US/DS", module+1, layer+1, sector+1);
+
+				int the_cell = module * 12 + layer * 4 + sector + 1;
+				hlogintratiovsZtrack_chan[the_cell] = new TH2I(name, title, 250, zminlocal, zmaxlocal, 250, -3, 3);
+			}
+		}
+	}
+
+	main->cd();
+
+    gDirectory->mkdir("BCAL_TDC_Offsets")->cd();
+    gDirectory->mkdir("ZvsDeltat")->cd();
+    
+    hZvsDeltat_all = new TH2I("AllPoints",  "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  // simulation has 16 values in each Deltat=1
+    hZvsDeltat_qpos = new TH2I("All_q+",  "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  
+    hZvsDeltat_qneg = new TH2I("All_q-",  "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  
+
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "AllLayer%i", layer+1);
+		hZvsDeltat_layer[layer] = new TH2I(layername, "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", 480, -30, 30, 250, zminhall, zmaxhall);  
+	}
+	for(int module = 0; module < NBCALMODS; module++) {
+		for(int layer = 0; layer < NBCALLAYERS; layer++) {
+			for(int sector = 0; sector < NBCALSECTORS; sector++) {
+				char name[200], title[400];
+				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
+            	sprintf(title, "%s  Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", name);
+
+				int the_cell = module * 12 + layer * 4 + sector + 1;
+				hZvsDeltat_chan[the_cell] = new TH2I(name, title, 480, -30, 30, 250, zminhall, zmaxhall);
+			}
+		}
+	}
+	
+    gDirectory->cd("..");
+    gDirectory->mkdir("DeltatvsTheta")->cd();
+
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "AllLayer%i", layer+1);
+		hThetavsDeltat_layer[layer] = new TH2I(layername, "#Delta t vs #theta_{Track};#theta_{Track}  (deg);#Delta t = t_{US}-t_{DS}  (ns)",
+                             360,0,180, 480, -30, 30);  
+	}
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Delta Z")->cd();
+
+    hZvsDeltaz_all = new TH2I("AllPoints",  "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50); 
+    hZvsDeltaz_qpos = new TH2I("All_q+",  "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50);  
+    hZvsDeltaz_qneg = new TH2I("All_q-",  "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50);  
+
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "AllLayer%i", layer+1);
+		hZvsDeltaz_layer[layer] = new TH2I(layername, "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", 250, zminhall, zmaxhall, 100, -50, 50);  
+	}
+	for(int module = 0; module < NBCALMODS; module++) {
+		for(int layer = 0; layer < NBCALLAYERS; layer++) {
+			for(int sector = 0; sector < NBCALSECTORS; sector++) {
+				char name[200], title[400];
+				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
+            	sprintf(title, "%s  #Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}", name);
+
+				int the_cell = module * 12 + layer * 4 + sector + 1;
+				hZvsDeltaz_chan[the_cell] = new TH2I(name, title, 250, zminhall, zmaxhall, 100, -50, 50);
+			}
+		}
+	}
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("Z Position")->cd();
+
+    htrackZvsBCALZ_all = new TH2I("AllPoints",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall); 
+    htrackZvsBCALZ_qpos = new TH2I("All_q+",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
+    htrackZvsBCALZ_qneg = new TH2I("All_q-",  "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
+
+	for(int layer = 0; layer < NBCALLAYERS; layer++) {
+		char layername[255];
+		sprintf(layername, "AllLayer%i", layer+1);
+		htrackZvsBCALZ_layer[layer] = new TH2I(layername,   "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]", 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);  
+	}
+	for(int module = 0; module < NBCALMODS; module++) {
+		for(int layer = 0; layer < NBCALLAYERS; layer++) {
+			for(int sector = 0; sector < NBCALSECTORS; sector++) {
+				char name[200], title[400];
+				sprintf(name, "M%02iL%iS%i", module+1, layer+1, sector+1);
+            	sprintf(title, "%s  Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]]", name);
+
+				int the_cell = module * 12 + layer * 4 + sector + 1;
+				htrackZvsBCALZ_chan[the_cell] = new TH2I(name, title, 500, zminhall, zmaxhall, 500, zminhall, zmaxhall);
+			}
+		}
+	}
+
+	main->cd();
+
+
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_TDC_Timing::brun(JEventLoop *loop, int32_t runnumber)
+void JEventProcessor_BCAL_TDC_Timing::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // This is called whenever the run number changes
-    DApplication* app = dynamic_cast<DApplication*>(loop->GetJApplication());
-    DGeometry* geom = app->GetDGeometry(runnumber);
+    DGeometry* geom = DEvent::GetDGeometry(event);
     geom->GetTargetZ(Z_TARGET);
 
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	auto locBCALGeom = BCALGeomVec[0];
@@ -103,7 +520,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::brun(JEventLoop *loop, int32_t runnumb
     // // THIS NEEDS TO CHANGE IF THERE IS A NEW TABLE
     // //////
     // //get timewalk corrections from CCDB
-    // JCalibration *jcalib = loop->GetJCalibration();
+    // JCalibration *jcalib = event->GetJCalibration();
     // //these tables hold: module layer sector end c0 c1 c2 c3
     // vector<vector<float> > tdc_timewalk_table;
     // jcalib->Get("BCAL/timewalk_tdc",tdc_timewalk_table);
@@ -133,40 +550,33 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::brun(JEventLoop *loop, int32_t runnumb
     /// Read in initial calibration constants and write to root file for use in later calibration
     vector<double> raw_channel_global_offset;
     //if(print_messages) jout << "In BCAL_TDC_Timing, loading constants..." << endl;
-    if(loop->GetCalib("/BCAL/channel_global_offset", raw_channel_global_offset))
+    if(DEvent::GetCalib(event, "/BCAL/channel_global_offset", raw_channel_global_offset))
         jout << "Error loading /BCAL/channel_global_offset !" << endl;
 
-    japp->RootFillLock(this);
+    lockService->RootFillLock(this);
     //TH1D *CCDB_raw_channel_global_offset = new TH1D("CCDB_raw_channel_global_offset","Offsets at time of running;channel;offset",768,0.5,768.5);
     int counter = 1;
-    Fill1DWeightedHistogram("BCAL_Global_Offsets", "Target Time", "CCDB_raw_channel_global_offset",
-                            769, 1,
-                            "Offsets at time of running;CCDB Index;CCDB timing offset [ns]",
-                            769, 0.5, 769.5);
+    hCCDB_raw_channel_global_offset->Fill(769, 1);
     for (vector<double>::iterator iter = raw_channel_global_offset.begin(); iter != raw_channel_global_offset.end(); ++iter) {
-        //CCDB_raw_channel_global_offset->SetBinContent(counter,*iter);
-        Fill1DWeightedHistogram("BCAL_Global_Offsets", "Target Time", "CCDB_raw_channel_global_offset",
-                                counter, *iter,
-                                "Offsets at time of running;CCDB Index;CCDB timing offset [ns]",
-                                769, 0.5, 769.5);
+        hCCDB_raw_channel_global_offset->Fill(counter, *iter);
         counter++;
     }
-    japp->RootFillUnLock(this);
-
-    return NOERROR;
+    lockService->RootFillUnLock(this);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_BCAL_TDC_Timing::Process(const std::shared_ptr<const JEvent>& event)
 {
+   auto eventnumber = event->GetEventNumber();
+
    // First check that this is not a font panel trigger or no trigger
    bool goodtrigger=1;
 
    const DL1Trigger *trig = NULL;
    try {
-       loop->GetSingle(trig);
+       event->GetSingle(trig);
    } catch (...) {}
    if (trig) {
        if (trig->fp_trig_mask){
@@ -174,23 +584,23 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
        }
    } else {
        // HDDM files are from simulation, so keep them even though they have no trigger
-       bool locIsHDDMEvent = loop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
+       bool locIsHDDMEvent = DEvent::GetStatusBit(event, kSTATUS_HDDM);
        if (!locIsHDDMEvent) goodtrigger=0;
    }
    
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	auto locBCALGeom = BCALGeomVec[0];
 
     vector<const DTrackFitter *> fitters;
-    loop->Get(fitters);
+    event->Get(fitters);
     
     if(fitters.size()<1){
       _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      throw JException("Unable to get a DTrackFinder object!");
     }
     
     auto fitter = fitters[0];
@@ -199,7 +609,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
    // calculate total BCAL energy in order to catch BCAL LED events
    vector<const DBCALHit *> bcal_hits;
-   loop->Get(bcal_hits);
+   event->Get(bcal_hits);
    double total_bcal_energy = 0.;
    for(unsigned int i=0; i<bcal_hits.size(); i++) {
        total_bcal_energy += bcal_hits[i]->E;
@@ -207,11 +617,11 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
    if (total_bcal_energy > 12.) goodtrigger=0;
 
    if (!goodtrigger) {
-       return NOERROR;
+       return;
    }
 
    vector<const DBCALUnifiedHit *> bcalUnifiedHitVector;
-   loop->Get(bcalUnifiedHitVector);
+   event->Get(bcalUnifiedHitVector);
 
    /**********************************************
       _____ _                   __        __    _ _    
@@ -223,25 +633,27 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
    // The very first thing to do is correct for the timewalk. If this calibration is screwed up, the calibrations that follow will be wrong...
    // The following plots can be used for the calibration or to check the calibration if it has already been done
 
-   double MIN_TDIFF = -10.0, MAX_TDIFF = 10.0, MAX_TDIFF_WIDE = 30.0;
-   const int ndtbins = 100;
-   double dtbins[ndtbins+1];
-   for (int i=0; i<=ndtbins; i++) {
-       dtbins[i] = MIN_TDIFF + (MAX_TDIFF-MIN_TDIFF)/ndtbins*i;
-   }
-   const int ndtbinswide = 200;
-   double dtbinswide[ndtbinswide+1];
-   for (int i=0; i<=ndtbinswide; i++) {
-       dtbinswide[i] = MIN_TDIFF + (MAX_TDIFF_WIDE-MIN_TDIFF)/ndtbinswide*i;
-   }
-   const int npeakbins = 100;
-   double peakbins[npeakbins+1] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,20,
-                                   21,23,24,26,28,30,32,34,36,39,42,44,48,51,54,58,62,66,71,76,
-                                   81,86,92,98,105,112,120,128,137,146,156,167,178,190,203,217,
-                                   231,247,264,281,300,321,343,366,390,417,445,475,507,541,578,
-                                   617,659,703,750,801,855,913,974,1040,1110,1185,1265,1351,1442,
-                                   1539,1643,1754,1872,1998,2133,2277,2430,2594,2769,2956,3155,
-                                   3368,3595,3837,4096};
+//    double MIN_TDIFF = -10.0, MAX_TDIFF = 10.0, MAX_TDIFF_WIDE = 30.0;
+//    const int ndtbins = 100;
+//    double dtbins[ndtbins+1];
+//    for (int i=0; i<=ndtbins; i++) {
+//        dtbins[i] = MIN_TDIFF + (MAX_TDIFF-MIN_TDIFF)/ndtbins*i;
+//    }
+//    const int ndtbinswide = 200;
+//    double dtbinswide[ndtbinswide+1];
+//    for (int i=0; i<=ndtbinswide; i++) {
+//        dtbinswide[i] = MIN_TDIFF + (MAX_TDIFF_WIDE-MIN_TDIFF)/ndtbinswide*i;
+//    }
+//    const int npeakbins = 100;
+//    double peakbins[npeakbins+1] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,20,
+//                                    21,23,24,26,28,30,32,34,36,39,42,44,48,51,54,58,62,66,71,76,
+//                                    81,86,92,98,105,112,120,128,137,146,156,167,178,190,203,217,
+//                                    231,247,264,281,300,321,343,366,390,417,445,475,507,541,578,
+//                                    617,659,703,750,801,855,913,974,1040,1110,1185,1265,1351,1442,
+//                                    1539,1643,1754,1872,1998,2133,2277,2430,2594,2769,2956,3155,
+//                                    3368,3595,3837,4096};
+
+   lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
    for (unsigned int i = 0; i < bcalUnifiedHitVector.size(); i++){
       //int the_cell = (bcalUnifiedHitVector[i]->module - 1) * 16 + (bcalUnifiedHitVector[i]->layer - 1) * 4 + bcalUnifiedHitVector[i]->sector;
@@ -259,64 +671,41 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
       // The raw information from the DBCALHit and DBCALTDCHit is not corrected for timewalk yet, so we can always plot the before and after.
       if (thisADCHit != NULL && thisTDCHit != NULL){
-         char name[200];
-         sprintf(name, "M%02iL%iS%i", bcalUnifiedHitVector[i]->module, bcalUnifiedHitVector[i]->layer, bcalUnifiedHitVector[i]->sector);
+//          char name[200];
+//          sprintf(name, "M%02iL%iS%i", bcalUnifiedHitVector[i]->module, bcalUnifiedHitVector[i]->layer, bcalUnifiedHitVector[i]->sector);
          if (bcalUnifiedHitVector[i]->end == 0){
-            Fill2DHistogram ("BCAL_TDC_Timing", "Upstream_TimewalkVsPeak", name,
-                             pulse_peak, thisTDCHit->t - thisADCHit->t,
-                             "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
-                             npeakbins, peakbins, ndtbinswide, dtbinswide);
-            Fill2DHistogram ("BCAL_TDC_Timing", "Timewalk_All", "Upstream_Channel_Deltat",
-                             the_tdc_cell, thisTDCHit->t - thisADCHit->t,
-                             "BCAL Upstream t_{TDC}-t_{ADC}; cellID; t_{TDC} - t_{ADC} [ns] ",
-                             576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);
+			 hUpstream_TimewalkVsPeak[the_tdc_cell]->Fill(pulse_peak, thisTDCHit->t - thisADCHit->t);
+			 hUpstream_Channel_Deltat_All->Fill(the_tdc_cell, thisTDCHit->t - thisADCHit->t);
          }
-
          else{
-            Fill2DHistogram ("BCAL_TDC_Timing", "Downstream_TimewalkVsPeak", name,
-                             pulse_peak, thisTDCHit->t - thisADCHit->t,
-                             "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
-                             npeakbins, peakbins, ndtbinswide, dtbinswide);
-            Fill2DHistogram ("BCAL_TDC_Timing", "Timewalk_All", "Downstream_Channel_Deltat",
-                             the_tdc_cell, thisTDCHit->t - thisADCHit->t,
-                             "BCAL Upstream t_{TDC}-t_{ADC}; cellID; t_{TDC} - t_{ADC} [ns] ",
-                             576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);
+			 hDownstream_TimewalkVsPeak[the_tdc_cell]->Fill(pulse_peak, thisTDCHit->t - thisADCHit->t);
+			 hDownstream_Channel_Deltat_All->Fill(the_tdc_cell, thisTDCHit->t - thisADCHit->t);
          }
       }
+      
       // Next look directly at the DBCALUnifiedHit to get the corrected times and plot those seperately
       if (bcalUnifiedHitVector[i]->has_TDC_hit){
          double correctedTDCTime = bcalUnifiedHitVector[i]->t_TDC;
          char name[200];
          sprintf(name, "M%02iL%iS%i", bcalUnifiedHitVector[i]->module, bcalUnifiedHitVector[i]->layer, bcalUnifiedHitVector[i]->sector);
          if (bcalUnifiedHitVector[i]->end == 0){
-            Fill2DHistogram ("BCAL_TDC_Timing", "Upstream_TimewalkVsPeak_Corrected", name,
-                             pulse_peak, correctedTDCTime - bcalUnifiedHitVector[i]->t_ADC,
-                             "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
-                             npeakbins, peakbins, ndtbins ,dtbins);
-            Fill2DHistogram ("BCAL_TDC_Timing", "Timewalk_All", "Upstream_Channel_Deltat_TimewalkCorrected",
-                             the_tdc_cell, correctedTDCTime - bcalUnifiedHitVector[i]->t_ADC,
-                             "BCAL Upstream t_{TDC}-t_{ADC} corrected; cellID; t_{TDC} - t_{ADC} [ns] ",
-                             576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);
+			 hUpstream_TimewalkVsPeak_Corrected[the_tdc_cell]->Fill(pulse_peak, correctedTDCTime - thisADCHit->t);
+			 hUpstream_Channel_Deltat_All_Corrected->Fill(the_tdc_cell, correctedTDCTime - thisADCHit->t);
          }
          else{
-            Fill2DHistogram ("BCAL_TDC_Timing", "Downstream_TimewalkVsPeak_Corrected", name,
-                             pulse_peak, correctedTDCTime - bcalUnifiedHitVector[i]->t_ADC,
-                             "Timewalk; Pulse Peak [ADC Counts]; t_{TDC} - t_{ADC} [ns]",
-                             npeakbins, peakbins, ndtbins ,dtbins);
-            Fill2DHistogram ("BCAL_TDC_Timing", "Timewalk_All", "Downstream_Channel_Deltat_TimewalkCorrected",
-                             the_tdc_cell, correctedTDCTime - bcalUnifiedHitVector[i]->t_ADC,
-                             "BCAL Downstream t_{TDC}-t_{ADC} corrected; cellID; t_{TDC} - t_{ADC} [ns] ",
-                             576, 0.5, 576.5, ndtbins, MIN_TDIFF, MAX_TDIFF);
+			 hDownstream_TimewalkVsPeak_Corrected[the_tdc_cell]->Fill(pulse_peak, thisTDCHit->t - thisADCHit->t);
+			 hDownstream_Channel_Deltat_All_Corrected->Fill(the_tdc_cell, thisTDCHit->t - thisADCHit->t);
          }
       }
    }
 
+   lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
    //
    // Attenuation Length
    //
    // vector<const DBCALPoint *> BCALPointVector;
-   // loop->Get(BCALPointVector);
+   // event->Get(BCALPointVector);
 
    // for (unsigned int i = 0; i < BCALPointVector.size(); i++){
    //     const DBCALPoint *thisPoint = BCALPointVector[i];
@@ -378,16 +767,18 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
    // We need the RF bunch for the event in order to check the global alignemtn of the timing
    const DEventRFBunch *thisRFBunch = NULL;
-   loop->GetSingle(thisRFBunch);
+   event->GetSingle(thisRFBunch);
 
    vector <const DChargedTrack *> chargedTrackVector;
-   loop->Get(chargedTrackVector);
+   event->Get(chargedTrackVector);
 
-   Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 1, "Success profile;Step", 16, -0.5, 15.5);
+   lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+   
+   hDebug->Fill(1);
    for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
       // Pick out the best charged track hypothesis for this charged track based only on the Tracking FOM
       // const DChargedTrackHypothesis* bestHypothesis = chargedTrackVector[iTrack]->Get_BestTrackingFOM();
-      Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 2, "Success profile;Step", 16, -0.5, 15.5);
+      hDebug->Fill(2);
       // get charge and choose pion hypothesis as most likely
       int charge = chargedTrackVector[iTrack]->Get_Charge();
       char q[2];
@@ -400,7 +791,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
           sprintf(q,"-");
       }
       if (bestHypothesis == NULL) continue;
-      Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 3, "Success profile;Step", 16, -0.5, 15.5);
+      hDebug->Fill(3);
 
       // Now from this hypothesis we can get the detector matches to the BCAL
       auto bcalMatch = bestHypothesis->Get_BCALShowerMatchParams();
@@ -411,16 +802,14 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
       //float_track = momentum.Mag();
 
       if (bcalMatch == NULL) continue; 
-      Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 4, "Success profile;Step", 16, -0.5, 15.5);
+      hDebug->Fill(4);
       if (!DONT_USE_SC && (scMatch == NULL)) continue;
-      Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 5, "Success profile;Step", 16, -0.5, 15.5);
+      hDebug->Fill(5);
 
       double dDeltaZToShower = bcalMatch->dDeltaZToShower;
       double dDeltaPhiToShower = bcalMatch->dDeltaPhiToShower;
-
-      Fill2DHistogram("BCAL_Global_Offsets", "Showers", "BCAL Match",
-                      dDeltaZToShower, dDeltaPhiToShower, "BCAL Match;#Delta Z [cm]; #Delta#phi [rad]",
-                      200, -25, 25, 200, -0.1, 0.1);
+      
+      hBCALMatch->Fill(dDeltaZToShower, dDeltaPhiToShower);
 
       const DTrackTimeBased *timeBasedTrack = bestHypothesis->Get_TrackTimeBased();
 
@@ -429,7 +818,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
       } else {
           if (timeBasedTrack->FOM < 0.0027) continue; // 3-sigma cut on tracking FOM
       }
-      Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 6, "Success profile;Step", 16, -0.5, 15.5);
+      hDebug->Fill(6);
       if (timeBasedTrack->Ndof < 10) continue; // CDC: 5 params in fit, 10 dof => [15 hits]; FDC [10 hits]
 
       // Use CDC dEdx to help reject protons
@@ -442,7 +831,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
       const DBCALShower *thisShower = bcalMatch->dBCALShower;
 
       // Fill histograms based on the shower
-      char name[200], title[200];
+      // char name[200], title[200];
       DVector3 proj_pos;
       double flightTime=0.;
       //double innerpathLength, innerflightTime;
@@ -472,54 +861,37 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
       if (fitter->ExtrapolateToRadius(R,extrapolations,proj_pos,proj_mom,
 				      flightTime,pathLength)){	
 
-          Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 7, "Success profile;Step", 16, -0.5, 15.5);
+          hDebug->Fill(7);
           if (thisRFBunch->dNumParticleVotes >= 2){ // Require good RF bunch and this track match the SC
-              Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 8, "Success profile;Step", 16, -0.5, 15.5);
+              hDebug->Fill(8);
               // We have the flight time to our BCAL point, so we can get the target time
               double targetCenterTime = t_shower - flightTime - ((timeBasedTrack->position()).Z() - Z_TARGET) / SPEED_OF_LIGHT;
-              sprintf(name, "AllShowers_q%s", q);
-              sprintf(title, "Charged shower; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]");
-              Fill2DHistogram("BCAL_Global_Offsets", "Showers", name,
-                              E_shower, targetCenterTime - thisRFBunch->dTime, title,
-                              1000, 0.0, 5.0, 200, -10, 10);
-              sprintf(name, "dEdxVsP_q%s", q);
-              sprintf(title, "CDC dE/dx vs P; P [GeV]; dE/dx [keV/cm]");
-              Fill2DHistogram("BCAL_Global_Offsets", "Showers_PID", name,
-                              P_track, dEdx, title,
-                              200, 0.0, 5.0, 200, 0.0, 5.0);
-              sprintf(name, "deltaTVsdEdx_q%s", q);
-              sprintf(title, "PID; dE/dx [keV/cm]; t_{Target} - t_{RF} [ns]");
-              Fill2DHistogram("BCAL_Global_Offsets", "Showers_PID", name,
-                              dEdx, targetCenterTime - thisRFBunch->dTime, title,
-                              200, 0.0, 5.0, 200, -10, 10);
-              sprintf(name, "EVsP_q%s", q);
-              sprintf(title, "PID; P  [GeV]; E/P");
-              Fill2DHistogram("BCAL_Global_Offsets", "Showers_PID", name,
-                              P_track, E_shower, title,
-                              200, 0.0, 5.0, 200, 0, 5.0);
-              sprintf(name, "EoverPVsP_q%s", q);
-              sprintf(title, "PID; P  [GeV]; E  [GeV]");
-              Fill2DHistogram("BCAL_Global_Offsets", "Showers_PID", name,
-                              P_track, E_shower/P_track, title,
-                              200, 0.0, 5.0, 200, 0, 2);
-              if (dEdx_pion) {
-                  Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 9, "Success profile;Step", 16, -0.5, 15.5);
-                  sprintf(name, "PionShowers_q%s", q);
-                  sprintf(title, "Pion showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]");
-                  Fill2DHistogram("BCAL_Global_Offsets", "Showers", name,
-                                  E_shower, targetCenterTime - thisRFBunch->dTime, title,
-                                  1000, 0.0, 5.0, 200, -10, 10);
-                  sprintf(name, "PionShowersVsP_q%s", q);
-                  sprintf(title, "Pion showers; P [GeV]; t_{Target} - t_{RF} [ns]");
-                  Fill2DHistogram("BCAL_Global_Offsets", "Showers", name,
-                                  P_track, targetCenterTime - thisRFBunch->dTime, title,
-                                  1000, 0.0, 5.0, 200, -10, 10);
-                  sprintf(name, "PionShowersVsZ_q%s", q);
-                  sprintf(title, "Pion showers; Z [cm]; t_{Target} - t_{RF} [ns]");
-                  Fill2DHistogram("BCAL_Global_Offsets", "Showers", name,
-                                  Z_shower, targetCenterTime - thisRFBunch->dTime, title,
-                                  880, 0.0, 420.0, 200, -10, 10);
-              }
+			  if (charge>0) {
+				  hPosShowers_Evst->Fill(E_shower, targetCenterTime - thisRFBunch->dTime);
+				  hPosShowers_PvsdEdx->Fill(P_track, dEdx);
+				  hPosShowers_dEdxvst->Fill(dEdx, targetCenterTime - thisRFBunch->dTime);
+				  hPosShowers_PvsE->Fill(P_track, E_shower);
+				  hPosShowers_PvsEP->Fill(P_track, E_shower/P_track);
+				  if (dEdx_pion) {
+					  hDebug->Fill(9);
+					  hPosPionShowers_Evst->Fill(E_shower, targetCenterTime - thisRFBunch->dTime);
+					  hPosPionShowers_Pvst->Fill(P_track, targetCenterTime - thisRFBunch->dTime);
+					  hPosPionShowers_zvst->Fill(Z_shower, targetCenterTime - thisRFBunch->dTime);
+				  }
+			  } else {
+				  hNegShowers_Evst->Fill(E_shower, targetCenterTime - thisRFBunch->dTime);
+				  hNegShowers_PvsdEdx->Fill(P_track, dEdx);
+				  hNegShowers_dEdxvst->Fill(dEdx, targetCenterTime - thisRFBunch->dTime);
+				  hNegShowers_PvsE->Fill(P_track, E_shower);
+				  hNegShowers_PvsEP->Fill(P_track, E_shower/P_track);
+				  if (dEdx_pion) {
+					  hDebug->Fill(9);
+					  hNegPionShowers_Evst->Fill(E_shower, targetCenterTime - thisRFBunch->dTime);
+					  hNegPionShowers_Pvst->Fill(P_track, targetCenterTime - thisRFBunch->dTime);
+					  hNegPionShowers_zvst->Fill(Z_shower, targetCenterTime - thisRFBunch->dTime);
+				  }
+			  }
+
           }
       }
 
@@ -530,11 +902,11 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
       int N_points = pointVector.size();
       // N_points vs E_shower
-      sprintf(name, "NpointVsEshower_q%s", q);
-      sprintf(title, "PID; E_{shower} [GeV]; N_{point}");
-      Fill2DHistogram("BCAL_Global_Offsets", "Points", name,
-                      E_shower, N_points, title,
-                      500, 0.0, 5.0, 50, 0, 50);
+      if (charge>0) {
+      	hNpointVsEshower_qpos->Fill(E_shower, N_points);
+      } else {
+      	hNpointVsEshower_qneg->Fill(E_shower, N_points);
+      }
 
       // Loop over the points within the cluster
       for (unsigned int iPoint = 0; iPoint < pointVector.size(); iPoint++){
@@ -543,26 +915,15 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
          double rpoint = thisPoint->r();
          float E_point = thisPoint->E();
          double Z_point = thisPoint->z();
+         
+         hAllPointsVsShower_zpos->Fill(Z_shower, Z_point + Z_TARGET);
 
-         float zminhall = 0;
-         float zmaxhall = 450;
-         float zminlocal = -250;
-         float zmaxlocal = 250;
-         Fill2DHistogram ("BCAL_Global_Offsets", "Z Position", "AllPointsVsShower",
-                          Z_shower, Z_point + Z_TARGET,
-                          "Z_{Point} vs Z_{Shower};Z_{Shower}  [cm];Z_{Point} [cm]",
-                          225, zminhall, zmaxhall, 225, zminhall, zmaxhall);
-
-	 if (fitter->ExtrapolateToRadius(rpoint,extrapolations,proj_pos,
-					 proj_mom,
-					 flightTime,pathLength)){	
+		 if (fitter->ExtrapolateToRadius(rpoint,extrapolations,proj_pos,
+						 proj_mom,
+						 flightTime,pathLength)){	
 
             // Now proj_pos contains the projected position of the track at this particular point within the BCAL
             // We can plot the difference of the projected position and the BCAL position as a function of the channel
-            char channame[20], layername[255], chargename[255];
-            sprintf(channame, "M%02iL%iS%i", thisPoint->module(), thisPoint->layer(), thisPoint->sector());
-            sprintf(layername, "AllLayer%i", thisPoint->layer());
-            sprintf(chargename, "All_q%s", q);
             // These results are in slightly different coordinate systems. We want one where the center of the BCAL is z=0
             double trackHitZ = proj_pos.z();
             double localTrackHitZ = proj_pos.z() - locBCALGeom->GetBCAL_center();
@@ -571,74 +932,46 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
             double deltaZ = trackHitZ-BCALHitZ;
             double Deltat = thisPoint->t_US() - thisPoint->t_DS();
 
-            Fill2DHistogram ("BCAL_TDC_Offsets", "ZvsDeltat", "AllPoints",
-                             Deltat, trackHitZ,
-                             "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]",
-                             480, -30, 30, 250, zminhall, zmaxhall);  // simulation has 16 values in each Deltat=1
-            Fill2DHistogram ("BCAL_TDC_Offsets", "ZvsDeltat", layername,
-                             Deltat, trackHitZ,
-                             "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]",
-                             480, -30, 30, 250, zminhall, zmaxhall); 
-            Fill2DHistogram ("BCAL_TDC_Offsets", "ZvsDeltat", chargename,
-                             Deltat, trackHitZ,
-                             "Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]",
-                             480, -30, 30, 250, zminhall, zmaxhall);
-            sprintf(title, "%s  Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", channame);
-            Fill2DHistogram ("BCAL_TDC_Offsets", "ZvsDeltat", channame,
-                             Deltat, trackHitZ, title,
-                             480, -30, 30, 250, zminhall, zmaxhall); 
+			int the_cell = (thisPoint->module() - 1) * 12 + (thisPoint->layer() - 1) * 4 + thisPoint->sector();
 
-            double trackTheta = 180/3.14159265358*atan2(timeBasedTrack->pperp(),timeBasedTrack->pz());
-            Fill2DHistogram ("BCAL_TDC_Offsets", "DeltatvsTheta", layername,
-                             trackTheta, Deltat,
-                             "#Delta t vs #theta_{Track};#theta_{Track}  (deg);#Delta t = t_{US}-t_{DS}  (ns)",
-                             360,0,180, 480, -30, 30); 
-
-
-            int the_cell = (thisPoint->module() - 1) * 16 + (thisPoint->layer() - 1) * 4 + thisPoint->sector();
-            float Deltat_Zcorr = Deltat - (trackHitZ-212)/8.1;
-            sprintf(title, "#Delta t (Hit) corrected for Z;#Delta t - Z_{Track}/v_{eff}");
-            Fill1DHistogram ("BCAL_Global_Offsets", "Deltat", "AllPoints",
-                             Deltat_Zcorr, title, 70, -10, 14);
-            Fill2DHistogram ("BCAL_Global_Offsets", "Deltat", "VsCell",
-                             the_cell, Deltat_Zcorr,
-                             "#Delta t (Hit) corrected for Z;#Delta t - Z_{Track}/v_{eff}",
-                             768, 0.5, 768.5, 70, -10, 14);
-
-            Fill2DHistogram ("BCAL_TDC_Offsets", "Delta Z", "AllPoints",
-                             trackHitZ, deltaZ,
-                             "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}",
-                             250, zminhall, zmaxhall, 100, -50, 50); 
-            Fill2DHistogram ("BCAL_TDC_Offsets", "Delta Z", layername,
-                             trackHitZ, deltaZ,
-                             "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}",
-                             250, zminhall, zmaxhall, 100, -50, 50); 
-            Fill2DHistogram ("BCAL_TDC_Offsets", "Delta Z", chargename,
-                             trackHitZ, deltaZ,
-                             "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}",
-                             250, zminhall, zmaxhall, 100, -50, 50); 
-            Fill2DHistogram ("BCAL_TDC_Offsets", "Delta Z", channame,
-                             trackHitZ, deltaZ,
-                             "#Delta Z vs Z_{Track};Z_{Track} [cm];#Delta Z = Z_{Track} - Z_{Point}",
-                             250, zminhall, zmaxhall, 100, -50, 50); 
             
-            Fill2DHistogram ("BCAL_TDC_Offsets", "Z Position", "AllPoints",
-                             trackHitZ, BCALHitZ,
-                             "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]",
-                             500, zminhall, zmaxhall, 500, zminhall, zmaxhall); 
-            Fill2DHistogram ("BCAL_TDC_Offsets", "Z Position", layername,
-                             trackHitZ, BCALHitZ,
-                             "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]",
-                             500, zminhall, zmaxhall, 500, zminhall, zmaxhall); 
-            Fill2DHistogram ("BCAL_TDC_Offsets", "Z Position", chargename,
-                             trackHitZ, BCALHitZ,
-                             "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]",
-                             500, zminhall, zmaxhall, 500, zminhall, zmaxhall); 
-            Fill2DHistogram ("BCAL_TDC_Offsets", "Z Position", channame,
-                             trackHitZ, BCALHitZ,
-                             "Z_{point} Vs. Z_{Track}; Z_{Track} [cm]; Z_{Point} [cm]",
-                             500, zminhall, zmaxhall, 500, zminhall, zmaxhall); 
+            hZvsDeltat_all->Fill(Deltat, trackHitZ); 
+            if(charge>0) {
+	            hZvsDeltat_qpos->Fill(Deltat, trackHitZ);
+			} else {
+	            hZvsDeltat_qneg->Fill(Deltat, trackHitZ);
+			}
+			hZvsDeltat_layer[thisPoint->layer() - 1]->Fill(Deltat, trackHitZ);
+			hZvsDeltat_chan[the_cell]->Fill(Deltat, trackHitZ);
+			
+            double trackTheta = 180/3.14159265358*atan2(timeBasedTrack->pperp(),timeBasedTrack->pz());
+			hThetavsDeltat_layer[thisPoint->layer() - 1]->Fill(trackTheta, Deltat);
 
+            //int the_cell = (thisPoint->module() - 1) * 16 + (thisPoint->layer() - 1) * 4 + thisPoint->sector();
+            float Deltat_Zcorr = Deltat - (trackHitZ-212)/8.1;
+
+			hDeltat_corr_all->Fill(Deltat_Zcorr);
+			hDeltatvscell_corr->Fill(the_cell, Deltat_Zcorr);
+
+            hZvsDeltaz_all->Fill(trackHitZ, deltaZ); 
+            if(charge>0) {
+	            hZvsDeltaz_qpos->Fill(trackHitZ, deltaZ);
+			} else {
+	            hZvsDeltaz_qneg->Fill(trackHitZ, deltaZ);
+			}
+			hZvsDeltaz_layer[thisPoint->layer() - 1]->Fill(trackHitZ, deltaZ);
+			hZvsDeltaz_chan[the_cell]->Fill(trackHitZ, deltaZ);
+			
+            htrackZvsBCALZ_all->Fill(trackHitZ, BCALHitZ); 
+            if(charge>0) {
+	            htrackZvsBCALZ_qpos->Fill(trackHitZ, BCALHitZ);
+			} else {
+	            htrackZvsBCALZ_qneg->Fill(trackHitZ, BCALHitZ);
+			}
+			htrackZvsBCALZ_layer[thisPoint->layer() - 1]->Fill(trackHitZ, BCALHitZ);
+			htrackZvsBCALZ_chan[the_cell]->Fill(trackHitZ, BCALHitZ);
+			
+			
             // Get the unifiedhits
             vector <const DBCALUnifiedHit*> unifiedhitVector;
             thisPoint->Get(unifiedhitVector);
@@ -665,14 +998,11 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
             // Get raw times
             float Deltat_raw = thisADCHit_up->t_raw - thisADCHit_down->t_raw;
             float Deltat_raw_Zcorr = Deltat_raw - (trackHitZ-212)/8.1;
-            Fill2DHistogram("BCAL_Global_Offsets", "Deltat_raw", "VsCell",
-                            the_cell, Deltat_raw_Zcorr,
-                            "#Delta t (Hit) corrected for Z;#Delta t_{raw} - Z_{Track}/v_{eff}",
-                            768, 0.5, 768.5, 70, -10, 14);
-            sprintf(title, "#Delta t (Hit) corrected for Z;#Delta t_{raw} - Z_{Track}/v_{eff}");
-            Fill1DHistogram ("BCAL_Global_Offsets", "Deltat_raw", "AllPoints",
-                             Deltat_raw_Zcorr, title, 70, -10, 14);
-
+            
+            hDeltat_raw_all->Fill(Deltat_raw_Zcorr);
+            hDeltat_raw_chan->Fill(the_cell, Deltat_raw_Zcorr);
+            
+            
             // Attenuation Length
             vector<const DBCALDigiHit*> digihits;
             thisPoint->Get(digihits);
@@ -702,15 +1032,8 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
             float logintratio = log(intratio);
 
             if (VERBOSEHISTOGRAMS) {
-                sprintf(title,"Attenuation;Z_{Track}  (cm);log of integral ratio US/DS");
-                Fill2DHistogram ("BCAL_atten_gain", "logintratiovsZtrack", "AllPoints",
-                                 localTrackHitZ, logintratio, title,
-                                 250, zminlocal, zmaxlocal, 250, -3, 3);
-                sprintf(title,"Attenuation (M%i,L%i,S%i);Z_{Track}  (cm);log of integral ratio US/DS", 
-                        thisPoint->module(), thisPoint->layer(), thisPoint->sector());
-                Fill2DHistogram ("BCAL_atten_gain", "logintratiovsZtrack", channame,
-                                 localTrackHitZ, logintratio, title,
-                                 250, zminlocal, zmaxlocal, 250, -3, 3);
+            	hlogintratiovsZtrack_all->Fill(localTrackHitZ, logintratio);
+            	hlogintratiovsZtrack_chan[the_cell]->Fill(localTrackHitZ, logintratio);
             }
 
             // Now fill some histograms that are useful for aligning the BCAL with the rest of the detector systems
@@ -723,30 +1046,19 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
                // Now we just plot the difference in from the RF Time to get out the correction
                if (E_point > 0.05) { // The timing is known not to be great for very low energy, so only use our best info 
-                   Fill2DHistogram("BCAL_Global_Offsets", "Target Time", "deltaTVsCell",
-                                   the_cell, targetCenterTime - thisRFBunch->dTime,
-                                   "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]",
-                                   768, 0.5, 768.5, 200, -10, 10);
-                   sprintf(name , "deltaTVsCell_q%s", q);
-                   Fill2DHistogram("BCAL_Global_Offsets", "Target Time", name,
-                                   the_cell, targetCenterTime - thisRFBunch->dTime,
-                                   "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]",
-                                   768, 0.5, 768.5, 200, -10, 10);
-                   sprintf(name , "deltaTVsCell_q%s_Eweight", q);
-                   Fill2DWeightedHistogram("BCAL_Global_Offsets", "Target Time", name,
-                                           the_cell, targetCenterTime - thisRFBunch->dTime, E_point,
-                                           "Charged shower points (E weighted); CCDB Index; t_{Target} - t_{RF} [ns]",
-                                           768, 0.5, 768.5, 200, -10, 10);
-                   sprintf(name , "deltaTVsCell_q%s_E2weight", q);
-                   Fill2DWeightedHistogram("BCAL_Global_Offsets", "Target Time", name,
-                                           the_cell, targetCenterTime - thisRFBunch->dTime, E_point*E_point,
-                                           "Charged shower points (E^{2} weighted); CCDB Index; t_{Target} - t_{RF} [ns]",
-                                           768, 0.5, 768.5, 200, -10, 10);
-                   sprintf(name , "deltaTVsLayer_q%s", q); // for simulation separate by layer
-                   Fill2DHistogram("BCAL_Global_Offsets", "Target Time", name,
-                                   thisPoint->layer(), targetCenterTime - thisRFBunch->dTime,
-                                   "Charged shower points; CCDB Index; t_{Target} - t_{RF} [ns]",
-                                   4, 0.5, 4.5, 200, -10, 10);
+
+					hdeltaTVsCell_all->Fill(the_cell, targetCenterTime - thisRFBunch->dTime);
+					if(charge > 0) {
+						hdeltaTVsCell_qpos->Fill(the_cell, targetCenterTime - thisRFBunch->dTime);
+						hdeltaTVsCell_qpos_Eweight->Fill(the_cell, targetCenterTime - thisRFBunch->dTime, E_point);
+						hdeltaTVsCell_qpos_E2weight->Fill(the_cell, targetCenterTime - thisRFBunch->dTime, E_point*E_point);
+						hdeltaTVsLayer_qpos->Fill(thisPoint->layer(), targetCenterTime - thisRFBunch->dTime);
+					} else {
+						hdeltaTVsCell_qneg->Fill(the_cell, targetCenterTime - thisRFBunch->dTime);
+						hdeltaTVsCell_qneg_Eweight->Fill(the_cell, targetCenterTime - thisRFBunch->dTime, E_point);
+						hdeltaTVsCell_qneg_E2weight->Fill(the_cell, targetCenterTime - thisRFBunch->dTime, E_point*E_point);
+						hdeltaTVsLayer_qneg->Fill(thisPoint->layer(), targetCenterTime - thisRFBunch->dTime);
+					}
                }
 
                float pulse_peak_max = max(thisADCHit_up->pulse_peak,thisADCHit_down->pulse_peak);
@@ -763,79 +1075,97 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 	    
                int the_cell = (thisPoint->module() - 1) * 16 + (thisPoint->layer() - 1) * 4 + thisPoint->sector();
                //int channel = end*768 + the_cell;
-               Fill2DHistogram("BCAL_Global_Offsets", "Target Time", "hitDeltaTVsChannel",
-                               the_cell, hitup_TargetCenterTime - thisRFBunch->dTime,
-                               "Charged shower hit; CCDB Index; t_{Target} - t_{RF} [ns]",
-                               1536, 0.5, 1536.5, 200, -10, 10);               
-               Fill2DHistogram("BCAL_Global_Offsets", "Target Time", "hitDeltaTVsChannel",
-                               the_cell+768, hitdown_TargetCenterTime - thisRFBunch->dTime,
-                               "Charged shower hit; CCDB Index; t_{Target} - t_{RF} [ns]",
-                               1536, 0.5, 1536.5, 200, -10, 10);               
-               Fill2DHistogram("BCAL_Global_Offsets", "Target Time", "hittimediff",
-                               the_cell, hittimediff,
-                               "Charged shower hit; CCDB Index; t_{Target} - t_{RF} [ns]",
-                               768, 0.5, 768.5, 200, -10, 10);               
+               hHitDeltaTVsChannel->Fill(the_cell, hitup_TargetCenterTime - thisRFBunch->dTime);
+               hHitDeltaTVsChannel->Fill(the_cell+768, hitdown_TargetCenterTime - thisRFBunch->dTime);
+               hHittimediff->Fill(the_cell, hittimediff);
+               
+//             sprintf(type,"Mixed");
+//             if (t_up == t_ADC_up && t_down == t_ADC_down) sprintf(type,"ADC");
+//             if (t_up == t_TDC_up && t_down == t_TDC_down) sprintf(type,"TDC");
 
-               sprintf(title, "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]");
-               sprintf(name, "AllHits_%s_q%s",type,q);
-               Fill2DHistogram("BCAL_Global_Offsets", "Hits_deltaTVsE", name,
-                               E_point, targetCenterTime - thisRFBunch->dTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
+			   if (t_up == t_ADC_up && t_down == t_ADC_down) {   // "ADC"
+			   	if(charge > 0) {
+			   		hHits_deltaTVsE_ADC_qpos->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmax_ADC_qpos->Fill(pulse_peak_max, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmin_ADC_qpos->Fill(pulse_peak_min, targetCenterTime - thisRFBunch->dTime);
+			   	} else {
+			   		hHits_deltaTVsE_ADC_qneg->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmax_ADC_qneg->Fill(pulse_peak_max, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmin_ADC_qneg->Fill(pulse_peak_min, targetCenterTime - thisRFBunch->dTime);
+			   	}
+			   		
+			   } else if (t_up == t_TDC_up && t_down == t_TDC_down) {   // "TDC"
+			   	if(charge > 0) {
+			   		hHits_deltaTVsE_TDC_qpos->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmax_TDC_qpos->Fill(pulse_peak_max, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmin_TDC_qpos->Fill(pulse_peak_min, targetCenterTime - thisRFBunch->dTime);
+			   	} else {
+			   		hHits_deltaTVsE_TDC_qneg->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmax_TDC_qneg->Fill(pulse_peak_max, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmin_TDC_qneg->Fill(pulse_peak_min, targetCenterTime - thisRFBunch->dTime);
+			   	}
+			   		
+			   } else {    // "Mixed"
+			   	if(charge > 0) {
+			   		hHits_deltaTVsE_Mixed_qpos->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmax_Mixed_qpos->Fill(pulse_peak_max, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmin_Mixed_qpos->Fill(pulse_peak_min, targetCenterTime - thisRFBunch->dTime);
+			   	} else {
+			   		hHits_deltaTVsE_Mixed_qneg->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmax_Mixed_qneg->Fill(pulse_peak_max, targetCenterTime - thisRFBunch->dTime);
+			   		hHits_deltaTVsPPmin_Mixed_qneg->Fill(pulse_peak_min, targetCenterTime - thisRFBunch->dTime);
+			   	}
+			   		
+			   }
 
-               sprintf(title, "Charged shower points; peak [counts]; t_{Target} - t_{RF} [ns]");
-               sprintf(name, "AllHits_%s_q%s",type,q);
-               Fill2DHistogram("BCAL_Global_Offsets", "Hits_deltaTVsPPmax", name,
-                               pulse_peak_max, targetCenterTime - thisRFBunch->dTime, title,
-                               1000, 0.0, 4000, 200, -10, 10);
-               sprintf(name, "AllHits_%s_q%s",type,q);
-               Fill2DHistogram("BCAL_Global_Offsets", "Hits_deltaTVsPPmin", name,
-                               pulse_peak_min, targetCenterTime - thisRFBunch->dTime, title,
-                               1000, 0.0, 4000, 200, -10, 10);
 
                int layer = thisPoint->layer();
                // E_point vs E_shower
-               sprintf(name, "EpointVsEshower_q%s", q);
-               sprintf(title, "PID; E_{shower} [GeV]; E_{point} [GeV]");
-               Fill2DHistogram("BCAL_Global_Offsets", "Points", name,
-                               E_shower, E_point, title,
-                               1000, 0.0, 5.0, 1000, 0, 2);
-               sprintf(name, "EpointVsEshower_Layer%i_q%s", layer, q);
-               sprintf(title, "PID; E_{shower} [GeV]; E_{point} [GeV]");
-               Fill2DHistogram("BCAL_Global_Offsets", "Points", name,
-                               E_shower, E_point, title,
-                               1000, 0.0, 5.0, 1000, 0, 2);
-               // deltaT vs E_point
-               sprintf(name, "AllPoints_q%s", q);
-               sprintf(title, "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]");
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsEnergy", name,
-                               E_point, targetCenterTime - thisRFBunch->dTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               sprintf(name, "Layer%i_q%s", layer, q);
-               sprintf(title, "Charged shower points, layer %i; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", layer);
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsEnergy", name,
-                               E_point, targetCenterTime - thisRFBunch->dTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               sprintf(name, "AllPoints_%s_q%s", type, q);
-               sprintf(title, "Charged shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]");
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsEnergy", name,
-                               E_point, targetCenterTime - thisRFBunch->dTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               sprintf(name, "Layer%i_%s_q%s", layer, type, q);
-               sprintf(title, "Charged shower points, layer %i; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", layer);
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsEnergy", name,
-                               E_point, targetCenterTime - thisRFBunch->dTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               // deltaT vs E_shower
-               sprintf(name, "AllPoints_q%s", q);
-               sprintf(title, "Charged shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]");
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsShowerEnergy", name,
-                               E_shower, targetCenterTime - thisRFBunch->dTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               sprintf(name, "Layer%i_q%s", layer, q);
-               sprintf(title, "Charged shower points, layer %i; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", layer);
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsShowerEnergy", name,
-                               E_shower, targetCenterTime - thisRFBunch->dTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
+               if(charge > 0) {
+               		hEpointVsEshower_qpos->Fill(E_shower, E_point);
+               		hEpointVsEshower_qpos_layer[layer-1]->Fill(E_shower, E_point);
+               } else {
+               		hEpointVsEshower_qneg->Fill(E_shower, E_point);
+               		hEpointVsEshower_qneg_layer[layer-1]->Fill(E_shower, E_point);
+               }
+               
+               // deltaT vs E_point and deltaT vs E_shower
+               if(charge > 0) {
+               		hPoints_deltaTVsEnergy_qpos->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+               		hPoints_deltaTVsEnergy_qpos_layer[layer-1]->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+               		
+               		hPoints_deltaTVsShowerEnergy_qpos->Fill(E_shower, targetCenterTime - thisRFBunch->dTime);
+               		hPoints_deltaTVsShowerEnergy_qpos_layer[layer-1]->Fill(E_shower, targetCenterTime - thisRFBunch->dTime);
+               		
+					if (t_up == t_ADC_up && t_down == t_ADC_down) {   // "ADC"
+						hPoints_deltaTVsEnergy_ADC_qpos->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+						hPoints_deltaTVsEnergy_ADC_qpos_layer[layer-1]->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+					} else if (t_up == t_TDC_up && t_down == t_TDC_down) {   // "TDC"
+						hPoints_deltaTVsEnergy_TDC_qpos->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+						hPoints_deltaTVsEnergy_TDC_qpos_layer[layer-1]->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+					} else {    // "Mixed"
+						hPoints_deltaTVsEnergy_Mixed_qpos->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+						hPoints_deltaTVsEnergy_Mixed_qpos_layer[layer-1]->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+					}
+               } else {
+               		hPoints_deltaTVsEnergy_qneg->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+               		hPoints_deltaTVsEnergy_qneg_layer[layer-1]->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+               		
+               		hPoints_deltaTVsShowerEnergy_qneg->Fill(E_shower, targetCenterTime - thisRFBunch->dTime);
+               		hPoints_deltaTVsShowerEnergy_qneg_layer[layer-1]->Fill(E_shower, targetCenterTime - thisRFBunch->dTime);
+               		
+					if (t_up == t_ADC_up && t_down == t_ADC_down) {   // "ADC"
+						hPoints_deltaTVsEnergy_ADC_qneg->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+						hPoints_deltaTVsEnergy_ADC_qneg_layer[layer-1]->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+					} else if (t_up == t_TDC_up && t_down == t_TDC_down) {   // "TDC"
+						hPoints_deltaTVsEnergy_TDC_qneg->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+						hPoints_deltaTVsEnergy_TDC_qneg_layer[layer-1]->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+					} else {    // "Mixed"
+						hPoints_deltaTVsEnergy_Mixed_qneg->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+						hPoints_deltaTVsEnergy_Mixed_qneg_layer[layer-1]->Fill(E_point, targetCenterTime - thisRFBunch->dTime);
+					}
+               }
+                                              
             }
          }
       }
@@ -853,27 +1183,27 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
    // //double r_shower = sqrt(shower_x*shower_x+shower_y*shower_y);
    // double t_shower = shower_t;
    // double E_shower = shower_E;
-   char name[200], title[200];
-   Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 10, "Success profile;Step", 16, -0.5, 15.5);
+   // char name[200], title[200];
+   hDebug->Fill(10);
    if (thisRFBunch->dNumParticleVotes >= 2){ // Require good RF bunch
-       Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 11, "Success profile;Step", 16, -0.5, 15.5);
+       hDebug->Fill(11);
        vector<const DVertex*> locVertex;
-       loop->Get(locVertex);       
+       event->Get(locVertex);       
        // *** get unmatched BCAL showers from neutral showers
        // *** not restrictive enough so do the matching locally
        //vector <const DNeutralShower *> neutralShower;
-       // loop->Get(neutralShower);
+       // event->Get(neutralShower);
        //       for (unsigned int ishower = 0; ishower < neutralShower.size(); ishower++){
        // vector <const DBCALShower*> bcalshowervector;
        // if (neutralShower[ishower]->dDetectorSystem == SYS_BCAL) {
        //        neutralShower[ishower]->Get(bcalshowervector);
        // }
        vector <const DBCALShower *> locBCALShowers;
-       loop->Get(locBCALShowers);
+       event->Get(locBCALShowers);
        vector<const DTrackTimeBased*> locTrackTimeBased;
-       loop->Get(locTrackTimeBased);
+       event->Get(locTrackTimeBased);
        for (unsigned int ibcalshower = 0; ibcalshower < locBCALShowers.size(); ibcalshower++){
-           Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 12, "Success profile;Step", 16, -0.5, 15.5);
+           hDebug->Fill(12);
            const DBCALShower *bcalshower = locBCALShowers[ibcalshower];
            double x = bcalshower->x;
            double y = bcalshower->y;
@@ -889,17 +1219,14 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
 		 double dPhi = 180./3.14159265358*(trackpos.Phi()-showerpos.Phi());
 		 double dZ = (trackpos.Z() - z);
-		 sprintf(name, "Matching");
-		 sprintf(title, "Shower-Track position difference;dZ [cm]; d#phi [degrees]");
-		 Fill2DHistogram("BCAL_Global_Offsets", "Showers_PID", name,
-				 dZ, dPhi, title,
-				 200, -60.0, 60.0, 200, -30, 30);
+		 hMatching_dZvsdPhi->Fill(dZ, dPhi);
+
 		 // analysis shows 40 and 15 are better
 		 if (TMath::Abs(dZ < 40.0) && TMath::Abs(dPhi) < 15) matched=1;
 	       }
 	   }
            if (matched) continue;
-           Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 13, "Success profile;Step", 16, -0.5, 15.5);
+           hDebug->Fill(13);
 
            float vertexX = locVertex[0]->dSpacetimeVertex.X();
            float vertexY = locVertex[0]->dSpacetimeVertex.Y();
@@ -920,27 +1247,16 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
            //printf("shower (%5.1f,%5.1f,%5.1f) vertex (%5.1f,%5.1f,%5.1f) length (%5.1f,%5.1f,%5.1f) time sh %5.1f flight %5.1f %5.1f target %5.1f rf %5.1f\n",
            // bcalshower->x,bcalshower->y,bcalshower->z,vertexX,vertexY,vertexZ,
            // xdiff,ydiff,zdiff, bcalshower->t,flightTime,vertexTime,targetCenterTime,thisRFBunch->dTime);
-           sprintf(name, "AllShowers_q0");
-           sprintf(title, "Neutral Showers; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]");
-           Fill2DHistogram("BCAL_Global_Offsets", "Showers", name,
-                           E_shower, deltaTime, title,
-                           1000, 0.0, 5.0, 200, -10, 10);
-           sprintf(name, "AllShowersVsZ_q0");
-           sprintf(title, "Neutral showers; Z [cm]; t_{Target} - t_{RF} [ns]");
-           Fill2DHistogram("BCAL_Global_Offsets", "Showers", name,
-                           bcalshower->z, deltaTime, title,
-                           880, 0.0, 440.0, 200, -10, 10);
-
-           // // Get the points from the shower
+           hNeutShowers_Evst->Fill(E_shower, deltaTime);
+           hNeutShowers_zvst->Fill(bcalshower->z, deltaTime);
+           
+           // Get the points from the shower
            vector <const DBCALPoint*> pointVector;
            bcalshower->Get(pointVector);
            int N_points = pointVector.size();
            // N_points vs E_shower
-           sprintf(name, "NpointVsEshower_q0");
-           sprintf(title, "PID; E_{shower} [GeV]; N_{point}");
-           Fill2DHistogram("BCAL_Global_Offsets", "Points", name,
-                           E_shower, N_points, title,
-                           500, 0.0, 5.0, 50, 0, 50);
+           hNpointVsEshower_q0->Fill(E_shower, N_points);
+
            // Loop over the points within the cluster
            for (unsigned int iPoint = 0; iPoint < pointVector.size(); iPoint++){
                const DBCALPoint *thisPoint = pointVector[iPoint];
@@ -954,56 +1270,18 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
                if (E_point > 0.05) { // The timing is known not to be great for very low energy, so only use our best info 
                    int the_cell = (thisPoint->module() - 1) * 16 + (thisPoint->layer() - 1) * 4 + thisPoint->sector();
-                   Fill2DHistogram("BCAL_Global_Offsets", "Target Time", "deltaTVsCell_q0",
-                                   the_cell, deltaTime,
-                                   "Neutral shower points; CCDB Index; t_{Target} - t_{RF} [ns]",
-                                   768, 0.5, 768.5, 200, -10, 10);
-                   Fill2DHistogram("BCAL_Global_Offsets", "Target Time", "deltaTVsCell_q0",
-                                   the_cell, deltaTime,
-                                   "Neutral shower points; CCDB Index; t_{Target} - t_{RF} [ns]",
-                                   768, 0.5, 768.5, 200, -10, 10);
-                   Fill2DWeightedHistogram("BCAL_Global_Offsets", "Target Time", "deltaTVsCell_q0_Eweight",
-                                           the_cell, deltaTime, E_point,
-                                           "Neutral shower points (E weighted); CCDB Index; t_{Target} - t_{RF} [ns]",
-                                           768, 0.5, 768.5, 200, -10, 10);
-                   Fill2DWeightedHistogram("BCAL_Global_Offsets", "Target Time", "deltaTVsCell_q0_E2weight",
-                                           the_cell, deltaTime, E_point*E_point,
-                                           "Neutral shower points (E^{2} weighted); CCDB Index; t_{Target} - t_{RF} [ns]",
-                                           768, 0.5, 768.5, 200, -10, 10);
-               }
+                   hdeltaTVsCell_q0->Fill(the_cell, deltaTime);
+                   hdeltaTVsCell_q0_Eweight->Fill(the_cell, deltaTime, E_point);
+                   hdeltaTVsCell_q0_E2weight->Fill(the_cell, deltaTime, E_point*E_point);
+                                  }
                int layer = thisPoint->layer();
                // deltaT vs E_point
-               sprintf(name, "AllPoints_q0");
-               sprintf(title, "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]");
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsEnergy", name,
-                               E_point, deltaTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               sprintf(name, "Layer%i_q0", layer);
-               sprintf(title, "Neutral shower points, layer %i; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", layer);
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsEnergy", name,
-                               E_point, deltaTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               // sprintf(name, "AllPoints_%s_q0", type);
-               // sprintf(title, "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]");
-               // Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsEnergy", name,
-               //                    E_point, deltaTime, title,
-               //                    1000, 0.0, 2.0, 200, -10, 10);
-               // sprintf(name, "Layer%i_%s_q0", layer, type);
-               // sprintf(title, "Neutral shower points, layer %i; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", layer);
-               // Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsEnergy", name,
-               //                    E_point, deltaTime, title,
-               //                    1000, 0.0, 2.0, 200, -10, 10);
+               hPoints_deltaTVsEnergy_q0->Fill(E_point, deltaTime);
+               hPoints_deltaTVsEnergy_q0_layer[layer-1]->Fill(E_point, deltaTime);
+               
                // deltaT vs E_shower
-               sprintf(name, "AllPoints_q0");
-               sprintf(title, "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]");
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsShowerEnergy", name,
-                               E_shower, deltaTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               sprintf(name, "Layer%i_q0", layer);
-               sprintf(title, "Neutral shower points, layer %i; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", layer);
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_deltaTVsShowerEnergy", name,
-                               E_shower, deltaTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
+               hPoints_deltaTVsShowerEnergy_q0->Fill(E_shower, deltaTime);
+               hPoints_deltaTVsShowerEnergy_q0_layer[layer-1]->Fill(E_shower, deltaTime);
 
                // Now simulate the projection to the inner radius
 
@@ -1014,62 +1292,39 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
                float altDeltaTime = targetCenterTime - thisRFBunch->dTime;
 
                // altDeltaT vs E_point
-               sprintf(name, "AllPoints_q0");
-               sprintf(title, "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]");
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_altDeltaTVsEnergy", name,
-                               E_point, altDeltaTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               sprintf(name, "Layer%i_q0", layer);
-               sprintf(title, "Neutral shower points, layer %i; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", layer);
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_altDeltaTVsEnergy", name,
-                               E_point, altDeltaTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               // sprintf(name, "AllPoints_%s_q0", type);
-               // sprintf(title, "Neutral shower points; E_{point} [GeV]; t_{Target} - t_{RF} [ns]");
-               // Fill2DHistogram("BCAL_Global_Offsets", "Points_altDeltaTVsEnergy", name,
-               //                    E_point, altDeltaTime, title,
-               //                    1000, 0.0, 2.0, 200, -10, 10);
-               // sprintf(name, "Layer%i_%s_q0", layer, type);
-               // sprintf(title, "Neutral shower points, layer %i; E_{point} [GeV]; t_{Target} - t_{RF} [ns]", layer);
-               // Fill2DHistogram("BCAL_Global_Offsets", "Points_altDeltaTVsEnergy", name,
-               //                    E_point, altDeltaTime, title,
-               //                    1000, 0.0, 2.0, 200, -10, 10);
+               hPoints_altdeltaTVsEnergy_q0->Fill(E_point, altDeltaTime);
+               hPoints_altdeltaTVsEnergy_q0_layer[layer-1]->Fill(E_point, altDeltaTime);
+
                // altDeltaT vs E_shower
-               sprintf(name, "AllPoints_q0");
-               sprintf(title, "Neutral shower points; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]");
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_altDeltaTVsShowerEnergy", name,
-                               E_shower, altDeltaTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
-               sprintf(name, "Layer%i_q0", layer);
-               sprintf(title, "Neutral shower points, layer %i; E_{shower} [GeV]; t_{Target} - t_{RF} [ns]", layer);
-               Fill2DHistogram("BCAL_Global_Offsets", "Points_altDeltaTVsShowerEnergy", name,
-                               E_shower, altDeltaTime, title,
-                               1000, 0.0, 2.0, 200, -10, 10);
+               hPoints_altdeltaTVsShowerEnergy_q0->Fill(E_shower, altDeltaTime);
+               hPoints_altdeltaTVsShowerEnergy_q0_layer[layer-1]->Fill(E_shower, altDeltaTime);
+
            }
        }
    }   
 
-   return NOERROR;
+   lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
+   return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_TDC_Timing::erun(void)
+void JEventProcessor_BCAL_TDC_Timing::EndRun()
 {
    // This is called whenever the run number changes, before it is
    // changed to give you a chance to clean up before processing
    // events from the next run number.
-   return NOERROR;
+   return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_TDC_Timing::fini(void)
+void JEventProcessor_BCAL_TDC_Timing::Finish()
 {
    // Called before program exit after event processing is finished.
-   SortDirectories(); // Sort the histogram directories by name
-   return NOERROR;
+   return;
 }
 

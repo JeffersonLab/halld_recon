@@ -14,7 +14,8 @@ using namespace evio;
 
 #include "DMagneticFieldMapFineMesh.h"
 
-#include "JANA/JException.h"
+#include <JANA/JException.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 
 #include <DAQ/HDEVIO.h>
 
@@ -22,13 +23,13 @@ using namespace evio;
 //---------------------------------
 // DMagneticFieldMapFineMesh    (Constructor)
 //---------------------------------
-DMagneticFieldMapFineMesh::DMagneticFieldMapFineMesh(JApplication *japp, int32_t runnumber, string namepath)
+DMagneticFieldMapFineMesh::DMagneticFieldMapFineMesh(JApplication *app, int32_t runnumber, string namepath)
 {
-	jcalib = japp->GetJCalibration(runnumber);
-	jresman = japp->GetJResourceManager(runnumber);
+	auto calib_svc = app->GetService<JCalibrationManager>();
+	jcalib = calib_svc->GetJCalibration(runnumber);
+	jresman = calib_svc->GetResource(runnumber);
 
-	JParameterManager *jparms = japp->GetJParameterManager();
-	jparms->SetDefaultParameter("BFIELD_MAP", namepath);
+	japp->SetDefaultParameter("BFIELD_MAP", namepath);
 	
 	int Npoints = ReadMap(namepath, runnumber); 
 	if(Npoints==0){
@@ -71,11 +72,11 @@ int DMagneticFieldMapFineMesh::ReadMap(string namepath, int32_t runnumber, strin
   // built into a run-dependent geometry framework, but for now
   // we do it this way. 
   if(!jcalib){
-    jerr << "ERROR: jcalib pointer is NULL in DMagneticFieldMapFineMesh::ReadMap() !" << endl;
+    jerr << "ERROR: jcalib pointer is NULL in DMagneticFieldMapFineMesh::ReadMap() !" << jendl;
     return 0;
   }
   
-  jout<<"Reading Magnetic field map from "<<namepath<<" ..."<<endl;
+  jout<<"Reading Magnetic field map from "<<namepath<<" ..."<<jendl;
   vector< vector<float> > Bmap;
   
   // Newer maps are stored as resources while older maps were stored
@@ -181,6 +182,7 @@ int DMagneticFieldMapFineMesh::ReadMap(string namepath, int32_t runnumber, strin
     b->Bx = a[3];
     b->By = a[4];
     b->Bz = a[5];
+    b->Bmag=sqrt(b->Bx*b->Bx + b->By*b->By + b->Bz*b->Bz);
   }
   
   // Calculate gradient at every point in the map.
@@ -373,8 +375,8 @@ void DMagneticFieldMapFineMesh::GetFieldBicubic(double x,double y,double z,
     }
   }
   else{ // otherwise do a simple lookup in the fine-mesh table
-    unsigned int indr=(unsigned int)floor((r-rminFine)*rscale);
-    unsigned int indz=(unsigned int)floor((z-zminFine)*zscale);
+    unsigned int indr=static_cast<unsigned int>((r-rminFine)*rscale);
+    unsigned int indz=static_cast<unsigned int>((z-zminFine)*zscale);
     
     Bz_=mBfine[indr][indz].Bz;
     Br_=mBfine[indr][indz].Br;
@@ -519,6 +521,90 @@ void DMagneticFieldMapFineMesh::InterpolateField(double r,double z,double &Br,
     }
   dBzdr/=dx;
   dBzdz/=dz;
+}
+
+// Find the field and field gradient at the point (x,y,z).
+void DMagneticFieldMapFineMesh::GetFieldAndGradient(double x,double y,double z,
+						    DBfieldCartesian_t &Bdata) const{
+  // radial distance
+  double rsq = x*x + y*y;
+  if (rsq>xmax*xmax || z>zmax || z<zmin){
+    Bdata.Bx=0.0,Bdata.By=0.0,Bdata.Bz=0.;
+    Bdata.Bmag=0.0;
+    Bdata.dBxdx=0.0,Bdata.dBxdy=0.0,Bdata.dBxdz=0.0;
+    Bdata.dBydx=0.0,Bdata.dBydy=0.0,Bdata.dBydz=0.0;
+    Bdata.dBzdx=0.0,Bdata.dBzdy=0.0,Bdata.dBzdz=0.0;
+    return;
+  }
+
+  // radial component of B and gradient
+  double Br_=0.,dBrdr_=0.,dBrdz_=0.,dBzdr_=0.;
+
+  // If the point (x,y,z) is outside the fine-mesh grid, interpolate
+  // on the coarse grid
+  //if (true){
+  double r=sqrt(rsq);
+  if (z<zminFine || z>=zmaxFine || r>=rmaxFine){
+    // Get closest indices for this point
+    int index_x = static_cast<int>(r*one_over_dx);
+    int index_z = static_cast<int>((z-zmin)*one_over_dz);
+    int index_y = 0;
+
+    if(index_x>=0 && index_x<Nx && index_z>=0 && index_z<Nz){
+      const DBfieldPoint_t *B = &Btable[index_x][index_y][index_z];
+
+      // Fractional distance between map points.
+      double ur = (r - B->x)*one_over_dx;
+      double uz = (z - B->z)*one_over_dz;
+
+      // Use gradient to project grid point to requested position
+      Br_ = B->Bx+B->dBxdx*ur+B->dBxdz*uz;
+      Bdata.Bz = B->Bz+B->dBzdx*ur+B->dBzdz*uz;
+      Bdata.Bmag=B->Bmag; // approximation, at grid point edge
+
+      dBrdr_=B->dBxdx;
+      dBrdz_=B->dBxdz;
+      dBzdr_=B->dBzdx;
+      Bdata.dBzdz=B->dBzdz;
+    }
+  }
+  else{ // otherwise do a simple lookup in the fine-mesh table
+    unsigned int indr=static_cast<unsigned int>(r*rscale);
+    unsigned int indz=static_cast<unsigned int>((z-zminFine)*zscale);
+    const DBfieldCylindrical_t *field=&mBfine[indr][indz];
+
+    Bdata.Bmag=field->Bmag;
+    Bdata.Bz=field->Bz;
+    Br_=field->Br;
+
+    dBrdr_=field->dBrdr;
+    dBrdz_=field->dBrdz;
+    Bdata.dBzdz=field->dBzdz;
+    dBzdr_=field->dBzdr;
+
+    //	  printf("Bz Br %f %f\n",Bz,Br);
+  }
+
+  // Convert r back to x,y components
+  double cos_theta = 1.;
+  double sin_theta = 0.;
+  if(r>0.){
+    cos_theta=x/r;
+    sin_theta=y/r;
+  }
+  // Rotate back into phi direction
+  Bdata.Bx=Br_*cos_theta;
+  Bdata.By=Br_*sin_theta;
+
+  Bdata.dBxdx =dBrdr_*cos_theta*cos_theta;
+  Bdata.dBxdy =dBrdr_*cos_theta*sin_theta;
+  Bdata.dBxdz =dBrdz_*cos_theta;
+  Bdata.dBydx =Bdata.dBxdy;
+  Bdata.dBydy = dBrdr_*sin_theta*sin_theta;
+  Bdata.dBydz = dBrdz_*sin_theta;
+  Bdata.dBzdx = dBzdr_*cos_theta;
+  Bdata.dBzdy = dBzdr_*sin_theta;
+
 }
 
 // Find the field and field gradient at the point (x,y,z).  
@@ -861,7 +947,7 @@ void DMagneticFieldMapFineMesh::GetFineMeshMap(string namepath,int32_t runnumber
     // see if we can get the EVIO file as a resource
     try {
         evioFileName = jresman->GetResource(finemesh_namepath);
-    } catch ( JException e ) {
+    } catch ( const JException& e ) {
         // if we can't get it as a resource, try to get it from a local file
         size_t ipos=namepath.find("/");
         size_t ipos2=namepath.find("/",ipos+1);
@@ -902,8 +988,8 @@ void DMagneticFieldMapFineMesh::GenerateFineMesh(void){
   dzFine=0.1;
   zscale=1./dzFine;
   rscale=1./drFine;
-  NrFine=(unsigned int)floor((rmaxFine-rminFine)/drFine+0.5);
-  NzFine=(unsigned int)floor((zmaxFine-zminFine)/dzFine+0.5);
+  NrFine=static_cast<unsigned int>((rmaxFine-rminFine)/drFine+0.5);
+  NzFine=static_cast<unsigned int>((zmaxFine-zminFine)/dzFine+0.5);
 
   vector<DBfieldCylindrical_t>zrow;
   for (unsigned int i=0;i<NrFine;i++){
@@ -1041,7 +1127,7 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 	// Open EVIO file
 	HDEVIO hdevio(evioFileName, false);
 	if(!hdevio.is_open){
-		jerr << " Unable to open fine-mesh B-field file!" << endl;
+		jerr << " Unable to open fine-mesh B-field file!" << jendl;
 		return;
 	}
 
@@ -1058,8 +1144,8 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 		hdevio.readNoFileBuff(buff, buff_size);
 	}
 	if(hdevio.err_code != HDEVIO::HDEVIO_OK){
-		jerr << " Problem reading fine-mesh B-field" << endl;
-		jerr << hdevio.err_mess.str() << endl;
+		jerr << " Problem reading fine-mesh B-field" << jendl;
+		jerr << hdevio.err_mess.str() << jendl;
 		delete[] buff;
 		return;
 	}
@@ -1071,7 +1157,7 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 
 	// First bank has tag=2, num=0 and length 6 data words
 	if(iptr[0] != 6+1){
-		jerr << " Bad length for minmaxdelta bank!" <<endl;
+		jerr << " Bad length for minmaxdelta bank!" <<jendl;
 		_exit(-1);
 	}
 	float *minmaxdelta = (float*)&iptr[2];
@@ -1086,8 +1172,8 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 	zscale=1./dzFine;
 	rscale=1./drFine;
 
-	NrFine=(unsigned int)floor((rmaxFine-rminFine)/drFine+0.5);
-	NzFine=(unsigned int)floor((zmaxFine-zminFine)/dzFine+0.5);
+	NrFine=static_cast<unsigned int>((rmaxFine-rminFine)/drFine+0.5);
+	NzFine=static_cast<unsigned int>((zmaxFine-zminFine)/dzFine+0.5);
 	mBfine.resize(NrFine);
 	for(auto &m : mBfine) m.resize(NzFine);
 
@@ -1099,7 +1185,7 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 		uint32_t N = iptr[0] - 1;
 		iptr = &iptr[N+2];
 		if(iptr > iend){
-			jerr << " Bad format of fine mesh B-field file!" << endl;
+			jerr << " Bad format of fine mesh B-field file!" << jendl;
 			_exit(-1);
 		}
 		
@@ -1115,6 +1201,13 @@ void DMagneticFieldMapFineMesh::ReadEvioFile(string evioFileName){
 				case 5: mBfine[indr][indz].dBzdz = *fptr++;  break;  // dBzdz
 			}
 		}
+	}
+
+	for (unsigned int i=0;i<NrFine;i++){
+	  for (unsigned int k=0;k<NzFine;k++){
+	    mBfine[i][k].Bmag=sqrt(mBfine[i][k].Bz*mBfine[i][k].Bz
+				   +mBfine[i][k].Br*mBfine[i][k].Br);
+	  }
 	}
 	
 	delete[] buff;

@@ -45,8 +45,8 @@
 	locDirectory->cd();
 
         //Setpoints
-        double nominalTAGHTime = 5.;
-        double nominalTAGMTime = 5.;	
+        double nominalTAGHTime = 6.;
+        double nominalTAGMTime = 6.;	
 
 	//Get Histograms
  	TH1I* TAGH_Timing        = (TH1I*)gDirectory->Get("Physics Triggers/TAGH/TAGHHit Matched time");

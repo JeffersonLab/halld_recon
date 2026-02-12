@@ -8,21 +8,23 @@
 #ifndef _DBeamPhoton_factory_MCGEN_
 #define _DBeamPhoton_factory_MCGEN_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <PID/DBeamPhoton.h>
 #include <PID/DMCReaction.h>
 #include "DANA/DStatusBits.h"
 #include "TAGGER/DTAGHHit.h"
 #include "TAGGER/DTAGMHit.h"
 
-class DBeamPhoton_factory_MCGEN:public jana::JFactory<DBeamPhoton>{
+class DBeamPhoton_factory_MCGEN:public JFactoryT<DBeamPhoton>{
 	public:
-		const char* Tag(void){return "MCGEN";}
+		DBeamPhoton_factory_MCGEN() {
+			SetTag("MCGEN");
+		}
 
 	private:
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void Finish() override;
 };
 
 #endif // _DBeamPhoton_factory_MCGEN_

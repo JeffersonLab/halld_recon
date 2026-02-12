@@ -26,10 +26,10 @@
 
 
 #include "JEventProcessor_cdc_scan.h"
-#include <JANA/JApplication.h>
+//#include <JANA/JApplication.h>
+
 
 using namespace std;
-using namespace jana;
 
 
 #include "CDC/DCDCDigiHit.h"
@@ -54,7 +54,7 @@ static TTree *tt = NULL;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_cdc_scan());
+	app->Add(new JEventProcessor_cdc_scan());
 }
 } // "C"
 
@@ -64,7 +64,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_cdc_scan::JEventProcessor_cdc_scan()
 {
-
+    SetTypeName("JEventProcessor_cdc_scan");
 }
 
 //------------------
@@ -78,25 +78,28 @@ JEventProcessor_cdc_scan::~JEventProcessor_cdc_scan()
 //------------------
 // init
 //------------------
-jerror_t JEventProcessor_cdc_scan::init(void)
+void JEventProcessor_cdc_scan::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling histograms in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
 
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
+
   const uint32_t NSAMPLES = 200;
 
   EMU = 1;    // set to 0 to skip emulation from window raw data
 
-  if (gPARMS) {
-    gPARMS->SetDefaultParameter("CDC_SCAN:EMU",EMU,"Set to 0 to skip emulation from window raw data");
+  if (app) {
+    app->SetDefaultParameter("CDC_SCAN:EMU",EMU,"Set to 0 to skip emulation from window raw data");
   }
 
   FDC = 1;    // set to 0 to skip FDC data
 
-  if (gPARMS) {
-    gPARMS->SetDefaultParameter("CDC_SCAN:FDC",FDC,"Set to 0 to skip FDC data");
+  if (app) {
+    app->SetDefaultParameter("CDC_SCAN:FDC",FDC,"Set to 0 to skip FDC data");
   }
 
 
@@ -108,7 +111,7 @@ jerror_t JEventProcessor_cdc_scan::init(void)
   if (!FDC)  cout << "\n cdc_scan: skipping FDC data\n\n";  
 
 
-  japp->RootWriteLock();
+  lockService->RootWriteLock();
   
   t = new TTree("T","Event stats");
 
@@ -134,7 +137,8 @@ jerror_t JEventProcessor_cdc_scan::init(void)
   p->Branch("word1",&word1,"word1/i");
   p->Branch("word2",&word2,"word2/i");
 
-  uint32_t time, q, pedestal, amp, integral, overflows, pktime;
+  uint32_t npk, time, q, pedestal, amp, integral, overflows, pktime;
+  p->Branch("npk",&npk,"npk/i");    
   p->Branch("time",&time,"time/i");    
   p->Branch("q",&q,"q/i");    
   p->Branch("pedestal",&pedestal,"pedestal/i");    
@@ -212,25 +216,22 @@ jerror_t JEventProcessor_cdc_scan::init(void)
   uint64_t tt_time;
   tt->Branch("time",&tt_time,"time/l");
 
-  japp->RootUnLock();
+  lockService->RootUnLock();
 
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_cdc_scan::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_cdc_scan::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &event)
 {
 
 
@@ -263,39 +264,35 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   /* 0xN0B4 FE timing_thres_hi definitions */
   #define FA125_FE_TIMING_THRES_HI_MASK(x) (0x1FF<<((x%3)*9))
   
-  
+  /*
   // Only look at physics triggers
-  
+  /*
   const DTrigger* locTrigger = NULL; 
-  loop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger);
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
+    return;
   if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
-    return NOERROR;
+    return;
   }
-   
-  vector <const Df125CDCPulse*> cdcpulses;
-  loop->Get(cdcpulses);
+  */
+  
+  auto cdcpulses = event->Get<Df125CDCPulse>();  
   uint32_t nc = (uint32_t)cdcpulses.size();
 
-  
-  vector <const Df125FDCPulse*> fdcpulses;
-  loop->Get(fdcpulses);
+  auto fdcpulses = event->Get<Df125FDCPulse>();
   uint32_t nf = (uint32_t)fdcpulses.size();
 
-
-  vector<const Df125TriggerTime*> ttvector;
-  loop->Get(ttvector);
+  auto ttvector = event->Get<Df125TriggerTime>();
   uint32_t ntt = (uint32_t)ttvector.size();
 
   
-  if (nc+nf==0) return NOERROR;  // no DC hits
+  if (nc+nf==0) return;  // no DC hits
 
 
-  ULong64_t eventnum = (ULong64_t)eventnumber;
+  ULong64_t eventnum = (ULong64_t)event->GetEventNumber();
 
   
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
   t->SetBranchAddress("eventnum",&eventnum);
   t->SetBranchAddress("CDCPulsecount",&nc);
@@ -304,7 +301,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
     
   t->Fill();  
 
-  japp->RootUnLock();
+  lockService->RootUnLock();
   
  
   
@@ -312,7 +309,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   
   if (ntt > 0) { //   Df125TriggerTime 
 
-    japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!    
 
     tt->SetBranchAddress("eventnum",&eventnum);
 
@@ -340,7 +337,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
       tt->Fill();
     }
 
-    japp->RootUnLock();
+    lockService->RootUnLock();
 
   }
 
@@ -350,7 +347,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   if (nc || (nf&&FDC)) {  // branches are almost the same for CDC & FDC - only amp differs
 
-    japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
     
     p->SetBranchAddress("eventnum",&eventnum);
 
@@ -363,8 +360,9 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
     p->SetBranchAddress("word1",&word1);
     p->SetBranchAddress("word2",&word2);
 
-    uint32_t time, q, pedestal, amp, integral, overflows, pktime;
-    p->SetBranchAddress("time",&time);
+    uint32_t npk, time, q, pedestal, amp, integral, overflows, pktime;
+    p->SetBranchAddress("npk",&npk);
+    p->SetBranchAddress("time",&time);    
     p->SetBranchAddress("q",&q);
     p->SetBranchAddress("pedestal",&pedestal);
     p->SetBranchAddress("amp",&amp);
@@ -383,11 +381,12 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
     p->SetBranchAddress("adc",&adc);
 
     
-    uint32_t m_time=0, m_q=0, m_pedestal=0, m_integral=0, m_amp=0, m_overflows=0, m_pktime=0;
-    int d_time=0, d_q=0, d_pedestal=0, d_integral=0, d_amp=0, d_overflows=0, d_pktime=0;
+    uint32_t m_npk, m_time=0, m_q=0, m_pedestal=0, m_integral=0, m_amp=0, m_overflows=0, m_pktime=0;
+    int d_npk = 0, d_time=0, d_q=0, d_pedestal=0, d_integral=0, d_amp=0, d_overflows=0, d_pktime=0;
     bool diffs=0;
     
     if (EMU) {    
+      p->SetBranchAddress("m_npk",&m_npk);
       p->SetBranchAddress("m_time",&m_time);
       p->SetBranchAddress("m_q",&m_q);
       p->SetBranchAddress("m_overflows",&m_overflows);
@@ -396,6 +395,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
       p->SetBranchAddress("m_amp",&m_amp);
       p->SetBranchAddress("m_pktime",&m_pktime);
 
+      p->SetBranchAddress("d_npk",&d_npk);
       p->SetBranchAddress("d_time", &d_time);
       p->SetBranchAddress("d_q", &d_q);
       p->SetBranchAddress("d_pedestal", &d_pedestal);
@@ -447,6 +447,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   
         word1 = cp->word1;
         word2 = cp->word2;
+	npk = cp->NPK;
         time = cp->le_time;
         pedestal = cp->pedestal;
         integral = cp->integral;
@@ -457,9 +458,8 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
         emulated = cp->emulated;
 
-        const Df125WindowRawData *wrd;
-        cp->GetSingle(wrd);
-
+	auto wrd = cp->GetSingle<Df125WindowRawData>();
+	
         if (wrd) {
           ns = (uint32_t)wrd->samples.size();
 
@@ -474,7 +474,8 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
  	  Df125CDCPulse *emu = new Df125CDCPulse();
 
           em->EmulateFirmware(wrd, emu, NULL);
-	
+
+	  m_npk = 0;
           m_time = emu->le_time_emulated;
           m_q = emu->time_quality_bit_emulated;
           m_overflows = emu->overflow_count_emulated;
@@ -488,6 +489,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  uint m_q_binary = (m_q == 0) ? 0 : 1 ;
           d_q = q - m_q_binary;
 
+	  d_npk = 0;//npk - m_npk;
           d_time = time - m_time;
           d_overflows = overflows - m_overflows;
           d_pedestal = pedestal - m_pedestal;
@@ -496,7 +498,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           d_pktime=0;
 
 	  diffs=0;
-          if (d_time || d_q || d_overflows || d_pedestal || d_integral || d_amp) diffs = 1;
+          if (d_npk || d_time || d_q || d_overflows || d_pedestal || d_integral || d_amp) diffs = 1;
 	  
 	}
 	
@@ -518,9 +520,8 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
         cTH=0;
         cTL=0;
 
-        const Df125BORConfig *BORConfig=NULL;
-        cp->GetSingle(BORConfig);
-
+	auto BORConfig = cp->GetSingle<Df125BORConfig>();
+	
         if (BORConfig) {
 
           board_id = BORConfig->board_id;
@@ -584,6 +585,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   
         word1 = fp->word1;
         word2 = fp->word2;
+	npk = fp->NPK;
         time = fp->le_time;
         pedestal = fp->pedestal;
         integral = fp->integral;
@@ -594,8 +596,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
         emulated = fp->emulated;
 
-        const Df125WindowRawData *wrd;
-        fp->GetSingle(wrd);
+	auto wrd = fp->GetSingle<Df125WindowRawData>();	
 
         if (wrd) {
           ns = (uint32_t)wrd->samples.size();
@@ -612,6 +613,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 
           em->EmulateFirmware(wrd, NULL, emu);
 
+	  m_npk = 0; //fp->npk;
           m_time = fp->le_time_emulated;
           m_q = fp->time_quality_bit_emulated;
           m_overflows = fp->overflow_count_emulated;
@@ -625,6 +627,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  uint m_q_binary = (m_q == 0) ? 0 : 1 ;
           d_q = q - m_q_binary;
 
+	  d_npk = 0; //npk - d_npk;
           d_time = time - m_time;
           d_overflows = overflows - m_overflows;
           d_pedestal = pedestal - m_pedestal;
@@ -656,9 +659,8 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
         cTH=0;
         cTL=0;
 
-        const Df125BORConfig *BORConfig=NULL;
-        fp->GetSingle(BORConfig);
-
+	auto BORConfig = fp->GetSingle<Df125BORConfig>();
+	
         if (BORConfig) {
 
           board_id = BORConfig->board_id;
@@ -705,30 +707,28 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   
     }
 
-    japp->RootUnLock();    
+    lockService->RootUnLock();    
   }
     
-  return NOERROR;
+  return;
 
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_cdc_scan::erun(void)
+void JEventProcessor_cdc_scan::EndRun()
 {
 	// This is called whenever the run number changes);
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t JEventProcessor_cdc_scan::fini(void)
+void JEventProcessor_cdc_scan::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 
