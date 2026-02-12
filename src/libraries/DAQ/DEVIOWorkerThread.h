@@ -132,7 +132,9 @@ class DEVIOWorkerThread{
 		void               ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 		void           ParseDGEMSRSBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 		void   MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t apv_id, vector<int>rawData16bits);
-        void   ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
+                void   ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
+  
+                void   ParseUnknownBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 
 		void LinkAllAssociations(void);
 
@@ -140,7 +142,7 @@ class DEVIOWorkerThread{
 
 
 		void DumpBinary(const uint32_t *iptr, const uint32_t *iend, uint32_t MaxWords=0, const uint32_t *imark=NULL);
-
+                void ClearBadDataFormatEventTriggers(DParsedEvent *pe);  
 	protected:
 	
 	
