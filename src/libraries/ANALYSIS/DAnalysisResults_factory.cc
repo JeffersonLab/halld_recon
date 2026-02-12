@@ -317,8 +317,8 @@ void DAnalysisResults_factory::Process(const std::shared_ptr<const JEvent>& locE
 
 
 	// HACK
-	if(eventnumber == 0)
-		return NOERROR;
+	if(locEvent->GetEventNumber() == 0)
+		return;
 
 	if(dDebugLevel > 0)
 		cout << "Analyze event: " << locEvent->GetEventNumber() << endl;

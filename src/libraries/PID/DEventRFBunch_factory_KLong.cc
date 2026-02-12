@@ -6,35 +6,41 @@
 #include "DEventRFBunch_factory_KLong.h"
 #include <deque>
 
+#include "DANA/DEvent.h"
+
 using namespace jana;
 
-//------------------
-// init
-//------------------
-jerror_t DEventRFBunch_factory_KLong::init(void)
-{
-	return NOERROR;
+// //------------------
+// // init
+// //------------------
+// void DEventRFBunch_factory_KLong::init(void)
+// {
+// }
+// 
+// //------------------
+// // brun
+// //------------------
+// void DEventRFBunch_factory_KLong::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+// {
+// }
+
+
+DEventRFBunch_factory_KLong::DEventRFBunch_factory_KLong(void) { 
+	SetTag("KLong"); 
 }
 
-//------------------
-// brun
-//------------------
-jerror_t DEventRFBunch_factory_KLong::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
-{
-	return NOERROR;
-}
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventRFBunch_factory_KLong::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DEventRFBunch_factory_KLong::Process(const std::shared_ptr<const JEvent>& event) 
 {
 
     vector<const DVertex*> locVertices;
-    locEventLoop->Get(locVertices);
+    event->Get(locVertices);
     
     if(locVertices.size() == 0)
-    	return NOERROR;
+    	return;
     	
     const DVertex *locVertex = locVertices[0];
 
@@ -46,24 +52,21 @@ jerror_t DEventRFBunch_factory_KLong::evnt(jana::JEventLoop *locEventLoop, uint6
 	locEventRFBunch->dTimeSource = SYS_NULL;   // could say SYS_START?  but I think that this implies that we should measure with respect the accelerator RF
 
 	locEventRFBunch->AddAssociatedObject(locVertices[0]);
-	_data.push_back(locEventRFBunch);
+	Insert(locEventRFBunch);
 
-	return NOERROR;
 }
 
-//------------------
-// erun
-//------------------
-jerror_t DEventRFBunch_factory_KLong::erun(void)
-{
-	return NOERROR;
-}
-
-//------------------
-// fini
-//------------------
-jerror_t DEventRFBunch_factory_KLong::fini(void)
-{
-	return NOERROR;
-}
-
+// //------------------
+// // erun
+// //------------------
+// void DEventRFBunch_factory_KLong::erun(void)
+// {
+// }
+// 
+// //------------------
+// // fini
+// //------------------
+// void DEventRFBunch_factory_KLong::fini(void)
+// {
+// }
+// 

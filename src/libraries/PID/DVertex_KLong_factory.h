@@ -8,8 +8,7 @@
 #ifndef _DVertex_KLong_factory_
 #define _DVertex_KLong_factory_
 
-#include <JANA/JFactory.h>
-#include "JANA/JEventLoop.h"
+#include <JANA/JFactoryT.h>
 
 #include "TVector3.h"
 
@@ -29,22 +28,27 @@
 using namespace std;
 using namespace jana;
 
-class DVertex_KLong_factory : public jana::JFactory<DVertex>
+class DVertex_KLong_factory : public JFactoryT<DVertex>
 {
+	public:
+		DVertex_KLong_factory(void) { 
+			SetTag("KLong"); 
+		}
+
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override; 
+		void Process(const std::shared_ptr<const JEvent>& event) override; 
+// 		void EndRun() override; 
+// 		void Finish() override; 
 
 		jerror_t Create_Vertex_NoTracks();
 		jerror_t Create_Vertex_OneTrack(const DTrackTimeBased* locTrackTimeBased);
 		jerror_t Create_Vertex_Rough(DVector3 locPosition, double locTime);
 		jerror_t Create_Vertex_KinFit(vector<const DKinematicData*> &locKinematicDataVector);
 
-		void Set_TrackTime(JEventLoop* locEventLoop, DTrackTimeBased* locTrackTimeBased, const DTrackTimeBased* locTrackTimeBased_ToMatch, const DDetectorMatches* locDetectorMatches, const DParticleID* locPIDAlgorithm);
+		void Set_TrackTime(const std::shared_ptr<const JEvent>& event, DTrackTimeBased* locTrackTimeBased, const DTrackTimeBased* locTrackTimeBased_ToMatch, const DDetectorMatches* locDetectorMatches, const DParticleID* locPIDAlgorithm);
 		//double Calc_CrudeVertexTime(const vector<DKinFitParticle*>& locParticles, const DVector3& locCommonVertex) const;
-
-		const char* Tag(void){return "KLong";}
 
 		const DAnalysisUtilities* dAnalysisUtilities;
 		DKinFitter* dKinFitter;

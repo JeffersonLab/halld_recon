@@ -16,35 +16,33 @@ using namespace std;
 #include "particleType.h"
 using namespace jana;
 
+#include "DANA/DEvent.h"
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DBeamParticle_factory::init(void)
+void DBeamParticle_factory::Init() 
 {
+    auto app = GetApplication();
 
-	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory.
-	SetFactoryFlag(NOT_OBJECT_OWNER);
-	return NOERROR;
-	
-	gPARMS->SetDefaultParameter("BEAM:SKIPTAGGEDPHOTONS", dSkipTaggedPhotons,
-    "Whether to skip tagged photons in beam particle creation");
+	app->SetDefaultParameter("BEAM:SKIPTAGGEDPHOTONS", dSkipTaggedPhotons,
+    		"Whether to skip tagged photons in beam particle creation");
     
 }
 
 //------------------
 // brun
 //------------------
-jerror_t DBeamParticle_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DBeamParticle_factory::BeginRun(const std::shared_ptr<const JEvent>& event) 
 {
-
-    return NOERROR;
+    return;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t DBeamParticle_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locEventNumber)
+void DBeamParticle_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 // 	dResourcePool_BeamPhotons->Recycle(dCreated);
 // 	dCreated.clear();
@@ -53,28 +51,26 @@ jerror_t DBeamParticle_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t lo
 	// load beam photons
 	if(!dSkipTaggedPhotons) {
 		vector <const DBeamPhoton*> locBeamPhotons;
-		locEventLoop->Get(locBeamPhotons);
+		event->Get(locBeamPhotons);
 		
 		for(auto locBeamPhoton : locBeamPhotons) {
 			DBeamParticle* beam = new DBeamParticle(*locBeamPhoton);
 			beam->dBeamPhoton = locBeamPhoton;
-			_data.push_back(beam);
+			Insert(beam);
 		}
 	}
 
 	if(!dSkipKLongBeam) {
 		// load KL beam particles
 		vector <const DBeamKLong*> locBeamKLongs;
-		locEventLoop->Get(locBeamKLongs);
+		event->Get(locBeamKLongs);
 		
 		for(auto locBeamKLong : locBeamKLongs) {
 			DBeamParticle* beam = new DBeamParticle(*locBeamKLong);
 			beam->dBeamKLong = locBeamKLong;
-			_data.push_back(beam);
+			Insert(beam);
 		}
 	}
 
-
-    return NOERROR;
 }
 

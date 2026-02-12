@@ -9,42 +9,41 @@ using namespace std;
 
 #include "DBeamKLong_factory.h"
 
+#include "HDGEOMETRY/DGeometry.h"
+#include "DANA/DEvent.h"
+
 #include "DVertex.h"
 #include "particleType.h"
 using namespace jana;
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DBeamKLong_factory::init(void)
+void DBeamKLong_factory::Init(void)
 {
 	dEnableKLongBeamRecon = true; // should default to false
 
-	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory.
-	SetFactoryFlag(NOT_OBJECT_OWNER);
-	return NOERROR;
+    auto app = GetApplication();
+	app->SetDefaultParameter("BEAM:ENABLE_KLONG_BEAM_RECON", dEnableKLongBeamRecon);
+
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBeamKLong_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DBeamKLong_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-    DApplication* dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-    DGeometry* locGeometry = dapp->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+ 	DGeometry *locGeometry = DEvent::GetDGeometry(event);
     dTargetCenterZ = 0.0;
     locGeometry->GetTargetZ(dTargetCenterZ);
 
-	gPARMS->SetDefaultParameter("BEAM:ENABLE_KLONG_BEAM_RECON", dEnableKLongBeamRecon);
-
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBeamKLong_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locEventNumber)
+void DBeamKLong_factory::Process(const std::shared_ptr<const JEvent>& event) 
 {
 // 	dResourcePool_BeamPhotons->Recycle(dCreated);
 // 	dCreated.clear();
@@ -53,10 +52,10 @@ jerror_t DBeamKLong_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locEv
 //cout << "in DBeamKLong_factory::evnt()" << endl;
 
     vector<const DVertex*> locVertices;
-    locEventLoop->Get(locVertices, "KLong");
+    event->Get(locVertices, "KLong");
     
     if(locVertices.size() == 0)
-    	return NOERROR;
+    	return;
     	
     const DVertex *locVertex = locVertices[0];
     
@@ -70,11 +69,11 @@ jerror_t DBeamKLong_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locEv
 //      << KL_distance << " " << KL_propagation_time << " " << beta << endl;
     
     if(beta > 1.)
-    	return NOERROR;
+    	return;
     
     // should make some cut based on the beam period... but for now, cut out events that are obviously too slow
     if(locVertex->dSpacetimeVertex.T() > 250.)
-    	return NOERROR;
+    	return;
     
 //     cout << "in DBeamKLong_factory::evnt() ..." << endl;
 //     cout << KL_distance << " " << locVertex->dSpacetimeVertex.Z() << " " << dTargetCenterZ << endl;
@@ -95,8 +94,8 @@ jerror_t DBeamKLong_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locEv
 // 	locCovarianceMatrix->Zero();
 // 	beam->setErrorMatrix(locCovarianceMatrix);
 // 
-	_data.push_back(beam);
+	Insert(beam);
 
-    return NOERROR;
+    return;
 }
 

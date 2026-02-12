@@ -13,15 +13,17 @@ class DBeamParticle : public DKinematicData
 	public:
 		JOBJECT_PUBLIC(DBeamParticle);
 
+		oid_t id = reinterpret_cast<oid_t>(this);
+
 		DBeamParticle() : DKinematicData() {}
 		DBeamParticle(const DKinematicData& locSourceData) : DKinematicData(locSourceData) {}
 
 		const DBeamPhoton *dBeamPhoton = nullptr;
 		const DBeamKLong  *dBeamKLong = nullptr;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			if(dBeamPhoton != nullptr)  dBeamPhoton->toStrings(items);
-			if(dBeamKLong != nullptr)   dBeamKLong->toStrings(items);
+		void Summarize(JObjectSummary& summary) const override {
+			if(dBeamPhoton != nullptr)  dBeamPhoton->Summarize(summary);
+			if(dBeamKLong != nullptr)   dBeamKLong->Summarize(summary);
 		}
 };
 
