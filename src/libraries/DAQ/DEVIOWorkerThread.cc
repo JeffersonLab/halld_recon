@@ -2128,7 +2128,9 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	// Word 2:
 	++iptr;
 	if(iptr>=iend){
-	  if(pe) pe->NEW_DBadHit(rocid,slot);   
+	  if(pe) pe->NEW_DBadHit(rocid,slot);
+          if (pe) ClearBadDataFormatEventTriggers(pe);  
+	  
 	  PrintLimitCDC++;
 	  if (PrintLimitCDC<10) jerr << " Truncated f125 CDC hit (block ends before continuation word!). BadHit created." << endl;
 	  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
@@ -2136,7 +2138,8 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	}
 	
 	if( ((*iptr>>31) & 0x1) != 0 ){
-	  if(pe) pe->NEW_DBadHit(rocid,slot);   
+	  if(pe) pe->NEW_DBadHit(rocid,slot);
+          if (pe) ClearBadDataFormatEventTriggers(pe);  	  
 	  PrintLimitCDC++;
 	  if (PrintLimitCDC<10) jerr << " Truncated f125 CDC hit (missing continuation word!). BadHit created." << endl;
 	  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
@@ -2156,30 +2159,10 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	// Create hit objects
 	uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
 	uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
-	if (VERBOSE > 10) {
-          cout << "CDC pulse prep\n";
-          cout << " rocid " << rocid << endl;
-  	  cout << " slot " << slot << endl;
-	  cout << " channel " << channel << endl;
-	  cout << " itrigger " << itrigger << endl;
-
-	  cout << " pulse_number " << pulse_number << endl;
-          cout << " pulse_time " << pulse_time << endl;
-          cout << " quality_factor " << quality_factor       << endl;
-          cout << " overflow_count " << overflow_count       << endl;
-          cout << " pedestal " << pedestal             << endl;
-          cout << " sum " << sum                  << endl;
-          cout << " pulse_peak " << pulse_peak           << endl;
-          cout << " word1 0x" << hex << word1 << dec                << endl;
-          cout << " word2 0x" << hex << word2  << dec              << endl;
-          cout << " nsamples_pedestal " << nsamples_pedestal    << endl;
-          cout << " nsamples_integral " << nsamples_integral    << endl;
-          cout << " number of CDC pulses existing : " << pe->vDf125CDCPulse.size() << " event num " << pe->event_number << endl;
-	
-          if (pe) cout << " pe exists\n";
-	}
 	
 	if( pe ) {
+          //cout << " number of CDC pulses existing : " << pe->vDf125CDCPulse.size() << " event num " << pe->event_number << endl;
+	  
 	  pe->NEW_Df125CDCPulse(rocid, slot, channel, itrigger
 				, pulse_number        // NPK
 				, pulse_time          // le_time
@@ -2194,7 +2177,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 				, nsamples_integral   // nsamples_integral
 				, false);             // emulated
 	}
-	if (VERBOSE>10) cout << "CDC pulse created\n";
+
       }
       break;
       
@@ -2222,6 +2205,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  
 	  if(iptr>=iend){  // no more words
 	    if(pe) pe->NEW_DBadHit(rocid,slot);   
+            if (pe) ClearBadDataFormatEventTriggers(pe);  
 	    break;
 	  }
 	  
@@ -2229,7 +2213,8 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	    // most of the FDC missing cont word errs are caused by the pulse number (1) mis-recorded as 7 or 15
 	    // only make a fuss about these if pulse_number=1
 	    if (pulse_number == 1) {
-              if (pe) pe->NEW_DBadHit(rocid,slot);   
+              if (pe) pe->NEW_DBadHit(rocid,slot);
+              if (pe) ClearBadDataFormatEventTriggers(pe);  	      
 	    
  	      PrintLimitFDC++;
 	      if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
@@ -2338,6 +2323,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	  ++iptr;
 	  if(iptr>=iend){
 	    if(pe) pe->NEW_DBadHit(rocid,slot);   
+            if (pe) ClearBadDataFormatEventTriggers(pe);  
 	    break;
 	  }
 
@@ -2346,7 +2332,8 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	    // only make a fuss about these if pulse_number=1
 	    if (pulse_number == 1) {
               if (pe) pe->NEW_DBadHit(rocid,slot);   
-	    
+              if (pe) ClearBadDataFormatEventTriggers(pe);
+	      
  	      PrintLimitFDC++;
 	      if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
 	      if (PrintLimitFDC < 10) jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
