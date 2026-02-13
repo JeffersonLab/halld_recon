@@ -2174,7 +2174,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
           cout << " word2 0x" << hex << word2  << dec              << endl;
           cout << " nsamples_pedestal " << nsamples_pedestal    << endl;
           cout << " nsamples_integral " << nsamples_integral    << endl;
-          cout << " number of CDC pulses existing : " << pe->vDf125CDCPulse.size() << endl;
+          cout << " number of CDC pulses existing : " << pe->vDf125CDCPulse.size() << " event num " << pe->event_number << endl;
 	
           if (pe) cout << " pe exists\n";
 	}
