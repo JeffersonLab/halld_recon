@@ -4,6 +4,7 @@
 #include "FCAL/DFCALHit.h"
 
 #include <JANA/JEvent.h>
+#include "DANA/DEvent.h"
 
 
 //------------------
@@ -28,9 +29,39 @@ void DTrigger_factory::Init()
 	locUsageString = "Calculate calorimter energy sums using emulated triggers (1/0, off by default)";
 	app->SetDefaultParameter("TRIGGER:EMULATE_CAL_ENERGY_SUMS", EMULATE_CAL_ENERGY_SUMS, locUsageString);
 
+	locUsageString = "";
+	app->SetDefaultParameter("TRIGGER:MC_TRIGGER_TAG", MC_TRIGGER_TAG, locUsageString);
+	locUsageString = "";
+	app->SetDefaultParameter("TRIGGER:DATA_SIM_TRIGGER_TAG", DATA_SIM_TRIGGER_TAG, locUsageString);
+
 }
 
 
+//------------------
+// BeginRun
+//------------------
+void DTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
+{
+	map<string,string> trigger_tags;
+	if( DEvent::GetCalib(event, "/ANALYSIS/dtrigger_types", trigger_tags) ) {
+		jerr << "Cannot find requested /ANALYSIS/dtrigger_types in CCDB for this run!" << endl;
+		return; // RESOURCE_UNAVAILABLE;
+	}
+	
+	if (trigger_tags.find("data_tag") != trigger_tags.end()) {
+		DATA_SIM_TRIGGER_TAG = trigger_tags["data_tag"];
+	} else {
+		jerr << "Unable to get DATA_SIM_TRIGGER_TAG from /ANALYSIS/dtrigger_types !" << endl;
+		return; // RESOURCE_UNAVAILABLE;
+	}
+	if (trigger_tags.find("mc_tag") != trigger_tags.end()) {
+		MC_TRIGGER_TAG = trigger_tags["mc_tag"];
+	} else {
+		jerr << "Unable to get MC_TRIGGER_TAG from /ANALYSIS/dtrigger_types !" << endl;
+		return; // RESOURCE_UNAVAILABLE;
+	}
+	
+}
 
 
 //------------------
@@ -82,15 +113,15 @@ void DTrigger_factory::Process(const std::shared_ptr<const JEvent>& event)
         // eventually we'll get the values directly from the firmware
         if(EMULATE_CAL_ENERGY_SUMS) {
             vector<const DL1MCTrigger*> locMCTriggers;
-            event->Get(locMCTriggers, "DATA");
+            event->Get(locMCTriggers, DATA_SIM_TRIGGER_TAG);
             const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
 
             if(locMCTrigger != NULL)
             {
                 locTrigger->Set_GTP_BCALEnergy(locMCTrigger->bcal_gtp_en);
                 locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
-		locTrigger->Set_GTP_ECALEnergy(locMCTrigger->ecal_gtp_en);
-		locTrigger->Set_GTP_FCAL2Energy(locMCTrigger->fcal2_gtp_en);
+				locTrigger->Set_GTP_ECALEnergy(locMCTrigger->ecal_gtp_en);
+				locTrigger->Set_GTP_FCAL2Energy(locMCTrigger->fcal2_gtp_en);
             }
         }
 
@@ -114,7 +145,7 @@ void DTrigger_factory::Process(const std::shared_ptr<const JEvent>& event)
 
         // realistic trigger simulation
         vector<const DL1MCTrigger*> locMCTriggers;
-        event->Get(locMCTriggers);
+        event->Get(locMCTriggers, MC_TRIGGER_TAG);
         const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
 	
         if(locMCTrigger != NULL)
@@ -124,9 +155,8 @@ void DTrigger_factory::Process(const std::shared_ptr<const JEvent>& event)
             locTrigger->Set_L1FrontPanelTriggerBits(0);
             locTrigger->Set_GTP_BCALEnergy(locMCTrigger->bcal_gtp_en);
             locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
-	    locTrigger->Set_GTP_ECALEnergy(locMCTrigger->ecal_gtp_en);
-	    locTrigger->Set_GTP_FCAL2Energy(locMCTrigger->fcal2_gtp_en);
-
+			locTrigger->Set_GTP_ECALEnergy(locMCTrigger->ecal_gtp_en);
+			locTrigger->Set_GTP_FCAL2Energy(locMCTrigger->fcal2_gtp_en);
         }
     }
 
