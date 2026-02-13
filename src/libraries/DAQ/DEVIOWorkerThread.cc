@@ -5,6 +5,20 @@
 // Creator: davidl (on Darwin harriet.jlab.org 13.4.0 i386)
 //
 
+// 12 Feb 2026  Naomi's strategy for dealing with EVIO data format errors, which can be caused by aged or radiation-aged electronics:
+// Create a DBadHit(rocid,slot) for monitoring
+// If appropriate, clear the physics triggers from the event - possible because the built trigger bank is parsed before the physics data types. 
+// if there is no rocid, these are used:
+// 0 : error found in swap_bank 
+// 1 : TS scaler
+// 2 : f250 scaler bank
+// 3 : EPICS events
+// 4 : BOR events
+// 5 : Trigger bank
+
+
+
+
 #include <unistd.h>
 
 #include "DEVIOWorkerThread.h"
@@ -106,7 +120,6 @@ void DEVIOWorkerThread::Run(void)
 		// attempting to process a buffer that was being written to. Avoid that
 		// condition by checking the in_use flag is really set.
 		if( !in_use ) continue;
-
 
 		
 		try {
@@ -501,18 +514,23 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	if(!PARSE_BOR){ iptr = &iptr[(*iptr) + 1]; return; }
 	if(VERBOSE>1) jout << "--- Parsing BOR Bank" << endl;
 
+	DParsedEvent *pe = current_parsed_events.front();
+	
 	// Make sure there is exactly 1 event in current_parsed_events
 	if(current_parsed_events.size() != 1){
-		stringstream ss;
+	        stringstream ss;
 		ss << "DEVIOWorkerThread::ParseBORbank() called for EVIO event with " << current_parsed_events.size() << " events in it. (Should be exactly 1!)";
 		jerr << ss.str() << endl;
 		jerr << "EVIO length=" << hex << iptr[0] << "  header=" << iptr[1] << endl;
-		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+		if (pe) {
+		  pe->NEW_DBadHit(0,3);
+		}
+	    //throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 	
 	// Create new DBORptrs object and set pointer to it in DParsedEvent
 	// (see JEventSource_EVIOpp::GetEvent)
-	DParsedEvent *pe = current_parsed_events.front();
+	//DParsedEvent *pe = current_parsed_events.front();
 	pe->event_status_bits |= (1<<kSTATUS_BOR_EVENT);
 	pe->borptrs = new DBORptrs();
 	DBORptrs* &borptrs = pe->borptrs;
@@ -523,7 +541,10 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	if(borevent_len > bank_len){
 		stringstream ss;
 		ss << "from DEVIOWorkerThread::ParseBORbank(), BOR: Size of bank doesn't match amount of data given (" << borevent_len << " > " << bank_len << ")";
-		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+		if (pe) {
+		  pe->NEW_DBadHit(0,4);
+		}
+		//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 	iend = &iptr[borevent_len]; // in case they give us too much data!
 	
@@ -540,7 +561,10 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 		ss << "from DEVIOWorkerThread::ParseBORbank(), Bad BOR header: 0x" << hex << bor_header;
 		_DBG_<< ss.str() << endl;
 		DumpBinary(&iptr[-4], iend, 32, iptr);
-		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+		if (pe) {
+		  pe->NEW_DBadHit(0,4);
+		}		
+		//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 
 	// Loop over crates
@@ -555,7 +579,11 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 			stringstream ss;
 			ss << "from DEVIOWorkerThread::ParseBORbank(), Bad BOR crate header: 0x" << hex << (crate_header>>16);
 			_DBG_<< ss.str() << endl;
-			throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+			if (pe) {
+			  pe->NEW_DBadHit(0,4);
+			}
+		      
+			//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 		}
 
 		// Loop over modules
@@ -620,7 +648,11 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 					ss << "from DEVIOWorkerThread::ParseBORbank(), Unknown BOR module type: " << modType
 					   << "  (module_header=0x"<<hex<<module_header<<")";
 					jerr << ss.str() << endl;
-					throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+					if (pe) {
+					  pe->NEW_DBadHit(0,4);
+					}
+					
+					//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 					}
 			}
 
@@ -630,7 +662,10 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 				ss << "from DEVIOWorkerThread::ParseBORbank(), BOR module bank size does not match structure! " << module_len
 				   << " > " << sizeof_dest << " for modType " << modType;
 				_DBG_<< ss.str() << endl;
-				throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+				if (pe) {
+				  pe->NEW_DBadHit(0,4);
+				}				
+				//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 			}
 
 			// Copy bank data, assuming format is the same
@@ -665,14 +700,21 @@ void DEVIOWorkerThread::ParseTSscalerBank(uint32_t* &iptr, uint32_t *iend)
 {
     uint32_t Nwords = ((uint64_t)iend - (uint64_t)iptr)/sizeof(uint32_t);
     uint32_t Nwords_expected = (6+32+16+32+16);
+
+    // n.b. Get the last event here since if this is a block
+    // of events, the last should be the actual sync event.
+    DParsedEvent *pe = current_parsed_events.back();
+
     if(Nwords != Nwords_expected){
         _DBG_ << "TS bank size does not match expected!!" << endl;
         _DBG_ << "Found " << Nwords << " words. Expected " << Nwords_expected << endl;
-        throw JExceptionDataFormat("DEVIOWorkerThread::ParseTSscalerBank(): TS bank size does not match expected", __FILE__, __LINE__);
+
+	if (pe) {
+	  pe->NEW_DBadHit(0,1);
+	}
+	
+	//        throw JExceptionDataFormat("DEVIOWorkerThread::ParseTSscalerBank(): TS bank size does not match expected", __FILE__, __LINE__);
     }else{
-	 	// n.b. Get the last event here since if this is a block
-		// of events, the last should be the actual sync event.
-		DParsedEvent *pe = current_parsed_events.back();
 		DL1Info *s = pe->NEW_DL1Info();
 		s->nsync = *iptr++;
 		s->trig_number = *iptr++;
@@ -696,15 +738,18 @@ void DEVIOWorkerThread::Parsef250scalerBank(uint32_t rocid, uint32_t* &iptr, uin
 {
   
   uint32_t Nwords = ((uint64_t)iend - (uint64_t)iptr)/sizeof(uint32_t);
-
+  DParsedEvent *pe = current_parsed_events.back();
+    
   if(Nwords < 4){
     _DBG_ << "250Scaler bank size does not match expected!!" << endl;
     _DBG_ << "Found " << Nwords << endl;
-    throw JExceptionDataFormat("DEVIOWorkerThread::Parsef250scalerBank(): 250scaler bank size does not match expected", __FILE__, __LINE__);
-  } else {
 
-    DParsedEvent *pe = current_parsed_events.back();
-    
+    if (pe) {
+	  pe->NEW_DBadHit(0,2);
+    }  
+    //throw JExceptionDataFormat("DEVIOWorkerThread::Parsef250scalerBank(): 250scaler bank size does not match expected", __FILE__, __LINE__);
+  } else {
+  
     Df250Scaler  *sc = pe->NEW_Df250Scaler();
  
     sc->nsync        =   *iptr++; 
@@ -837,23 +882,34 @@ void DEVIOWorkerThread::ParseBuiltTriggerBank(uint32_t* &iptr, uint32_t *iend)
 {
 	if(!PARSE_TRIGGER) return;
 
+	// attach early format errors to this event
+	DParsedEvent *pe = current_parsed_events.back();
+	
 	iptr++; // advance past length word
 	uint32_t mask = 0xFF202000;
 	if( ((*iptr) & mask) != mask ){
 		stringstream ss;
 		ss << "Bad header word in  DEVIOWorkerThread::ParseBuiltTriggerBank(): " << hex << *iptr;
-		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+		if (pe) {
+		  pe->NEW_DBadHit(0,5);
+		}
+		return;
+		//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 	
 	uint32_t tag     = (*iptr)>>16; // 0xFF2X
 	uint32_t Nrocs   = (*iptr++) & 0xFF;
 	uint32_t Mevents = current_parsed_events.size();
 	
-    // sanity check: 
-    if(Mevents == 0) {
+	// sanity check: 
+	if(Mevents == 0) {
 		stringstream ss;
 		ss << "DEVIOWorkerThread::ParseBuiltTriggerBank() called with zero events! "<<endl;
-		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+		if (pe) {
+		  pe->NEW_DBadHit(0,5);
+		}
+		return;
+		//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 
 	
@@ -893,7 +949,7 @@ void DEVIOWorkerThread::ParseBuiltTriggerBank(uint32_t* &iptr, uint32_t *iend)
 	iptr = &iptr[common_header16_len];
 
 	vector<uint16_t> event_types;
-   for(uint32_t i=0; i<Mevents; i++) event_types.push_back(*iptr16++);
+	for(uint32_t i=0; i<Mevents; i++) event_types.push_back(*iptr16++);
 	
 	//-------- ROC data (32bit)
 	for(uint32_t iroc=0; iroc<Nrocs; iroc++){
@@ -914,7 +970,9 @@ void DEVIOWorkerThread::ParseBuiltTriggerBank(uint32_t* &iptr, uint32_t *iend)
 			for(uint32_t i=2; i<Nwords_per_event; i++) codarocinfo->misc.push_back(*iptr++);
 			
 			if(iptr > iend){
-				throw JExceptionDataFormat("Bad data format in  DEVIOWorkerThread::ParseBuiltTriggerBank()!", __FILE__, __LINE__);
+			        jerr << "Bad data format in  DEVIOWorkerThread::ParseBuiltTriggerBank()!" << endl;
+			        pe->NEW_DBadHit(0,5);
+				//throw JExceptionDataFormat("Bad data format in  DEVIOWorkerThread::ParseBuiltTriggerBank()!", __FILE__, __LINE__);
 			}
 		}
 	}
@@ -971,7 +1029,10 @@ void DEVIOWorkerThread::ParseRawTriggerBank(uint32_t rocid, uint32_t* &iptr, uin
 		for(uint32_t i=3; i<segment_len; i++) codarocinfo->misc.push_back(*iptr++);
 		
 		if( iptr != iend_segment){
-			throw JExceptionDataFormat("Bad raw trigger bank format in DEVIOWorkerThread::ParseRawTriggerBank()", __FILE__, __LINE__);
+		        jerr << "Bad raw trigger bank format in DEVIOWorkerThread::ParseRawTriggerBank()" << endl;
+		        pe->NEW_DBadHit(0,5);
+			ClearBadDataFormatEventTriggers(pe);
+			//throw JExceptionDataFormat("Bad raw trigger bank format in DEVIOWorkerThread::ParseRawTriggerBank()", __FILE__, __LINE__);
 		}
 	}
 }
@@ -1201,6 +1262,7 @@ void DEVIOWorkerThread::ParseCAEN1190(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						_DBG_ << "CAEN1290TDC parser sees more events than CODA header! (>" << current_parsed_events.size() << ")" << endl;
 						for( auto p : events_by_event_id) cout << "id=" << p.first << endl;
 						iptr = iend;
+						jerr << "DEVIOWorkerThread::ParseCAEN1190(): CAEN1290TDC parser sees more events than CODA header" << endl;
 						throw JExceptionDataFormat("DEVIOWorkerThread::ParseCAEN1190(): CAEN1290TDC parser sees more events than CODA header", __FILE__, __LINE__);
 					}
 					pe = *pe_iter++;
@@ -1274,7 +1336,7 @@ void DEVIOWorkerThread::ParseModuleConfiguration(uint32_t rocid, uint32_t* &iptr
 		// Events will be created in the first event (i.e. using its pool)
 		// but pointers are saved so we can use them to construct identical
 		// objects in all other event later
-		DParsedEvent *pe = current_parsed_events.front();
+        DParsedEvent *pe = current_parsed_events.front();
 
         Df250Config *f250config = NULL;
         Df125Config *f125config = NULL;
@@ -1285,7 +1347,9 @@ void DEVIOWorkerThread::ParseModuleConfiguration(uint32_t rocid, uint32_t* &iptr
         for(uint32_t i=0; i< Nvals; i++){
             if( iptr >= iend){
                 _DBG_ << "DAQ Configuration bank corrupt! slot_mask=0x" << hex << slot_mask << dec << " Nvals="<< Nvals << endl;
-                throw JExceptionDataFormat("DEVIOWorkerThread::ParseModuleConfiguration(): Corrupt DAQ config. bank", __FILE__, __LINE__);
+		if (pe) pe->NEW_DBadHit(rocid,0);
+		return;
+                //throw JExceptionDataFormat("DEVIOWorkerThread::ParseModuleConfiguration(): Corrupt DAQ config. bank", __FILE__, __LINE__);
             }
 
             daq_param_type ptype = (daq_param_type)((*iptr)>>16);
@@ -1361,7 +1425,8 @@ void DEVIOWorkerThread::ParseModuleConfiguration(uint32_t rocid, uint32_t* &iptr
 
                 default:
                     _DBG_ << "Unknown module type: 0x" << hex << (ptype>>8) << endl;
-                    throw JExceptionDataFormat("DEVIOWorkerThread::ParseModuleConfiguration(): Unknown module type in configuration bank", __FILE__, __LINE__);
+		    if (pe) pe->NEW_DBadHit(rocid,0);
+                    //throw JExceptionDataFormat("DEVIOWorkerThread::ParseModuleConfiguration(): Unknown module type in configuration bank", __FILE__, __LINE__);
             }
 
 
@@ -1776,13 +1841,21 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	// event_number_within_block=0 indicates error
 	if(event_number_within_block==0){
 	  _DBG_<<"event_number_within_block==0. This indicates a bug in firmware." << endl;
+	  //if (pe) pe->NEW_DBadHit(rocid,slot);
 	  exit(-1);
 	}
 	
 	// Event headers may be suppressed so determine event from hit data
 	if( (event_number_within_block > current_parsed_events.size()) ) {
-	  jerr << "Bad f250 event number for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;	  
-	  throw JException("Bad f250 event number in DEVIOWorkerThread::Parsef250Bank()", __FILE__, __LINE__);}
+	  jerr << "Bad f250 event number for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;	        if (pe) {
+	    pe->NEW_DBadHit(rocid,slot);
+	    ClearBadDataFormatEventTriggers(pe);
+	    jerr << "Created new BadHit and cleared physics triggers" << endl;	    
+	  }
+	  break;
+	  //throw JException("Bad f250 event number in DEVIOWorkerThread::Parsef250Bank()", __FILE__, __LINE__);
+	}  
+
 	pe_iter = current_parsed_events.begin();
 	advance( pe_iter, event_number_within_block-1 );
 	pe = *pe_iter++;
@@ -2010,6 +2083,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     case 1: // Block Trailer
       pe_iter = current_parsed_events.begin();
       pe = NULL;
+      if(VERBOSE>7) cout << "      FADC125 Block Trailer" << endl;      
       break;
     case 2: // Event Header
       //slot_event_header = (*iptr>>22) & 0x1F;
@@ -2056,21 +2130,20 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	if(iptr>=iend){
 	  if(pe) pe->NEW_DBadHit(rocid,slot);   
 	  PrintLimitCDC++;
+	  if (PrintLimitCDC<10) jerr << " Truncated f125 CDC hit (block ends before continuation word!). BadHit created." << endl;
 	  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
-	  if (PrintLimitCDC<10) {
-	    jerr << " Truncated f125 CDC hit (block ends before continuation word!). BadHit created." << endl;
-	    continue;
-	  }
+	  break;
 	}
+	
 	if( ((*iptr>>31) & 0x1) != 0 ){
 	  if(pe) pe->NEW_DBadHit(rocid,slot);   
 	  PrintLimitCDC++;
+	  if (PrintLimitCDC<10) jerr << " Truncated f125 CDC hit (missing continuation word!). BadHit created." << endl;
 	  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
-	  if (PrintLimitCDC<10)
-	    jerr << " Truncated f125 CDC hit (missing continuation word!) BadHit created." << endl;
-	  --iptr;
-	  continue;
+          --iptr;
+	  break;
 	}
+	
 	uint32_t word2      = *iptr;
 	uint32_t pedestal   = (*iptr>>23) & 0xFF;
 	uint32_t sum        = (*iptr>>9 ) & 0x3FFF;
@@ -2083,6 +2156,28 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	// Create hit objects
 	uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
 	uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
+	if (VERBOSE > 10) {
+          cout << "CDC pulse prep\n";
+          cout << " rocid " << rocid << endl;
+  	  cout << " slot " << slot << endl;
+	  cout << " channel " << channel << endl;
+	  cout << " itrigger " << itrigger << endl;
+
+	  cout << " pulse_number " << pulse_number << endl;
+          cout << " pulse_time " << pulse_time << endl;
+          cout << " quality_factor " << quality_factor       << endl;
+          cout << " overflow_count " << overflow_count       << endl;
+          cout << " pedestal " << pedestal             << endl;
+          cout << " sum " << sum                  << endl;
+          cout << " pulse_peak " << pulse_peak           << endl;
+          cout << " word1 0x" << hex << word1 << dec                << endl;
+          cout << " word2 0x" << hex << word2  << dec              << endl;
+          cout << " nsamples_pedestal " << nsamples_pedestal    << endl;
+          cout << " nsamples_integral " << nsamples_integral    << endl;
+          cout << " number of CDC pulses existing : " << pe->vDf125CDCPulse.size() << endl;
+	
+          if (pe) cout << " pe exists\n";
+	}
 	
 	if( pe ) {
 	  pe->NEW_Df125CDCPulse(rocid, slot, channel, itrigger
@@ -2099,6 +2194,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 				, nsamples_integral   // nsamples_integral
 				, false);             // emulated
 	}
+	if (VERBOSE>10) cout << "CDC pulse created\n";
       }
       break;
       
@@ -3088,7 +3184,7 @@ void DEVIOWorkerThread::ClearBadDataFormatEventTriggers(DParsedEvent *pe)
 	if(cri->rocid != 1) continue;
 	
         cri->misc[0] = 0;  	// Global Trigger Processor latch word
-			      //cri->misc[1]; // Front Panel latch word
+	cri->misc[1] = 0;      // Front Panel latch word
     }
 
     if(VERBOSE>7) cout << "      Cleared physics trigger bits for badly formatted event, number " << pe->event_number << endl;
