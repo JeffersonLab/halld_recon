@@ -11,17 +11,12 @@
 #include <JANA/JEventProcessor.h>
 #include "evio_writer/DEventWriterEVIO.h"
 
+#include <ECAL/DECALShower.h>
 #include <FCAL/DFCALShower.h>
 #include <BCAL/DBCALShower.h>
 
-#include <thread>
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <iostream>
-#include <fstream>
-#include <iomanip>
+#include <vector>
+#include <TMath.h>
 
 class JEventProcessor_npp_skim:public JEventProcessor{
  public:
@@ -36,22 +31,20 @@ class JEventProcessor_npp_skim:public JEventProcessor{
   void Process(const std::shared_ptr<const JEvent>& event) override;
   void EndRun() override;
   void Finish() override;
-  const double z_CPP_Target = 1.;
-  
-  double mgg(double x1,double y1, double z1, double e1,double x2,double y2, double z2, double e2) {
-    double r1 = sqrt(x1*x1+y1*y1+z1*z1);
-    double r2 = sqrt(x2*x2+y2*y2+z2*z2);
-    double px1= x1/r1*e1;
-    double py1= y1/r1*e1;
-    double pz1= z1/r1*e1;
-    double px2= x2/r2*e2;
-    double py2= y2/r2*e2;
-    double pz2= z2/r2*e2;
-    
-    double m2 = e1*e2-px1*px2-py1*py2-pz1*pz2;
-    m2        = sqrt(2.*m2);
-    
-    return m2;
+
+  struct Shower {DVector3 pos{0.0,0.0,0.0}; double e = 0;};
+
+  double  targetZ;
+  double  ECAL_E_CUT, FCAL_E_CUT, BCAL_E_CUT, EGG_CUT, MGG_CUT, EPI0_CUT, MPI0_CUT, EPI0PI0_CUT;
+
+  double mgg(const Shower &s1, const Shower &s2) {
+    DVector3 tgt_pos(0,0,targetZ);
+    DVector3 n1 = (s1.pos - tgt_pos).Unit();
+    DVector3 n2 = (s2.pos - tgt_pos).Unit();
+    double cost = n1.Dot(n2);
+    double m2 = s1.e*s2.e*(1.0-cost);
+
+    return (m2>0.0) ? std::sqrt(2*m2) : 0.0;
   }
   
 };

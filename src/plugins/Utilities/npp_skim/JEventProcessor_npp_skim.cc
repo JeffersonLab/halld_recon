@@ -42,9 +42,33 @@ JEventProcessor_npp_skim::~JEventProcessor_npp_skim()
 //------------------
 void JEventProcessor_npp_skim::Init(void)
 {
-  // This is called once at program startup. 
-  
-  return; //NOERROR;
+  auto app = GetApplication();
+
+  ECAL_E_CUT  = 0.5;
+  app->SetDefaultParameter("NPP_SKIM:ECAL_E_CUT", ECAL_E_CUT, "min shower energy in ECAL");
+
+  FCAL_E_CUT  = 0.3; 
+  app->SetDefaultParameter("NPP_SKIM:FCAL_E_CUT", FCAL_E_CUT, "min shower energy in FCAL");
+
+  BCAL_E_CUT  = 0.1;
+  app->SetDefaultParameter("NPP_SKIM:BCAL_E_CUT", BCAL_E_CUT, "min shower energy in BCAL");
+
+  EGG_CUT     = 3.3;
+  app->SetDefaultParameter("NPP_SKIM:EGG_CUT",   EGG_CUT, "min two shower energy sum for gg skim");
+
+  MGG_CUT     = 0.1;
+  app->SetDefaultParameter("NPP_SKIM:MGG_CUT",   MGG_CUT, "min two shower inv. mass for gg skim");
+ 
+  EPI0_CUT    = 0.5;
+  app->SetDefaultParameter("NPP_SKIM:EPI0_CUT", EPI0_CUT, "min pi0 energy for 2pi0 skim");
+
+  MPI0_CUT    = 0.1;
+  app->SetDefaultParameter("NPP_SKIM:MPI0_CUT", MPI0_CUT, "min two shower inv. mass for 2pi0 skim");
+
+  EPI0PI0_CUT = 3.5;
+  app->SetDefaultParameter("NPP_SKIM:EPI0PI0_CUT", EPI0PI0_CUT, "min two pi0 energy sum for 2pi0 skim");
+
+  return;
 }
 
 //------------------
@@ -53,50 +77,30 @@ void JEventProcessor_npp_skim::Init(void)
 void JEventProcessor_npp_skim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
+
+  DGeometry *geom = DEvent::GetDGeometry(event);
+  if(!geom) throw JException("DGeometry is nullptr");
+	geom->GetTargetZ(targetZ);
+
   num_epics_events = 0;
-  return; //NOERROR;
+  return;
 }
 
 //------------------
 // Process
 //------------------
 void JEventProcessor_npp_skim::Process(const std::shared_ptr<const JEvent>& event){
-  // This is called for every event. Use of common resources like writing
-  // to a file or filling a histogram should be mutex protected. Using
-  // loop->Get(...) to get reconstructed objects (and thereby activating the
-  // reconstruction algorithm) should be done outside of any mutex lock
-  // since multiple threads may call this method at the same time.
-  // Here's an example:
-  //
-  // vector<const MyDataClass*> mydataclasses;
-  // loop->Get(mydataclasses);
-  //
-  // japp->RootFillLock(this);
-  //  ... fill historgrams or trees ...
-  // japp->RootFillUnLock(this);
 
-
-  vector<const DFCALHit*> locFCALHits;
-  event->Get(locFCALHits);
-  if(locFCALHits.size()>200) return; //NOERROR;
-
-  vector< const DFCALShower* > locFCALShowers;
-  event->Get(locFCALShowers);
-
-  vector< const DBCALShower* > locBCALShowers;
-  event->Get(locBCALShowers);
-
-  const DEventWriterEVIO* locEventWriterEVIO = NULL;
+  const DEventWriterEVIO* locEventWriterEVIO = nullptr;
   event->GetSingle(locEventWriterEVIO);
-  if(locEventWriterEVIO == NULL) {
-    cerr << "from JEventProcessor_npp_skim: locEventWriterEVIO is not available" << endl;
-    exit(1);
-  }
+
+  if(locEventWriterEVIO == nullptr)
+    throw JException("JEventProcessor_npp_skim: locEventWriterEVIO is not available");
 
   if(GetStatusBit(event, kSTATUS_BOR_EVENT)) { // Begin of Run event
     locEventWriterEVIO->Write_EVIOEvent(event,"npp_2g");
     locEventWriterEVIO->Write_EVIOEvent(event,"npp_2pi0");
-    return; //NOERROR;
+    return;
   }
 
   if(GetStatusBit(event, kSTATUS_EPICS_EVENT)) { // Epics event
@@ -105,158 +109,98 @@ void JEventProcessor_npp_skim::Process(const std::shared_ptr<const JEvent>& even
       locEventWriterEVIO->Write_EVIOEvent(event,"npp_2pi0");
     }
     ++num_epics_events;
-    return; //NOERROR;
+    return;
   }
+
+  vector<const DFCALHit*> locFCALHits;
+  event->Get(locFCALHits);
+  if(locFCALHits.size()>200) return;
+
+  vector< const DECALShower* > locECALShowers;
+  event->Get(locECALShowers);
+
+  vector< const DFCALShower* > locFCALShowers;
+  event->Get(locFCALShowers);
+
+  vector< const DBCALShower* > locBCALShowers;
+  event->Get(locBCALShowers);
 
   bool write_2g = false, write_2pi0 = false;
 
-  for(unsigned int i=0; i<locFCALShowers.size()+locBCALShowers.size() && !write_2g; ++i) {
-    double x1, y1, z1, e1;
-    if(i<locFCALShowers.size()) {
-      const DFCALShower *s1 = locFCALShowers[i];
-      e1 = s1->getEnergy();
-      x1 = s1->getPosition().X();
-      y1 = s1->getPosition().Y();
-      z1 = s1->getPosition().Z() - z_CPP_Target;
-      if(e1<0.3) continue;
-    } else {
-      const DBCALShower *s1 = locBCALShowers[i-locFCALShowers.size()];
-      e1 = s1->E;
-      x1 = s1->x;
-      y1 = s1->y;
-      z1 = s1->z - z_CPP_Target;
-      if(e1<0.1) continue;
-    }
+  vector<Shower> showers;
+  showers.clear();
+  showers.reserve(locECALShowers.size()+locFCALShowers.size()+locBCALShowers.size());
 
-    for(unsigned int j=i+1; j<locFCALShowers.size()+locBCALShowers.size() && !write_2g; ++j) {
-      double x2, y2, z2, e2;
-      if(j<locFCALShowers.size()) {
-    	const DFCALShower *s2 = locFCALShowers[j];
-	e2 = s2->getEnergy();
-	x2 = s2->getPosition().X();
-	y2 = s2->getPosition().Y();
-	z2 = s2->getPosition().Z() - z_CPP_Target;
-	if(e2<0.3) continue;
-      } else {
-	const DBCALShower *s2 = locBCALShowers[j-locFCALShowers.size()];
-	e2 = s2->E;
-	x2 = s2->x;
-	y2 = s2->y;
-	z2 = s2->z - z_CPP_Target;
-	if(e2<0.1) continue;
-      }
+  for(size_t i=0; i<locECALShowers.size(); ++i) {
+  	const DECALShower *shecal = locECALShowers[i];
+    double e = shecal->E;
+    if(e<ECAL_E_CUT) continue;
 
-      if(e1+e2<3.3) continue;
+    auto& sh = showers.emplace_back();
+    sh.pos   = shecal->pos;
+    sh.e     = e;
+  }
 
-      double mraw= mgg(x1,y1,z1,e1,x2,y2,z2,e2);
+  for(size_t i=0; i<locFCALShowers.size(); ++i) {
+  	const DFCALShower *shfcal = locFCALShowers[i];
+    double e = shfcal->getEnergy();
+    if(e<FCAL_E_CUT) continue;
 
-      if(mraw<0.1) continue;
+    auto& sh = showers.emplace_back();
+    sh.pos   = shfcal->getPosition();
+    sh.e     = e;
+  }
 
+  for(size_t i=0; i<locBCALShowers.size(); ++i) {
+  	const DBCALShower *shbcal = locBCALShowers[i];
+    double e = shbcal->E;
+    if(e<BCAL_E_CUT) continue;
+
+    auto& sh = showers.emplace_back();
+    sh.pos.SetXYZ(shbcal->x,shbcal->y,shbcal->z);
+    sh.e     = e;
+  }
+
+  for(size_t i=0; i+1<showers.size()&&!write_2g; ++i) {
+    for(size_t j=i+1; j<showers.size(); ++j) {
+
+      if(showers[i].e + showers[j].e < EGG_CUT) continue;
+      double mraw= mgg(showers[i],showers[j]);
+      if(mraw<MGG_CUT) continue;
       write_2g = true;
+      break;
 
     }
   }
 
+  for(size_t i=0; i+1<showers.size()&&!write_2pi0; ++i) {
+    for(size_t j=i+1; j<showers.size()&&!write_2pi0; ++j) {
 
-  for(unsigned int i=0; i<locFCALShowers.size()+locBCALShowers.size() && !write_2pi0; ++i) {
-    double x1, y1, z1, e1;
-    if(i<locFCALShowers.size()) {
-      const DFCALShower *s1 = locFCALShowers[i];
-      e1 = s1->getEnergy();
-      x1 = s1->getPosition().X();
-      y1 = s1->getPosition().Y();
-      z1 = s1->getPosition().Z() - z_CPP_Target;
-      if(e1<0.3) continue;
-    } else {
-      const DBCALShower *s1 = locBCALShowers[i-locFCALShowers.size()];
-      e1 = s1->E;
-      x1 = s1->x;
-      y1 = s1->y;
-      z1 = s1->z - z_CPP_Target;
-      if(e1<0.1) continue;
-    }
+      if(showers[i].e + showers[j].e < EPI0_CUT) continue;
+      double mraw12 = mgg(showers[i],showers[j]);
+      if(mraw12<MPI0_CUT) continue;
 
-    for(unsigned int j=i+1; j<locFCALShowers.size()+locBCALShowers.size() && !write_2pi0; ++j) {
-      double x2, y2, z2, e2;
-      if(j<locFCALShowers.size()) {
-    	const DFCALShower *s2 = locFCALShowers[j];
-	e2 = s2->getEnergy();
-	x2 = s2->getPosition().X();
-	y2 = s2->getPosition().Y();
-	z2 = s2->getPosition().Z()  - z_CPP_Target;
-	if(e2<0.3) continue;
-      } else {
-	const DBCALShower *s2 = locBCALShowers[j-locFCALShowers.size()];
-	e2 = s2->E;
-	x2 = s2->x;
-	y2 = s2->y;
-	z2 = s2->z-1.;
-	if(e2<0.1) continue;
-      }
+      for(size_t i2=i+1; i2+1<showers.size()&&!write_2pi0; ++i2) {
+        if(i2==j) continue;
+        for(size_t j2=i2+1; j2<showers.size(); ++j2) {
+          if(j2==j) continue;
 
-      if(e1+e2<0.5) continue;
-      double mraw12 = mgg(x1,y1,z1,e1,x2,y2,z2,e2);
-      if(mraw12<0.1) continue;
+          if(showers[i2].e + showers[j2].e < EPI0_CUT) continue;
+          if(showers[i].e + showers[j].e + showers[i2].e + showers[j2].e < EPI0PI0_CUT) continue;
+          double mraw34 = mgg(showers[i2],showers[j2]);
+          if(mraw34<MPI0_CUT) continue;
 
-      for(unsigned int i2=i+1; i2<locFCALShowers.size()+locBCALShowers.size() && !write_2pi0; ++i2) { // i2>i
-	if(i2==j) continue;
-	double x3, y3, z3, e3;
-	if(i2<locFCALShowers.size()) {
-	  const DFCALShower *s3 = locFCALShowers[i2];
-	  e3 = s3->getEnergy();
-	  x3 = s3->getPosition().X();
-	  y3 = s3->getPosition().Y();
-	  z3 = s3->getPosition().Z()  - z_CPP_Target;
-	  if(e3<0.3) continue;
-	} else {
-	  const DBCALShower *s3 = locBCALShowers[i2-locFCALShowers.size()];
-	  e3 = s3->E;
-	  x3 = s3->x;
-	  y3 = s3->y;
-	  z3 = s3->z - z_CPP_Target;
-	  if(e3<0.1) continue;
-	}
-
-	for(unsigned int j2=i2+1; j2<locFCALShowers.size()+locBCALShowers.size() && !write_2pi0; ++j2) { // j2>i2>i
-	  if(j2==j) continue;
-	  double x4, y4, z4, e4;
-	  if(j2<locFCALShowers.size()) {
-	    const DFCALShower *s4 = locFCALShowers[j2];
-	    e4 = s4->getEnergy();
-	    x4 = s4->getPosition().X();
-	    y4 = s4->getPosition().Y();
-	    z4 = s4->getPosition().Z() - z_CPP_Target;
-	    if(e4<0.3) continue;
-	  } else {
-	    const DBCALShower *s4 = locBCALShowers[j2-locFCALShowers.size()];
-	    e4 = s4->E;
-	    x4 = s4->x;
-	    y4 = s4->y;
-	    z4 = s4->z - z_CPP_Target;
-	    if(e4<0.1) continue;
-	  }
-
-	  if(e3+e4<0.5) continue;
-	  if(e1+e2+e3+e4<3.5) continue;
-
-	  double mraw34 = mgg(x3,y3,z3,e3,x4,y4,z4,e4);
-	  if(mraw34<0.1) continue;
-
-	  write_2pi0 = true;
-	}
+          write_2pi0 = true;
+          break;
+        }
       }
     }
   }
 
-  if(write_2g)   {
-    locEventWriterEVIO->Write_EVIOEvent(event,"npp_2g");
-  }
+  if(write_2g)    locEventWriterEVIO->Write_EVIOEvent(event,"npp_2g");
+  if(write_2pi0)  locEventWriterEVIO->Write_EVIOEvent(event,"npp_2pi0");
 
-  if(write_2pi0) {
-    locEventWriterEVIO->Write_EVIOEvent(event,"npp_2pi0");
-  }
-
-  return; //NOERROR;
+  return;
 }
 
 //------------------
@@ -267,7 +211,7 @@ void JEventProcessor_npp_skim::EndRun(void)
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return; //NOERROR;
+  return;
 }
 
 //------------------
@@ -276,6 +220,6 @@ void JEventProcessor_npp_skim::EndRun(void)
 void JEventProcessor_npp_skim::Finish(void)
 {
   // Called before program exit after event processing is finished.
-  return; //NOERROR;
+  return;
 }
 
