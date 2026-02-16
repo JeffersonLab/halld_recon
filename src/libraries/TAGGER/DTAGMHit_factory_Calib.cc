@@ -319,9 +319,12 @@ void DTAGMHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
         hit->AddAssociatedObject(digihit);
     }
     
-    for(auto hit : results)
-    	if(hit->has_fADC==true || hit->has_TDC==true)
-    		filtered_results.push_back(hit);
+    for(auto hit : results){
+      if(hit->has_fADC==true || hit->has_TDC==true){
+	filtered_results.push_back(hit);
+      }
+      else delete hit;
+    }
 
     Set(filtered_results);
 
