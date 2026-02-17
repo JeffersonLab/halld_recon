@@ -17,6 +17,9 @@ void DDetectorMatches_factory::Init()
 
   ENABLE_ECAL_SINGLE_HITS = false;
   GetApplication()->SetDefaultParameter("PID:ENABLE_ECAL_SINGLE_HITS",ENABLE_ECAL_SINGLE_HITS);
+
+  MATCH_TO_DIRC = true;
+  GetApplication()->SetDefaultParameter("PID:MATCH_TO_DIRC",MATCH_TO_DIRC);
 }
 
 //------------------
@@ -60,11 +63,11 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	event->Get(locBCALShowers);
 
 	vector<const DDIRCPmtHit*> locDIRCHits;
-	event->Get(locDIRCHits);
+	if (MATCH_TO_DIRC) event->Get(locDIRCHits);
 
 	// cheat and get truth info of track at bar
 	vector<const DDIRCTruthBarHit*> locDIRCBarHits;
-	event->Get(locDIRCBarHits);
+	if (MATCH_TO_DIRC) event->Get(locDIRCBarHits);
 
 	vector<const DCTOFPoint*> locCTOFPoints;
 	event->Get(locCTOFPoints);
@@ -84,7 +87,9 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 		MatchToTOF(locParticleID, locTrackTimeBasedVector[loc_i], locTOFPoints, locDetectorMatches);
 		MatchToFCAL(locParticleID, locTrackTimeBasedVector[loc_i], locFCALShowers, locDetectorMatches);
 		MatchToSC(locParticleID, locTrackTimeBasedVector[loc_i], locSCHits, locDetectorMatches);
-		MatchToDIRC(locParticleID, locTrackTimeBasedVector[loc_i], locDIRCHits, locDetectorMatches, locDIRCBarHits);
+		if (MATCH_TO_DIRC){
+		  MatchToDIRC(locParticleID, locTrackTimeBasedVector[loc_i], locDIRCHits, locDetectorMatches, locDIRCBarHits);
+		}
 		if (locTrackTimeBasedVector[loc_i]->PID()<10){ // GEANT ids; ignore proton=14 and kaons=11+12
 		  MatchToCTOF(locParticleID, locTrackTimeBasedVector[loc_i], locCTOFPoints, locDetectorMatches);
 		  MatchToFMWPC(locTrackTimeBasedVector[loc_i], locFMWPCClusters, locDetectorMatches);
