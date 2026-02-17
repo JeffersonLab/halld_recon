@@ -10,7 +10,9 @@
 
 #include "DTRDSegment.h"
 #include "DTRDPoint.h"
-#include "PID/DChargedTrack.h"
+
+#include "TRACKING/DTrackTimeBased.h"
+#include "TRACKING/DTrackFitter.h"
 
 #include <algorithm>
 #include <map>
