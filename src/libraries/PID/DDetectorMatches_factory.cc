@@ -12,14 +12,16 @@
 //------------------
 void DDetectorMatches_factory::Init()
 {
+  auto app = GetApplication();
+
   ENABLE_FCAL_SINGLE_HITS = false;
-  GetApplication()->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);
+  app->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);
 
   ENABLE_ECAL_SINGLE_HITS = false;
-  GetApplication()->SetDefaultParameter("PID:ENABLE_ECAL_SINGLE_HITS",ENABLE_ECAL_SINGLE_HITS);
+  app->SetDefaultParameter("PID:ENABLE_ECAL_SINGLE_HITS",ENABLE_ECAL_SINGLE_HITS);
 
   MATCH_TO_DIRC = true;
-  GetApplication()->SetDefaultParameter("PID:MATCH_TO_DIRC",MATCH_TO_DIRC);
+  app->SetDefaultParameter("PID:MATCH_TO_DIRC",MATCH_TO_DIRC);
 }
 
 //------------------
