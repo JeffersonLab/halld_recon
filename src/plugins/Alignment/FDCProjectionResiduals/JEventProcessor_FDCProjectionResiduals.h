@@ -35,6 +35,9 @@ using namespace std;
 #include <PID/DDetectorMatches.h>
 #include <CDC/DCDCTrackHit.h>
 
+// Convenience methods for GlueX services
+#include <DANA/DEvent.h>
+
 class JEventProcessor_FDCProjectionResiduals:public JEventProcessor{
 	public:
 		JEventProcessor_FDCProjectionResiduals();
@@ -56,6 +59,8 @@ class JEventProcessor_FDCProjectionResiduals:public JEventProcessor{
       int PLANE_TO_SKIP;
       double dMinTrackingFOM;
 
+		std::shared_ptr<JLockService> lockService;
+
       vector< vector< DCDCWire * > > cdcwires; // CDC Wires Referenced by [ring][straw]
       vector<vector<double> >max_sag;
       vector<vector<double> >sag_phi_offset;
@@ -69,6 +74,15 @@ class JEventProcessor_FDCProjectionResiduals:public JEventProcessor{
       double CDCDriftDistance(double delta, double t);
       unsigned int Locate(vector<double>&xx,double x);
       double GetDOCA(DVector3, DVector3, DVector3, DVector3, DVector3&, DVector3&);
+  
+  	  TH2F *hDistanceVsTime;
+  	  TH2F *hResidualsVsTime;
+  	  TH1F *hCathodeResiduals;
+  	  TH1F *hTrackingFOM;
+  
+  	  vector<TH2F*> hResidualVsStrawNumber;
+  	  vector<TH2F*> hResidualVsPhi;
+  	  vector<TH2F*> hDistanceVsTimeRing1;
       
 };
 

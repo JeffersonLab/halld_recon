@@ -268,7 +268,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 	DVector3 fnY1 = DVector3 (0,1,0);
 	DVector3 fnZ1 = DVector3 (0,0,1);
 
-	double tangle,luttheta,evtime;
+	double tangle,evtime;
 	int64_t pathid; 
 	DVector3 dir,dird;
 	
@@ -351,10 +351,12 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 
 				dir = dir.Unit();
 
-				luttheta = dir.Angle(DVector3(-1,0,0));
-				if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
+				//luttheta = dir.Angle(DVector3(-1,0,0));
+				//if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
 
-				double bartime = lenz/cos(luttheta)/DIRC_LIGHT_V;
+				//double bartime = lenz/(cos(luttheta)*DIRC_LIGHT_V);
+				double cosluttheta=fabs(dir.Dot(fnX1));
+				double bartime = lenz/(cosluttheta*DIRC_LIGHT_V);
 				double totalTime = bartime+evtime;
 
 				// LUT time corrections

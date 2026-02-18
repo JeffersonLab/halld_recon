@@ -1,8 +1,9 @@
+#include <fstream>
 void trkeff(int pid)
 {
 	gROOT->Reset();
 
-	Double_t Red[5]   = { 0.5,1.00,,0,0, 0 };
+	Double_t Red[5]   = { 0.5,1.00,0,0, 0 };
 	Double_t Green[5] = { 0.1, 0.3, 1., 0., 0.};
 	Double_t Blue[5]  = { 0.1, 0.35, 0.65,0.8,1.0 };	
 	Double_t Length[5] = { 0.00, 0.3, 0.5, 0.85, 1.00 };
@@ -25,7 +26,7 @@ void trkeff(int pid)
 	trkeff->Project("dp", "F.pthrown.Mag():180/3.14159*F.pthrown.Theta()", "");
 	trkeff->Project("npcut", "F.pthrown.Mag():180./3.14159*F.pthrown.Theta()", "(F.trktb.Nfdc>0 || F.trktb.Ncdc>0) && TMath::Prob(F.trktb.trk_chisq,F.trktb.trk_Ndof)>0.01");
 	
-	TH2D *effp = np->Clone("effp");
+	TH2D *effp = (TH2D*)np->Clone("effp");
 	
 	TCanvas *c1 = new TCanvas("c1");
 	c1->SetTickx();
@@ -75,11 +76,11 @@ void trkeff(int pid)
 	double p1=par[0]+par[1]+par[2]+par[3];
 	double p2=par[0]+par[1]*130.+par[2]*130.*130.+par[3]*130.*130.*130.;
 	TLine *line1 = new TLine(1,p1,1,pmax);
+	TLine *line2 = new TLine(130,p2,130,pmax);
 	line1->SetLineColor(5);
 	line1->SetLineWidth(2);
 	line1->Draw();
-	if (pid==9){
-	  TLine *line2 = new TLine(130,p2,130,pmax);
+	if (pid==9){ 
 	  line2->SetLineColor(5);
 	  line2->SetLineWidth(2);
 	  line2->Draw();
@@ -88,7 +89,7 @@ void trkeff(int pid)
 	else c1->SaveAs("proton_efficiency.png");
 
 
-	TH2D *effpcut = npcut->Clone("effpcut");
+	TH2D *effpcut =(TH2D*)npcut->Clone("effpcut");
 	
 	TCanvas *c2 = new TCanvas("c2");
 	c2->SetTickx();
@@ -116,8 +117,8 @@ void trkeff(int pid)
 	if (pid==9) c2->SaveAs("pion_efficiency_with_chi2_cut.png");
 	else c2->SaveAs("proton_efficiency_with_chi2_cut.png");
 
+	ofstream ofile("pion.txt");
 	if (pid==9){
-	  ofstream ofile("pion.txt");
 	  ofile << "<html>" <<endl;
 	  ofile<<"<h1>Single track reconstruction</h1>" <<endl;
 	  ofile<<"<p> Yellow lines indicate recommended fiducial cuts </p>" 

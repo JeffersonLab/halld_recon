@@ -34,7 +34,6 @@
 #include <TDirectory.h>
 #include <TH1I.h>
 #include <TH2F.h>
-#include "HistogramTools.h"
 
 
 const int nChan = 2800;

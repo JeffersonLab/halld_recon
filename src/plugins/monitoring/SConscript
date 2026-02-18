@@ -4,6 +4,7 @@ Import('*')
 subdirs = [
 'occupancy_online',
 'lowlevel_online',
+'bad_hits',
 'BCAL_online',
 'BCAL_LEDonline',
 'BCAL_LED',
@@ -58,7 +59,6 @@ subdirs = [
 'TS_scaler',
 'TrackingPulls',
 'TrackingPulls_straight',
-'timing_online',
 'DIRC_online',
 'TRD_online',
 'TRDTrack',

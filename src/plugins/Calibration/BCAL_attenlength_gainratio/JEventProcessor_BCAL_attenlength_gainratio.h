@@ -33,7 +33,7 @@ class JEventProcessor_BCAL_attenlength_gainratio:public JEventProcessor{
 		void Process(const std::shared_ptr<const JEvent>& event) override;
 		void EndRun() override;
 		void Finish() override;
-
+		
 		std::shared_ptr<JLockService> lockService;
 
 
@@ -51,6 +51,9 @@ class JEventProcessor_BCAL_attenlength_gainratio:public JEventProcessor{
 		TH2F *hist2D_intattenlength = nullptr;
 		TH2F *hist2D_intgainratio = nullptr;
 
+		TH2F *hEattenlength = nullptr;
+		TH2F *hEgainratio = nullptr;
+
 		// Channel by channel histograms
 		TH2I *logpeakratiovsZ_all = nullptr;
 		TH2I *logintratiovsZ_all = nullptr;
@@ -66,6 +69,7 @@ class JEventProcessor_BCAL_attenlength_gainratio:public JEventProcessor{
 		TH2I *logEratiovsZ_layers[4] = { nullptr };
 		TH2F *hist2D_aveZ = nullptr;
 };
+
 
 #endif // _JEventProcessor_BCAL_attenlength_gainratio_
 

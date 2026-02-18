@@ -63,54 +63,31 @@ void JEventProcessor_cpp_skim::BeginRun(const std::shared_ptr<const JEvent>& eve
 //------------------
 void JEventProcessor_cpp_skim::Process(const std::shared_ptr<const JEvent>& event)
 {
-	// This is called for every event. Use of common resources like writing
-	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
-	// reconstruction algorithm) should be done outside of any mutex lock
-	// since multiple threads may call this method at the same time.
-	// Here's an example:
-	//
-	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
-	//
-	// japp->RootFillLock(this);
-	//  ... fill historgrams or trees ...
-	// japp->RootFillUnLock(this);
-
 
   const DEventWriterEVIO* locEventWriterEVIO = NULL;
   event->GetSingle(locEventWriterEVIO);
-  if(locEventWriterEVIO == NULL) {
-    cerr << "from JEventProcessor_cpp_skim: locEventWriterEVIO is not available" << endl;
-    exit(1);
-  }
+  if(locEventWriterEVIO == NULL) throw JException("JEventProcessor_cpp_skim: locEventWriterEVIO is not availabl");
 
   if(GetStatusBit(event, kSTATUS_BOR_EVENT)) { // Begin of Run event
     locEventWriterEVIO->Write_EVIOEvent(event,"cpp_2c");
-    return; //NOERROR;
+    return;
   }
 
   if(GetStatusBit(event, kSTATUS_EPICS_EVENT)) { // Epics event
     if(num_epics_events<5) locEventWriterEVIO->Write_EVIOEvent(event,"cpp_2c");
      ++num_epics_events;
-    return; //NOERROR;
+    return;
   }
 
-
-	vector<const DTrackWireBased*> tracks;
+	vector<const DTrackTimeBased*> tracks;
 	event->Get(tracks);
 
   int npos = 0, nneg = 0;
 	for(unsigned int j=0; j<tracks.size(); j++) {
-		const DTrackWireBased *track = tracks[j];
+		const DTrackTimeBased *track = tracks[j];
     double p = track->momentum().Mag();
     DVector3 origin =  track->position();
-    if(p<0.2 || p>15.0 || fabs(origin.Z())>90. || origin.Pt()>2.7) continue;
-
-    double chi  = track->chisq;
-    int ndof = track->Ndof;
-    double prob = TMath::Prob(chi,ndof);
-    if(prob<1.e-3) continue;
+    if(p<0.2 || p>15.0 || fabs(origin.Z()-1.0)>90.) continue;
 
     double q = track->charge();
     if(q> 0.1) ++npos;
@@ -119,7 +96,7 @@ void JEventProcessor_cpp_skim::Process(const std::shared_ptr<const JEvent>& even
 
   if(npos && nneg) locEventWriterEVIO->Write_EVIOEvent(event,"cpp_2c");
 
-	return; //NOERROR;
+	return;
 }
 
 //------------------

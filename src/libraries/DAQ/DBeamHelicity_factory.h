@@ -34,6 +34,7 @@ class DBeamHelicity_factory:public JFactoryT<DBeamHelicity>{
 
 		uint32_t advanceSeed(uint32_t seed) const;
 		bool checkPredictor(uint32_t testval) const;
+		void reportPredictorError(uint32_t testval) const;
 		uint32_t helicityDecoderCalcPolarity(uint32_t event_polarity, uint32_t seed, uint32_t delay);
 
 		bool PREFER_PROMPT_HELICITY_DATA;

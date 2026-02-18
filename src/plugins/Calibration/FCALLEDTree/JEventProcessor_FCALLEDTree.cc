@@ -12,6 +12,8 @@
 #include "FCAL/DFCALDigiHit.h"
 
 #include "TTree.h"
+#include "TH1.h"
+#include "TH2.h"
 
 // Routine used to create our JEventProcessor
 extern "C"{
@@ -187,8 +189,10 @@ void JEventProcessor_FCALLEDTree::EndRun()
 void JEventProcessor_FCALLEDTree::Finish()
 {
   // Called before program exit after event processing is finished.
-  lockService->RootWriteLock();
-  m_tree->Write();
-  lockService->RootUnLock();
+  if (btree == 1) {
+    lockService->RootWriteLock();
+    m_tree->Write();
+    lockService->RootUnLock();
+  }
 }
 

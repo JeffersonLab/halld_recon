@@ -9,7 +9,6 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRACKING/DReferenceTrajectory.h"
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
-#include "HistogramTools.h"
 
 #include <CDC/DCDCHit.h>
 #include "DANA/DEvent.h"
@@ -47,7 +46,64 @@ JEventProcessor_FDCProjectionResiduals::~JEventProcessor_FDCProjectionResiduals(
 //------------------
 void JEventProcessor_FDCProjectionResiduals::Init()
 {
-   // This is called once at program startup. 
+   // This is called once at program startup.
+   auto app = GetApplication();
+   lockService = app->GetService<JLockService>();
+
+   unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
+      135,135,146,146,158,158,170,170,182,182,197,197,
+      209,209};
+
+    TDirectory *main = gDirectory;
+    gDirectory->mkdir("FDCProjectionResiduals")->cd();
+    
+    hTrackingFOM = new TH1F( "Tracking FOM", "TrackingFOM", 200, 0.0, 1.0);
+    
+    gDirectory->mkdir("FDCReco")->cd();
+
+	hDistanceVsTime = new TH2F("Distance Vs Time","Distance Vs. Time; Time [ns]; Distance [cm]", 300, 0.0, 300., 100, 0.0, 0.5);
+	hResidualsVsTime = new TH2F("Residual Vs Time","Residual Vs. Time; Time [ns]; Residual [cm]", 200, 0.0, 200., 160, -0.2, 0.2);
+	hCathodeResiduals = new TH1F("Cathode Residuals","Cathode Residual; Residual [cm];", 160,-0.2, 0.2);
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("ResidualVsStrawNumber")->cd();
+
+    for(int ring=0; ring<28; ring++) {
+	  char name[200];
+	  char title[200];
+	  sprintf(name,"Ring %i Residual Vs. Straw Number", ring+1);
+	  sprintf(title,"Ring %i Residual Vs. Straw Number; Straw Number; Residual [cm]", ring+1);
+    	
+      hResidualVsStrawNumber.push_back( new TH2F(name, title, numstraws[ring], 0.5, numstraws[ring] + 0.5, 1000, -0.5, 0.5) );
+    }
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("ResidualVsPhi")->cd();
+
+    for(int ring=0; ring<28; ring++) {
+	  char name[200];
+	  char title[200];
+	  sprintf(name,"Ring %i rPhi Residual Vs. phi", ring+1);
+	  sprintf(title,"Ring %i #Deltar#phi Vs. #phi; Straw Number; Residual [cm]", ring+1);
+    	
+      hResidualVsPhi.push_back( new TH2F(name, title, numstraws[ring], -3.14, 3.14, 1000, -0.5, 0.5) );
+    }
+
+    gDirectory->cd("..");
+    gDirectory->mkdir("DistanceVsTimeRing1")->cd();
+
+    for(unsigned int straw=0; straw<numstraws[0]; straw++) {
+	  char name[200];
+	  char title[200];	
+	  sprintf(name,"Ring %i Straw %i Distance Vs. Time", 1, straw+1);
+	  sprintf(title,"Ring %i Straw %i Distance Vs. Time ; Time [ns]; Distance [cm]", 1, straw+1);
+    	
+      hDistanceVsTimeRing1.push_back( new TH2F(name, title, 500, -50.0, 1000, 120, 0.0, 1.2) );
+    }
+
+
+   main->cd();
+
 }
 
 //------------------
@@ -196,10 +252,6 @@ void JEventProcessor_FDCProjectionResiduals::Process(const std::shared_ptr<const
    vector <const DChargedTrack *> chargedTrackVector;
    event->Get(chargedTrackVector);
 
-   unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
-      135,135,146,146,158,158,170,170,182,182,197,197,
-      209,209};
-
    for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
 
       const DChargedTrackHypothesis* bestHypothesis = chargedTrackVector[iTrack]->Get_BestTrackingFOM();
@@ -210,11 +262,14 @@ void JEventProcessor_FDCProjectionResiduals::Process(const std::shared_ptr<const
 
       double t0 = thisTimeBasedTrack->t0();
 
-      Fill1DHistogram("FDCProjectionResiduals", "", "Tracking FOM", thisTimeBasedTrack->FOM, "TrackingFOM", 200, 0.0, 1.0);
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	  hTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
       if (thisTimeBasedTrack->FOM < 0.0027 || thisTimeBasedTrack->Ndof < 4) continue;
 
       // Loop through the pulls to try to check on the FDC calibtrations
       vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       for (size_t iPull = 0; iPull < pulls.size(); iPull++){
          if ( pulls[iPull].fdc_hit != nullptr){
             if (PLANE_TO_SKIP == 0 || PLANE_TO_SKIP == pulls[iPull].fdc_hit->wire->layer){
@@ -222,23 +277,20 @@ void JEventProcessor_FDCProjectionResiduals::Process(const std::shared_ptr<const
                double residual = pulls[iPull].resi;
                double cathode_resi = pulls[iPull].resic;
                double tdrift = pulls[iPull].tdrift;
-               Fill2DHistogram("FDCProjectionResiduals", "FDCReco","Distance Vs Time",
-                     tdrift, DOCA,
-                     "Distance Vs. Time; Time [ns]; Distance [cm]",
-                     300, 0.0, 300., 100, 0.0, 0.5);
-               Fill2DHistogram("FDCProjectionResiduals", "FDCReco","Residual Vs Time",
-                     tdrift, residual,
-                     "Residual Vs. Time; Time [ns]; Residual [cm]",
-                     200, 0.0, 200., 160, -0.2, 0.2); 
-               Fill1DHistogram("FDCProjectionResiduals", "FDCReco","Cathode Residuals",
-                     cathode_resi, "Cathode Residual; Residual [cm];", 160,-0.2, 0.2);
-
+               
+               hDistanceVsTime->Fill(tdrift, DOCA);
+               hResidualsVsTime->Fill(tdrift, residual);
+               hCathodeResiduals->Fill(cathode_resi);               
             }
          }
       }
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
       vector<DTrackFitter::Extrapolation_t>extrapolations=thisTimeBasedTrack->extrapolations.at(SYS_CDC);
       if (extrapolations.size()>0){
+
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      
 	for (auto ringPtr=cdcwires.begin(); ringPtr < cdcwires.end(); ringPtr++){
 	  vector< DCDCWire * > wireByNumber = (*ringPtr);
 	  for (auto wirePtr = wireByNumber.begin(); wirePtr < wireByNumber.end(); wirePtr++)
@@ -258,9 +310,9 @@ void JEventProcessor_FDCProjectionResiduals::Process(const std::shared_ptr<const
 	      double zPOCA = POCAOnTrack.Z();
 	      DVector3 LOCA = POCAOnTrack - POCAOnWire;
 	      if(distanceToWire > 1.2 || distanceToBeamline > 1.0 || zPOCA < zVertex || POCAOnWire.Z() > endplate_z) continue;
-	      jout << " Dist = " << distanceToWire << " POCAOnTrack POCAOnWire Manual Distance = " << LOCA.Mag() << endl;
-	      POCAOnTrack.Print();
-	      POCAOnWire.Print(); 
+	      // jout << " Dist = " << distanceToWire << " POCAOnTrack POCAOnWire Manual Distance = " << LOCA.Mag() << endl;
+	      // POCAOnTrack.Print();
+	      // POCAOnWire.Print();
 	      
 	      double delta = 0.0, dz = 0.0;
 	      if(!Expect_Hit(thisTimeBasedTrack, wire, distanceToWire, delta, dz, fitter))
@@ -277,35 +329,26 @@ void JEventProcessor_FDCProjectionResiduals::Process(const std::shared_ptr<const
                   double signedResidual = measurement - (POCAOnTrack.Phi() - POCAOnWire.Phi())*POCAOnTrack.Perp();
                   double residual = measurement - distanceToWire;
                   //jout << "evnt" << eventnumber << " ring " << wire->ring << " straw " << wire->straw << " t " << thisHit->t << " t0 " << t0 << " measurement " << measurement << " residual " << residual << endl;
-                  char name[200];
-                  char title[200];
-                  sprintf(name,"Ring %i Residual Vs. Straw Number", thisHit->ring);
-                  sprintf(title,"Ring %i Residual Vs. Straw Number; Straw Number; Residual [cm]", thisHit->ring);
-                  Fill2DHistogram("FDCProjectionResiduals","ResidualVsStrawNumber",name,
-				  thisHit->straw, residual,
-				  title,
-				  numstraws[thisHit->ring-1], 0.5, numstraws[thisHit->ring-1] + 0.5, 1000, -0.5, 0.5);
-                  sprintf(name,"Ring %i rPhi Residual Vs. phi", thisHit->ring);
-                  sprintf(title,"Ring %i #Deltar#phi Vs. #phi; Straw Number; Residual [cm]", thisHit->ring);
-                  Fill2DHistogram("FDCProjectionResiduals","ResidualVsPhi",name,
-				  thisTimeBasedTrack->momentum().Phi(), signedResidual,
-                        title,
-				  numstraws[thisHit->ring-1], -3.14, 3.14, 1000, -0.5, 0.5);
+
+				  hResidualVsStrawNumber[thisHit->ring-1]->Fill(thisHit->straw, residual);
+				  hResidualVsPhi[thisHit->ring-1]->Fill(thisTimeBasedTrack->momentum().Phi(), signedResidual);
+
                   if (thisHit->ring == 1){
-		    sprintf(name,"Ring %i Straw %i Distance Vs. Time", thisHit->ring, thisHit->straw);
-		    sprintf(title,"Ring %i Straw %i Distance Vs. Time ; Time [ns]; Distance [cm]", thisHit->ring, thisHit->straw);
-		    Fill2DHistogram("FDCProjectionResiduals","DistanceVsTimeRing1",name,
-                           tdrift, distanceToWire,
-				    title,
-				    500, -50.0, 1000, 120, 0.0, 1.2);
-                  }
-		}
-	      }
+                  	hDistanceVsTimeRing1[thisHit->straw-1]->Fill(tdrift, distanceToWire);
+                		}
+                	}
+	      		}
             }
          }
+
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
       }
+
+
    }
 }
+
 
 //------------------
 // EndRun

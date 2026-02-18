@@ -39,7 +39,7 @@
 #include "DL1Info.h"
 #include "Df250Scaler.h"
 #include "Df250AsyncPedestal.h"
-
+#include "DBadHit.h"
 
 class JFactoryGenerator_DAQ: public JFactoryGenerator{
 	/// This is only necessary because we are using JEventSource::GetObjects instead of JEvent::Insert.
@@ -74,6 +74,7 @@ class JFactoryGenerator_DAQ: public JFactoryGenerator{
 			factory_set->Add(new JFactoryT<DL1Info>());
 			factory_set->Add(new JFactoryT<Df250Scaler>());
 			factory_set->Add(new JFactoryT<Df250AsyncPedestal>());
+			factory_set->Add(new JFactoryT<DBadHit>());
 		}
 };
 
