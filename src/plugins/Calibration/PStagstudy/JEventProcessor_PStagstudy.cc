@@ -327,6 +327,11 @@ void JEventProcessor_PStagstudy::Init() {
 
    gInterpreter->GenerateDictionary("std::vector<std::vector<unsigned short> >", "vector"); 
 
+   app->SetDefaultParameter("PSTAGSTUDY_BEAM_CURRENT_RECORD",
+                            beam_current_record_url,
+                            "Path/URL to the ROOT file containing the beam current tree");
+   LOG << "PStagstudy: using beam current record URL: " << beam_current_record_url << LOG_END;
+
    pstags = new TTree("pstags", "PS tag study");
    pstags->Branch("runno", &runno, "runno/i");
    pstags->Branch("eventno", &eventno, "eventno/i");
