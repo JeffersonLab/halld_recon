@@ -57,9 +57,9 @@ def main():
     cmd_list.append('-PTRACKINGPULLS:TREEFILE=%stree%06d.root' % (output_dir, runnum))
     cmd_list.append('-PTRKFIT:ALIGNMENT=1')
     cmd_list.append('-PNTHREADS=24')
-    cmd_list.append('-PJANA:BATCH_MODE=1')
+    cmd_list.append('-Pjana:global_loglevel=FATAL')
   if num_of_events > 0:
-    cmd_list.append('-PEVENTS_TO_KEEP=%d' % num_of_events)
+    cmd_list.append('-Pjana:nevents=%d' % num_of_events)
   cmd_list.append(evio_path)
   cmd_list.append('-o')
   cmd_list.append(output_file)
