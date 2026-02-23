@@ -306,11 +306,14 @@ void JEventProcessor_PStagstudy::Init() {
    // lock all root operations
    auto app = GetApplication();
    auto lock_svc = app->GetService<JLockService>();
-   lock_svc->RootWriteLock();
 
    bc_factory = new DBeamCurrent_factory();
    bc_factory->SetApplication(app);
    bc_factory->Init();
+
+   // create root folder and cd to it, store main dir
+   TDirectory *main = gDirectory;
+   gDirectory->mkdir("PStagstudy")->cd();
 
    std::ifstream tlimits("epoch_time_limits");
    int t0, t1;
@@ -497,8 +500,8 @@ void JEventProcessor_PStagstudy::Init() {
       }
    }
 
-   // unlock
-   lock_svc->RootUnLock();
+   main->cd();
+
 }
 
 
@@ -559,7 +562,7 @@ void JEventProcessor_PStagstudy::BeginRun(const std::shared_ptr<const JEvent>& e
    std::cout << "JEventProcessor_PStagstudy::brun read "
              << beam_current_from_epics.size() << " records"
              << " from EPICS for run " << runno << std::endl;
- 
+
    // unlock
    lock_svc->RootUnLock();
 }
