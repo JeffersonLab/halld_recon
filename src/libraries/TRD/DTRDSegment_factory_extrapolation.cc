@@ -44,7 +44,7 @@ void DTRDSegment_factory_extrapolation::Process(const std::shared_ptr<const JEve
   vector<const DTRDPoint*> points;
   event->Get<DTRDPoint>(points);
   
-  vector<const DChargedTrack*> tracks; 
+  vector<const DTrackTimeBased*> tracks; 
   event->Get(tracks);
 
   if (points.size()==0) {
@@ -56,14 +56,13 @@ void DTRDSegment_factory_extrapolation::Process(const std::shared_ptr<const JEve
   vector<TrackPoint> trackPoints;
   vector<DTrackFitter::Extrapolation_t> trackExtrapolations;
   for (auto &track: tracks) {
-    // const DChargedTrackHypothesis *hypElectron=track->Get_Hypothesis(Electron);
-    // const DChargedTrackHypothesis *hypPositron=track->Get_Hypothesis(Positron);   
-    // const DChargedTrackHypothesis *hyp = (hypElectron != nullptr) ? hypElectron : hypPositron;
-    const DChargedTrackHypothesis *hyp = track->Get_BestTrackingFOM();
-    if (hyp == nullptr) continue;
-    const DTrackTimeBased *trackTB=hyp->Get_TrackTimeBased();
-    if (trackTB==nullptr) continue; 
-    vector<DTrackFitter::Extrapolation_t> extrapolations = trackTB->extrapolations.at(SYS_TRD);
+    // just use the tracks with the electron mass hypothesis
+    // maybe we should use the pion mass hypothesis though?
+    if( track->PID()!=Electron && track->PID()!=Positron )  continue;
+    //if( track->PID()!=PiPlus && track->PID()!=PiMinus )  continue;
+  
+    //if (track==nullptr) continue; 
+    vector<DTrackFitter::Extrapolation_t> extrapolations = track->extrapolations.at(SYS_TRD);
     if (extrapolations.size()==0) continue;
     DTrackFitter::Extrapolation_t extrapolation = extrapolations[0];
 
