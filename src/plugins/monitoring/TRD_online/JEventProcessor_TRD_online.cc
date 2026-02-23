@@ -305,8 +305,13 @@ void JEventProcessor_TRD_online::Init() {
         hPoint_ZVsY_Event[i] = new TH2I(Form("Point_ZVsY_Event%d",i),Form("TRD Point Y vs. Z;Z [cm];Y [cm]",i),100,528,533,100,-70,-30);        
     }
 
+    NEventsTrack = 0;
+    NEventsTrackSegmentMatch = 0;
+
     // back to main dir
     mainDir->cd();
+
+    
 
 }
 
@@ -631,13 +636,15 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 
         vector<vector<DTrackFitter::Extrapolation_t>> v_extrapolations;
         for (const auto& track: tracks) {
-            const DChargedTrackHypothesis *hypElectron = track->Get_Hypothesis(Electron);
-            const DChargedTrackHypothesis *hypPositron = track->Get_Hypothesis(Positron);
-            const DChargedTrackHypothesis *hypPiMinus = track->Get_Hypothesis(PiMinus);
-            const DChargedTrackHypothesis *hypPiPlus = track->Get_Hypothesis(PiPlus);
-            const DChargedTrackHypothesis *hypMinus = (hypElectron != nullptr) ? hypElectron : hypPiMinus;
-            const DChargedTrackHypothesis *hypPlus = (hypPositron != nullptr) ? hypPositron : hypPiPlus;
-            const DChargedTrackHypothesis *hyp = (hypMinus != nullptr) ? hypMinus : hypPlus;
+            // const DChargedTrackHypothesis *hypElectron = track->Get_Hypothesis(Electron);
+            // const DChargedTrackHypothesis *hypPositron = track->Get_Hypothesis(Positron);
+            // const DChargedTrackHypothesis *hypPiMinus = track->Get_Hypothesis(PiMinus);
+            // const DChargedTrackHypothesis *hypPiPlus = track->Get_Hypothesis(PiPlus);
+            // const DChargedTrackHypothesis *hypMinus = (hypElectron != nullptr) ? hypElectron : hypPiMinus;
+            // const DChargedTrackHypothesis *hypPlus = (hypPositron != nullptr) ? hypPositron : hypPiPlus;
+            // const DChargedTrackHypothesis *hyp = (hypMinus != nullptr) ? hypMinus : hypPlus;
+
+            const DChargedTrackHypothesis *hyp = track->Get_BestTrackingFOM();
             if (hyp == nullptr) continue;
             const DTrackTimeBased *trackTB = hyp->Get_TrackTimeBased();
             if (trackTB == nullptr) continue;
@@ -696,6 +703,28 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
         cout << eventClusterCount << ". Event " << eventnumber << " has " << clusters.size() << " clusters, " << segments.size() << " segments, " << tracks.size() << " tracks, " << iExtrapolation << " extrapolations at TRD" << endl;
         eventClusterCount++;
     }
+
+    // Calculate efficiency of extrapolation to segment matching
+    if (tracks.size()>0) {
+        for (const auto& track : tracks) {
+            const DChargedTrackHypothesis *hyp = track->Get_BestTrackingFOM();
+            if (hyp == nullptr) continue;
+            const DTrackTimeBased *trackTB = hyp->Get_TrackTimeBased();
+            if (trackTB == nullptr) continue;
+            vector<DTrackFitter::Extrapolation_t> extrapolations = trackTB->extrapolations.at(SYS_TRD);
+            if (extrapolations.size() == 0) continue;
+            bool extrapolationFound = false;
+            for (const auto& extrapolation : extrapolations) {
+                if ((extrapolation.position.x() < -83.47 || extrapolation.position.x() > -11.47) || 
+                    (extrapolation.position.y() < -68.6 || extrapolation.position.y() > -32.61)) continue;
+                extrapolationFound = true;
+                NEventsTrack++;
+                break;                
+            }
+            if (extrapolationFound) cout << "extrapolationFound = " << extrapolationFound << ", points.size() = " << points.size() << endl;
+            if (points.size() > 0 && extrapolationFound) NEventsTrackSegmentMatch++;
+        }
+    }
 	
     lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	
@@ -708,12 +737,19 @@ void JEventProcessor_TRD_online::EndRun() {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
+
 }
 
 //----------------------------------------------------------------------------------
 
 void JEventProcessor_TRD_online::Finish() {
     // Called before program exit after event processing is finished.
+
+
+    cout << "NEventsTrackSegmentMatch = " << NEventsTrackSegmentMatch << endl;
+    cout << "NEventsTrack = " << NEventsTrack << endl;
+    cout << "Efficiency of extrapolation to segment matching = " 
+         << double(NEventsTrackSegmentMatch)/double(NEventsTrack) << endl;
 }
 
 //----------------------------------------------------------------------------------
