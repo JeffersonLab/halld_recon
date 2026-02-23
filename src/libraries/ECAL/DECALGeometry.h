@@ -19,7 +19,7 @@ class DECALGeometry:public JObject{
 public:
   JOBJECT_PUBLIC(DECALGeometry);
   
-  DECALGeometry(const DGeometry *geom);
+  DECALGeometry(const DGeometry *geom,JCalibration *calib);
   ~DECALGeometry(){}
   
   static const int kECALBlocksWide   = 40;
@@ -28,7 +28,7 @@ public:
   static const int kECALMaxChannels  = kECALBlocksWide * kECALBlocksTall;
   static const int kECALBeamHoleSize = 2;
 
-  static double blockSize()  { return  2.09 * k_cm; }
+  static double blockSize()  { return  2.08713 * k_cm; }
   static double blockLength(){ return  20.0 * k_cm; }
   bool isBlockActive( int row, int column ) const;
   
@@ -69,8 +69,11 @@ private:
 
 inline int DECALGeometry::y_to_row( double y ) const {
   y-=m_FCALy;
-  
-  int my_row=static_cast<int>( y / blockSize() + kECALMidBlock + 0.5);
+
+  double value = y / blockSize() + kECALMidBlock; // kECALMidBlock includes additional 0.5 for rounding
+  if (value < 0) return -1;
+  int my_row = static_cast<int>(value); // Rounds only positive values correctly
+
   if (my_row<0) return -1;
   if (my_row>=kECALBlocksTall) return -1;
   
@@ -80,7 +83,10 @@ inline int DECALGeometry::y_to_row( double y ) const {
 inline int DECALGeometry::x_to_column( double x ) const {
   x-=m_FCALx;
 
-  int my_col=static_cast<int>( x / blockSize() + kECALMidBlock + 0.5);
+  double value = x / blockSize() + kECALMidBlock; // kECALMidBlock includes additional 0.5 for rounding
+  if (value < 0) return -1;
+  int my_col = static_cast<int>(value); // Rounds only positive values correctly
+
   if (my_col<0) return -1;
   if (my_col>=kECALBlocksWide) return -1;
   

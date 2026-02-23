@@ -1,6 +1,7 @@
 // hnamepath: /highlevel/RFBeamBunchPeriod
 // hnamepath: /highlevel/RFBeamBunchPeriod_DFT
 // hnamepath: /highlevel/BeamEnergy
+// hnamepath: /highlevel/BeamEnergy_amo
 //
 // e-mail: davidl@jlab.org
 // e-mail: staylor@jlab.org
@@ -11,43 +12,42 @@
 {
 //--------------------------------------------------------------------
 // This taken from the bin contents of: DBeamPhoton::E of a janaroot file
-// for run 131013, an amorphous target run.
+// for run 133141, an amorphous target run.
 // The data in the table below was created with a macro in:
 //   $HALLD_RECON_HOME/src/plugins/monitoring/highlevel_online/AmorphousNormalization
 //
 // The working directory used was:
 //     ~hdops/2018.10.05.amorphous_normalization
 //
-string amorphous_label = "Normalized to Amorphous run 131013";
+string amorphous_label = "Normalized to Amorphous run 133141";
 
 	Double_t amorphous_data[] = {
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,    373353.0,
-		   519893.0,    694230.0,    678505.0,    539980.0,    642494.0,    608830.0,    609675.0,    591419.0,    543689.0,    551889.0,
-		   538369.0,    542725.0,    503079.0,    509751.0,    527706.0,    620217.0,    487267.0,    546460.0,    428377.0,    789217.0,
-		  1511570.0,    941223.0,    946673.0,   1253709.0,   1302989.0,    428096.0,    746474.0,    794928.0,   1157949.0,   1186794.0,
-		  1153566.0,   1108791.0,    700961.0,   1428867.0,   1018239.0,   1002719.0,    833449.0,    993379.0,   1000328.0,   1374827.0,
-		   663246.0,    851607.0,    805097.0,   1115152.0,   1033324.0,    887192.0,    953882.0,    932075.0,    898329.0,    847268.0,
-		  1270144.0,    805973.0,   1131964.0,    733701.0,   1269688.0,    510759.0,   1024540.0,    946681.0,    898659.0,   1273353.0,
-		   773108.0,   1033399.0,    393679.0,    726827.0,    664306.0,    853124.0,    741903.0,    761300.0,    569923.0,    319925.0,
-		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,
-			0.0};
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,    603024.0, 
+		   715809.0,    876503.0,    768876.0,    832468.0,    968221.0,    887220.0,    966896.0,    819973.0,    817816.0,    794689.0, 
+		   760821.0,    799343.0,    964819.0,    983185.0,    875640.0,   1007130.0,    872138.0,   1094751.0,    945558.0,   1248558.0, 
+		  1786723.0,   1123570.0,   1114447.0,   1497953.0,   1530973.0,    512074.0,    898413.0,    947271.0,   1394707.0,   1433727.0, 
+		  1377625.0,   1336832.0,    848098.0,   1720764.0,   1236145.0,   1203198.0,   1009402.0,   1193600.0,   1200645.0,   1659380.0, 
+		   763676.0,    961762.0,    982407.0,   1361042.0,   1243086.0,   1078576.0,   1152846.0,   1124651.0,   1086944.0,   1028931.0, 
+		  1045761.0,    974301.0,   1372879.0,    890618.0,   1532175.0,    605489.0,   1222477.0,   1147639.0,   1081689.0,   1532456.0, 
+		   929855.0,   1242304.0,    773876.0,    852506.0,    796618.0,   1023501.0,    891699.0,    911777.0,    678945.0,    387017.0, 
+		        0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0,         0.0, 
+	0.0};
 //--------------------------------------------------------------------
-
 	TDirectory *locTopDirectory = gDirectory;
 
 	//Goto Beam Path
@@ -59,6 +59,8 @@ string amorphous_label = "Normalized to Amorphous run 131013";
 	TH1* locHist_RFBeamBunchPeriod = (TH1*)gDirectory->Get("RFBeamBunchPeriod");
 	TH1* locHist_RFBeamBunchPeriod_DFT = (TH1*)gDirectory->Get("RFBeamBunchPeriod_DFT");
 	TH1* locHist_BeamEnergy = (TH1*)gDirectory->Get("BeamEnergy");
+	TH1* locHist_BeamEnergy_amo = (TH1*)gDirectory->Get("BeamEnergy_amo");
+	bool locUseCCDB = (locHist_BeamEnergy_amo != NULL && locHist_BeamEnergy_amo->GetEntries() > 0);
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -127,7 +129,13 @@ string amorphous_label = "Normalized to Amorphous run 131013";
 			// Normalize to amorphous baseline 
 			double scale = 0.0;
 			for(int ibin=1; ibin<=locHist_BeamEnergy_norm->GetNbinsX(); ibin++){
-				Double_t norm = amorphous_data[ibin-1];
+				Double_t norm;
+				if ( locUseCCDB ){
+				  amorphous_label = "Normalized to Amorphous run from CCDB";
+				  norm = locHist_BeamEnergy_amo->GetBinContent(ibin);
+				}
+				else
+				  norm = amorphous_data[ibin-1];
 				if( norm < 1000.0) continue;
 
 				Double_t v = (Double_t)locHist_BeamEnergy->GetBinContent(ibin);
@@ -142,7 +150,11 @@ string amorphous_label = "Normalized to Amorphous run 131013";
 			// Find leftmost non-zero bin 
 			double left_scale = 0.0;
 			for(int ibin=1; ibin<=locHist_BeamEnergy_norm->GetNbinsX(); ibin++){
-				if( amorphous_data[ibin-1] < 10000.0) continue;
+				if( locUseCCDB ){
+				  if (locHist_BeamEnergy_amo->GetBinContent(ibin) < 10000.0) continue;
+				}
+				else
+				  if (amorphous_data[ibin-1] < 10000.0) continue;
 				Double_t v = (Double_t)locHist_BeamEnergy_norm->GetBinContent(ibin);
 				if(v>0.1){
 					left_scale = v;
@@ -154,7 +166,7 @@ string amorphous_label = "Normalized to Amorphous run 131013";
 			double diff = 1.0 - left_scale;
 			double min = left_scale - diff*0.1;
 			double max = left_scale + diff*1.2;
-			if( (max-min) < 0.5 ){
+			if( (max-min) < 0.7 ){
 				min = 0.25;
 				if(max<1.50) max =1.5;
 			}
@@ -193,7 +205,7 @@ string amorphous_label = "Normalized to Amorphous run 131013";
 		}
 
 		TPad *beamenergypad = (TPad*)gDirectory->FindObjectAny("beamenergypad");
-		if(!beamenergypad) beamenergypad = new TPad("beamenergypad", "", 0.45, 0.65, 0.885, 0.895);
+		if(!beamenergypad) beamenergypad = new TPad("beamenergypad", "", 0.11, 0.65, 0.51, 0.895);
 		beamenergypad->SetTicks();
 		beamenergypad->Draw();
 		beamenergypad->cd();

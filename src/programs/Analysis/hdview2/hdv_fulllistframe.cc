@@ -6,12 +6,8 @@
 #include <fstream>
 using namespace std;
 
-#include <pthread.h>
-
 #include <TRACKING/DMCThrown.h>
 #include "hdv_fulllistframe.h"
-#include "hdview2.h"
-#include "MyProcessor.h"
 #include "FDC/DFDCGeometry.h"
 #include "FCAL/DFCALGeometry.h"
 #include "DVector2.h"
@@ -39,12 +35,6 @@ using namespace std;
 #include <TG3DLine.h>
 #include <TGListView.h>
 #include <TGTextView.h>
-
-extern JApplication *japp;
-//TGeoVolume *MOTHER = NULL;
-//TGeoCombiTrans *MotherRotTrans = NULL;
-
-extern int GO;
 
 
 //-------------------

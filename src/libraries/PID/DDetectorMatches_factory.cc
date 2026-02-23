@@ -12,8 +12,16 @@
 //------------------
 void DDetectorMatches_factory::Init()
 {
+  auto app = GetApplication();
+
   ENABLE_FCAL_SINGLE_HITS = false;
-  GetApplication()->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);
+  app->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);
+
+  ENABLE_ECAL_SINGLE_HITS = false;
+  app->SetDefaultParameter("PID:ENABLE_ECAL_SINGLE_HITS",ENABLE_ECAL_SINGLE_HITS);
+
+  MATCH_TO_DIRC = true;
+  app->SetDefaultParameter("PID:MATCH_TO_DIRC",MATCH_TO_DIRC);
 }
 
 //------------------
@@ -57,11 +65,11 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	event->Get(locBCALShowers);
 
 	vector<const DDIRCPmtHit*> locDIRCHits;
-	event->Get(locDIRCHits);
+	if (MATCH_TO_DIRC) event->Get(locDIRCHits);
 
 	// cheat and get truth info of track at bar
 	vector<const DDIRCTruthBarHit*> locDIRCBarHits;
-	event->Get(locDIRCBarHits);
+	if (MATCH_TO_DIRC) event->Get(locDIRCBarHits);
 
 	vector<const DCTOFPoint*> locCTOFPoints;
 	event->Get(locCTOFPoints);
@@ -82,7 +90,9 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 		MatchToTOF(locParticleID, locTrackTimeBasedVector[loc_i], locTOFPoints, locDetectorMatches);
 		MatchToFCAL(locParticleID, locTrackTimeBasedVector[loc_i], locFCALShowers, locDetectorMatches);
 		MatchToSC(locParticleID, locTrackTimeBasedVector[loc_i], locSCHits, locDetectorMatches);
-		MatchToDIRC(locParticleID, locTrackTimeBasedVector[loc_i], locDIRCHits, locDetectorMatches, locDIRCBarHits);
+		if (MATCH_TO_DIRC){
+		  MatchToDIRC(locParticleID, locTrackTimeBasedVector[loc_i], locDIRCHits, locDetectorMatches, locDIRCBarHits);
+		}
 		if (locTrackTimeBasedVector[loc_i]->PID()<10){ // GEANT ids; ignore proton=14 and kaons=11+12
 		  MatchToCTOF(locParticleID, locTrackTimeBasedVector[loc_i], locCTOFPoints, locDetectorMatches);
 		  MatchToFMWPC(locTrackTimeBasedVector[loc_i], locFMWPCClusters, locDetectorMatches);
@@ -110,6 +120,22 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	    
 	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
 	      MatchToFCAL(locParticleID,locTrackTimeBasedVector[loc_j],
+			  locSingleHits,locDetectorMatches);
+	    }
+	  }
+	}
+
+	// Try to find matches between tracks and single hits in ECAL
+	if (ENABLE_ECAL_SINGLE_HITS){
+	  vector<const DECALHit*> locECALHits;
+	  event->Get(locECALHits);
+	  if (locECALHits.size()>0){
+	    vector<const DECALHit*>locSingleHits;
+	    locParticleID->GetSingleECALHits(locECALShowers,locECALHits,
+					     locSingleHits);
+	    
+	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
+	      MatchToECAL(locParticleID,locTrackTimeBasedVector[loc_j],
 			  locSingleHits,locDetectorMatches);
 	    }
 	  }
@@ -415,4 +441,33 @@ DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID,
     }
   }
 }
+
+// Try to find matches between a track and a single hit in ECAL
+void 
+DDetectorMatches_factory::MatchToECAL(const DParticleID* locParticleID,
+				      const DTrackTimeBased *locTrackTimeBased,
+				      vector<const DECALHit *>&locSingleHits,
+				      DDetectorMatches* locDetectorMatches) const {
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_ECAL);
+  if (extrapolations.size()==0) return;
+
+  for (unsigned int i=0;i<locSingleHits.size();i++){
+    double locDOCA=0.,locHitTime;
+    if (locParticleID->Distance_ToTrack(locTrackTimeBased->t0(),
+					extrapolations[0],locSingleHits[i],
+					locDOCA,locHitTime)){
+      shared_ptr<DECALSingleHitMatchParams> locMatchParams=std::make_shared<DECALSingleHitMatchParams>();
+      
+      locMatchParams->dEHit=locSingleHits[i]->E;
+      locMatchParams->dTHit=locHitTime;
+      locMatchParams->dFlightTime = extrapolations[0].t;
+      locMatchParams->dFlightTimeVariance = 0.; // Fill this in!
+      locMatchParams->dPathLength = extrapolations[0].s;
+      locMatchParams->dDOCAToHit = locDOCA;
+      
+      locDetectorMatches->Add_Match(locTrackTimeBased,locMatchParams);
+    }
+  }
+}
+
 

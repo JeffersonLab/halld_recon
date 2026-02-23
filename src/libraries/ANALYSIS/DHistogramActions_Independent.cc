@@ -671,20 +671,28 @@ bool DHistogramAction_Reconstruction::Perform_Action(const std::shared_ptr<const
 		//TRACK CANDIDATES
 		for(size_t loc_i = 0; loc_i < locTrackCandidates.size(); ++loc_i)
 		{
-			int locCharge = (locTrackCandidates[loc_i]->charge() > 0.0) ? 1 : -1;
-			double locTheta = locTrackCandidates[loc_i]->momentum().Theta()*180.0/TMath::Pi();
-			double locP = locTrackCandidates[loc_i]->momentum().Mag();
+			int locCharge = (locTrackCandidates[loc_i]->dCharge > 0.0) ? 1 : -1;
+			double locTheta = locTrackCandidates[loc_i]->dMomentum.Theta()*180.0/TMath::Pi();
+			double locP = locTrackCandidates[loc_i]->dMomentum.Mag();
 			dHistMap_PVsTheta_Candidates[locCharge]->Fill(locTheta, locP);
-
+			
+			// Get the hits from the candidate
+			vector<const DFDCPseudo*>locFDCPseudos=locTrackCandidates[loc_i]->fdchits;
+			vector<const DCDCTrackHit *>locCDCTrackHits=locTrackCandidates[loc_i]->cdchits;
+			
+			unsigned int locCDCRingPattern=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+			unsigned int locFDCPlanePattern=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+			
 			set<int> locCDCRings;
-			locParticleID->Get_CDCRings(locTrackCandidates[loc_i]->dCDCRings, locCDCRings);
+			locParticleID->Get_CDCRings(locCDCRingPattern, locCDCRings);
 			for(set<int>::iterator locIterator = locCDCRings.begin(); locIterator != locCDCRings.end(); ++locIterator)
 				dHist_CDCRingVsTheta_Candidates->Fill(locTheta, *locIterator);
 
 			set<int> locFDCPlanes;
-			locParticleID->Get_FDCPlanes(locTrackCandidates[loc_i]->dFDCPlanes, locFDCPlanes);
+			locParticleID->Get_FDCPlanes(locFDCPlanePattern, locFDCPlanes);
 			for(set<int>::iterator locIterator = locFDCPlanes.begin(); locIterator != locFDCPlanes.end(); ++locIterator)
 				dHist_FDCPlaneVsTheta_Candidates->Fill(locTheta, *locIterator);
+			
 		}
 
 		//WIRE-BASED TRACKS
@@ -1630,14 +1638,12 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 			if(locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_ECAL))
 			  {
 			    dHistMap_PVsTheta_HasHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locP);
-			    //if(locP > 1.0)
-			    if(locP > 2.0)
+			    if(locP > 1.0)
 			      dHistMap_PhiVsTheta_HasHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locPhi);
 			    if(locProjectedECALRowColumnMap.find(locTrack) != locProjectedECALRowColumnMap.end())
 			      {
 				dHistMap_TrackECALP_HasHit[locIsTimeBased]->Fill(locP);
-				//if(locP > 1.0)
-				if(locP > 2.0)
+				if(locP > 1.0)
 				  {
 				    pair<float, float>& locPositionPair = locProjectedECALXYMap[locTrack];
 				    dHistMap_TrackECALYVsX_HasHit[locIsTimeBased]->Fill(locPositionPair.first, locPositionPair.second);
@@ -1651,14 +1657,12 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(const std::shared_ptr
 			else
 			  {
 			    dHistMap_PVsTheta_NoHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locP);
-			    //if(locP > 1.0)
-			    if(locP > 2.0)
+			    if(locP > 1.0)
 			      dHistMap_PhiVsTheta_NoHit[SYS_ECAL][locIsTimeBased]->Fill(locTheta, locPhi);
 			    if(locProjectedECALRowColumnMap.find(locTrack) != locProjectedECALRowColumnMap.end())
 			      {
 				dHistMap_TrackECALP_NoHit[locIsTimeBased]->Fill(locP);
-				//if(locP > 1.0)
-				if(locP > 2.0)
+				if(locP > 1.0)
 				  {
 				    pair<float, float>& locPositionPair = locProjectedECALXYMap[locTrack];
 				    dHistMap_TrackECALYVsX_NoHit[locIsTimeBased]->Fill(locPositionPair.first, locPositionPair.second);
@@ -4023,7 +4027,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates.size(); ++loc_i)
 			{
-				if(locTrackCandidates[loc_i]->charge() > 0.0)
+				if(locTrackCandidates[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
@@ -4036,7 +4040,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates_CDC.size(); ++loc_i)
 			{
-				if(locTrackCandidates_CDC[loc_i]->charge() > 0.0)
+				if(locTrackCandidates_CDC[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
@@ -4048,7 +4052,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 			locNumPos = 0;  locNumNeg = 0;
 			for(size_t loc_i = 0; loc_i < locTrackCandidates_FDC.size(); ++loc_i)
 			{
-				if(locTrackCandidates_FDC[loc_i]->charge() > 0.0)
+				if(locTrackCandidates_FDC[loc_i]->dCharge > 0.0)
 					++locNumPos;
 				else
 					++locNumNeg;
@@ -4341,7 +4345,7 @@ bool DHistogramAction_TriggerStudies::Perform_Action(const std::shared_ptr<const
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action();
 	{
-		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCALEnergy(), locTrigger->Get_GTP_BCALEnergy());
+		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCAL2Energy(), locTrigger->Get_GTP_BCALEnergy());
 	}
 	Unlock_Action();
 

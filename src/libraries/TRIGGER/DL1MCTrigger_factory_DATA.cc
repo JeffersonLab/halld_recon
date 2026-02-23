@@ -31,6 +31,7 @@ vector<DL1MCTrigger_factory_DATA::trigger_conf> DL1MCTrigger_factory_DATA::trigg
 
 vector<DL1MCTrigger_factory_DATA::fcal_mod> DL1MCTrigger_factory_DATA::fcal_trig_mask;
 vector<DL1MCTrigger_factory_DATA::bcal_mod> DL1MCTrigger_factory_DATA::bcal_trig_mask;
+vector<DL1MCTrigger_factory_DATA::ecal_mod> DL1MCTrigger_factory_DATA::ecal_trig_mask;
 
 int    DL1MCTrigger_factory_DATA::FCAL_CELL_THR = 65;
 int    DL1MCTrigger_factory_DATA::FCAL_NSA = 10;
@@ -42,6 +43,13 @@ int    DL1MCTrigger_factory_DATA::BCAL_NSA = 19;
 int    DL1MCTrigger_factory_DATA::BCAL_NSB = 3;
 int    DL1MCTrigger_factory_DATA::BCAL_WINDOW = 20;
 
+int    DL1MCTrigger_factory_DATA::ECAL_CELL_THR = 35;
+int    DL1MCTrigger_factory_DATA::ECAL_NSA = 10;
+int    DL1MCTrigger_factory_DATA::ECAL_NSB = 3;
+int    DL1MCTrigger_factory_DATA::ECAL_WINDOW = 15;
+
+float  DL1MCTrigger_factory_DATA::FCAL_GAIN = 1.;
+float  DL1MCTrigger_factory_DATA::ECAL_GAIN = 0.;
 
 //------------------
 // Init
@@ -56,6 +64,10 @@ void DL1MCTrigger_factory_DATA::Init(void)
     hfcal_gains   = new TH1F("fcal_gains", "fcal_gains",  80,  -1., 3.);
     hfcal_gains2  = new TH2F("fcal_gains2","fcal_gains2", 71, -142., 142., 71, -142., 142.);
     hfcal_ped     = new TH1F("fcal_ped", "fcal_ped", 800, 0., 200.);
+
+    hecal_gains   = new TH1F("ecal_gains", "ecal_gains",  80,  -1., 3.);
+    hecal_gains2  = new TH2F("ecal_gains2","ecal_gains2", 71, -71., 71., 71, -71., 71.);
+    hecal_ped     = new TH1F("ecal_ped", "ecal_ped", 800, 0., 200.);
   }
 
   BYPASS = 0; // default is to use trigger emulation
@@ -78,6 +90,8 @@ void DL1MCTrigger_factory_DATA::Init(void)
   //BCAL_NSB         =  3;
   //BCAL_WINDOW      =  20;
 
+  ECAL_ADC_PER_MEV =  1.8359;
+  
   FCAL_BCAL_EN     =  45000; 
 
   ST_ADC_PER_MEV   =  1.;
@@ -94,14 +108,16 @@ void DL1MCTrigger_factory_DATA::Init(void)
   
   OUTPUT_TREE = 0;
   USE_RAW_SAMPLES = 0;
-  
+  USE_DIGI = 1;
 
   simu_baseline_fcal  =  1;
   simu_baseline_bcal  =  1;
+  simu_baseline_ecal  =  1;
 
   simu_gain_fcal  =  0;
   simu_gain_bcal  =  0;
-
+  simu_gain_ecal  =  0;
+  
   app->SetDefaultParameter("TRIG:BYPASS", BYPASS,
                               "Bypass trigger by hard coding physics bit");
   app->SetDefaultParameter("TRIG:FCAL_ADC_PER_MEV", FCAL_ADC_PER_MEV,
@@ -136,6 +152,8 @@ void DL1MCTrigger_factory_DATA::Init(void)
 			      "Write out tree with trigger information, for debugging.");
   app->SetDefaultParameter("TRIG:USE_RAW_SAMPLES", USE_RAW_SAMPLES,
 			      "Use the measured raw fADC samples instead of the simulated ones (only works for raw mode data).");
+  app->SetDefaultParameter("TRIG:USE_DIGI", USE_DIGI,
+			      "Use the DigiHits instead of the simulated ones.");
   
   std::lock_guard<std::mutex> lock(params_mutex);
   if(!PARAMS_LOADED) {
@@ -158,6 +176,15 @@ void DL1MCTrigger_factory_DATA::Init(void)
 					  "BCAL NSB");
 	  app->SetDefaultParameter("TRIG:BCAL_WINDOW", BCAL_WINDOW,
 					  "BCAL GTP integration window");
+
+	  app->SetDefaultParameter("TRIG:ECAL_CELL_THR", ECAL_CELL_THR,
+					  "ECAL energy threshold per cell");
+	  app->SetDefaultParameter("TRIG:ECAL_NSA", ECAL_NSA,
+					  "ECAL NSA");
+	  app->SetDefaultParameter("TRIG:ECAL_NSB", ECAL_NSB,
+					  "ECAL NSB");
+	  app->SetDefaultParameter("TRIG:ECAL_WINDOW", ECAL_WINDOW,
+					  "ECAL GTP integration window");
   }
   
   if(OUTPUT_TREE) {
@@ -178,6 +205,11 @@ void DL1MCTrigger_factory_DATA::Init(void)
     locTreeBranchRegister.Register_Single<Double_t>("BCAL_ADC_En");
     locTreeBranchRegister.Register_Single<Double_t>("BCAL_GTP");
     locTreeBranchRegister.Register_Single<Double_t>("BCAL_GTP_En");
+    locTreeBranchRegister.Register_Single<Double_t>("ECAL_En");
+    locTreeBranchRegister.Register_Single<Double_t>("ECAL_ADC");
+    locTreeBranchRegister.Register_Single<Double_t>("ECAL_ADC_En");
+    locTreeBranchRegister.Register_Single<Double_t>("ECAL_GTP");
+    locTreeBranchRegister.Register_Single<Double_t>("ECAL_GTP_En");
 
     //REGISTER BRANCHES
     dTreeInterface->Create_Branches(locTreeBranchRegister);
@@ -207,13 +239,20 @@ void DL1MCTrigger_factory_DATA::Init(void)
 					    vector<double>(DFCALGeometry::kBlocksWide));
   vector< vector<double > > fcal_pedestals_temp(DFCALGeometry::kBlocksTall, 
 						vector<double>(DFCALGeometry::kBlocksWide));
+  vector< vector<double > > ecal_gains_temp(DECALGeometry::kECALBlocksTall, 
+					    vector<double>(DECALGeometry::kECALBlocksWide));
+  vector< vector<double > > ecal_pedestals_temp(DECALGeometry::kECALBlocksTall, 
+						vector<double>(DECALGeometry::kECALBlocksWide));
   
   fcal_gains      =  fcal_gains_temp;  
   fcal_pedestals  =  fcal_pedestals_temp;
+  ecal_gains      =  ecal_gains_temp;
+  ecal_pedestals  =  ecal_pedestals_temp;
 
   if(!SIMU_BASELINE){
     simu_baseline_fcal = 0;
     simu_baseline_bcal = 0;
+    simu_baseline_ecal = 0;
   }
 
   return; // NOERROR;
@@ -232,7 +271,8 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
 
   fcal_trig_mask.clear();
   bcal_trig_mask.clear();
-
+  ecal_trig_mask.clear();
+  
   triggers_enabled.clear();
 
   // Only print messages for one thread whenever run number change
@@ -260,9 +300,11 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
       // Don't simulate baseline fluctuations for mc_generic
       simu_baseline_fcal = 0;
       simu_baseline_bcal = 0;
+      simu_baseline_ecal = 0;
       // Don't simulate gain fluctuations for mc_generic
       simu_gain_fcal = 0;
       simu_gain_bcal = 0;
+      simu_gain_ecal = 0;
     }
   }
 
@@ -291,12 +333,19 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
   }
 
 
-   // extract the FCAL Geometry
+  // extract the FCAL Geometry
   vector<const DFCALGeometry*> fcalGeomVect;
   event->Get( fcalGeomVect );
   if (fcalGeomVect.size() < 1)
     return; //OBJECT_NOT_AVAILABLE;
   const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
+
+  // extract the ECAL Geometry
+  vector<const DECALGeometry*> ecalGeomVect;
+  event->Get( ecalGeomVect );
+  if (ecalGeomVect.size() < 1)
+    return; //OBJECT_NOT_AVAILABLE;
+  const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
   
   if(print_messages) jout << "In DL1MCTrigger_factory_DATA, loading constants..." << endl;
   
@@ -351,15 +400,70 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
     }
     
   }
+
+  // ECAL tables
+  vector< double > ecal_gains_ch;
+  vector< double > ecal_pedestals_ch;
+  
+  if (DEvent::GetCalib(event, "/ECAL/gains", ecal_gains_ch)){
+    jout << "DL1MCTrigger_factory_DATA: Error loading /ECAL/gains !" << endl;
+    // Load default values of gains if CCDB table is not found
+    for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
+      for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
+	ecal_gains[ii][jj] = 1.;	
+      }
+    }
+  } else {
+    LoadECALConst(ecal_gains, ecal_gains_ch, ecalGeom);
+
+    if(debug){
+      for(int ch = 0; ch < (int)ecal_gains_ch.size(); ch++){
+	      //if (ecalGeom.isBlockActive(ch)){
+	      int row = ecalGeom.row(ch);
+	      int col = ecalGeom.column(ch);
+	      hecal_gains->Fill(ecal_gains[row][col]);
+	      DVector2 aaa = ecalGeom.positionOnFace(row,col);
+	      hecal_gains2->Fill(float(aaa.X()), float(aaa.Y()), ecal_gains[row][col]);
+	      //cout << aaa.X() << "  " << aaa.Y() << endl;	  
+	      //}	
+      }
+    }
+
+  }
+
+  if (DEvent::GetCalib(event, "/ECAL/pedestals", ecal_pedestals_ch)){
+    jout << "DL1MCTrigger_factory_DATA: Error loading /ECAL/pedestals !" << endl;
+    // Load default values of pedestals if CCDB table is not found
+    for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
+      for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
+	ecal_pedestals[ii][jj] = 100.;	
+      }
+    }
+  } else {
+    LoadECALConst(ecal_pedestals, ecal_pedestals_ch, ecalGeom);
+
+    if(debug){
+      for(int ch = 0; ch < (int)ecal_gains_ch.size(); ch++){
+	      //if(ecalGeom.isBlockActive(ch)){
+	      int row = ecalGeom.row(ch);
+	      int col = ecalGeom.column(ch);
+	      hecal_ped->Fill(ecal_pedestals[row][col]);
+	      //}
+      }	
+    }
+    
+  }
   
   if(!SIMU_BASELINE){
     simu_baseline_fcal = 0;
     simu_baseline_bcal = 0;
+    simu_baseline_ecal = 0;
   }
 
   if(!SIMU_GAIN){
     simu_gain_fcal = 0;
     simu_gain_bcal = 0;
+    simu_gain_ecal = 0;
   }
   
   if(debug){
@@ -379,7 +483,7 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
 // Process
 //------------------
 void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& event){
-
+	
 	if(BYPASS) {
                 DL1MCTrigger *trigger = new DL1MCTrigger;
                 trigger->trig_mask = 1;
@@ -387,7 +491,7 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		return; //NOERROR;
         }
 
-        int l1_found = 1;  
+        // int l1_found = 1;
 
 	int status = 0;
 
@@ -398,23 +502,28 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 
 	fcal_signal_hits.clear();
 	bcal_signal_hits.clear();
+	ecal_signal_hits.clear();
 
 	fcal_merged_hits.clear();
 	bcal_merged_hits.clear();
-
+	ecal_merged_hits.clear();
+	
 	memset(fcal_ssp,0,sizeof(fcal_ssp));
 	memset(fcal_gtp,0,sizeof(fcal_gtp));
 
 	memset(bcal_ssp,0,sizeof(bcal_ssp));
 	memset(bcal_gtp,0,sizeof(bcal_gtp));
 
+	memset(ecal_ssp,0,sizeof(ecal_ssp));
+	memset(ecal_gtp,0,sizeof(ecal_gtp));
 
-    vector<const DFCALHit*>  fcal_hits;
+	vector<const DFCALHit*>  fcal_hits;
 	vector<const DBCALHit*>  bcal_hits;
+	vector<const DECALHit*>  ecal_hits;
 
 	event->Get(fcal_hits);
 	event->Get(bcal_hits);
-
+	event->Get(ecal_hits);
 
 	// Initialize random number generator
 	// Read seeds from hddm file
@@ -443,8 +552,8 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 	//  FCAL energy sum	
 	double fcal_hit_en = 0;
 	
-	//cerr << "FCAL energy sum" << endl;
-	//cerr << "  num hits = " << fcal_hits.size() << endl;
+	//cout << "FCAL energy sum" << endl;
+	//cout << "  num hits = " << fcal_hits.size() << endl;
 
 	for (unsigned int ii = 0; ii < fcal_hits.size(); ii++){
 	  const DFCALDigiHit *fcaldigihit = nullptr;
@@ -453,7 +562,7 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 	  int row  = fcal_hits[ii]->row;
 	  int col  = fcal_hits[ii]->column;
 
-	  //cerr << "FCAL hit row/column = " << row << "/" << col << endl;
+	  //cout << "FCAL hit row/column = " << row << "/" << col << endl;
 	  
 	  // Shift time to simulate pile up hits
 	  // don't need this for real data?
@@ -481,6 +590,9 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 
 	    fcal_tmp.energy  = fcal_hits[ii]->E;
 	    fcal_tmp.time    = fcal_hits[ii]->t;
+	    fcal_tmp.pulse_peak = fcaldigihit->pulse_peak;
+	    fcal_tmp.pulse_time = (fcaldigihit->pulse_time >> 6) & 0x1FF; // consider only course time;
+	    fcal_tmp.pulse_integral = fcaldigihit->pulse_integral - fcaldigihit->nsamples_integral*TRIG_BASELINE;
 	    memset(fcal_tmp.adc_amp,0,sizeof(fcal_tmp.adc_amp));
 	    memset(fcal_tmp.adc_en, 0,sizeof(fcal_tmp.adc_en));
 
@@ -517,7 +629,7 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		    status = SignalPulse(fcal_adc_en, fcal_tmp.time, fcal_tmp.adc_en, 1);
 		    status = 0;
 		}
-		
+
 	    fcal_signal_hits.push_back(fcal_tmp);
 	  }
 	  
@@ -547,7 +659,7 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		fcal_tmp.adc_en[kk] += fcal_signal_hits[jj].adc_en[kk];	
 	    }
 	  }
-	  
+
 	  fcal_merged_hits.push_back(fcal_tmp);
 	}	
 	
@@ -588,12 +700,15 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 			if( (fcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE) > 0.)
 			  fcal_hit_adc_en += (fcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE);
 	}
-	
-	status += FADC_SSP(fcal_merged_hits, 1);
 
-	status += GTP(1);
-
-
+	if(USE_DIGI && !USE_RAW_SAMPLES)
+		status += GTPDigi(fcal_signal_hits, 1);
+	else {
+		status += FADC_SSP(fcal_merged_hits, 1);
+		
+		status += GTP(1);
+	}
+		
 	//cerr << "BCAL energy sum" << endl;
 	//cerr << "  num hits = " << bcal_hits.size() << endl;
 
@@ -643,6 +758,9 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 
 	    bcal_tmp.energy  = bcal_hits[ii]->E;
 	    bcal_tmp.time    = bcal_hits[ii]->t;
+	    bcal_tmp.pulse_peak = bcaldigihit->pulse_peak;
+	    bcal_tmp.pulse_time = (bcaldigihit->pulse_time >> 6) & 0x1FF; // consider only course time;
+	    bcal_tmp.pulse_integral = bcaldigihit->pulse_integral - bcaldigihit->nsamples_integral*TRIG_BASELINE;
 	    memset(bcal_tmp.adc_amp,0,sizeof(bcal_tmp.adc_amp));
 	    memset(bcal_tmp.adc_en, 0,sizeof(bcal_tmp.adc_en));
 	    
@@ -663,7 +781,7 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		    status = SignalPulse(bcal_adc_en, bcal_tmp.time, bcal_tmp.adc_en, 2);
 		    status = 0;
  		}
- 		
+	    
 	    bcal_signal_hits.push_back(bcal_tmp);
 	  }	  
 	}       
@@ -727,19 +845,196 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 		
 		for(unsigned int ii = 0; ii < bcal_merged_hits.size(); ii++)	  
 		  for(int jj = 0; jj < sample; jj++)
-			bcal_hit_adc_en += bcal_merged_hits[ii].adc_amp[jj];	  
+			  if( (bcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE) > 0.)
+				  bcal_hit_adc_en += bcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE;	  
 	}
 	
+	if(USE_DIGI && !USE_RAW_SAMPLES)
+		status += GTPDigi(bcal_signal_hits, 2);
+	else {
+		status = FADC_SSP(bcal_merged_hits, 2);
+		
+		status = GTP(2);
+	}
+		
+	// temporary mask until files in RCDB
+	int ecal_row_mask_min = 15;
+	int ecal_row_mask_max = 24;
+	int ecal_col_mask_min = 15;
+	int ecal_col_mask_max = 24;
 	
-	status = FADC_SSP(bcal_merged_hits, 2);
+	//  ECAL energy sum	
+	double ecal_hit_en = 0;
 
-	status = GTP(2);
+	//cerr << "ECAL energy sum" << endl;
+	//cerr << "  num hits = " << ecal_hits.size() << endl;
 
+	for (unsigned int ii = 0; ii < ecal_hits.size(); ii++){
+	  const DECALDigiHit *ecaldigihit = nullptr;
+	  ecal_hits[ii]->GetSingle(ecaldigihit);
+	  
+	  int row  = ecal_hits[ii]->row;
+	  int col  = ecal_hits[ii]->column;
+
+	  // temporary mask before files in RCDB
+	  if( (row >= ecal_row_mask_min) && (row <= ecal_row_mask_max) ){
+		  if( (col >= ecal_col_mask_min) && (col <= ecal_col_mask_max) ) continue;
+	  }
+	  
+	  //cerr << "ECAL hit row/column = " << row << "/" << col << endl;
+	  
+	  // Shift time to simulate pile up hits
+	  // don't need this for real data?
+// 	  double time = ecal_hits[ii]->t + time_shift;
+// 	  if((time < time_min) || (time > time_max)){
+// 	    continue;
+// 	  }
+
+	  // Check channels masked for trigger
+	  int ch_masked = 0;
+	  for(unsigned int jj = 0; jj < ecal_trig_mask.size(); jj++){
+	    if( (row == ecal_trig_mask[jj].row) && (col == ecal_trig_mask[jj].col)){	      
+	      ch_masked = 1;
+	      break;
+	    } 
+	  }
+	  
+	  if(ch_masked == 0){
+	    ecal_hit_en += ecal_hits[ii]->E;
+	    
+	    ecal_signal ecal_tmp;
+	    
+	    ecal_tmp.row     = row;
+	    ecal_tmp.column  = col;
+
+	    ecal_tmp.energy  = ecal_hits[ii]->E;
+	    ecal_tmp.time    = ecal_hits[ii]->t;
+	    ecal_tmp.pulse_peak = ecaldigihit->pulse_peak;
+	    ecal_tmp.pulse_time = (ecaldigihit->pulse_time >> 6) & 0x1FF; // consider only course time;
+	    ecal_tmp.pulse_integral = ecaldigihit->pulse_integral - ecaldigihit->nsamples_integral*TRIG_BASELINE;
+	    memset(ecal_tmp.adc_amp,0,sizeof(ecal_tmp.adc_amp));
+	    memset(ecal_tmp.adc_en, 0,sizeof(ecal_tmp.adc_en));
+
+	    //double ecal_adc_en  = ecaldigihit->pulse_integral;  // need to pedestal subtract!
+	    double ecal_adc_en  = ecal_tmp.energy*ECAL_ADC_PER_MEV*1000;
+	    
+	    // Account for gain fluctuations 
+// 	    if(simu_gain_ecal){
+// 	      
+// 	      double gain  =  ecal_gains[row][col];	  
+// 	      
+// 	      ecal_adc_en *= gain;
+// 	    }
+	    
+	    if(USE_RAW_SAMPLES) {
+	    	// handle different pulse types
+	  		const Df250WindowRawData *rawdata = nullptr;
+	  		const Df250PulseData *pulsedata = nullptr;
+	  		ecaldigihit->GetSingle(pulsedata);
+	  		pulsedata->GetSingle(rawdata);
+
+		    if(rawdata == nullptr) {
+		    	jerr << "DL1MCTrigger_factory_DATA: warning! couldn't load raw data ..." << endl;
+		    }
+// 	  		
+// 	  		jerr << "0x" << hex << pulsedata << dec << endl;
+// 	  		jerr << "0x" << hex << rawdata << dec << endl;
+   	
+	    	int numsamples = (sample<rawdata->samples.size()) ? sample : rawdata->samples.size();
+	    	for(int i=0; i<numsamples; i++) 
+	    		ecal_tmp.adc_en[i] = rawdata->samples[i];
+	    	
+	    } else {
+		    status = SignalPulse(ecal_adc_en, ecal_tmp.time, ecal_tmp.adc_en, 3);
+		    status = 0;
+		}
+	    
+	    ecal_signal_hits.push_back(ecal_tmp);
+	  }
+	  
+	}       		
+
+
+	// Merge ECAL hits
+	for(unsigned int ii = 0; ii < ecal_signal_hits.size(); ii++){	  
+	  
+	  if(ecal_signal_hits[ii].merged == 1) continue;
+	  
+	  ecal_signal ecal_tmp;
+	  ecal_tmp.row     = ecal_signal_hits[ii].row;
+	  ecal_tmp.column  = ecal_signal_hits[ii].column;
+	  ecal_tmp.energy  = 0.;
+	  ecal_tmp.time    = 0.;
+	  for(int kk = 0; kk < sample; kk++)	      
+	    ecal_tmp.adc_en[kk] = ecal_signal_hits[ii].adc_en[kk];
+	  
+	  for(unsigned int jj = ii + 1; jj < ecal_signal_hits.size(); jj++){
+	    if((ecal_signal_hits[ii].row  == ecal_signal_hits[jj].row) &&
+	       (ecal_signal_hits[ii].column == ecal_signal_hits[jj].column)){
+
+	      ecal_signal_hits[jj].merged = 1;
+	      
+	      for(int kk = 0; kk < sample; kk++)	      
+		ecal_tmp.adc_en[kk] += ecal_signal_hits[jj].adc_en[kk];	
+	    }
+	  }
+	  
+	  ecal_merged_hits.push_back(ecal_tmp);
+	}	
+	
+	int ecal_hit_adc_en = 0;
+
+	if(USE_RAW_SAMPLES) {
+		for(unsigned int ii = 0; ii < ecal_merged_hits.size(); ii++) {
+			int row     = ecal_merged_hits[ii].row;
+			int column  = ecal_merged_hits[ii].column;
+			// need to add per-module pedestals
+			double pedestal = ecal_pedestals[row][column];	    
+
+		    for(int jj = 0; jj < sample; jj++) {
+		        ecal_merged_hits[ii].adc_amp[jj] = ecal_merged_hits[ii].adc_en[jj];
+				if( (ecal_merged_hits[ii].adc_amp[jj] - pedestal) > 0.)
+			  		ecal_hit_adc_en += (ecal_merged_hits[ii].adc_amp[jj] - pedestal);
+			}
+		}
+	} else {
+		// Add baseline fluctuations for channels with hits
+		if(simu_baseline_ecal){
+		  for(unsigned int ii = 0; ii < ecal_merged_hits.size(); ii++){
+			int row     = ecal_merged_hits[ii].row;
+			int column  = ecal_merged_hits[ii].column;
+			// need to add per-module pedestals
+			double pedestal = ecal_pedestals[row][column];	    
+			AddBaseline(ecal_merged_hits[ii].adc_en, pedestal, gDRandom);       
+		  }
+		}
+	
+		// Digitize		
+		for(unsigned int ii = 0; ii < ecal_merged_hits.size(); ii++){
+		  Digitize(ecal_merged_hits[ii].adc_en,ecal_merged_hits[ii].adc_amp);
+		  //	  cout << " Digitize " << ecal_merged_hits[ii].adc_en[sample - 3] 
+		  //   << "  " <<  ecal_merged_hits[ii].adc_amp[sample - 3] << endl;
+		}
+		
+		for(unsigned int ii = 0; ii < ecal_merged_hits.size(); ii++)
+		  for(int jj = 0; jj < sample; jj++)
+			if( (ecal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE) > 0.)
+			  ecal_hit_adc_en += (ecal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE);
+	}
+	
+	if(USE_DIGI && !USE_RAW_SAMPLES)
+		status += GTPDigi(ecal_signal_hits, 3);
+	else {
+		status += FADC_SSP(ecal_merged_hits, 3);
+
+		status += GTP(3);
+	}
+	
 	// Search for triggers
 
 	//cerr << "find triggers" << endl;
 
-	l1_found = FindTriggers(trigger);
+	// l1_found = FindTriggers(trigger);
 
 // 	  int fcal_gtp_max = 0;
 // 	  int bcal_gtp_max = 0;
@@ -758,16 +1053,18 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 // 	cerr << " bcal_gtp_max    = " << bcal_gtp_max << endl;
 
 	
-	if(l1_found){
+	//if(l1_found){
 	  
 	  int fcal_gtp_max = 0;
 	  int bcal_gtp_max = 0;
-	  
+	  int ecal_gtp_max = 0;
+
 	  for(unsigned int ii = 0; ii < sample; ii++){
 	    if(fcal_gtp[ii] > fcal_gtp_max) fcal_gtp_max = fcal_gtp[ii];
 	    if(bcal_gtp[ii] > bcal_gtp_max) bcal_gtp_max = bcal_gtp[ii];
+	    if(ecal_gtp[ii] > ecal_gtp_max) ecal_gtp_max = ecal_gtp[ii];
 	  }	
-	  	  
+
 	  trigger->fcal_en      =  fcal_hit_en;
 	  trigger->fcal_adc     =  fcal_hit_adc_en;
 	  trigger->fcal_adc_en  =  fcal_hit_adc_en/FCAL_ADC_PER_MEV/1000.;
@@ -779,9 +1076,23 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 	  trigger->bcal_adc_en  =  bcal_hit_adc_en/BCAL_ADC_PER_MEV_CORRECT/2./1000.;
 	  trigger->bcal_gtp     =  bcal_gtp_max;
 	  trigger->bcal_gtp_en  =  bcal_gtp_max/BCAL_ADC_PER_MEV_CORRECT/2./1000.;	  	  
-	  
-	  Insert(trigger);	 
-	  
+
+	  trigger->ecal_en      =  ecal_hit_en;
+	  trigger->ecal_adc     =  ecal_hit_adc_en;
+	  trigger->ecal_adc_en  =  ecal_hit_adc_en/ECAL_ADC_PER_MEV/1000.;
+	  trigger->ecal_gtp     =  ecal_gtp_max;
+	  trigger->ecal_gtp_en  =  ecal_gtp_max/ECAL_ADC_PER_MEV/1000.;
+
+	  // scale sum according to gains applied in trigger equation
+	  trigger->fcal2_en      =  ECAL_GAIN*ecal_hit_en + FCAL_GAIN*fcal_hit_en;
+	  trigger->fcal2_adc     =  ECAL_GAIN*ecal_hit_adc_en + FCAL_GAIN*fcal_hit_adc_en;
+	  trigger->fcal2_adc_en  =  (ecal_hit_adc_en/ECAL_ADC_PER_MEV + fcal_hit_adc_en/FCAL_ADC_PER_MEV)/1000.;
+	  trigger->fcal2_gtp     =  ECAL_GAIN*ecal_gtp_max + FCAL_GAIN*fcal_gtp_max;
+	  trigger->fcal2_gtp_en  =  (ecal_gtp_max/ECAL_ADC_PER_MEV + fcal_gtp_max/FCAL_ADC_PER_MEV)/1000.;
+
+	  // inser trigger sums for all events
+	  Insert(trigger); 
+	  		  
 	  if(OUTPUT_TREE) {
 	  	dTreeFillData.Fill_Single<ULong64_t>("RunNumber", runnumber);
 	  	dTreeFillData.Fill_Single<ULong64_t>("EventNumber", eventnumber);
@@ -795,12 +1106,17 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 	    dTreeFillData.Fill_Single<Double_t>("BCAL_ADC_En", trigger->bcal_adc_en);
 	    dTreeFillData.Fill_Single<Double_t>("BCAL_GTP", trigger->bcal_gtp);
 	    dTreeFillData.Fill_Single<Double_t>("BCAL_GTP_En", trigger->bcal_gtp_en);
+	    dTreeFillData.Fill_Single<Double_t>("ECAL_En", trigger->ecal_en);
+	    dTreeFillData.Fill_Single<Double_t>("ECAL_ADC", trigger->ecal_adc);
+	    dTreeFillData.Fill_Single<Double_t>("ECAL_ADC_En", trigger->ecal_adc_en);
+	    dTreeFillData.Fill_Single<Double_t>("ECAL_GTP", trigger->ecal_gtp);
+	    dTreeFillData.Fill_Single<Double_t>("ECAL_GTP_En", trigger->ecal_gtp_en);
 		dTreeInterface->Fill(dTreeFillData);
 	  }
 	  
-	} else{
-	  delete trigger;
-	}
+	  //} else{
+	  //delete trigger;
+	  //}
 	
 	return; //NOERROR;
 }
@@ -843,7 +1159,7 @@ auto runnumber = event->GetRunNumber();
   vector<const DTranslationTable*> ttab;  
   event->Get(ttab);
   
-  vector<string> SectionNames = {"TRIGGER", "GLOBAL", "FCAL", "BCAL", "TOF", "ST", "TAGH",
+  vector<string> SectionNames = {"TRIGGER", "GLOBAL", "FCAL", "BCAL", "ECAL", "TOF", "ST", "TAGH",
 				 "TAGM", "PS", "PSC", "TPOL", "CDC", "FDC"};
   
   string RCDB_CONNECTION;
@@ -911,6 +1227,20 @@ auto runnumber = event->GetRunNumber();
   if(trig_thr.size() > 0)
     BCAL_NSA  =  stoi(trig_nsa);
 
+  trig_thr = result.Sections["ECAL"].NameValues["FADC250_TRIG_THR"];
+  trig_nsb = result.Sections["ECAL"].NameValues["FADC250_TRIG_NSB"];
+  trig_nsa = result.Sections["ECAL"].NameValues["FADC250_TRIG_NSA"];
+  
+  if(trig_thr.size() > 0){
+    ECAL_CELL_THR   =  stoi(trig_thr);
+    if(ECAL_CELL_THR < 0) ECAL_CELL_THR = 0;
+  }
+
+  if(trig_nsb.size() > 0)
+    ECAL_NSB  =  stoi(trig_nsb);
+
+  if(trig_thr.size() > 0)
+    ECAL_NSA  =  stoi(trig_nsa);
 
   // List of enabled GTP equations and triggers
   vector<vector<string>> triggerTypes;
@@ -934,9 +1264,17 @@ auto runnumber = event->GetRunNumber();
 	  if(row[1] == "FCAL")
 	    FCAL_WINDOW = stoi(row[3]);  
 	  if(row[1] == "BCAL_E")
-	    BCAL_WINDOW = stoi(row[3]);  
+	    BCAL_WINDOW = stoi(row[3]);
+	  if(row[1] == "ECAL")
+	    ECAL_WINDOW = stoi(row[3]);
 	}
       }            
+    }
+
+    // ECAL and FCAL gains
+    if(row[0] == "TRIG_ECAL_FCAL_GAIN") {
+      ECAL_GAIN = stof(row[1]);
+      FCAL_GAIN = stof(row[2]);
     }
   }
   
@@ -1219,6 +1557,7 @@ int  DL1MCTrigger_factory_DATA::SignalPulse(double en, double time, double amp_a
   // Parameterize and digitize pulse shapes. Sum up amplitudes
   // type = 1 - FCAL
   // type = 2 - BCAL
+  // type = 3 - ECAL
 
   float exp_par = 0.358;
 
@@ -1250,6 +1589,9 @@ int  DL1MCTrigger_factory_DATA::SignalPulse(double en, double time, double amp_a
     //    if(amp_array[i] > max_adc_bins){
     //      amp_array[i] = max_adc_bins;
     //    }   
+
+    //if(amp > 0.001) 
+    //	    cout<<adc_t<<" "<<amp<<" "<<en<<endl;
     
     amp_array[i] += amp*time_stamp*en;
     
@@ -1262,6 +1604,7 @@ int DL1MCTrigger_factory_DATA::GTP(int detector){
 
   // 1  - FCAL
   // 2  - BCAL
+  // 3  - ECAL
 
   int INT_WINDOW = 20; 
 
@@ -1271,6 +1614,9 @@ int DL1MCTrigger_factory_DATA::GTP(int detector){
     break;
   case 2:
     INT_WINDOW =  BCAL_WINDOW;
+    break;
+  case 3:
+    INT_WINDOW =  ECAL_WINDOW;
     break;
   default:
     break;
@@ -1291,12 +1637,16 @@ int DL1MCTrigger_factory_DATA::GTP(int detector){
     for(int ii = index_min; ii <= index_max; ii++){
       if(detector == 1)
 	energy_sum += fcal_ssp[ii];
-      else 
+      else if(detector == 3)
+	energy_sum += ecal_ssp[ii];
+      else
 	energy_sum += bcal_ssp[ii];
     }
 
     if(detector == 1)
       fcal_gtp[samp] = energy_sum;
+    else if(detector == 3)
+      ecal_gtp[samp] = energy_sum;
     else 
       bcal_gtp[samp] = energy_sum;
   }  
@@ -1305,15 +1655,66 @@ int DL1MCTrigger_factory_DATA::GTP(int detector){
 
 }
 
+template <typename T>  int DL1MCTrigger_factory_DATA::GTPDigi(vector<T> digi_hits, int detector){
+
+  // 1  - FCAL
+  // 2  - BCAL
+  // 3  - ECAL
+
+  int EN_THR =  4096; 
+  // int INT_WINDOW = 20;
+
+  switch(detector){
+  case 1:
+    EN_THR     =  FCAL_CELL_THR;
+    // INT_WINDOW =  FCAL_WINDOW;
+    break;
+  case 2:
+    EN_THR     =  BCAL_CELL_THR;
+    // INT_WINDOW =  BCAL_WINDOW;
+    break;
+  case 3:
+    EN_THR     =  ECAL_CELL_THR;
+    // INT_WINDOW =  ECAL_WINDOW;
+    break;
+  default:
+    break;
+  }
+
+  for(unsigned int hit = 0; hit < digi_hits.size(); hit++){
+	  
+    // require pulse peak above threshold
+    if(digi_hits[hit].pulse_peak < EN_THR)
+	    continue;
+	    
+    // (for later) require in trigger timing window
+    //int adc_time = digi_hits[hit].pulse_time;
+    //if((adc_time < 15) || (adc_time > 50)) continue;
+
+    // insert DigiHit pulse integral as single sample
+    if(detector == 1)
+      fcal_gtp[10] += digi_hits[hit].pulse_integral;
+    else if(detector == 3)
+      ecal_gtp[10] += digi_hits[hit].pulse_integral;
+    else 
+      bcal_gtp[10] += digi_hits[hit].pulse_integral;
+
+  }
+
+  
+  return 0;
+
+}
 
 template <typename T>  int DL1MCTrigger_factory_DATA::FADC_SSP(vector<T> merged_hits, int detector){
   
   //  1  - FCAL
   //  2  - BCAL
+  //  3  - ECAL
 
   int EN_THR =  4096; 
   int NSA    =  10;
-  int NSB    =  3;;
+  int NSB    =  3;
   
   switch(detector){
   case 1:
@@ -1325,6 +1726,11 @@ template <typename T>  int DL1MCTrigger_factory_DATA::FADC_SSP(vector<T> merged_
     EN_THR =  BCAL_CELL_THR;
     NSA    =  BCAL_NSA;
     NSB    =  BCAL_NSB;
+    break;
+  case 3:
+    EN_THR =  ECAL_CELL_THR;
+    NSA    =  ECAL_NSA;
+    NSB    =  ECAL_NSB;
     break;
   default:
     break;
@@ -1344,7 +1750,7 @@ template <typename T>  int DL1MCTrigger_factory_DATA::FADC_SSP(vector<T> merged_
       } else {
 	continue;
       }
-      
+
       index_min = ii - NSB;
 
       if(index_max > index_min) index_min = index_max + 1;
@@ -1384,6 +1790,10 @@ template <typename T>  int DL1MCTrigger_factory_DATA::FADC_SSP(vector<T> merged_
 	  if((merged_hits[hit].adc_amp[kk] - 100) > 0)
 	    bcal_ssp[kk] += (merged_hits[hit].adc_amp[kk] - TRIG_BASELINE);
 	}
+	else if(detector == 3){
+	  if((merged_hits[hit].adc_amp[kk] - 100) > 0)
+	    ecal_ssp[kk] += (merged_hits[hit].adc_amp[kk] - TRIG_BASELINE);
+	}
       }
       
       if(pulse_found == 1){
@@ -1414,6 +1824,7 @@ void DL1MCTrigger_factory_DATA::PrintTriggers(){
   cout << "FCAL_NSA       = " <<  setw(10) <<  FCAL_NSA      <<  endl;
   cout << "FCAL_NSB       = " <<  setw(10) <<  FCAL_NSB      <<  endl;
   cout << "FCAL_WINDOW    = " <<  setw(10) <<  FCAL_WINDOW   <<  endl;
+  cout << "FCAL_GAIN      = " <<  setw(10) <<  FCAL_GAIN     <<  endl;
 
   cout << endl;
   
@@ -1424,6 +1835,16 @@ void DL1MCTrigger_factory_DATA::PrintTriggers(){
   cout << "BCAL_NSB       = " <<  setw(10) <<  BCAL_NSB      <<  endl;
   cout << "BCAL_WINDOW    = " <<  setw(10) <<  BCAL_WINDOW   <<  endl;
 
+   cout << endl;
+  
+  cout << "----------- ECAL ----------- " << endl << endl;
+
+  cout << "ECAL_CELL_THR  = " <<  setw(10) <<  ECAL_CELL_THR <<  endl;
+  cout << "ECAL_NSA       = " <<  setw(10) <<  ECAL_NSA      <<  endl;
+  cout << "ECAL_NSB       = " <<  setw(10) <<  ECAL_NSB      <<  endl;
+  cout << "ECAL_WINDOW    = " <<  setw(10) <<  ECAL_WINDOW   <<  endl;
+  cout << "ECAL_GAIN      = " <<  setw(10) <<  ECAL_GAIN     <<  endl;
+  
   cout << endl << endl;
 
 
@@ -1509,7 +1930,7 @@ int DL1MCTrigger_factory_DATA::FindTriggers(DL1MCTrigger *trigger){
 	}
 
 
-	gtp_energy = triggers_enabled[ii].gtp.fcal*fcal_gtp[samp] + 
+	gtp_energy = triggers_enabled[ii].gtp.fcal*(FCAL_GAIN * fcal_gtp[samp] + ECAL_GAIN * ecal_gtp[samp]) +
 	  triggers_enabled[ii].gtp.bcal*bcal_energy;
 	
 	if(gtp_energy >= triggers_enabled[ii].gtp.en_thr){
@@ -1581,6 +2002,18 @@ void DL1MCTrigger_factory_DATA::LoadFCALConst(fcal_constants_t &table, const vec
       int col = fcalGeom.column(ch);
       table[row][col] = fcal_const_ch[ch];
     }
+  }
+}
+
+// Fill ecal calibration tables similar to ECALHit factory
+void DL1MCTrigger_factory_DATA::LoadECALConst(ecal_constants_t &table, const vector<double> &ecal_const_ch, 
+					 const DECALGeometry  &ecalGeom){
+  for (int ch = 0; ch < static_cast<int>(ecal_const_ch.size()); ch++) {
+	  //if (ecalGeom.isBlockActive(ch)){
+	  int row = ecalGeom.row(ch);
+	  int col = ecalGeom.column(ch);
+	  table[row][col] = ecal_const_ch[ch];
+	  //}
   }
 }
 

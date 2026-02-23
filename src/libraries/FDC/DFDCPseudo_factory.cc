@@ -21,15 +21,6 @@
 
 #define HALF_CELL 0.5
 #define MAX_DEFLECTION 0.15
-#define X0 0
-#define QA 1
-#define K2 2
-#define ITER_MAX 100
-#define TOLX 1e-4
-#define TOLF 1e-4
-#define A_OVER_H 0.4
-#define ONE_OVER_H 2.0
-#define ALPHA 1e-4 // rate parameter for Newton step backtracking algorithm
 #define W_EFF 30.2e-9 // GeV
 #define GAS_GAIN 8e4
 #define ELECTRON_CHARGE 1.6022e-4 // fC
@@ -117,6 +108,13 @@ void DFDCPseudo_factory::Init()
 
   DEBUG_HISTS = false;
   app->SetDefaultParameter("FDC:DEBUG_HISTS",DEBUG_HISTS);
+
+  MATCH_TRUTH_HITS=false;
+  app->SetDefaultParameter("FDC:MATCH_TRUTH_HITS",MATCH_TRUTH_HITS);
+
+  // Flag to enable storage of variables needed for alignment derivatives
+  ALIGNMENT=false;
+  app->SetDefaultParameter("TRKFIT:ALIGNMENT",ALIGNMENT);
 }
 
 
@@ -325,7 +323,9 @@ void DFDCPseudo_factory::Process(const std::shared_ptr<const JEvent>& event) {
 	// makes that difficult. Here we have the full wire definition so
 	// we make the connection here.
 	vector<const DMCTrackHit*> mctrackhits;
-	event->Get(mctrackhits);
+	if (MATCH_TRUTH_HITS){
+	  event->Get(mctrackhits);
+	}
 
 	vector<const DFDCCathodeCluster*>::iterator uIt = uClus.begin();
 	vector<const DFDCCathodeCluster*>::iterator vIt = vClus.begin();
@@ -377,7 +377,8 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
     if (u[i]->members.size()>2){
       for (vector<const DFDCHit*>::const_iterator strip=u[i]->members.begin()+1;strip+1!=u[i]->members.end();strip++){  
 	      //printf("  %d %f %f\n",(*strip)->element,(*strip)->pulse_height,(*strip)->t);
-         if (FindCentroid(u[i]->members,strip,upeaks)==NOERROR){
+	if (FindCentroid(u[i]->members,strip,upeaks)==NOERROR){
+	  if (ALIGNMENT){
             // Some values needed for cathode alignment
             unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
             DMatrix3x1 XTemp,NTemp,NTempRaw,indexTemp; 
@@ -393,14 +394,15 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
             indexTemp(0) = (*(strip-1))->element;
             indexTemp(1) = (*(strip))->element;
             indexTemp(2) = (*(strip+1))->element;
-            upeaks[upeaks.size()-1].cluster=i;
             upeaks[upeaks.size()-1].X = XTemp;
             upeaks[upeaks.size()-1].N = NTemp;
             upeaks[upeaks.size()-1].NRaw = NTempRaw;
             upeaks[upeaks.size()-1].index = indexTemp;
-         }
-         else if (u[i]->members.size()==3){
-            if (ThreeStripCluster(u[i]->members,strip,upeaks)==NOERROR){
+	  }
+	  upeaks[upeaks.size()-1].cluster=i;
+	}
+	else if (u[i]->members.size()==3){
+	  if (ThreeStripCluster(u[i]->members,strip,upeaks)==NOERROR){
                upeaks[upeaks.size()-1].cluster=i;
             }
          }
@@ -414,37 +416,39 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
        }
     }
   }  
-  //  printf("---------v cluster --------\n");	
+  //printf("---------v cluster --------\n");	
   for (unsigned int i=0;i<v.size();i++){
-     //printf("Cluster %d\n",i);
+    //printf("Cluster %d\n",i);
      if (DEBUG_HISTS) v_cl_size->Fill(v[i]->members.size());
      if (v[i]->members.size()>2){
         for (vector<const DFDCHit*>::const_iterator strip=v[i]->members.begin()+1;strip+1!=v[i]->members.end();strip++){		
            //printf("  %d %f %f\n",(*strip)->element,(*strip)->pulse_height,(*strip)->t);
            if (FindCentroid(v[i]->members,strip,vpeaks)==NOERROR){
-              // Some values needed for cathode alignment
-              unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
-              DMatrix3x1 XTemp,NTemp,NTempRaw,indexTemp;
-              XTemp(0) = fdccathodes[index][(*(strip-1))->element-1]->u;
-              XTemp(1) = fdccathodes[index][(*(strip))->element-1]->u;
-              XTemp(2) = fdccathodes[index][(*(strip+1))->element-1]->u;
-              NTemp(0) = double ((*(strip-1))->pulse_height);
-              NTemp(1) = double ((*(strip))->pulse_height);
-              NTemp(2) = double ((*(strip+1))->pulse_height);
-              NTempRaw(0) = double ((*(strip-1))->pulse_height_raw);
-              NTempRaw(1) = double ((*(strip))->pulse_height_raw);
-              NTempRaw(2) = double ((*(strip+1))->pulse_height_raw);
-              indexTemp(0) = (*(strip-1))->element;
-              indexTemp(1) = (*(strip))->element;
-              indexTemp(2) = (*(strip+1))->element;
-              vpeaks[vpeaks.size()-1].cluster=i;
-              vpeaks[vpeaks.size()-1].X = XTemp;
-              vpeaks[vpeaks.size()-1].N = NTemp;
-              vpeaks[vpeaks.size()-1].NRaw = NTempRaw;
-              vpeaks[vpeaks.size()-1].index = indexTemp;
-           }
-           else if (v[i]->members.size()==3){
-              if (ThreeStripCluster(v[i]->members,strip,vpeaks)==NOERROR){
+	     if (ALIGNMENT){
+	       // Some values needed for cathode alignment
+	       unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
+	       DMatrix3x1 XTemp,NTemp,NTempRaw,indexTemp;
+	       XTemp(0) = fdccathodes[index][(*(strip-1))->element-1]->u;
+	       XTemp(1) = fdccathodes[index][(*(strip))->element-1]->u;
+	       XTemp(2) = fdccathodes[index][(*(strip+1))->element-1]->u;
+	       NTemp(0) = double ((*(strip-1))->pulse_height);
+	       NTemp(1) = double ((*(strip))->pulse_height);
+	       NTemp(2) = double ((*(strip+1))->pulse_height);
+	       NTempRaw(0) = double ((*(strip-1))->pulse_height_raw);
+	       NTempRaw(1) = double ((*(strip))->pulse_height_raw);
+	       NTempRaw(2) = double ((*(strip+1))->pulse_height_raw);
+	       indexTemp(0) = (*(strip-1))->element;
+	       indexTemp(1) = (*(strip))->element;
+	       indexTemp(2) = (*(strip+1))->element;
+	       vpeaks[vpeaks.size()-1].X = XTemp;
+	       vpeaks[vpeaks.size()-1].N = NTemp;
+	       vpeaks[vpeaks.size()-1].NRaw = NTempRaw;
+	       vpeaks[vpeaks.size()-1].index = indexTemp;
+	     }
+	     vpeaks[vpeaks.size()-1].cluster=i;
+	   }
+	   else if (v[i]->members.size()==3){
+	     if (ThreeStripCluster(v[i]->members,strip,vpeaks)==NOERROR){
                  vpeaks[vpeaks.size()-1].cluster=i;
               }
            }
@@ -478,14 +482,14 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
            for(xIt=x.begin();xIt!=x.end();xIt++){
               if ((*xIt)->element<=WIRES_PER_PLANE && (*xIt)->element>0){
                  const DFDCWire *wire=fdcwires[layer-1][(*xIt)->element-1];
-                 double x_from_wire=wire->u;
+                 //double x_from_wire=wire->u;
 
                  //printf("xs %f xw %f\n",x_from_strips,x_from_wire);
 
                  // Test radial value for checking whether or not the hit is within
                  // the fiducial region of the detector
-                 double r2test=x_from_wire*x_from_wire+y_from_strips*y_from_strips;
-                 double delta_x=x_from_wire-x_from_strips;
+                 double r2test=wire->u*wire->u+y_from_strips*y_from_strips;
+                 double delta_x=wire->u-x_from_strips;
 
                  if (DEBUG_HISTS){
                     if (upeaks[i].numstrips == 3 && vpeaks[j].numstrips == 3) x_dist_3->Fill(delta_x);
@@ -578,7 +582,7 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     newPseu->t_v = vpeaks[j].t;
                     newPseu->cluster_u = upeaks[i];
                     newPseu->cluster_v = vpeaks[j];
-                    newPseu->w      = x_from_wire+xshifts[ilay];
+                    newPseu->w      = wire->u+xshifts[ilay];
                     newPseu->dw     = 0.; // place holder
                     newPseu->w_c    = x_from_strips+xshifts[ilay];
                     newPseu->s      = y_from_strips+yshifts[ilay];
@@ -621,8 +625,10 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     newPseu->covxy=(sigy2-sigx2)*sinangle*cosangle;
 
                     // Try matching truth hit with this "real" hit.
-                    const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
-                    if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
+		    if (MATCH_TRUTH_HITS){
+		      const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
+		      if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
+		    }
 
                     Insert(newPseu);
 
@@ -678,229 +684,6 @@ void DFDCPseudo_factory::CalcMeanTime(vector<const DFDCHit *>::const_iterator pe
    t_rms=sqrt(t_rms/3.);
 }
 
-
-//
-/// DFDCPseudo_factory::FindCentroid()
-///   Uses the Newton-Raphson method for solving the set of non-linear
-/// equations describing the charge distribution over 3 strips for the peak 
-/// position x0, the anode charge qa, and the "width" parameter k2.  
-/// See Numerical Recipes in C p.379-383.
-/// Updates list of centroids. 
-///
-jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
-      vector<const DFDCHit *>::const_iterator peak,
-      vector<centroid_t>&centroids){
-   centroid_t temp;
-   double err_diff1=0.,err_diff2=0.;
-
-   // Fill in time info in temp  1/2/2008 D.L.
-   //CalcMeanTime(H, temp.t, temp.t_rms);
-
-   // Some code for checking for significance of fluctuations.
-   // Currently disabled.
-   //double dq1=(*(peak-1))->dq;
-   //double dq2=(*peak)->dq;
-   //double dq3=(*(peak+1))->dq;
-   //err_diff1=sqrt(dq1*dq1+dq2*dq2);
-   //err_diff2=sqrt(dq2*dq2+dq3*dq3);
-   if ((*peak)->pulse_height<MIDDLE_STRIP_THRESHOLD) {
-      return VALUE_OUT_OF_RANGE;
-   }
-
-   // Check for a peak in three adjacent strips
-   if ((*peak)->pulse_height-(*(peak-1))->pulse_height > err_diff1
-         && (*peak)->pulse_height-(*(peak+1))->pulse_height > err_diff2){
-      // Define some matrices for use in the Newton-Raphson iteration
-      DMatrix3x3 J;  //Jacobean matrix
-      DMatrix3x1 F,N,X,par,newpar,f;
-      int i=0;
-      double sum=0.;
-
-      // Initialize the matrices to some suitable starting values
-      unsigned int index=2*((*peak)->gLayer-1)+(1-(*peak)->plane/2);
-      par(K2)=1.;
-      for (vector<const DFDCHit*>::const_iterator j=peak-1;j<=peak+1;j++){
-         X(i)=fdccathodes[index][(*j)->element-1]->u;
-         N(i)=double((*j)->pulse_height);
-         sum+=N(i);
-         i++;
-      }
-      par(X0)=X(1);
-      par(QA)=2.*sum;
-      newpar=par;
-
-      // Newton-Raphson procedure
-      double errf=0.,errx=0;
-      for (int iter=1;iter<=ITER_MAX;iter++){
-         errf=0.;
-         errx=0.;
-
-         // Compute Jacobian matrix: J_ij = dF_i/dx_j.
-         for (i=0;i<3;i++){
-            double dx=(par(X0)-X(i))*ONE_OVER_H;
-            double argp=par(K2)*(dx+A_OVER_H);
-            double argm=par(K2)*(dx-A_OVER_H);
-            double tanh_p=tanh(argp);
-            double tanh_m=tanh(argm);
-            double tanh2_p=tanh_p*tanh_p;
-            double tanh2_m=tanh_m*tanh_m;
-            double q_over_4=0.25*par(QA);
-
-            f(i)=tanh_p-tanh_m;
-            J(i,QA)=-0.25*f(i);
-            J(i,K2)=-q_over_4*(argp/par(K2)*(1.-tanh2_p)
-                  -argm/par(K2)*(1.-tanh2_m));
-            J(i,X0)=-q_over_4*par(K2)*(tanh2_m-tanh2_p); 
-            F(i)=N(i)-q_over_4*f(i);
-            double new_errf=fabs(F(i));
-            if (new_errf>errf) errf=new_errf;
-         }
-         // Check for convergence
-         if (errf<TOLF){	
-            temp.pos=par(X0);
-            temp.q_from_pulse_height=par(QA);
-            temp.numstrips=3;  
-            temp.t=(*peak)->t;
-            temp.t_rms=0.;
-
-            // Find estimate for anode charge
-            sum=0;
-            double sum_f=f(0)+f(1)+f(2);
-            for (vector<const DFDCHit*>::const_iterator j=peak-1;j<=peak+1;j++){
-               sum+=double((*j)->q);
-            }
-            temp.q=4.*sum/sum_f;
-
-            //CalcMeanTime(peak,temp.t,temp.t_rms);
-            centroids.push_back(temp);
-
-            return NOERROR;
-         }
-
-         // Find the new set of parameters
-         FindNewParmVec(N,X,F,J,par,newpar);
-
-         //Check for convergence
-         for (i=0;i<3;i++){
-            double new_err=fabs(par(i)-newpar(i));
-            if (new_err>errx) errx=new_err;
-         }
-         if (errx<TOLX){
-            temp.pos=par(X0);
-            temp.numstrips=3;
-            temp.q_from_pulse_height=par(QA);
-            temp.t=(*peak)->t;
-            temp.t_rms=0.;
-
-            // Find estimate for anode charge
-            sum=0;
-            double sum_f=f(0)+f(1)+f(2);
-            for (vector<const DFDCHit*>::const_iterator j=peak-1;j<=peak+1;j++){
-               sum+=double((*j)->q);
-            }
-            temp.q=4.*sum/sum_f;
-
-            //CalcMeanTime(peak,temp.t,temp.t_rms);
-            centroids.push_back(temp);
-
-            return NOERROR;
-         }
-         par=newpar;
-      } // iterations
-   }
-   return INFINITE_RECURSION; // error placeholder
-}
-
-
-///
-/// DFDCPseudo_factory::FindNewParmVec()
-///   Routine used by FindCentroid to backtrack along the direction
-/// of the Newton step if the step is too large in order to avoid conditions
-/// where the iteration procedure starts to diverge.
-/// The procedure uses a scalar quantity f= 1/2 F.F for this purpose.
-/// Algorithm described in Numerical Recipes in C, pp. 383-389.
-///
-
-jerror_t DFDCPseudo_factory::FindNewParmVec(const DMatrix3x1 &N,
-      const DMatrix3x1 &X,
-      const DMatrix3x1 &F,
-      const DMatrix3x3 &J,
-      const DMatrix3x1 &par,
-      DMatrix3x1 &newpar){
-   // Invert the J matrix
-   DMatrix3x3 InvJ=J.Invert();
-
-   // Find the full Newton step
-   DMatrix3x1 fullstep=(-1.)*(InvJ*F);
-
-   // find the rate of decrease for the Newton-Raphson step
-   double slope=(-1.0)*F.Mag2(); //dot product
-
-   // This should be a negative number...
-   if (slope>=0){
-      return VALUE_OUT_OF_RANGE;
-   }
-
-   double lambda=1.0;  // Start out with full Newton step
-   double lambda_temp,lambda2=lambda;
-   DMatrix3x1 newF;
-   double f2=0.,newf;
-
-   // Compute starting values for f=1/2 F.F 
-   double f=-0.5*slope;
-
-   for (;;){
-      newpar=par+lambda*fullstep;
-
-      // Compute the value of the vector F and f=1/2 F.F with the current step
-      for (int i=0;i<3;i++){
-         double dx=(newpar(X0)-X(i))*ONE_OVER_H;
-         double argp=newpar(K2)*(dx+A_OVER_H);
-         double argm=newpar(K2)*(dx-A_OVER_H);
-         newF(i)=N(i)-0.25*newpar(QA)*(tanh(argp)-tanh(argm));
-      }
-      newf=0.5*newF.Mag2(); // dot product
-
-      if (lambda<0.1) {  // make sure the step is not too small
-         newpar=par;
-         return NOERROR;
-      } // Check if we have sufficient function decrease
-      else if (newf<=f+ALPHA*lambda*slope){
-         return NOERROR;
-      }
-      else{
-         // g(lambda)=f(par+lambda*fullstep)
-         if (lambda==1.0){//first attempt: quadratic approximation for g(lambda)
-            lambda_temp=-0.5*slope/(newf-f-slope);
-         }
-         else{ // cubic approximation for g(lambda)
-            double temp1=newf-f-lambda*slope;
-            double temp2=f2-f-lambda2*slope;
-            double one_over_lambda2_sq=1./(lambda2*lambda2);
-            double one_over_lambda_sq=1./(lambda*lambda);
-            double one_over_lambda_diff=1./(lambda-lambda2);
-            double a=(temp1*one_over_lambda_sq-temp2*one_over_lambda2_sq)*one_over_lambda_diff;
-            double b=(-lambda2*temp1*one_over_lambda_sq+lambda*temp2*one_over_lambda2_sq)
-               *one_over_lambda_diff;
-            if (a==0.0) lambda_temp=-0.5*slope/b;
-            else{
-               double disc=b*b-3.0*a*slope;
-               if (disc<0.0) lambda_temp=0.5*lambda;
-               else if (b<=0.0) lambda_temp=(-b+sqrt(disc))/(3.*a);
-               else lambda_temp=-slope/(b+sqrt(disc));
-            }
-            // ensure that we are headed in the right direction...
-            if (lambda_temp>0.5*lambda) lambda_temp=0.5*lambda;
-         }
-      }
-      lambda2=lambda;
-      f2=newf;
-      // Make sure that new version of lambda is not too small
-      lambda=(lambda_temp>0.1*lambda ? lambda_temp : 0.1*lambda);
-   } 
-}
-
-
 //
 /// DFDCPseudo_factory::TwoStripCluster()
 /// Almost 10% of all clusters have only two strips
@@ -948,7 +731,7 @@ jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
 
    // time from greater amplitude
    (amp2 > amp1) ? temp.t=t2 : temp.t=t1;
-   temp.t_rms=0.;
+   temp.cluster=0; // will be filled in later
 
    //CalcMeanTime(peak,temp.t,temp.t_rms);
    centroids.push_back(temp);
@@ -1008,9 +791,9 @@ jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
 
    temp.q=sum;
    temp.q_from_pulse_height = q_from_pulse_height;
-   temp.numstrips=10;
+   temp.numstrips=3;
    temp.t=t;
-   temp.t_rms=0.;
+   temp.cluster=0; // will be filled in later
 
    //CalcMeanTime(peak,temp.t,temp.t_rms);
    centroids.push_back(temp);
@@ -1018,3 +801,68 @@ jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
    return NOERROR;
 }
 
+///   Uses the Newton-Raphson method for solving the set of non-linear
+/// equations describing the charge distribution over 3 strips for the peak 
+/// position x0, the anode charge qa, and the "width" parameter k2.  
+/// Updates list of centroids. 
+///
+jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
+					  vector<const DFDCHit *>::const_iterator peak,
+					  vector<centroid_t>&centroids){
+  centroid_t temp;
+  double err_diff1=0.,err_diff2=0.;
+
+  // Fill in time info in temp  1/2/2008 D.L.
+  //CalcMeanTime(H, temp.t, temp.t_rms);
+  
+  // Some code for checking for significance of fluctuations.
+  // Currently disabled.
+  //double dq1=(*(peak-1))->dq;
+  //double dq2=(*peak)->dq;
+  //double dq3=(*(peak+1))->dq;
+  //err_diff1=sqrt(dq1*dq1+dq2*dq2);
+  //err_diff2=sqrt(dq2*dq2+dq3*dq3);
+  if ((*peak)->pulse_height<MIDDLE_STRIP_THRESHOLD) {
+    return VALUE_OUT_OF_RANGE;
+  }
+
+  // Check for a peak in three adjacent strips
+  if ((*peak)->pulse_height-(*(peak-1))->pulse_height > err_diff1
+      && (*peak)->pulse_height-(*(peak+1))->pulse_height > err_diff2){
+    // Define some matrices for use in the Newton-Raphson iteration
+    DMatrix3x1 N,X;
+    int i=0;
+    
+    // Initialize the matrices to some suitable starting values
+    unsigned int index=2*((*peak)->gLayer-1)+(1-(*peak)->plane/2);
+    for (vector<const DFDCHit*>::const_iterator j=peak-1;j<=peak+1;j++){
+      X(i)=fdccathodes[index][(*j)->element-1]->u;
+      N(i)=double((*j)->pulse_height);
+      i++;
+    }
+
+    double pos=0.,sum_f=0.,q_ph=0.;
+    DFDCPseudo tempPseudo; // instatiate class so we can use its methods
+    if (tempPseudo.FindCentroid(N,X,pos,&sum_f,&q_ph)==NOERROR){
+      temp.pos=pos;
+      temp.numstrips=3;
+      temp.q_from_pulse_height=q_ph;
+      temp.t=(*peak)->t;
+      temp.cluster=0; // will be filled in later
+      
+      // Find estimate for anode charge
+      double sum=0;
+      for (vector<const DFDCHit*>::const_iterator j=peak-1;j<=peak+1;j++){
+	sum+=double((*j)->q);
+      }
+      temp.q=4.*sum/sum_f;
+      
+      centroids.push_back(temp);
+      return NOERROR;
+    }
+  }
+
+  return RESOURCE_UNAVAILABLE; // error placeholder
+}
+    
+ 

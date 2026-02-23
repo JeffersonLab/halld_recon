@@ -95,7 +95,17 @@ void DTrackWireBased_factory::Init()
 			       SKIP_MASS_HYPOTHESES_WIRE_BASED); 
    PROTON_MOM_THRESH=0.8; // GeV 
    app->SetDefaultParameter("TRKFIT:PROTON_MOM_THRESH",
-			       PROTON_MOM_THRESH);
+			    PROTON_MOM_THRESH);
+
+   BCAL_CUT=3.; // cm^2 
+   app->SetDefaultParameter("TRKFIT:BCAL_CUT",BCAL_CUT);
+
+   SC_DPHI_CUT=0.25; // radians
+   app->SetDefaultParameter("TRKFIT:SC_DPHI_CUT",SC_DPHI_CUT);
+   
+   MIN_BCAL_MATCHES=1;
+   app->SetDefaultParameter("TRKFIT:MIN_BCAL_MATCHES",MIN_BCAL_MATCHES);
+   
 
    // Make list of mass hypotheses to use in fit
    vector<int> hypotheses;
@@ -186,6 +196,17 @@ void DTrackWireBased_factory::BeginRun(const std::shared_ptr<const JEvent>& even
    rt = new DReferenceTrajectory(bfield);
    rt->SetDGeometry(geom);
 
+   // Start counter geometry
+   haveStartCounter=false;
+   vector<vector<DVector3> >sc_pos;
+   vector<vector<DVector3> >sc_norm;
+   if (geom->GetStartCounterGeom(sc_pos, sc_norm)){
+     for (unsigned int i=0;i<30;i++){
+       sc_phi.push_back(sc_pos[i][1].Phi());
+     }
+     haveStartCounter=true;
+   }
+
    // Get pointer to DTrackFitter object that actually fits a track
    vector<const DTrackFitter *> fitters;
    event->Get(fitters);
@@ -252,36 +273,109 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
 
    if (candidates.size()==0) return;
 
+   // Get SC hits and BCAL points for crude t0 estimate
+   vector<const DSCHit*>schits;
+   event->Get(schits);
+   vector<const DBCALPoint*>bcalpoints;
+   event->Get(bcalpoints);
+   
    // Loop over candidates
    for(unsigned int i=0; i<candidates.size(); i++){
       const DTrackCandidate *candidate = candidates[i];
 
       // Skip candidates with momentum below some cutoff
-      if (candidate->momentum().Mag()<MIN_FIT_P){
+      if (candidate->dMomentum.Mag()<MIN_FIT_P){
          continue;
       }
-
+      
+      // Get crude t0 estimate. First try to match to start counter.
+      double min_dphi=1e9;
+      double phi=candidate->dPosition.Phi();
+      double t0=candidate->dMinimumDriftTime;
+      unsigned int sc_hit_index=0;
+      if (haveStartCounter){
+	for (unsigned int j=0;j<schits.size();j++){
+	  double dphi=sc_phi[schits[j]->sector-1]-phi;
+	  if (dphi<-M_PI) dphi+=2.*M_PI;
+	  if (dphi>M_PI) dphi-=2.*M_PI;
+	  if (fabs(dphi)<min_dphi){
+	    min_dphi=fabs(dphi);
+	    sc_hit_index=j;
+	  }
+	}
+      }
+      DetectorSystem_t t0_detector=candidate->dDetector;
+      if (min_dphi<SC_DPHI_CUT){
+	t0_detector=SYS_START;
+	t0=schits[sc_hit_index]->t;
+      }
+      else { // If matching to start counter did not work, try to match to BCAL
+	// circle parameters from the candidate
+	double xc=candidate->xc;
+	double yc=candidate->yc;
+	double rc=candidate->rc;
+	double rc2=rc*rc;
+	double xc2=xc*xc;
+	double yc2=yc*yc;
+	double xc2_plus_yc2=xc2+yc2;
+	double scale=1./(2.*xc2_plus_yc2);
+	// loop over BCAL points looking for matches
+	vector<const DBCALPoint *>matched_points;
+	for (unsigned int k=0;k<bcalpoints.size();k++){
+	  const DBCALPoint *point=bcalpoints[k];
+	  double phi_b=point->phi();
+	  double r_b=point->r();
+	  double r2=r_b*r_b;
+	  double A=r2+xc2_plus_yc2-rc2;
+	  double B=4*r2*xc2_plus_yc2-A*A;
+	  if (B<0) continue;
+	
+	  double sqrtB=sqrt(B);
+	  double my_xplus=(xc*A+yc*sqrtB)*scale;
+	  double my_xminus=(xc*A-yc*sqrtB)*scale;
+	  double my_yplus=(yc*A-xc*sqrtB)*scale;
+	  double my_yminus=(yc*A+xc*sqrtB)*scale;
+	  
+	  double x_b=r_b*cos(phi_b);
+	  double y_b=r_b*sin(phi_b);
+	  double dx_b=my_xplus-x_b;
+	  double dy_b=my_yplus-y_b;
+	  double d2min=dx_b*dx_b+dy_b*dy_b;
+	  if (d2min<BCAL_CUT) matched_points.push_back(point);
+	  dx_b=my_xminus-x_b;
+	  dy_b=my_yminus-y_b;
+	  d2min=dx_b*dx_b+dy_b*dy_b;
+	  if (d2min<BCAL_CUT) matched_points.push_back(point);
+	}
+	if (matched_points.size()>=MIN_BCAL_MATCHES){
+	  t0_detector=SYS_BCAL;
+	  t0=matched_points[0]->t();
+	  // Crude correction for flight time from target
+	  t0-=2.2; // assum s=65 cm at roughly the speed of light
+	}
+      }
+      
       if (SKIP_MASS_HYPOTHESES_WIRE_BASED){
 	rt->Reset();
-	rt->q = candidate->charge();
+	rt->q = candidate->dCharge;
 
-	DoFit(i,candidate,rt,event,ParticleMass(PiPlus));
+	DoFit(i,candidate,rt,event,ParticleMass(PiPlus),t0,t0_detector);
 	// Only do fit for proton mass hypothesis for low momentum particles
-	if (candidate->momentum().Mag()<PROTON_MOM_THRESH){
+	if (candidate->dMomentum.Mag()<PROTON_MOM_THRESH){
 	  rt->Reset();
-	  DoFit(i,candidate,rt,event,ParticleMass(Proton));
+	  DoFit(i,candidate,rt,event,ParticleMass(Proton),t0,t0_detector);
 	}
       }
       else{
          // Choose list of mass hypotheses based on charge of candidate
          vector<int> mass_hypotheses;
-         if(candidate->charge()<0.0){
+         if(candidate->dCharge<0.0){
             mass_hypotheses = mass_hypotheses_negative;
          }else{
             mass_hypotheses = mass_hypotheses_positive;
          }
 
-         if ((!isfinite(candidate->momentum().Mag())) || (!isfinite(candidate->position().Mag())))
+         if ((!isfinite(candidate->dMomentum.Mag())) || (!isfinite(candidate->dPosition.Mag())))
             _DBG_ << "Invalid seed data for event "<< event->GetEventNumber() <<"..."<<endl;
 
          // Loop over potential particle masses
@@ -289,8 +383,8 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
             if(DEBUG_LEVEL>1){_DBG__;_DBG_<<"---- Starting wire based fit with id: "<<mass_hypotheses[j]<<endl;}
 
 	    rt->Reset();
-            rt->q = candidate->charge();
-            DoFit(i,candidate,rt,event,ParticleMass(Particle_t(mass_hypotheses[j])));
+            rt->q = candidate->dCharge;
+            DoFit(i,candidate,rt,event,ParticleMass(Particle_t(mass_hypotheses[j])),t0,t0_detector);
          }
 
       }
@@ -400,14 +494,14 @@ void DTrackWireBased_factory::FilterDuplicates(void)
 
 // Routine to find the hits, do the fit, and fill the list of wire-based tracks
 void DTrackWireBased_factory::DoFit(unsigned int c_id,
-      const DTrackCandidate *candidate,
-      DReferenceTrajectory *rt,
-      const std::shared_ptr<const JEvent>& event, double mass){
+				    const DTrackCandidate *candidate,
+				    DReferenceTrajectory *rt,
+				    const std::shared_ptr<const JEvent>& event,
+				    double mass,double t0,
+				    DetectorSystem_t t0_detector){
    // Get the hits from the candidate
-  vector<const DFDCPseudo*>myfdchits;
-  candidate->GetT(myfdchits);
-  vector<const DCDCTrackHit *>mycdchits;
-  candidate->GetT(mycdchits);
+  vector<const DFDCPseudo*>myfdchits=candidate->fdchits;
+  vector<const DCDCTrackHit *>mycdchits=candidate->cdchits;
 
    // Do the fit
    DTrackFitter::fit_status_t status = DTrackFitter::kFitNotDone;
@@ -418,8 +512,8 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
       fitter->AddHits(myfdchits);
       fitter->AddHits(mycdchits);
 
-      status=fitter->FitTrack(candidate->position(),candidate->momentum(),
-            candidate->charge(),mass,0.);
+      status=fitter->FitTrack(candidate->dPosition,candidate->dMomentum,
+			      candidate->dCharge,mass,t0,t0_detector);
    }
    else{
      fitter->Reset();
@@ -427,20 +521,27 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
       // Swim a reference trajectory using the candidate starting momentum
       // and position
       rt->SetMass(mass);
-      //rt->Swim(candidate->position(),candidate->momentum(),candidate->charge());
-      rt->FastSwimForHitSelection(candidate->position(),candidate->momentum(),candidate->charge());
+      //rt->Swim(candidate->dPosition,candidate->dMomentum,candidate->dCharge);
+      rt->FastSwimForHitSelection(candidate->dPosition,candidate->dMomentum,candidate->dCharge);
 
-      status=fitter->FindHitsAndFitTrack(*candidate,rt,event,mass,
-					 mycdchits.size()+2*myfdchits.size());
-      if (/*false && */status==DTrackFitter::kFitNotDone){
-         if (DEBUG_LEVEL>1)_DBG_ << "Using hits from candidate..." << endl;
+      // Kinematic data
+      DKinematicData kd;
+      kd.setPID(IDTrack(candidate->dCharge,mass));
+      kd.setPosition(candidate->dPosition);
+      kd.setMomentum(candidate->dMomentum);
+      status=fitter->FindHitsAndFitTrack(kd,rt,event,mass,
+					 mycdchits.size()+2*myfdchits.size(),
+					 t0,t0_detector);
+      if (fitter->GetChisq()<0 || status==DTrackFitter::kFitNotDone){
+	if (DEBUG_LEVEL>1)
+	  _DBG_ << "Using hits from candidate..." << endl;
          fitter->Reset();
         
          fitter->AddHits(myfdchits);
          fitter->AddHits(mycdchits);
 
-         status=fitter->FitTrack(candidate->position(),candidate->momentum(),
-               candidate->charge(),mass,0.);
+         status=fitter->FitTrack(candidate->dPosition,candidate->dMomentum,
+				 candidate->dCharge,mass,t0,t0_detector);
       }
    }
 
@@ -469,6 +570,7 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
             track->pulls =std::move(fitter->GetPulls()); 
 	    track->extrapolations=std::move(fitter->GetExtrapolations());
             track->candidateid = c_id+1;
+	    track->IsSmoothed=fitter->GetIsSmoothed();
 
             // Add hits used as associated objects
             vector<const DCDCTrackHit*> cdchits = fitter->GetCDCFitHits();

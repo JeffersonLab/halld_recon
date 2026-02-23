@@ -886,8 +886,16 @@ bool DCutAction_TrackHitPattern::Cut_TrackHitPattern(const DParticleID* locParti
 	}
 	else if(locTrackCandidate != NULL)
 	{
-		locParticleID->Get_CDCNumHitRingsPerSuperlayer(locTrackCandidate->dCDCRings, locNumHitRingsPerSuperlayer);
-		locParticleID->Get_FDCNumHitPlanesPerPackage(locTrackCandidate->dFDCPlanes, locNumHitPlanesPerPackage);
+	  // Get the hits from the candidate
+	  vector<const DFDCPseudo*>locFDCPseudos;
+	  locTrackCandidate->GetT(locFDCPseudos);
+	  vector<const DCDCTrackHit *>locCDCTrackHits;
+	  locTrackCandidate->GetT(locCDCTrackHits);
+
+	  unsigned int locCDCRings=locParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+	  unsigned int locFDCPlanes=locParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+	  locParticleID->Get_CDCNumHitRingsPerSuperlayer(locCDCRings, locNumHitRingsPerSuperlayer);
+	  locParticleID->Get_FDCNumHitPlanesPerPackage(locFDCPlanes, locNumHitPlanesPerPackage);
 	}
 	else
 		return false;

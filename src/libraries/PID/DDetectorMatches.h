@@ -66,6 +66,19 @@ public:
   double dDOCAToShower; //DOCA of track to shower
 };
 
+class DECALSingleHitMatchParams
+{
+ public:
+ DECALSingleHitMatchParams(void): dEHit(0.0), dTHit(0.0), dx(0.0), dFlightTime(0.0), dFlightTimeVariance(0.0), dPathLength(0.0), dDOCAToHit(0.0){}
+  double dEHit; // energy of ECAL hit
+  double dTHit; // time of ECAL hit
+  double dx; //the distance the track traveled through the block
+  double dFlightTime; //flight time from DKinematicData::position() to the block
+  double dFlightTimeVariance;
+  double dPathLength; //path length from DKinematicData::position() to the block
+  double dDOCAToHit; //DOCA of track to block
+};
+
 class DFCALSingleHitMatchParams
 {
  public:
@@ -222,6 +235,7 @@ class DDetectorMatches : public JObject
 		inline bool Get_SCMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DSCHitMatchParams> >& locMatchParams) const;
 		inline bool Get_DIRCMatchParams(const DTrackingData* locTrack, shared_ptr<const DDIRCMatchParams>& locMatchParams) const;
   		inline bool Get_TRDMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DTRDMatchParams> >& locMatchParams) const;
+  inline bool Get_ECALSingleHitMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALSingleHitMatchParams> >& locMatchParams) const;
   		inline bool Get_ECALMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALShowerMatchParams> >& locMatchParams) const;
 	
 		inline bool Get_IsMatchedToTrack(const DBCALShower* locBCALShower) const;
@@ -268,7 +282,8 @@ class DDetectorMatches : public JObject
 				      const shared_ptr<const DFMWPCMatchParams>& locFMWPCMatchParams);
   		inline void Add_Match(const DTrackingData* locTrack, const shared_ptr<const DTRDMatchParams>& locHitMatchParams);
   		inline void Add_Match(const DTrackingData* locTrack, const DECALShower* locECALShower, const shared_ptr<const DECALShowerMatchParams>& locShowerMatchParams);
-
+  inline void Add_Match(const DTrackingData* locTrack, const shared_ptr<const DECALSingleHitMatchParams>& locECALSingleHitMatchParams);
+  
 		inline void Set_DistanceToNearestTrack(const DBCALShower* locBCALShower, double locDeltaPhi, double locDeltaZ);
 		inline void Set_DistanceToNearestTrack(const DFCALShower* locFCALShower, double locDistanceToNearestTrack);
   		inline void Set_DistanceToNearestTrack(const DECALShower* locECALShower, double locDistanceToNearestTrack);
@@ -300,7 +315,8 @@ class DDetectorMatches : public JObject
 		map<const DTrackingData*, shared_ptr<const DDIRCMatchParams> > dTrackDIRCMatchParams;
   		map<const DTrackingData*, vector<shared_ptr<const DTRDMatchParams> > > dTrackTRDMatchParams;
   		map<const DTrackingData*, vector<shared_ptr<const DECALShowerMatchParams> > > dTrackECALMatchParams;
-
+  map<const DTrackingData*, vector<shared_ptr<const DECALSingleHitMatchParams> > > dTrackECALSingleHitMatchParams;
+  
 		//reverse-direction maps of the above (match params are the same objects)
 		map<const DBCALShower*, vector<shared_ptr<const DBCALShowerMatchParams> > > dBCALTrackMatchParams;
 		map<const DFCALShower*, vector<shared_ptr<const DFCALShowerMatchParams> > > dFCALTrackMatchParams;
@@ -329,6 +345,17 @@ inline bool DDetectorMatches::Get_BCALMatchParams(const DTrackingData* locTrack,
 	locMatchParams = locIterator->second;
 	return true;
 }
+
+inline bool DDetectorMatches::Get_ECALSingleHitMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALSingleHitMatchParams> >& locMatchParams) const
+{
+  locMatchParams.clear();
+  auto locIterator = dTrackECALSingleHitMatchParams.find(locTrack);
+  if(locIterator == dTrackECALSingleHitMatchParams.end())
+    return false;
+  locMatchParams = locIterator->second;
+  return true;
+}
+
 
 inline bool DDetectorMatches::Get_ECALMatchParams(const DTrackingData* locTrack, vector<shared_ptr<const DECALShowerMatchParams> >& locMatchParams) const
 {
@@ -673,6 +700,9 @@ inline void DDetectorMatches::Add_Match(const DTrackingData* locTrack, const DBC
 {
 	dTrackBCALMatchParams[locTrack].push_back(locShowerMatchParams);
 	dBCALTrackMatchParams[locBCALShower].push_back(locShowerMatchParams);
+}
+inline void DDetectorMatches::Add_Match(const DTrackingData* locTrack, const shared_ptr<const DECALSingleHitMatchParams>& locECALSingleHitMatchParams){
+  dTrackECALSingleHitMatchParams[locTrack].push_back(locECALSingleHitMatchParams);
 }
 inline void DDetectorMatches::Add_Match(const DTrackingData* locTrack, const DECALShower* locECALShower, const shared_ptr<const DECALShowerMatchParams>& locShowerMatchParams)
 {

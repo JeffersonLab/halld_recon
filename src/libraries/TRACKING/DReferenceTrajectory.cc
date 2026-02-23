@@ -15,7 +15,6 @@ using namespace std;
 #include <algorithm>
 
 #include "DReferenceTrajectory.h"
-#include "DTrackCandidate.h"
 #include "DMagneticFieldStepper.h"
 #include <TMatrix.h>
 #include "HDGEOMETRY/DRootGeom.h"

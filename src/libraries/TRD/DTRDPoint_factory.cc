@@ -5,6 +5,7 @@
 #include "DTRDPoint_factory.h"
 #include <JANA/JEvent.h>
 #include "DANA/DGeometryManager.h"
+#include "DANA/DEvent.h"
 
 ///
 /// DTRDPoint_cmp(): 
@@ -44,6 +45,15 @@ void DTRDPoint_factory::Init()
 //------------------
 void DTRDPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/TRD/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		INSTALLED = false;
+	else
+		INSTALLED = true;
+		
+	if(!INSTALLED) return;
+
   auto runnumber = event->GetRunNumber();
   auto app = event->GetJApplication();
   auto geo_manager = app->GetService<DGeometryManager>();

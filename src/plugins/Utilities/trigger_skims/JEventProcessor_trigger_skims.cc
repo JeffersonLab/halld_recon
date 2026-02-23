@@ -25,7 +25,8 @@ extern "C" {
 // variables to control which triggers get read out
 static bool write_out_bcal_led = true;
 static bool write_out_fcal_led = true;
-static bool write_out_ccal_led = true;
+static bool write_out_ecal_led = true;
+static bool write_out_ccal_led = false;
 static bool write_out_dirc_led = true;
 static bool write_out_random = true;
 static bool write_out_sync = true;
@@ -40,7 +41,8 @@ void JEventProcessor_trigger_skims::Init()
     auto app = GetApplication();
     int bcal_led_writeout_toggle = 1;
     int fcal_led_writeout_toggle = 1;
-    int ccal_led_writeout_toggle = 1;
+    int ecal_led_writeout_toggle = 1;
+    int ccal_led_writeout_toggle = 0;
     int dirc_led_writeout_toggle = 1;
     int random_writeout_toggle = 1;
     int sync_writeout_toggle = 1;
@@ -49,6 +51,7 @@ void JEventProcessor_trigger_skims::Init()
     app->SetDefaultParameter("TRIGSKIM:WRITEBCALLED", bcal_led_writeout_toggle, "Write out BCAL LED events");
     app->SetDefaultParameter("TRIGSKIM:WRITEFCALLED", fcal_led_writeout_toggle, "Write out FCAL LED events");
     app->SetDefaultParameter("TRIGSKIM:WRITECCALLED", fcal_led_writeout_toggle, "Write out CCAL LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITEECALLED", ecal_led_writeout_toggle, "Write out ECAL LED events");
     app->SetDefaultParameter("TRIGSKIM:WRITEDIRCLED", fcal_led_writeout_toggle, "Write out DIRC LED events");
     app->SetDefaultParameter("TRIGSKIM:WRITERANDOM", random_writeout_toggle, "Write out random pulser events");
     app->SetDefaultParameter("TRIGSKIM:WRITESYNC", sync_writeout_toggle, "Write out TS sync events");
@@ -94,6 +97,8 @@ void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>&
             locEventWriterEVIO->Write_EVIOEvent( locEvent, "BCAL-LED" );
         if (write_out_ccal_led)
             locEventWriterEVIO->Write_EVIOEvent( locEvent, "CCAL-LED" );
+        if (write_out_ecal_led)
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "ECAL-LED" );
         if (write_out_fcal_led)
             locEventWriterEVIO->Write_EVIOEvent( locEvent, "FCAL-LED" );
         if (write_out_dirc_led)
@@ -115,6 +120,8 @@ void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>&
             locEventWriterEVIO->Write_EVIOEvent(locEvent, "BCAL-LED");
         if (write_out_ccal_led)
             locEventWriterEVIO->Write_EVIOEvent(locEvent, "CCAL-LED");
+        if (write_out_ecal_led)
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "ECAL-LED");
         if (write_out_fcal_led)
             locEventWriterEVIO->Write_EVIOEvent(locEvent, "FCAL-LED");
         if (write_out_dirc_led)
@@ -130,6 +137,7 @@ void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>&
 	bool is_BCAL_LED_US_trigger = false;
 	bool is_BCAL_LED_DS_trigger = false;
 	bool is_CCAL_LED_trigger = false;
+	bool is_ECAL_LED_trigger = false;
 	bool is_FCAL_LED_trigger = false;
 	bool is_DIRC_LED_trigger = false;
 	bool is_random_trigger = false;
@@ -173,18 +181,18 @@ void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>&
 			// FCAL LED trigger fired
 			is_FCAL_LED_trigger = true;
 		}
+		//if (trig->fp_trig_mask & 0x008) {   // Trigger front-panel bit 4
+		//	// ECAL LED trigger fired
+		//	is_ECAL_LED_trigger = true;
+		//}
 		if (trig->fp_trig_mask & 0x010) {   // Trigger front-panel bit 5
-			// CCAL LED trigger fired
-			//is_CCAL_LED_trigger = true;
-
+			// ECAL alpha trigger fired
+			is_ECAL_LED_trigger = true;
 		}
-		if (trig->fp_trig_mask & 0x020) {   // Trigger front-panel bit 6
-			// CCAL LED trigger fired
-			//is_CCAL_LED_trigger = true;
-
-            // CPP run - this is now the CTOF trigger
-            is_ctof_event = true;
-		}
+ 		if (trig->fp_trig_mask & 0x020) {   // Trigger front-panel bit 6
+ 			// ECAL LED trigger fired
+            is_ECAL_LED_trigger = true;
+ 		}
 		if (trig->fp_trig_mask & 0x4000 ) {   // Trigger front-panel bit 15
 			// DIRC LED trigger fired
 			is_DIRC_LED_trigger = true;
@@ -221,6 +229,9 @@ void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>&
     }
     if ( write_out_ccal_led && is_CCAL_LED_trigger ) {
       locEventWriterEVIO->Write_EVIOEvent(locEvent, "CCAL-LED");
+    }
+    if ( write_out_ecal_led && is_ECAL_LED_trigger ) {
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "ECAL-LED");
     }
     if ( write_out_fcal_led && is_FCAL_LED_trigger ) {
       locEventWriterEVIO->Write_EVIOEvent(locEvent, "FCAL-LED");

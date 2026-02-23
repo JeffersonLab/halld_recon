@@ -6,12 +6,12 @@
 // Run this for an amorphous radiator run using the following.
 // Ideally, one would use an entire EVIO file's worth of data.
 //
-//   ssh hdops@gluonraid2
+//   ssh hdops@gluonraid6
 //   mkdir ~/work/2023.01.15.amorphous_normalization
 //   cd ~/work/2023.01.15.amorphous_normalization
 //   ln -s $HALLD_RECON_HOME/src/plugins/monitoring/highlevel_online/AmorphousNormalization/ .
 //   setenv run 120219
-//   hd_ana --config=AmorphousNormalization/jana.conf /gluonraid2/rawdata/volatile/RunPeriod*/rawdata/Run${run}/hd_rawdata_${run}_000.evio
+//   hd_ana --loadconfigs AmorphousNormalization/jana.conf /gluonraid6/rawdata/volatile/RunPeriod*/rawdata/Run${run}/hd_rawdata_${run}_000.evio
 //   mv janaroot.root janaroot_${run}.root
 //   root -l -q "AmorphousNormalization/extract_photon_energy_spectrum.C(${run})"
 //

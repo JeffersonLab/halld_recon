@@ -105,6 +105,8 @@ class DTRDPoint_factory : public JFactoryT<DTRDPoint> {
   		double dTRDx=0.,dTRDy=0.,dTRDz=0.;
    		double dE_DIFF_MAX;
 		int MIN_NClusters;
+   		
+   		bool INSTALLED;
 };
 
 #endif // DFACTORY_DTRDPOINT_H

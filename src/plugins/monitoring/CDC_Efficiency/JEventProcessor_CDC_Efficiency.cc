@@ -11,7 +11,8 @@
 #include "DAQ/Df125CDCPulse.h"
 #include "DANA/DEvent.h"
 #include "TRIGGER/DTrigger.h"
-#include "HistogramTools.h"
+
+#include <TDirectory.h>
 
 
 // Routine used to create our JEventProcessor

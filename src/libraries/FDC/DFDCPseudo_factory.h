@@ -87,12 +87,6 @@ class DFDCPseudo_factory : public JFactoryT<DFDCPseudo> {
 		jerror_t FindCentroid(const vector<const DFDCHit*>& H, 
 				      vector<const DFDCHit *>::const_iterator peak,
 				      vector<centroid_t> &centroids);
-		// Backtracking routine needed by FindCentroid 
-		jerror_t FindNewParmVec(const DMatrix3x1 &N,const DMatrix3x1 &X,
-					const DMatrix3x1 &F,const DMatrix3x3 &J,
-					const DMatrix3x1 &par,
-					DMatrix3x1 &newpar);
-		
 		///
 		/// DFDCPseudo_factory::TwoStripCluster()
 		/// Calculates the center-of-gravity of two adjacent strips
@@ -122,8 +116,7 @@ class DFDCPseudo_factory : public JFactoryT<DFDCPseudo> {
 		double r2_out,r2_in;
 		double STRIP_ANODE_TIME_CUT;
 		unsigned int MAX_ALLOWED_FDC_HITS;
-//		bool DEBUG_HISTS,USE_FDC,MATCH_TRUTH_HITS;
-		bool DEBUG_HISTS,USE_FDC;
+  bool DEBUG_HISTS,USE_FDC, MATCH_TRUTH_HITS,ALIGNMENT;
 		double MIDDLE_STRIP_THRESHOLD;
 		double FDC_RES_PAR1,FDC_RES_PAR2;
 		double CHARGE_THRESHOLD;

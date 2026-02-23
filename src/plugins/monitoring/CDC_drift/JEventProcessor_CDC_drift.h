@@ -11,6 +11,7 @@
 #include <JANA/JEventProcessor.h>
 #include <JANA/Services/JLockService.h>
 
+#include <TH1.h>
 
 class JEventProcessor_CDC_drift:public JEventProcessor{
  public:
@@ -27,6 +28,9 @@ class JEventProcessor_CDC_drift:public JEventProcessor{
 
   std::shared_ptr<JLockService> lockService;
 
+
+  TH1F *cdc_time = NULL;
+  
 };
 
 #endif // _JEventProcessor_CDC_drift_

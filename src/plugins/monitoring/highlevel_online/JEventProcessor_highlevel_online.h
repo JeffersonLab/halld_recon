@@ -57,6 +57,7 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 		TH2I* dHist_NumHighLevelObjects;
 
 		TH1I* dHist_BeamEnergy;
+		TH1I* dHist_BeamEnergy_amo;
 		TH1I* dHist_PSPairEnergy;
 
 		TH2I* dHist_PVsTheta_Tracks;
@@ -64,6 +65,8 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 
 		TH1I* dEventVertexZ;
 		TH2I* dEventVertexYVsX;
+		TH2I* dEventVertexXVsZ;
+		TH2I* dEventVertexYVsZ;
 
 		TH1I* d2gamma;
 		TH1I *dpip_pim;

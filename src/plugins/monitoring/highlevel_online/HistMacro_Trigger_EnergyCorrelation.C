@@ -39,7 +39,8 @@
 {
 	TDirectory *locTopDirectory = gDirectory;
 
-
+	gStyle->SetOptStat("eou");
+	
 	// Grab remaining histos from highlevel directory
 	TDirectory *locDirectory = (TDirectory*)gDirectory->FindObjectAny("highlevel");
 	if(!locDirectory)
@@ -63,6 +64,8 @@
 	latex.SetTextSize(0.04);
 	char str[256];
 
+        double entries = 0;
+
 	// ECAL vs. FCAL for Trig bit 1
 	locCanvas->cd(1);
 	gPad->SetTicks();
@@ -73,7 +76,7 @@
 	{
 		locHist_ECALVsFCAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
 		locHist_ECALVsFCAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_ECALVsFCAL_TrigBit1->SetStats(0);
+		//locHist_ECALVsFCAL_TrigBit1->SetStats(0);
 		locHist_ECALVsFCAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
 		locHist_ECALVsFCAL_TrigBit1->Draw("colz");
 
@@ -90,7 +93,7 @@
 	{
 		locHist_BCALVsFCAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
 		locHist_BCALVsFCAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_BCALVsFCAL_TrigBit1->SetStats(0);
+		//locHist_BCALVsFCAL_TrigBit1->SetStats(0);
 		locHist_BCALVsFCAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
 		locHist_BCALVsFCAL_TrigBit1->Draw("colz");
 
@@ -108,10 +111,12 @@
 	{
 		locHist_BCALVsFCAL2_TrigBit1->GetXaxis()->SetTitleSize(0.05);
 		locHist_BCALVsFCAL2_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_BCALVsFCAL2_TrigBit1->SetStats(0);
+		//locHist_BCALVsFCAL2_TrigBit1->SetStats(0);
 		locHist_BCALVsFCAL2_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
 		locHist_BCALVsFCAL2_TrigBit1->Draw("colz");
-
+                entries = locHist_BCALVsFCAL2_TrigBit1->Integral();
+                
+                gPad->SetName("EnergyCorrelation"); // used by RSAI in filenaming
 		gPad->SetLogz();
 		gPad->Update();
 	}
@@ -126,7 +131,7 @@
 	{
 		locHist_BCALVsECAL_TrigBit1->GetXaxis()->SetTitleSize(0.05);
 		locHist_BCALVsECAL_TrigBit1->GetYaxis()->SetTitleSize(0.04);
-		locHist_BCALVsECAL_TrigBit1->SetStats(0);
+		//locHist_BCALVsECAL_TrigBit1->SetStats(0);
 		locHist_BCALVsECAL_TrigBit1->GetYaxis()->SetTitleOffset(2.0);
 		locHist_BCALVsECAL_TrigBit1->Draw("colz");
 
@@ -134,4 +139,16 @@
 		gPad->Update();
 	}
 
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E4;
+		if( entries >= min_events ) {
+			cout << "Trigger Energy Correlation AI check after " << entries << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("Trigger_Energy", 3);
+			rs_ResetAllMacroHistos("//HistMacro_Trigger_EnergyCorrelation");
+		}
+	}
+#endif
 }

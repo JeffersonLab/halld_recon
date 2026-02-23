@@ -13,6 +13,7 @@
 #include "DECALShower_factory.h"
 #include <JANA/JEvent.h>
 #include <DANA/DGeometryManager.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 #include <HDGEOMETRY/DGeometry.h>
 #include <units.h>
 
@@ -37,14 +38,8 @@ void DECALShower_factory::Init()
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   app->SetDefaultParameter("ECAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
-  E_CORRECTION_PAR1=0.016;
-  E_CORRECTION_PAR2=0.864;
-  E_CORRECTION_PAR3=1.055;
-  E_CORRECTION_PAR4=2.0;
-  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR1",E_CORRECTION_PAR1);
-  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR2",E_CORRECTION_PAR2);
-  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR3",E_CORRECTION_PAR3);
-  app->SetDefaultParameter("ECAL:E_CORRECTION_PAR4",E_CORRECTION_PAR4);
+  ENABLE_ENERGY_CORRECTION=true;
+  app->SetDefaultParameter("ECAL:ENABLE_ENERGY_CORRECTION",ENABLE_ENERGY_CORRECTION);
 }
 
 //------------------
@@ -57,6 +52,21 @@ void DECALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   auto geo_manager = app->GetService<DGeometryManager>();
   auto geom = geo_manager->GetDGeometry(runnumber);
   geom->GetECALZ(mECALz);
+  mECALzBack=mECALz+20.;
+
+  // Get calibration constant
+  auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+  map<string, double> ecal_parms;
+  jcalib->Get("ECAL/ecal_parms", ecal_parms);
+  if (ecal_parms.find("ECAL_C_EFFECTIVE")!=ecal_parms.end()){
+    ECAL_C_EFFECTIVE = ecal_parms["ECAL_C_EFFECTIVE"];
+    //jout<<"ECAL_C_EFFECTIVE = "<<ECAL_C_EFFECTIVE<<endl;
+  }
+  map<string,double>ecal_E_correction_parms;
+  jcalib->Get("ECAL/E_correction_parms",ecal_E_correction_parms);
+  E_CORRECTION_PAR1=ecal_E_correction_parms["p1"];
+  E_CORRECTION_PAR2=ecal_E_correction_parms["p2"];
+  E_CORRECTION_PAR3=ecal_E_correction_parms["p3"];
 }
 
 //------------------
@@ -70,16 +80,21 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
   for (size_t i=0;i<clusters.size();i++){
     const DECALCluster *cluster=clusters[i];
 
-    double E=GetCorrectedEnergy(cluster->E);
+    double E=cluster->E;
+    if (ENABLE_ENERGY_CORRECTION){
+      E=GetCorrectedEnergy(cluster->E);
+    }
     if (E>SHOWER_ENERGY_THRESHOLD){
       DECALShower *shower=new DECALShower;
       shower->nBlocks=cluster->nBlocks;
       shower->isNearBorder=cluster->isNearBorder;
       shower->E=E;
-      shower->t=cluster->t;
+      shower->E1E9=cluster->E1E9;
+      shower->E9E25=cluster->E9E25;
 
       double z=GetCorrectedZ(E);
       shower->pos=DVector3(cluster->x,cluster->y,z);
+      shower->t=cluster->t-(mECALzBack-z)/ECAL_C_EFFECTIVE;
 
       // Guess for covariance matrix
       TMatrixFSym cov(5);
@@ -119,16 +134,8 @@ void DECALShower_factory::Finish()
 // Correct the measured energy to account for the unmeasured part of of the
 // shower
 double DECALShower_factory::GetCorrectedEnergy(double Ecluster) const {
-  double Ecorr=0.;
-  if (Ecluster<E_CORRECTION_PAR4){
-    Ecorr=Ecluster/(E_CORRECTION_PAR1*Ecluster+E_CORRECTION_PAR2);
-  }
-  else {
-    Ecorr=E_CORRECTION_PAR4
-      /(E_CORRECTION_PAR1*E_CORRECTION_PAR4+E_CORRECTION_PAR2)
-      +E_CORRECTION_PAR3*(Ecluster-E_CORRECTION_PAR4);
-  }
-  return Ecorr;
+  return E_CORRECTION_PAR1*Ecluster+E_CORRECTION_PAR2/sqrt(Ecluster)
+    +E_CORRECTION_PAR3/Ecluster;
 }
 
 // Correct the z-position of the shower to account for the shower depth

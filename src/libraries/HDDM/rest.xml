@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1" standalone="no" ?>
+
 <HDDM xmlns="http://www.gluex.org/hddm" class="r" version="1.1.0">
 
   <reconstructedPhysicsEvent eventNo="long" runNo="int">
@@ -12,8 +13,9 @@
       <vertex maxOccurs="unbounded">
         <origin t="float" vx="float" vy="float" vz="float" lunit="cm"/>
         <product id="int" maxOccurs="unbounded" parentId="int" pdgtype="int">
-          <momentum E="float" px="float" py="float" pz="float" Eunit="GeV"
-                    punit="GeV/c"/>
+          <momentum E="float" px="float" py="float" pz="float" Eunit="GeV" punit="GeV/c">
+            <momentum_double minOccurs="0" E="double" px="double" py="double" pz="double" punit="GeV/c"/>
+          </momentum>
         </product>
       </vertex>
     </reaction>
@@ -31,7 +33,10 @@
                 xycorr="float" xzcorr="float" yzcorr="float"
                 tzcorr="float" Ezcorr="float" isNearBorder="int"
 		numBlocks="int"
-                lunit="cm" tunit="ns" Eunit="GeV"/>
+                lunit="cm" tunit="ns" Eunit="GeV">
+      <ecalShowerProperties minOccurs="0" maxOccurs="1"
+                            E1E9="float" E9E25="float"/>
+    </ecalShower>  
     <fcalShower minOccurs="0" maxOccurs="unbounded" jtag="string"
                 x="float" y="float" z="float" t="float" E="float"
                 xerr="float" yerr="float" zerr="float" terr="float" Eerr="float"
@@ -122,7 +127,8 @@
             tsync="float" tunit="ns"/>
     <trigger minOccurs="0" maxOccurs="1" jtag="string"
 			 l1_trig_bits="int" l1_fp_trig_bits="int">
- 	  <triggerEnergySums BCALEnergySum="float" FCALEnergySum="float" minOccurs="0"/>
+      <triggerEnergySums BCALEnergySum="float" FCALEnergySum="float" minOccurs="0"/>
+      <triggerFcal2EnergySum ECALEnergySum="float" FCAL2EnergySum="float" minOccurs="0"/>
     </trigger>
     <electronBeam maxOccurs="1" minOccurs="0" jtag="string" helicitydata="int" />
 
@@ -141,6 +147,15 @@
       <bcalMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" shower="int"
                 dx="float" deltaphi="float" deltaz="float" pathlength="float" tflight="float" tflightvar="float"
+                tunit="ns" lunit="cm"/>
+      <ecalMatchParams maxOccurs="unbounded" minOccurs="0"
+                       track="int" shower="int"
+                       dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
+                       tunit="ns" lunit="cm"/>
+      <ecalSingleHitMatchParams maxOccurs="unbounded" minOccurs="0"
+                track="int" ehit="float" thit="float"
+                dx="float" doca="float" pathlength="float" tflight="float"
+		tflightvar="float"
                 tunit="ns" lunit="cm"/>
       <fcalMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" shower="int"

@@ -12,6 +12,7 @@
 #include "DECALGeometry.h"
 #include <HDGEOMETRY/DGeometry.h>
 #include <DANA/DGeometryManager.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 
 class DECALGeometry_factory:public JFactoryT<DECALGeometry>{
 public:
@@ -28,7 +29,8 @@ private:
     auto geo_manager = app->GetService<DGeometryManager>();
     auto dgeom = geo_manager->GetDGeometry(runnumber);
     if (dgeom->HaveInsert()){
-      Insert(new DECALGeometry(dgeom));
+      auto jcalib =  app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+      Insert(new DECALGeometry(dgeom,jcalib));
     }
   } 
   //------------------
