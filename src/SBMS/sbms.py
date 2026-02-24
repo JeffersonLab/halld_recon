@@ -609,6 +609,7 @@ def AddHDDS(env):
 ##################################
 def AddHDDM(env):
 	hddm_dir = os.getenv('HDDM_DIR', 'hddm')
+	env.AppendUnique(CPPPATH = ["%s/include" % (hddm_dir)])
 	env.AppendUnique(CPPPATH = ["%s/include/xrootd" % (hddm_dir)])
 	env.AppendUnique(LIBPATH = ["%s/lib" % (hddm_dir)])
 	env.AppendUnique(LIBS = 'HDDM')
