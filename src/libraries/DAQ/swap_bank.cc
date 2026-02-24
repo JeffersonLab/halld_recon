@@ -20,18 +20,28 @@ uint32_t swap_bank(uint32_t *outbuff, uint32_t *inbuff, uint32_t len)
 	/// that this method will be recursive in the cases where it is a bank
 	/// of banks.
 
-	if(len < 2) throw JException("Attempt to swap bank with len<2", __FILE__, __LINE__);
-	
+        if(len < 2) {
+	  cout <<"EVIO swap_bank: Attempt to swap bank with len<2" << endl;
+	  return 0;
+  	  // throw JException("Attempt to swap bank with len<2", __FILE__, __LINE__);
+        }
+
 	// Swap length and header words
 	swap_block(inbuff, 2, outbuff);
 	uint32_t bank_len = outbuff[0];
+	
 	if((bank_len+1) > len){
-		stringstream ss;
-		ss << "WARNING: Bank length word exceeds valid words in buffer (" << bank_len+1 << " > " << len << ")";
-		throw JException(ss.str(), __FILE__, __LINE__);
+		cout << "EVIO swap_bank: Bank length word exceeds valid words in buffer (" << bank_len+1 << " > " << len << ")" << endl;
+                return 0;
+		//stringstream ss;
+		//ss << "WARNING: Bank length word exceeds valid words in buffer (" << bank_len+1 << " > " << len << ")";
+		//		throw JException(ss.str(), __FILE__, __LINE__);
 	}
+	
 	if( bank_len < 1 ){
-		throw JException("EVIO bank length word is zero in swap_bank!", __FILE__, __LINE__);
+	        cout << "EVIO swap_bank: bank length word is zero in swap_bank!" << endl;
+	        return 0;
+	        //throw JException("EVIO bank length word is zero in swap_bank!", __FILE__, __LINE__);
 	}
 	
 	uint32_t type = (outbuff[1]>>8) & 0xFF;
@@ -85,9 +95,11 @@ uint32_t swap_bank(uint32_t *outbuff, uint32_t *inbuff, uint32_t len)
 			}
 			break;
 		default:
-			stringstream ss;
-			ss << "WARNING: unknown bank type (0x" << hex << type << dec << ")";
-			throw JException(ss.str(), __FILE__, __LINE__);
+		        cout << " EVIO swap_bank: unknown bank type (0x" << hex << type << dec << ")" << endl;
+			return 0;
+			//stringstream ss;
+			//ss << "WARNING: unknown bank type (0x" << hex << type << dec << ")";
+			//throw JException(ss.str(), __FILE__, __LINE__);
 
 			break;
 	}
