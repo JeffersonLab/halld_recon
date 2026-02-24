@@ -277,9 +277,8 @@ extern "C"{
    }
 }
 
-JEventProcessor_PStagstudy::JEventProcessor_PStagstudy()
- : pstags(0)
-{
+JEventProcessor_PStagstudy::JEventProcessor_PStagstudy() {
+  SetTypeName("JEventProcessor_PStagstudy");
 }
 
 
@@ -311,10 +310,6 @@ void JEventProcessor_PStagstudy::Init() {
    bc_factory->SetApplication(app);
    bc_factory->Init();
 
-   // create root folder and cd to it, store main dir
-   TDirectory *main = gDirectory;
-   gDirectory->mkdir("PStagstudy")->cd();
-
    std::ifstream tlimits("epoch_time_limits");
    int t0, t1;
    if (tlimits.is_open()) {
@@ -335,151 +330,306 @@ void JEventProcessor_PStagstudy::Init() {
                             "Path/URL to the ROOT file containing the beam current tree");
    LOG << "PStagstudy: using beam current record URL: " << beam_current_record_url << LOG_END;
 
-   pstags = new TTree("pstags", "PS tag study");
-   pstags->Branch("runno", &runno, "runno/i");
-   pstags->Branch("eventno", &eventno, "eventno/i");
-   pstags->Branch("trgigger", &trigger, "trigger/i");
-   pstags->Branch("timestamp", &timestamp, "timestamp/l");
-   pstags->Branch("epochtime", &epochtime, "epochtime/l");
-   pstags->Branch("beamcurrent", &beamcurrent, "beamcurrent/i");
+   string treeName = "tree_pstags";
+   string treeFile = "tree_PStags.root";
+   dTreeInterface = DTreeInterface::Create_DTreeInterface(treeName, treeFile);
 
-   pstags->Branch("nrf", &nrf, "nrf/I[0,999]");
-   pstags->Branch("rf_sys", rf_sys, "rf_sys[nrf]/I");
-   pstags->Branch("rf_time", rf_time, "rf_time[nrf]/D");
+   //TTREE BRANCHES
+   DTreeBranchRegister locTreeBranchRegister;
 
-   pstags->Branch("ntagm", &ntagm, "ntagm/I[0,999]");
-   pstags->Branch("tagm_seqno", tagm_seqno, "tagm_seqno[ntagm]/I");
-   pstags->Branch("tagm_channel", tagm_channel, "tagm_channel[ntagm]/I");
-   pstags->Branch("tagm_peak", tagm_peak, "tagm_peak[ntagm]/F");
-   pstags->Branch("tagm_pint", tagm_pint, "tagm_pint[ntagm]/F");
-   pstags->Branch("tagm_tadc", tagm_tadc, "tagm_tadc[ntagm]/F");
-   pstags->Branch("tagm_toth", tagm_toth, "tagm_toth[ntagm]/F");
-   pstags->Branch("tagm_ttdc", tagm_ttdc, "tagm_ttdc[ntagm]/F");
-   pstags->Branch("tagm_time", tagm_time, "tagm_time[ntagm]/F");
-   pstags->Branch("tagm_Etag", tagm_Etag, "tagm_Etag[ntagm]/F");
-   pstags->Branch("tagm_pmax", tagm_pmax, "tagm_pmax[ntagm]/F");
-   pstags->Branch("tagm_tlast", tagm_tlast, "tagm_tlast[ntagm]/F");
-   pstags->Branch("tagm_plast", tagm_plast, "tagm_plast[ntagm]/F");
-   pstags->Branch("tagm_base", tagm_base, "tagm_base[ntagm]/F");
-   pstags->Branch("tagm_rothr", tagm_rothr, "tagm_rothr[ntagm]/F");
-   pstags->Branch("tagm_ped", tagm_ped, "tagm_ped[ntagm]/F");
-   pstags->Branch("tagm_multi", tagm_multi, "tagm_multi[ntagm]/I");
-   pstags->Branch("tagm_qf", tagm_qf, "tagm_qf[ntagm]/I");
-   pstags->Branch("tagm_bg", tagm_bg, "tagm_bg[ntagm]/I");
-   pstags->Branch("tagm_has_adc", tagm_has_adc, "tagm_has_adc[ntagm]/I");
-   pstags->Branch("tagm_has_tdc", tagm_has_tdc, "tagm_has_tdc[ntagm]/I");
-   pstags->Branch("tagm_nped", tagm_nped, "tagm_nped[ntagm]/I");
-   pstags->Branch("tagm_nint", tagm_nint, "tagm_nint[ntagm]/I");
-   pstags->Branch("tagm_raw_waveform", &tagm_raw_waveform, 30000, 1);
+   // pstags = new TTree("pstags", "PS tag study");
+   // pstags->Branch("runno", &runno, "runno/i");
+   // pstags->Branch("eventno", &eventno, "eventno/i");
+   // pstags->Branch("trgigger", &trigger, "trigger/i");
+   // pstags->Branch("timestamp", &timestamp, "timestamp/l");
+   // pstags->Branch("epochtime", &epochtime, "epochtime/l");
+   // pstags->Branch("beamcurrent", &beamcurrent, "beamcurrent/i");
 
-   pstags->Branch("ntagh", &ntagh, "ntagh/I[0,999]");
-   pstags->Branch("tagh_seqno", tagh_seqno, "tagh_seqno[ntagh]/I");
-   pstags->Branch("tagh_counter", tagh_counter, "tagh_counter[ntagh]/I");
-   pstags->Branch("tagh_peak", tagh_peak, "tagh_peak[ntagh]/F");
-   pstags->Branch("tagh_pint", tagh_pint, "tagh_pint[ntagh]/F");
-   pstags->Branch("tagh_tadc", tagh_tadc, "tagh_tadc[ntagh]/F");
-   pstags->Branch("tagh_toth", tagh_toth, "tagh_toth[ntagh]/F");
-   pstags->Branch("tagh_ttdc", tagh_ttdc, "tagh_ttdc[ntagh]/F");
-   pstags->Branch("tagh_time", tagh_time, "tagh_time[ntagh]/F");
-   pstags->Branch("tagh_Etag", tagh_Etag, "tagh_Etag[ntagh]/F");
-   pstags->Branch("tagh_pmax", tagh_pmax, "tagh_pmax[ntagh]/F");
-   pstags->Branch("tagh_ped", tagh_ped, "tagh_ped[ntagh]/F");
-   pstags->Branch("tagh_tlast", tagh_tlast, "tagh_tlast[ntagh]/F");
-   pstags->Branch("tagh_plast", tagh_plast, "tagh_plast[ntagh]/F");
-   pstags->Branch("tagh_base", tagh_base, "tagh_base[ntagh]/F");
-   pstags->Branch("tagh_rothr", tagh_rothr, "tagh_rothr[ntagh]/F");
-   pstags->Branch("tagh_multi", tagh_multi, "tagh_multi[ntagh]/I");
-   pstags->Branch("tagh_qf", tagh_qf, "tagh_qf[ntagh]/I");
-   pstags->Branch("tagh_bg", tagh_bg, "tagh_bg[ntagh]/I");
-   pstags->Branch("tagh_has_adc", tagh_has_adc, "tagh_has_adc[ntagh]/I");
-   pstags->Branch("tagh_has_tdc", tagh_has_tdc, "tagh_has_tdc[ntagh]/I");
-   pstags->Branch("tagh_nped", tagh_nped, "tagh_nped[ntagh]/I");
-   pstags->Branch("tagh_nint", tagh_nint, "tagh_nint[ntagh]/I");
-   pstags->Branch("tagh_raw_waveform", &tagh_raw_waveform, 30000, 1);
+   // pstags->Branch("nrf", &nrf, "nrf/I[0,999]");
+   // pstags->Branch("rf_sys", rf_sys, "rf_sys[nrf]/I");
+   // pstags->Branch("rf_time", rf_time, "rf_time[nrf]/D");
 
-   pstags->Branch("nbeam", &nbeam, "nbeam/I[0,999]");
-   pstags->Branch("beam_sys", beam_sys, "beam_sys[nbeam]/I");
-   pstags->Branch("beam_E", beam_E, "beam_E[nbeam]/F");
-   pstags->Branch("beam_t", beam_t, "beam_t[nbeam]/F");
-   pstags->Branch("beam_z", beam_z, "beam_z[nbeam]/F");
+   locTreeBranchRegister.Register_Single<Int_t>("runno");
+   locTreeBranchRegister.Register_Single<Int_t>("eventno");
+   locTreeBranchRegister.Register_Single<Int_t>("trgigger");
+   locTreeBranchRegister.Register_Single<Long64_t>("timestamp");
+   locTreeBranchRegister.Register_Single<Long64_t>("epochtime");
+   locTreeBranchRegister.Register_Single<Int_t>("beamcurrent");
 
-   pstags->Branch("nps", &nps, "nps/I[0,999]");
-   pstags->Branch("ps_seqno", ps_seqno, "ps_seqno[nps]/I");
-   pstags->Branch("ps_arm", ps_arm, "ps_arm[nps]/I");
-   pstags->Branch("ps_column", ps_column, "ps_column[nps]/I");
-   pstags->Branch("ps_peak", ps_peak, "ps_peak[nps]/F");
-   pstags->Branch("ps_pint", ps_pint, "ps_pint[nps]/F");
-   pstags->Branch("ps_npix", ps_pint, "ps_npix[nps]/F");
-   pstags->Branch("ps_t", ps_t, "ps_t[nps]/F");
-   pstags->Branch("ps_E", ps_E, "ps_E[nps]/F");
-   pstags->Branch("ps_tadc", ps_tadc, "ps_tadc[nps]/F");
-   pstags->Branch("ps_toth", ps_toth, "ps_toth[nps]/F");
-   pstags->Branch("ps_pmax", ps_pmax, "ps_pmax[nps]/F");
-   pstags->Branch("ps_ped", ps_ped, "ps_ped[nps]/F");
-   pstags->Branch("ps_multi", ps_multi, "ps_multi[nps]/I");
-   pstags->Branch("ps_qf", ps_qf, "ps_qf[nps]/I");
-   pstags->Branch("ps_nped", ps_nped, "ps_nped[nps]/I");
-   pstags->Branch("ps_nint", ps_nint, "ps_nint[nps]/I");
-   pstags->Branch("ps_raw_waveform", &ps_raw_waveform, 30000, 1);
+   locTreeBranchRegister.Register_Single<Int_t>("nrf");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("rf_sys", "nrf");
+   locTreeBranchRegister.Register_FundamentalArray<Double_t>("rf_time", "nrf");
 
-   pstags->Branch("npsc", &npsc, "npsc/I[0,999]");
-   pstags->Branch("psc_seqno", psc_seqno, "psc_seqno[npsc]/I");
-   pstags->Branch("psc_arm", psc_arm, "pcs_arm[npsc]/I");
-   pstags->Branch("psc_module", psc_module, "ps_module[npsc]/I");
-   pstags->Branch("psc_counter", psc_counter, "psc_counter[npsc]/I");
-   pstags->Branch("psc_peak", psc_peak, "psc_peak[npsc]/F");
-   pstags->Branch("psc_pint", psc_pint, "psc_pint[npsc]/F");
-   pstags->Branch("psc_npe", psc_npe, "psc_npe[npsc]/F");
-   pstags->Branch("psc_t", psc_t, "psc_t[npsc]/F");
-   pstags->Branch("psc_tadc", psc_tadc, "psc_tadc[npsc]/F");
-   pstags->Branch("psc_ttdc", psc_ttdc, "psc_ttdc[npsc]/F");
-   pstags->Branch("psc_toth", psc_toth, "psc_toth[npsc]/F");
-   pstags->Branch("psc_pmax", psc_pmax, "psc_pmax[npsc]/F");
-   pstags->Branch("psc_ped", psc_ped, "psc_ped[npsc]/F");
-   pstags->Branch("psc_multi", psc_multi, "psc_multi[npsc]/I");
-   pstags->Branch("psc_qf", psc_qf, "psc_qf[npsc]/I");
-   pstags->Branch("psc_bg", psc_bg, "psc_bg[npsc]/I");
-   pstags->Branch("psc_has_adc", psc_has_adc, "psc_has_adc[npsc]/I");
-   pstags->Branch("psc_has_tdc", psc_has_tdc, "psc_has_tdc[npsc]/I");
-   pstags->Branch("psc_nped", psc_nped, "psc_nped[npsc]/I");
-   pstags->Branch("psc_nint", psc_nint, "psc_nint[npsc]/I");
-   pstags->Branch("psc_raw_waveform", &psc_raw_waveform, 30000, 1);
+   locTreeBranchRegister.Register_Single<Int_t>("ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_seqno", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_channel", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_peak", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_pint", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_tadc", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_toth", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_ttdc", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_time", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_Etag", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_pmax", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_tlast", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_plast", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_base", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_rothr", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_ped", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_multi", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_qf", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_bg", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_has_adc", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_has_tdc", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_nped", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_nint", "ntagm");
 
-   pstags->Branch("npairps", &npairps, "npairps/I[0,999]");
-   pstags->Branch("Epair", Epair, "Epair[npairps]/F");
-   pstags->Branch("tpair", tpair, "tpair[npairps]/F");
-   pstags->Branch("psleft_peak", psleft_peak, "psleft_peak[npairps]/F");
-   pstags->Branch("psright_peak", psright_peak, "psright_peak[npairps]/F");
-   pstags->Branch("psleft_pint", psleft_pint, "psleft_pint[npairps]/F");
-   pstags->Branch("psright_pint", psright_pint, "psright_pint[npairps]/F");
-   pstags->Branch("psleft_time", psleft_time, "psleft_time[npairps]/F");
-   pstags->Branch("psright_time", psright_time, "psright_time[npairps]/F");
-   pstags->Branch("psEleft", psEleft, "psEleft[npairps]/F");
-   pstags->Branch("psEright", psEright, "psEright[npairps]/F");
-   pstags->Branch("pstleft", pstleft, "pstleft[npairps]/F");
-   pstags->Branch("pstright", pstright, "pstright[npairps]/F");
-   pstags->Branch("nleft_ps", nleft_ps, "nleft_ps[npairps]/I");
-   pstags->Branch("nright_ps", nright_ps, "nright_ps[npairps]/I");
+   // pstags->Branch("ntagm", &ntagm, "ntagm/I[0,999]");
+   // pstags->Branch("tagm_seqno", tagm_seqno, "tagm_seqno[ntagm]/I");
+   // pstags->Branch("tagm_channel", tagm_channel, "tagm_channel[ntagm]/I");
+   // pstags->Branch("tagm_peak", tagm_peak, "tagm_peak[ntagm]/F");
+   // pstags->Branch("tagm_pint", tagm_pint, "tagm_pint[ntagm]/F");
+   // pstags->Branch("tagm_tadc", tagm_tadc, "tagm_tadc[ntagm]/F");
+   // pstags->Branch("tagm_toth", tagm_toth, "tagm_toth[ntagm]/F");
+   // pstags->Branch("tagm_ttdc", tagm_ttdc, "tagm_ttdc[ntagm]/F");
+   // pstags->Branch("tagm_time", tagm_time, "tagm_time[ntagm]/F");
+   // pstags->Branch("tagm_Etag", tagm_Etag, "tagm_Etag[ntagm]/F");
+   // pstags->Branch("tagm_pmax", tagm_pmax, "tagm_pmax[ntagm]/F");
+   // pstags->Branch("tagm_tlast", tagm_tlast, "tagm_tlast[ntagm]/F");
+   // pstags->Branch("tagm_plast", tagm_plast, "tagm_plast[ntagm]/F");
+   // pstags->Branch("tagm_base", tagm_base, "tagm_base[ntagm]/F");
+   // pstags->Branch("tagm_rothr", tagm_rothr, "tagm_rothr[ntagm]/F");
+   // pstags->Branch("tagm_ped", tagm_ped, "tagm_ped[ntagm]/F");
+   // pstags->Branch("tagm_multi", tagm_multi, "tagm_multi[ntagm]/I");
+   // pstags->Branch("tagm_qf", tagm_qf, "tagm_qf[ntagm]/I");
+   // pstags->Branch("tagm_bg", tagm_bg, "tagm_bg[ntagm]/I");
+   // pstags->Branch("tagm_has_adc", tagm_has_adc, "tagm_has_adc[ntagm]/I");
+   // pstags->Branch("tagm_has_tdc", tagm_has_tdc, "tagm_has_tdc[ntagm]/I");
+   // pstags->Branch("tagm_nped", tagm_nped, "tagm_nped[ntagm]/I");
+   // pstags->Branch("tagm_nint", tagm_nint, "tagm_nint[ntagm]/I");
+   // pstags->Branch("tagm_raw_waveform", &tagm_raw_waveform, 30000, 1);
 
-   pstags->Branch("npairpsc", &npairpsc, "npairpsc/I[0,999]");
-   pstags->Branch("pscleft_seqno", pscleft_seqno, "pscleft_seqno[npairpsc]/I");
-   pstags->Branch("pscright_seqno", pscright_seqno, "pscright_seqno[npairpsc]/I");
-   pstags->Branch("pscleft_module", pscleft_module, "pscleft_module[npairpsc]/I");
-   pstags->Branch("pscright_module", pscright_module, "pscright_module[npairpsc]/I");
-   pstags->Branch("pscleft_peak", pscleft_peak, "pscleft_peak[npairpsc]/F");
-   pstags->Branch("pscright_peak", pscright_peak, "pscright_peak[npairpsc]/F");
-   pstags->Branch("pscleft_pint", pscleft_pint, "pscleft_pint[npairpsc]/F");
-   pstags->Branch("pscright_pint", pscright_pint, "pscright_pint[npairpsc]/F");
-   pstags->Branch("pscleft_ttdc", pscleft_ttdc, "pscleft_ttdc[npairpsc]/F");
-   pstags->Branch("pscright_ttdc", pscright_ttdc, "pscright_ttdc[npairpsc]/F");
-   pstags->Branch("pscleft_tadc", pscleft_tadc, "pscleft_tadc[npairpsc]/F");
-   pstags->Branch("pscright_tadc", pscright_tadc, "pscright_tadc[npairpsc]/F");
-   pstags->Branch("pscleft_t", pscleft_t, "pscleft_t[npairpsc]/F");
-   pstags->Branch("pscright_t", pscright_t, "pscright_t[npairpsc]/F");
-   pstags->Branch("pscleft_ped", pscleft_ped, "pscleft_ped[npairpsc]/F");
-   pstags->Branch("pscright_ped", pscright_ped, "pscright_ped[npairpsc]/F");
-   pstags->Branch("pscleft_qf", pscleft_qf, "pscleft_qf[npairpsc]/I");
-   pstags->Branch("pscright_qf", pscright_qf, "pscright_qf[npairpsc]/I");
+   locTreeBranchRegister.Register_Single<Int_t>("ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_seqno", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_counter", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_peak", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_pint", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_tadc", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_toth", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_ttdc", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_time", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_Etag", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_pmax", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_ped", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_tlast", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_plast", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_base", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_rothr", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_multi", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_qf", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_bg", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_has_adc", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_has_tdc", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_nped", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_nint", "ntagh");
+
+   // pstags->Branch("ntagh", &ntagh, "ntagh/I[0,999]");
+   // pstags->Branch("tagh_seqno", tagh_seqno, "tagh_seqno[ntagh]/I");
+   // pstags->Branch("tagh_counter", tagh_counter, "tagh_counter[ntagh]/I");
+   // pstags->Branch("tagh_peak", tagh_peak, "tagh_peak[ntagh]/F");
+   // pstags->Branch("tagh_pint", tagh_pint, "tagh_pint[ntagh]/F");
+   // pstags->Branch("tagh_tadc", tagh_tadc, "tagh_tadc[ntagh]/F");
+   // pstags->Branch("tagh_toth", tagh_toth, "tagh_toth[ntagh]/F");
+   // pstags->Branch("tagh_ttdc", tagh_ttdc, "tagh_ttdc[ntagh]/F");
+   // pstags->Branch("tagh_time", tagh_time, "tagh_time[ntagh]/F");
+   // pstags->Branch("tagh_Etag", tagh_Etag, "tagh_Etag[ntagh]/F");
+   // pstags->Branch("tagh_pmax", tagh_pmax, "tagh_pmax[ntagh]/F");
+   // pstags->Branch("tagh_ped", tagh_ped, "tagh_ped[ntagh]/F");
+   // pstags->Branch("tagh_tlast", tagh_tlast, "tagh_tlast[ntagh]/F");
+   // pstags->Branch("tagh_plast", tagh_plast, "tagh_plast[ntagh]/F");
+   // pstags->Branch("tagh_base", tagh_base, "tagh_base[ntagh]/F");
+   // pstags->Branch("tagh_rothr", tagh_rothr, "tagh_rothr[ntagh]/F");
+   // pstags->Branch("tagh_multi", tagh_multi, "tagh_multi[ntagh]/I");
+   // pstags->Branch("tagh_qf", tagh_qf, "tagh_qf[ntagh]/I");
+   // pstags->Branch("tagh_bg", tagh_bg, "tagh_bg[ntagh]/I");
+   // pstags->Branch("tagh_has_adc", tagh_has_adc, "tagh_has_adc[ntagh]/I");
+   // pstags->Branch("tagh_has_tdc", tagh_has_tdc, "tagh_has_tdc[ntagh]/I");
+   // pstags->Branch("tagh_nped", tagh_nped, "tagh_nped[ntagh]/I");
+   // pstags->Branch("tagh_nint", tagh_nint, "tagh_nint[ntagh]/I");
+   // pstags->Branch("tagh_raw_waveform", &tagh_raw_waveform, 30000, 1);
+
+   locTreeBranchRegister.Register_Single<Int_t>("nbeam");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("beam_sys", "nbeam");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("beam_E", "nbeam");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("beam_t", "nbeam");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("beam_z", "nbeam");
+
+   // pstags->Branch("nbeam", &nbeam, "nbeam/I[0,999]");
+   // pstags->Branch("beam_sys", beam_sys, "beam_sys[nbeam]/I");
+   // pstags->Branch("beam_E", beam_E, "beam_E[nbeam]/F");
+   // pstags->Branch("beam_t", beam_t, "beam_t[nbeam]/F");
+   // pstags->Branch("beam_z", beam_z, "beam_z[nbeam]/F");
+
+   locTreeBranchRegister.Register_Single<Int_t>("nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_seqno", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_arm", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_column", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_peak", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_pint", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_npix", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_t", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_E", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_tadc", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_toth", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_pmax", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_ped", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_multi", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_qf", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_nped", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_nint", "nps");
+
+   // pstags->Branch("nps", &nps, "nps/I[0,999]");
+   // pstags->Branch("ps_seqno", ps_seqno, "ps_seqno[nps]/I");
+   // pstags->Branch("ps_arm", ps_arm, "ps_arm[nps]/I");
+   // pstags->Branch("ps_column", ps_column, "ps_column[nps]/I");
+   // pstags->Branch("ps_peak", ps_peak, "ps_peak[nps]/F");
+   // pstags->Branch("ps_pint", ps_pint, "ps_pint[nps]/F");
+   // pstags->Branch("ps_npix", ps_pint, "ps_npix[nps]/F");
+   // pstags->Branch("ps_t", ps_t, "ps_t[nps]/F");
+   // pstags->Branch("ps_E", ps_E, "ps_E[nps]/F");
+   // pstags->Branch("ps_tadc", ps_tadc, "ps_tadc[nps]/F");
+   // pstags->Branch("ps_toth", ps_toth, "ps_toth[nps]/F");
+   // pstags->Branch("ps_pmax", ps_pmax, "ps_pmax[nps]/F");
+   // pstags->Branch("ps_ped", ps_ped, "ps_ped[nps]/F");
+   // pstags->Branch("ps_multi", ps_multi, "ps_multi[nps]/I");
+   // pstags->Branch("ps_qf", ps_qf, "ps_qf[nps]/I");
+   // pstags->Branch("ps_nped", ps_nped, "ps_nped[nps]/I");
+   // pstags->Branch("ps_nint", ps_nint, "ps_nint[nps]/I");
+   // pstags->Branch("ps_raw_waveform", &ps_raw_waveform, 30000, 1);
+
+   locTreeBranchRegister.Register_Single<Int_t>("npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_seqno", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_arm", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_module", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_counter", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_peak", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_pint", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_npe", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_t", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_tadc", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_ttdc", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_toth", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_pmax", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_ped", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_multi", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_qf", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_bg", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_has_adc", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_has_tdc", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_nped", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_nint", "npsc");
+
+   // pstags->Branch("npsc", &npsc, "npsc/I[0,999]");
+   // pstags->Branch("psc_seqno", psc_seqno, "psc_seqno[npsc]/I");
+   // pstags->Branch("psc_arm", psc_arm, "pcs_arm[npsc]/I");
+   // pstags->Branch("psc_module", psc_module, "ps_module[npsc]/I");
+   // pstags->Branch("psc_counter", psc_counter, "psc_counter[npsc]/I");
+   // pstags->Branch("psc_peak", psc_peak, "psc_peak[npsc]/F");
+   // pstags->Branch("psc_pint", psc_pint, "psc_pint[npsc]/F");
+   // pstags->Branch("psc_npe", psc_npe, "psc_npe[npsc]/F");
+   // pstags->Branch("psc_t", psc_t, "psc_t[npsc]/F");
+   // pstags->Branch("psc_tadc", psc_tadc, "psc_tadc[npsc]/F");
+   // pstags->Branch("psc_ttdc", psc_ttdc, "psc_ttdc[npsc]/F");
+   // pstags->Branch("psc_toth", psc_toth, "psc_toth[npsc]/F");
+   // pstags->Branch("psc_pmax", psc_pmax, "psc_pmax[npsc]/F");
+   // pstags->Branch("psc_ped", psc_ped, "psc_ped[npsc]/F");
+   // pstags->Branch("psc_multi", psc_multi, "psc_multi[npsc]/I");
+   // pstags->Branch("psc_qf", psc_qf, "psc_qf[npsc]/I");
+   // pstags->Branch("psc_bg", psc_bg, "psc_bg[npsc]/I");
+   // pstags->Branch("psc_has_adc", psc_has_adc, "psc_has_adc[npsc]/I");
+   // pstags->Branch("psc_has_tdc", psc_has_tdc, "psc_has_tdc[npsc]/I");
+   // pstags->Branch("psc_nped", psc_nped, "psc_nped[npsc]/I");
+   // pstags->Branch("psc_nint", psc_nint, "psc_nint[npsc]/I");
+   // pstags->Branch("psc_raw_waveform", &psc_raw_waveform, 30000, 1);
+
+   locTreeBranchRegister.Register_Single<Int_t>("npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("Epair", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tpair", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psleft_peak", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psright_peak", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psleft_pint", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psright_pint", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psleft_time", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psright_time", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psEleft", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psEright", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pstleft", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pstright", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("nleft_ps", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("nright_ps", "npairps");
+
+   // pstags->Branch("npairps", &npairps, "npairps/I[0,999]");
+   // pstags->Branch("Epair", Epair, "Epair[npairps]/F");
+   // pstags->Branch("tpair", tpair, "tpair[npairps]/F");
+   // pstags->Branch("psleft_peak", psleft_peak, "psleft_peak[npairps]/F");
+   // pstags->Branch("psright_peak", psright_peak, "psright_peak[npairps]/F");
+   // pstags->Branch("psleft_pint", psleft_pint, "psleft_pint[npairps]/F");
+   // pstags->Branch("psright_pint", psright_pint, "psright_pint[npairps]/F");
+   // pstags->Branch("psleft_time", psleft_time, "psleft_time[npairps]/F");
+   // pstags->Branch("psright_time", psright_time, "psright_time[npairps]/F");
+   // pstags->Branch("psEleft", psEleft, "psEleft[npairps]/F");
+   // pstags->Branch("psEright", psEright, "psEright[npairps]/F");
+   // pstags->Branch("pstleft", pstleft, "pstleft[npairps]/F");
+   // pstags->Branch("pstright", pstright, "pstright[npairps]/F");
+   // pstags->Branch("nleft_ps", nleft_ps, "nleft_ps[npairps]/I");
+   // pstags->Branch("nright_ps", nright_ps, "nright_ps[npairps]/I");
+
+   locTreeBranchRegister.Register_Single<Int_t>("npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscleft_seqno", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscright_seqno", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscleft_module", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscright_medule", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_peak", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_peak", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_pint", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_pint", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_ttdc", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_ttdc", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_tadc", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_tadc", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_t", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_t", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_ped", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_ped", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscleft_qf", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscright_qf", "npairpsc");
+
+   // pstags->Branch("npairpsc", &npairpsc, "npairpsc/I[0,999]");
+   // pstags->Branch("pscleft_seqno", pscleft_seqno, "pscleft_seqno[npairpsc]/I");
+   // pstags->Branch("pscright_seqno", pscright_seqno, "pscright_seqno[npairpsc]/I");
+   // pstags->Branch("pscleft_module", pscleft_module, "pscleft_module[npairpsc]/I");
+   // pstags->Branch("pscright_module", pscright_module, "pscright_module[npairpsc]/I");
+   // pstags->Branch("pscleft_peak", pscleft_peak, "pscleft_peak[npairpsc]/F");
+   // pstags->Branch("pscright_peak", pscright_peak, "pscright_peak[npairpsc]/F");
+   // pstags->Branch("pscleft_pint", pscleft_pint, "pscleft_pint[npairpsc]/F");
+   // pstags->Branch("pscright_pint", pscright_pint, "pscright_pint[npairpsc]/F");
+   // pstags->Branch("pscleft_ttdc", pscleft_ttdc, "pscleft_ttdc[npairpsc]/F");
+   // pstags->Branch("pscright_ttdc", pscright_ttdc, "pscright_ttdc[npairpsc]/F");
+   // pstags->Branch("pscleft_tadc", pscleft_tadc, "pscleft_tadc[npairpsc]/F");
+   // pstags->Branch("pscright_tadc", pscright_tadc, "pscright_tadc[npairpsc]/F");
+   // pstags->Branch("pscleft_t", pscleft_t, "pscleft_t[npairpsc]/F");
+   // pstags->Branch("pscright_t", pscright_t, "pscright_t[npairpsc]/F");
+   // pstags->Branch("pscleft_ped", pscleft_ped, "pscleft_ped[npairpsc]/F");
+   // pstags->Branch("pscright_ped", pscright_ped, "pscright_ped[npairpsc]/F");
+   // pstags->Branch("pscleft_qf", pscleft_qf, "pscleft_qf[npairpsc]/I");
+   // pstags->Branch("pscright_qf", pscright_qf, "pscright_qf[npairpsc]/I");
+
+   //REGISTER BRANCHES
+   dTreeInterface->Create_Branches(locTreeBranchRegister);
+
+   // create root folder and cd to it, store main dir
+   TDirectory *main = gDirectory;
+   gDirectory->mkdir("PStagstudy")->cd();
 
    for (int i=0; i < tagm_fadc250_channels; ++i) {
       char name[99], title[99];
@@ -622,6 +772,10 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    eventno = event_info[0]->event_number;
    timestamp = event_info[0]->avg_timestamp;
    trigger = trig_bits;
+   dTreeFillData.Fill_Single<Int_t>("runno",runno);
+   dTreeFillData.Fill_Single<Int_t>("eventno",eventno);
+   dTreeFillData.Fill_Single<Int_t>("trgigger",trigger);
+
 
    std::vector<const DCODAControlEvent*> controls;
    event->Get(controls);
@@ -1256,7 +1410,8 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    printf("Filling pstags with ntagm=%d, ntagh=%d, npairps=%d, npairpsc=%d\n",
           ntagm, ntagh, npairps, npairpsc);
 #endif
-   pstags->Fill();
+   dTreeInterface->Fill(dTreeFillData);
+   //pstags->Fill();
 
    lock_svc->RootUnLock();
 }
@@ -1267,4 +1422,6 @@ void JEventProcessor_PStagstudy::EndRun() {
 
 
 void JEventProcessor_PStagstudy::Finish() {
+  // Called before program exit after event processing is finished.
+  delete dTreeInterface; //saves trees to file, closes file
 }

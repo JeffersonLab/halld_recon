@@ -6,6 +6,7 @@
 #define _JEventProcessor_PStagstudy_
 
 #include <JANA/JEventProcessor.h>
+#include "ANALYSIS/DTreeInterface.h"
 #include <TTAB/DTranslationTable.h>
 #include <DAQ/DBeamCurrent_factory.h>
 #include <TTree.h>
@@ -20,7 +21,9 @@ class JEventProcessor_PStagstudy : public JEventProcessor {
    ~JEventProcessor_PStagstudy();
    const char* className(void) { return "JEventProcessor_PStagstudy"; }
 
-   TTree *pstags;
+   DTreeInterface* dTreeInterface;
+   //static thread_local
+   DTreeFillData dTreeFillData;
 
    int runno;
    int eventno;
