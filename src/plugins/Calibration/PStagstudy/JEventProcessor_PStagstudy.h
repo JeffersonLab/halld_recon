@@ -40,32 +40,32 @@ class JEventProcessor_PStagstudy : public JEventProcessor {
    TH1D *tagh_hpedestal[300];
 
    int nrf;
-   int rf_sys[999];
-   double rf_time[999];
+   // int rf_sys[999];
+   // double rf_time[999];
 
    int ntagm;
-   int tagm_seqno[999];
-   int tagm_channel[999];
-   float tagm_Etag[999];
-   float tagm_peak[999];
-   float tagm_pint[999];
-   float tagm_tadc[999];
-   float tagm_toth[999];
-   float tagm_ttdc[999];
-   float tagm_time[999];
-   float tagm_pmax[999];
+   // int tagm_seqno[999];
+   // int tagm_channel[999];
+   // float tagm_Etag[999];
+   // float tagm_peak[999];
+   // float tagm_pint[999];
+   // float tagm_tadc[999];
+   // float tagm_toth[999];
+   // float tagm_ttdc[999];
+   // float tagm_time[999];
+   // float tagm_pmax[999];
    float tagm_ped[999];
    float tagm_tlast[999];
    float tagm_plast[999];
-   float tagm_base[999];
-   float tagm_rothr[999];
-   int tagm_multi[999];
-   int tagm_qf[999];
-   int tagm_bg[999];
-   int tagm_has_adc[999];
-   int tagm_has_tdc[999];
-   int tagm_nped[999];
-   int tagm_nint[999];
+   // float tagm_base[999];
+   // float tagm_rothr[999];
+   // int tagm_multi[999];
+   // int tagm_qf[999];
+   // int tagm_bg[999];
+   // int tagm_has_adc[999];
+   // int tagm_has_tdc[999];
+   // int tagm_nped[999];
+   // int tagm_nint[999];
    std::vector<std::vector<unsigned short> > tagm_raw_waveform;
 
    int ntagh;
@@ -94,10 +94,10 @@ class JEventProcessor_PStagstudy : public JEventProcessor {
    std::vector<std::vector<unsigned short> > tagh_raw_waveform;
 
    int nbeam;
-   int beam_sys[999];
-   float beam_E[999];
-   float beam_t[999];
-   float beam_z[999];
+   // int beam_sys[999];
+   // float beam_E[999];
+   // float beam_t[999];
+   // float beam_z[999];
 
    int nps;
    int ps_seqno[999];
