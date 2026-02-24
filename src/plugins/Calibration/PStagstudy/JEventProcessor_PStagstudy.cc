@@ -1049,8 +1049,8 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    int ntagh_per_counter[512] = {0};
    ntagh = 0;
    for (itagh = tagh_hits.begin(); itagh != tagh_hits.end(); ++itagh) {
-      tagh_seqno[ntagh] = ntagh_per_counter[(*itagh)->counter_id]++;
-      tagh_counter[ntagh] = (*itagh)->counter_id;
+      dTreeFillData.Fill_Array<Int_t>("tagh_seqno",ntagh_per_counter[(*itagh)->counter_id]++,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_counter",(*itagh)->counter_id,ntagh);
       int channel = (*itagh)->counter_id;
       tagh_tlast[ntagh] = 0;
       tagh_plast[ntagh] = 0;
@@ -1060,40 +1060,44 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
             tagh_plast[ntagh] = peaklist[channel][i];
          }
       }
+      dTreeFillData.Fill_Array<Float_t>("tagh_tlast",tagh_tlast[ntagh],ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_plast",tagh_plast[ntagh],ntagh);
       timelist[channel].push_back((*itagh)->time_fadc);
       peaklist[channel].push_back((*itagh)->pulse_peak);
-      tagh_rothr[ntagh] = tagh_fadc250_readout_threshold[channel];
-      tagh_peak[ntagh] = (*itagh)->pulse_peak;
-      tagh_pint[ntagh] = (*itagh)->integral;
-      tagh_tadc[ntagh] = (*itagh)->time_fadc;
-      tagh_toth[ntagh] = 999;
-      tagh_ttdc[ntagh] = (*itagh)->time_tdc;
-      tagh_Etag[ntagh] = (*itagh)->E;
-      tagh_time[ntagh] = (*itagh)->t;
-      tagh_multi[ntagh] = 0;
-      tagh_pmax[ntagh] = 999;
+      dTreeFillData.Fill_Array<Float_t>("tagh_rothr",tagh_fadc250_readout_threshold[channel],ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_peak",(*itagh)->pulse_peak,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_pint",(*itagh)->integral,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_tadc",(*itagh)->time_fadc,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_toth",999,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_ttdc",(*itagh)->time_tdc,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_Etag",(*itagh)->E,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_time",(*itagh)->t,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_multi",0,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_pmax",999,ntagh);
       tagh_ped[ntagh] = 999;
-      tagh_qf[ntagh] = 999;
-      tagh_bg[ntagh] = (*itagh)->bg;
-      tagh_has_adc[ntagh] = (*itagh)->has_fADC;
-      tagh_has_tdc[ntagh] = (*itagh)->has_TDC;
-      tagh_nped[ntagh] = 999;
-      tagh_nint[ntagh] = 999;
+      dTreeFillData.Fill_Array<Float_t>("tagh_ped",999,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_qf",999,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_bg",(*itagh)->bg,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_has_adc",(*itagh)->has_fADC,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_has_tdc",(*itagh)->has_TDC,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_nped",999,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_nint",999,ntagh);
       std::vector<const DTAGHDigiHit*> digi_hits;
       (*itagh)->Get(digi_hits);
       std::vector<const DTAGHDigiHit*>::iterator atagh;
       for (atagh = digi_hits.begin(); atagh != digi_hits.end(); ++atagh) {
          if ((*atagh)->counter_id == (*itagh)->counter_id) {
-            tagh_pmax[ntagh] = (*atagh)->pulse_peak;
+	    dTreeFillData.Fill_Array<Float_t>("tagh_pmax",(*atagh)->pulse_peak,ntagh);
             tagh_ped[ntagh] = (*atagh)->pedestal / (*atagh)->nsamples_pedestal;
-            tagh_qf[ntagh] = (*atagh)->QF;
-            tagh_nped[ntagh] = (*atagh)->nsamples_pedestal;
-            tagh_nint[ntagh] = (*atagh)->nsamples_integral;
+	    dTreeFillData.Fill_Array<Float_t>("tagh_ped",tagh_ped[ntagh],ntagh);
+	    dTreeFillData.Fill_Array<Int_t>("tagh_qf",(*atagh)->QF,ntagh);
+	    dTreeFillData.Fill_Array<Int_t>("tagh_nped",(*atagh)->nsamples_pedestal,ntagh);
+	    dTreeFillData.Fill_Array<Int_t>("tagh_nint",(*atagh)->nsamples_integral,ntagh);
             std::vector<const Df250PulseData*> pulse_data;
             (*atagh)->Get(pulse_data);
             std::vector<const Df250PulseData*>::iterator ptagh;
             for (ptagh = pulse_data.begin(); ptagh != pulse_data.end(); ++ptagh) {
-               tagh_toth[ntagh] = (*ptagh)->nsamples_over_threshold * 4;
+	       dTreeFillData.Fill_Array<Float_t>("tagh_toth",(*ptagh)->nsamples_over_threshold*4,ntagh);
                // f_qpedestal = ((*ptagh)->QF_pedestal)? 1 : 0;
                // f_latepulse = ((*ptagh)->QF_NSA_beyond_PTW)? 1 : 0;
                // f_underflow = ((*ptagh)->QF_underflow)? 1 : 0;
@@ -1112,7 +1116,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
          bsum[1] += tagh_hpedestal[channel]->GetBinContent(maxbin + i) *
                     tagh_hpedestal[channel]->GetXaxis()->GetBinCenter(maxbin + i);
       }
-      tagh_base[ntagh] = bsum[1] / bsum[0];
+      dTreeFillData.Fill_Array<Float_t>("tagh_base",bsum[1]/bsum[0],ntagh);
 
       std::vector<const DTAGHHit*> assoc_hits;
       (*itagh)->Get(assoc_hits);
@@ -1131,38 +1135,40 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
          }
          timelist[channel].push_back((*jtagh)->time_fadc);
          peaklist[channel].push_back((*jtagh)->pulse_peak);
-         tagh_rothr[ntagh] = tagh_fadc250_readout_threshold[channel];
-         tagh_seqno[ntagh] = ntagh_per_counter[(*jtagh)->counter_id]++;
-         tagh_counter[ntagh] = (*jtagh)->counter_id;
-         tagh_peak[ntagh] = (*jtagh)->pulse_peak;
-         tagh_pint[ntagh] = (*jtagh)->integral;
-         tagh_tadc[ntagh] = (*jtagh)->time_fadc;
-         tagh_toth[ntagh] = 999;
-         tagh_ttdc[ntagh] = (*jtagh)->time_tdc;
-         tagh_Etag[ntagh] = (*jtagh)->E;
-         tagh_time[ntagh] = (*jtagh)->t;
-         tagh_multi[ntagh] = ++mtagh;
-         tagh_pmax[ntagh] = 999;
+	 dTreeFillData.Fill_Array<Float_t>("tagh_rothr",tagh_fadc250_readout_threshold[channel],ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_seqno",ntagh_per_counter[(*jtagh)->counter_id]++,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_counter",(*jtagh)->counter_id,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_peak",(*jtagh)->pulse_peak,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_pint",(*jtagh)->integral,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_tadc",(*jtagh)->time_fadc,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_toth",999,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_ttdc",(*jtagh)->time_tdc,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_Etag",(*jtagh)->E,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_time",(*jtagh)->t,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_multi",++mtagh,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_pmax",999,ntagh);
          tagh_ped[ntagh] = 999;
-         tagh_qf[ntagh] = 999;
-         tagh_bg[ntagh] = (*jtagh)->bg;
-         tagh_has_adc[ntagh] = (*jtagh)->has_fADC;
-         tagh_has_tdc[ntagh] = (*jtagh)->has_TDC;
-         tagh_nped[ntagh] = 999;
-         tagh_nint[ntagh] = 999;
+	 dTreeFillData.Fill_Array<Float_t>("tagh_ped",999,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_qf",999,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_bg",(*jtagh)->bg,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_has_adc",(*jtagh)->has_fADC,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_has_tdc",(*jtagh)->has_TDC,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_nped",999,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_nint",999,ntagh);
          (*jtagh)->Get(digi_hits);
          for (atagh = digi_hits.begin(); atagh != digi_hits.end(); ++atagh) {
             if ((*atagh)->counter_id == (*itagh)->counter_id) {
-               tagh_pmax[ntagh] = (*atagh)->pulse_peak;
-               tagh_ped[ntagh] = (*atagh)->pedestal / (*atagh)->nsamples_pedestal;
-               tagh_qf[ntagh] = (*atagh)->QF;
-               tagh_nped[ntagh] = (*atagh)->nsamples_pedestal;
-               tagh_nint[ntagh] = (*atagh)->nsamples_integral;
+	       dTreeFillData.Fill_Array<Float_t>("tagh_pmax",(*atagh)->pulse_peak,ntagh);
+	       tagh_ped[ntagh] = (*atagh)->pedestal / (*atagh)->nsamples_pedestal;
+	       dTreeFillData.Fill_Array<Float_t>("tagh_ped",tagh_ped[ntagh],ntagh);
+	       dTreeFillData.Fill_Array<Int_t>("tagh_qf",(*atagh)->QF,ntagh);
+	       dTreeFillData.Fill_Array<Int_t>("tagh_nped",(*atagh)->nsamples_pedestal,ntagh);
+	       dTreeFillData.Fill_Array<Int_t>("tagh_nint",(*atagh)->nsamples_integral,ntagh);
                std::vector<const Df250PulseData*> pulse_data;
                (*atagh)->Get(pulse_data);
                std::vector<const Df250PulseData*>::iterator ptagh;
                for (ptagh = pulse_data.begin(); ptagh != pulse_data.end(); ++ptagh) {
-                  tagh_toth[ntagh] = (*ptagh)->nsamples_over_threshold * 4;
+		  dTreeFillData.Fill_Array<Float_t>("tagh_toth",(*ptagh)->nsamples_over_threshold*4,ntagh);
                   // f_qpedestal = ((*ptagh)->QF_pedestal)? 1 : 0;
                   // f_latepulse = ((*ptagh)->QF_NSA_beyond_PTW)? 1 : 0;
                   // f_underflow = ((*ptagh)->QF_underflow)? 1 : 0;
@@ -1181,7 +1187,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
             bsum[1] += tagh_hpedestal[channel]->GetBinContent(maxbin + i) *
                        tagh_hpedestal[channel]->GetXaxis()->GetBinCenter(maxbin + i);
          }
-         tagh_base[ntagh] = bsum[1] / bsum[0];
+	 dTreeFillData.Fill_Array<Float_t>("tagh_base",bsum[1]/bsum[0],ntagh);
       }
       std::vector<unsigned short> trace;
       std::vector<const Df250WindowRawData*>::iterator itrace;
@@ -1197,6 +1203,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
       tagh_raw_waveform.push_back(trace);
       ntagh++;
    }
+   dTreeFillData.Fill_Single<Int_t>("ntagh",ntagh);
 
    std::vector<const DPSHit*> ps_hits;
    event->Get(ps_hits);
