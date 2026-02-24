@@ -614,7 +614,7 @@ void DL1MCTrigger_factory_CPP::Process(const std::shared_ptr<const JEvent>& even
       uint32_t bit0 = BuildTOFGroupBits(coincidences,0,isample,TOF_BAR_MATCH_WINDOW);
       uint32_t bit1 = BuildTOFGroupBits(coincidences,1,isample,TOF_BAR_MATCH_WINDOW);
 
-      if(bit0*bit1>0 && popcount(bit0)+popcount(bit1)>3) {
+      if(bit0*bit1>0 && __builtin_popcount(bit0)+__builtin_popcount(bit1)>3) {
         emulated_tof_trigger = true;
         break;
       }
