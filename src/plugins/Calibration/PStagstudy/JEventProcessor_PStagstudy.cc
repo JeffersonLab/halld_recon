@@ -472,7 +472,7 @@ void JEventProcessor_PStagstudy::Init() {
 
    locTreeBranchRegister.Register_Single<Int_t>("nps");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_seqno", "nps");
-   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_arm", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_arm", "nps"); // North(left): 0, South(right): 1
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_column", "nps");
    locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_peak", "nps");
    locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_pint", "nps");
@@ -1211,38 +1211,38 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    int nps_per_counter[512] = {0};
    nps = 0;
    for (ips = ps_hits.begin(); ips != ps_hits.end(); ++ips) {
-      ps_arm[nps] = (*ips)->arm;
-      ps_column[nps] = (*ips)->column;
-      ps_seqno[nps] = nps_per_counter[ps_arm[nps] * 256 + ps_column[nps]]++;
-      ps_E[nps] = (*ips)->E;
-      ps_t[nps] = (*ips)->t;
-      ps_pint[nps] = (*ips)->integral;
-      ps_peak[nps] = (*ips)->pulse_peak;
-      ps_npix[nps] = (*ips)->npix_fadc;
-      ps_toth[nps] = 999;
-      ps_tadc[nps] = 999;
-      ps_multi[nps] = 0;
-      ps_pmax[nps] = 999;
-      ps_ped[nps] = 999;
-      ps_qf[nps] = 999;
-      ps_nped[nps] = 999;
-      ps_nint[nps] = 999;
+      dTreeFillData.Fill_Array<Int_t>("ps_arm",(*ips)->arm,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_column",(*ips)->column,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_seqno",nps_per_counter[(*ips)->arm*256+(*ips)->column]++,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_E",(*ips)->E,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_t",(*ips)->t,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_pint",(*ips)->integral,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_peak",(*ips)->pulse_peak,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_npix",(*ips)->npix_fadc,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_toth",999,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_tadc",999,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_multi",0,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_pmax",999,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_ped",999,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_qf",999,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_nped",999,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_nint",999,nps);
       std::vector<const DPSDigiHit*> digi_hits;
       (*ips)->Get(digi_hits);
       std::vector<const DPSDigiHit*>::iterator aps;
       for (aps = digi_hits.begin(); aps != digi_hits.end(); ++aps) {
          if ((*aps)->column == (*ips)->column && (*aps)->arm == (*ips)->arm) {
-            ps_tadc[nps] = (*aps)->pulse_time;
-            ps_pmax[nps] = (*aps)->pulse_peak;
-            ps_ped[nps] = (*aps)->pedestal;
-            ps_qf[nps] = (*aps)->QF;
-            ps_nped[nps] = (*aps)->nsamples_pedestal;
-            ps_nint[nps] = (*aps)->nsamples_integral;
+	    dTreeFillData.Fill_Array<Float_t>("ps_tadc",(*aps)->pulse_time,nps);
+	    dTreeFillData.Fill_Array<Float_t>("ps_pmax",(*aps)->pulse_peak,nps);
+	    dTreeFillData.Fill_Array<Float_t>("ps_ped",(*aps)->pedestal,nps);
+	    dTreeFillData.Fill_Array<Int_t>("ps_qf",(*aps)->QF,nps);
+	    dTreeFillData.Fill_Array<Int_t>("ps_nped",(*aps)->nsamples_pedestal,nps);
+	    dTreeFillData.Fill_Array<Int_t>("ps_nint",(*aps)->nsamples_integral,nps);
             std::vector<const Df250PulseData*> pulse_data;
             (*aps)->Get(pulse_data);
             std::vector<const Df250PulseData*>::iterator pps;
             for (pps = pulse_data.begin(); pps != pulse_data.end(); ++pps) {
-               ps_toth[nps] = (*pps)->nsamples_over_threshold * 4;
+	       dTreeFillData.Fill_Array<Float_t>("ps_toth",(*pps)->nsamples_over_threshold*4,nps);
                // f_qpedestal = ((*pps)->QF_pedestal)? 1 : 0;
                // f_latepulse = ((*pps)->QF_NSA_beyond_PTW)? 1 : 0;
                // f_underflow = ((*pps)->QF_underflow)? 1 : 0;
@@ -1267,6 +1267,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
       ps_raw_waveform.push_back(trace);
       nps++;
    }
+   dTreeFillData.Fill_Single<Int_t>("nps",nps);
 
    std::vector<const DPSCHit*> psc_hits;
    event->Get(psc_hits);
@@ -1274,42 +1275,42 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    int npsc_per_counter[512] = {0};
    npsc = 0;
    for (ipsc = psc_hits.begin(); ipsc != psc_hits.end(); ++ipsc) {
-      psc_arm[npsc] = (*ipsc)->arm;
-      psc_module[npsc] = (*ipsc)->module;
-      psc_counter[npsc] = ((*ipsc)->arm * 8 + (*ipsc)->module);
-      psc_seqno[npsc] = npsc_per_counter[psc_counter[npsc]]++;
-      psc_t[npsc] = (*ipsc)->t;
-      psc_pint[npsc] = (*ipsc)->integral;
-      psc_peak[npsc] = (*ipsc)->pulse_peak;
-      psc_npe[npsc] = (*ipsc)->npe_fadc;
-      psc_tadc[npsc] = (*ipsc)->time_fadc;
-      psc_ttdc[npsc] = (*ipsc)->time_tdc;
-      psc_has_adc[npsc] = 0;
-      psc_has_tdc[npsc] = 0;
-      psc_toth[npsc] = 999;
-      psc_multi[npsc] = 0;
-      psc_pmax[npsc] = 999;
-      psc_ped[npsc] = 999;
-      psc_qf[npsc] = 999;
-      psc_nped[npsc] = 999;
-      psc_nint[npsc] = 999;
+      dTreeFillData.Fill_Array<Int_t>("psc_arm",(*ipsc)->arm,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_module",(*ipsc)->module,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_counter",(*ipsc)->arm*8+(*ipsc)->module,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_seqno",npsc_per_counter[(*ipsc)->arm*8+(*ipsc)->module]++,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_t",(*ipsc)->t,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_pint",(*ipsc)->integral,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_peak",(*ipsc)->pulse_peak,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_npe",(*ipsc)->npe_fadc,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_tadc",(*ipsc)->time_fadc,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_ttdc",(*ipsc)->time_tdc,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_has_adc",0,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_has_tdc",0,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_toth",999,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_multi",0,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_pmax",999,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_ped",999,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_qf",999,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_nped",999,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_nint",999,npsc);
       std::vector<const DPSCDigiHit*> digi_hits;
       (*ipsc)->Get(digi_hits);
       std::vector<const DPSCDigiHit*>::iterator apsc;
       for (apsc = digi_hits.begin(); apsc != digi_hits.end(); ++apsc) {
          if ((*apsc)->counter_id == (*ipsc)->arm * 8 + (*ipsc)->module) {
-            psc_has_adc[npsc] = 1;
-            psc_tadc[npsc] = (*apsc)->pulse_time;
-            psc_pmax[npsc] = (*apsc)->pulse_peak;
-            psc_ped[npsc] = (*apsc)->pedestal;
-            psc_qf[npsc] = (*apsc)->QF;
-            psc_nped[npsc] = (*apsc)->nsamples_pedestal;
-            psc_nint[npsc] = (*apsc)->nsamples_integral;
+	    dTreeFillData.Fill_Array<Int_t>("psc_has_adc",1,npsc);
+	    dTreeFillData.Fill_Array<Float_t>("psc_tadc",(*apsc)->pulse_time,npsc);
+	    dTreeFillData.Fill_Array<Float_t>("psc_pmax",(*apsc)->pulse_peak,npsc);
+	    dTreeFillData.Fill_Array<Float_t>("psc_ped",(*apsc)->pedestal,npsc);
+	    dTreeFillData.Fill_Array<Int_t>("psc_qf",(*apsc)->QF,npsc);
+	    dTreeFillData.Fill_Array<Int_t>("psc_nped",(*apsc)->nsamples_pedestal,npsc);
+	    dTreeFillData.Fill_Array<Int_t>("psc_nint",(*apsc)->nsamples_integral,npsc);
             std::vector<const Df250PulseData*> pulse_data;
             (*apsc)->Get(pulse_data);
             std::vector<const Df250PulseData*>::iterator ppsc;
             for (ppsc = pulse_data.begin(); ppsc != pulse_data.end(); ++ppsc) {
-               psc_toth[npsc] = (*ppsc)->nsamples_over_threshold * 4;
+	       dTreeFillData.Fill_Array<Float_t>("psc_toth",(*ppsc)->nsamples_over_threshold*4,npsc);
                // f_qpedestal = ((*pps)->QF_pedestal)? 1 : 0;
                // f_latepulse = ((*pps)->QF_NSA_beyond_PTW)? 1 : 0;
                // f_underflow = ((*pps)->QF_underflow)? 1 : 0;
@@ -1325,8 +1326,8 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
       std::vector<const DPSCTDCDigiHit*>::iterator tpsc;
       for (tpsc = tdc_hits.begin(); tpsc != tdc_hits.end(); ++tpsc) {
          if ((*tpsc)->counter_id == (*ipsc)->arm * 8 + (*ipsc)->module) {
-            psc_has_tdc[npsc] = 1;
-            psc_ttdc[npsc] = (*tpsc)->time;
+	    dTreeFillData.Fill_Array<Int_t>("psc_has_tdc",1,npsc);
+	    dTreeFillData.Fill_Array<Float_t>("psc_ttdc",(*tpsc)->time,npsc);
          }
       }
       std::vector<unsigned short> trace;
@@ -1343,6 +1344,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
       ps_raw_waveform.push_back(trace);
       npsc++;
    }
+   dTreeFillData.Fill_Single<Int_t>("npsc",npsc);
 
    std::vector<const DBeamPhoton*> beams;
    event->Get(beams);
