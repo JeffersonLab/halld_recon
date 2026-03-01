@@ -1759,6 +1759,11 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     uint32_t data_type = (*iptr>>27) & 0x0F;
     switch(data_type){
     case 0: // Block Header
+	  if(pe != NULL) {
+		  cout << "Warning in DEVIOWorkerThread::Parsef250Bank(): found block header before block trailer, recovering ..." << endl;
+	      pe_iter = current_parsed_events.begin();
+    	  pe = NULL;
+	  }
       slot = (*iptr>>22) & 0x1F;
       if(VERBOSE>7) cout << "      FADC250 Block Header: slot="<<slot<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
       break;
@@ -2077,6 +2082,11 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     uint32_t data_type = (*iptr>>27) & 0x0F;
     switch(data_type){
     case 0: // Block Header
+	  if(pe != NULL) {
+		  cout << "Warning in DEVIOWorkerThread::Parsef125Bank(): found block header before block trailer, recovering ..." << endl;
+	      pe_iter = current_parsed_events.begin();
+    	  pe = NULL;
+	  }
       slot = (*iptr>>22) & 0x1F;
       if(VERBOSE>7) cout << "      FADC125 Block Header: slot="<<slot<<endl;
       break;
