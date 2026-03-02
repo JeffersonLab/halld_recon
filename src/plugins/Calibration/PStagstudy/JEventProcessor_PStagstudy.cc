@@ -521,9 +521,6 @@ void JEventProcessor_PStagstudy::Init() {
 
 void JEventProcessor_PStagstudy::BeginRun(const std::shared_ptr<const JEvent>& event) {
 
-   // lock all root operations
-   lock_svc->RootWriteLock();
-
    bc_factory->BeginRun(event);
    int runno = event->GetRunNumber();
 
@@ -544,7 +541,6 @@ void JEventProcessor_PStagstudy::BeginRun(const std::shared_ptr<const JEvent>& e
                 << beam_current_record_url << std::endl
                 << "...continuing on without beam current information from EPICS"
                 << std::endl;
-      lock_svc->RootUnLock();
       return;
    }
    TTree *bctree = dynamic_cast<TTree*>(bcfile->Get(beam_current_record_tree.c_str()));
@@ -555,7 +551,6 @@ void JEventProcessor_PStagstudy::BeginRun(const std::shared_ptr<const JEvent>& e
                 << "...continuing on without beam current information from EPICS"
                 << std::endl;
       bcfile->Close();
-      lock_svc->RootUnLock();
       return;
    }
    uint32_t tepoch_s;
@@ -575,8 +570,6 @@ void JEventProcessor_PStagstudy::BeginRun(const std::shared_ptr<const JEvent>& e
              << beam_current_from_epics.size() << " records"
              << " from EPICS for run " << runno << std::endl;
 
-   // unlock
-   lock_svc->RootUnLock();
 }
 
 
@@ -886,7 +879,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
          if (chaninfo.det_sys == DTranslationTable::TAGM) {
             if ((int)chaninfo.tagm.row == row && (int)chaninfo.tagm.col == column) {
                trace = (*itrace)->samples;
-            }
+	    }
          }
       }
       tagm_raw_waveform.push_back(trace);
