@@ -1760,7 +1760,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     switch(data_type){
     case 0: // Block Header
 	  if(pe != NULL) {
-		  cout << "Warning in DEVIOWorkerThread::Parsef250Bank(): found block header before block trailer, recovering ..." << endl;
+		  cout << "Warning in DEVIOWorkerThread::Parsef250Bank(): missing block trailer, recovering ..." << endl;
 	      pe_iter = current_parsed_events.begin();
     	  pe = NULL;
 	  }
@@ -2083,7 +2083,7 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     switch(data_type){
     case 0: // Block Header
 	  if(pe != NULL) {
-		  cout << "Warning in DEVIOWorkerThread::Parsef125Bank(): found block header before block trailer, recovering ..." << endl;
+		  cout << "Warning in DEVIOWorkerThread::Parsef125Bank(): missing block trailer, recovering ..." << endl;
 	      pe_iter = current_parsed_events.begin();
     	  pe = NULL;
 	  }
@@ -2098,6 +2098,10 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
     case 2: // Event Header
       //slot_event_header = (*iptr>>22) & 0x1F;
       itrigger = (*iptr>>0) & 0xFFFF;
+	  if(pe_iter == current_parsed_events.end()) {
+	  	jout << "GOING OFF THE DEEP END!" << endl;
+	  	break;
+	  }
       pe = *pe_iter++;
       if(VERBOSE>7) cout << "      FADC125 Event Header: itrigger="<<itrigger<<", rocid="<<rocid<<", slot="<<slot <<endl;
       break;
