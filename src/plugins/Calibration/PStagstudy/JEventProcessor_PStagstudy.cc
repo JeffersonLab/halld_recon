@@ -337,24 +337,12 @@ void JEventProcessor_PStagstudy::Init() {
    //TTREE BRANCHES
    DTreeBranchRegister locTreeBranchRegister;
 
-   // pstags = new TTree("pstags", "PS tag study");
-   // pstags->Branch("runno", &runno, "runno/i");
-   // pstags->Branch("eventno", &eventno, "eventno/i");
-   // pstags->Branch("trgigger", &trigger, "trigger/i");
-   // pstags->Branch("timestamp", &timestamp, "timestamp/l");
-   // pstags->Branch("epochtime", &epochtime, "epochtime/l");
-   // pstags->Branch("beamcurrent", &beamcurrent, "beamcurrent/i");
-
-   // pstags->Branch("nrf", &nrf, "nrf/I[0,999]");
-   // pstags->Branch("rf_sys", rf_sys, "rf_sys[nrf]/I");
-   // pstags->Branch("rf_time", rf_time, "rf_time[nrf]/D");
-
    locTreeBranchRegister.Register_Single<Int_t>("runno");
    locTreeBranchRegister.Register_Single<Int_t>("eventno");
    locTreeBranchRegister.Register_Single<Int_t>("trgigger");
-   locTreeBranchRegister.Register_Single<Long64_t>("timestamp");
-   locTreeBranchRegister.Register_Single<Long64_t>("epochtime");
-   locTreeBranchRegister.Register_Single<Int_t>("beamcurrent");
+   locTreeBranchRegister.Register_Single<ULong64_t>("timestamp");
+   locTreeBranchRegister.Register_Single<ULong64_t>("epochtime");
+   locTreeBranchRegister.Register_Single<UInt_t>("beamcurrent");
 
    locTreeBranchRegister.Register_Single<Int_t>("nrf");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("rf_sys", "nrf");
@@ -384,29 +372,6 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_nped", "ntagm");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_nint", "ntagm");
 
-   // pstags->Branch("ntagm", &ntagm, "ntagm/I[0,999]");
-   // pstags->Branch("tagm_seqno", tagm_seqno, "tagm_seqno[ntagm]/I");
-   // pstags->Branch("tagm_channel", tagm_channel, "tagm_channel[ntagm]/I");
-   // pstags->Branch("tagm_peak", tagm_peak, "tagm_peak[ntagm]/F");
-   // pstags->Branch("tagm_pint", tagm_pint, "tagm_pint[ntagm]/F");
-   // pstags->Branch("tagm_tadc", tagm_tadc, "tagm_tadc[ntagm]/F");
-   // pstags->Branch("tagm_toth", tagm_toth, "tagm_toth[ntagm]/F");
-   // pstags->Branch("tagm_ttdc", tagm_ttdc, "tagm_ttdc[ntagm]/F");
-   // pstags->Branch("tagm_time", tagm_time, "tagm_time[ntagm]/F");
-   // pstags->Branch("tagm_Etag", tagm_Etag, "tagm_Etag[ntagm]/F");
-   // pstags->Branch("tagm_pmax", tagm_pmax, "tagm_pmax[ntagm]/F");
-   // pstags->Branch("tagm_tlast", tagm_tlast, "tagm_tlast[ntagm]/F");
-   // pstags->Branch("tagm_plast", tagm_plast, "tagm_plast[ntagm]/F");
-   // pstags->Branch("tagm_base", tagm_base, "tagm_base[ntagm]/F");
-   // pstags->Branch("tagm_rothr", tagm_rothr, "tagm_rothr[ntagm]/F");
-   // pstags->Branch("tagm_ped", tagm_ped, "tagm_ped[ntagm]/F");
-   // pstags->Branch("tagm_multi", tagm_multi, "tagm_multi[ntagm]/I");
-   // pstags->Branch("tagm_qf", tagm_qf, "tagm_qf[ntagm]/I");
-   // pstags->Branch("tagm_bg", tagm_bg, "tagm_bg[ntagm]/I");
-   // pstags->Branch("tagm_has_adc", tagm_has_adc, "tagm_has_adc[ntagm]/I");
-   // pstags->Branch("tagm_has_tdc", tagm_has_tdc, "tagm_has_tdc[ntagm]/I");
-   // pstags->Branch("tagm_nped", tagm_nped, "tagm_nped[ntagm]/I");
-   // pstags->Branch("tagm_nint", tagm_nint, "tagm_nint[ntagm]/I");
    // pstags->Branch("tagm_raw_waveform", &tagm_raw_waveform, 30000, 1);
 
    locTreeBranchRegister.Register_Single<Int_t>("ntagh");
@@ -433,29 +398,6 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_nped", "ntagh");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_nint", "ntagh");
 
-   // pstags->Branch("ntagh", &ntagh, "ntagh/I[0,999]");
-   // pstags->Branch("tagh_seqno", tagh_seqno, "tagh_seqno[ntagh]/I");
-   // pstags->Branch("tagh_counter", tagh_counter, "tagh_counter[ntagh]/I");
-   // pstags->Branch("tagh_peak", tagh_peak, "tagh_peak[ntagh]/F");
-   // pstags->Branch("tagh_pint", tagh_pint, "tagh_pint[ntagh]/F");
-   // pstags->Branch("tagh_tadc", tagh_tadc, "tagh_tadc[ntagh]/F");
-   // pstags->Branch("tagh_toth", tagh_toth, "tagh_toth[ntagh]/F");
-   // pstags->Branch("tagh_ttdc", tagh_ttdc, "tagh_ttdc[ntagh]/F");
-   // pstags->Branch("tagh_time", tagh_time, "tagh_time[ntagh]/F");
-   // pstags->Branch("tagh_Etag", tagh_Etag, "tagh_Etag[ntagh]/F");
-   // pstags->Branch("tagh_pmax", tagh_pmax, "tagh_pmax[ntagh]/F");
-   // pstags->Branch("tagh_ped", tagh_ped, "tagh_ped[ntagh]/F");
-   // pstags->Branch("tagh_tlast", tagh_tlast, "tagh_tlast[ntagh]/F");
-   // pstags->Branch("tagh_plast", tagh_plast, "tagh_plast[ntagh]/F");
-   // pstags->Branch("tagh_base", tagh_base, "tagh_base[ntagh]/F");
-   // pstags->Branch("tagh_rothr", tagh_rothr, "tagh_rothr[ntagh]/F");
-   // pstags->Branch("tagh_multi", tagh_multi, "tagh_multi[ntagh]/I");
-   // pstags->Branch("tagh_qf", tagh_qf, "tagh_qf[ntagh]/I");
-   // pstags->Branch("tagh_bg", tagh_bg, "tagh_bg[ntagh]/I");
-   // pstags->Branch("tagh_has_adc", tagh_has_adc, "tagh_has_adc[ntagh]/I");
-   // pstags->Branch("tagh_has_tdc", tagh_has_tdc, "tagh_has_tdc[ntagh]/I");
-   // pstags->Branch("tagh_nped", tagh_nped, "tagh_nped[ntagh]/I");
-   // pstags->Branch("tagh_nint", tagh_nint, "tagh_nint[ntagh]/I");
    // pstags->Branch("tagh_raw_waveform", &tagh_raw_waveform, 30000, 1);
 
    locTreeBranchRegister.Register_Single<Int_t>("nbeam");
@@ -463,12 +405,6 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Float_t>("beam_E", "nbeam");
    locTreeBranchRegister.Register_FundamentalArray<Float_t>("beam_t", "nbeam");
    locTreeBranchRegister.Register_FundamentalArray<Float_t>("beam_z", "nbeam");
-
-   // pstags->Branch("nbeam", &nbeam, "nbeam/I[0,999]");
-   // pstags->Branch("beam_sys", beam_sys, "beam_sys[nbeam]/I");
-   // pstags->Branch("beam_E", beam_E, "beam_E[nbeam]/F");
-   // pstags->Branch("beam_t", beam_t, "beam_t[nbeam]/F");
-   // pstags->Branch("beam_z", beam_z, "beam_z[nbeam]/F");
 
    locTreeBranchRegister.Register_Single<Int_t>("nps");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_seqno", "nps");
@@ -488,23 +424,6 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_nped", "nps");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_nint", "nps");
 
-   // pstags->Branch("nps", &nps, "nps/I[0,999]");
-   // pstags->Branch("ps_seqno", ps_seqno, "ps_seqno[nps]/I");
-   // pstags->Branch("ps_arm", ps_arm, "ps_arm[nps]/I");
-   // pstags->Branch("ps_column", ps_column, "ps_column[nps]/I");
-   // pstags->Branch("ps_peak", ps_peak, "ps_peak[nps]/F");
-   // pstags->Branch("ps_pint", ps_pint, "ps_pint[nps]/F");
-   // pstags->Branch("ps_npix", ps_pint, "ps_npix[nps]/F");
-   // pstags->Branch("ps_t", ps_t, "ps_t[nps]/F");
-   // pstags->Branch("ps_E", ps_E, "ps_E[nps]/F");
-   // pstags->Branch("ps_tadc", ps_tadc, "ps_tadc[nps]/F");
-   // pstags->Branch("ps_toth", ps_toth, "ps_toth[nps]/F");
-   // pstags->Branch("ps_pmax", ps_pmax, "ps_pmax[nps]/F");
-   // pstags->Branch("ps_ped", ps_ped, "ps_ped[nps]/F");
-   // pstags->Branch("ps_multi", ps_multi, "ps_multi[nps]/I");
-   // pstags->Branch("ps_qf", ps_qf, "ps_qf[nps]/I");
-   // pstags->Branch("ps_nped", ps_nped, "ps_nped[nps]/I");
-   // pstags->Branch("ps_nint", ps_nint, "ps_nint[nps]/I");
    // pstags->Branch("ps_raw_waveform", &ps_raw_waveform, 30000, 1);
 
    locTreeBranchRegister.Register_Single<Int_t>("npsc");
@@ -529,27 +448,6 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_nped", "npsc");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_nint", "npsc");
 
-   // pstags->Branch("npsc", &npsc, "npsc/I[0,999]");
-   // pstags->Branch("psc_seqno", psc_seqno, "psc_seqno[npsc]/I");
-   // pstags->Branch("psc_arm", psc_arm, "pcs_arm[npsc]/I");
-   // pstags->Branch("psc_module", psc_module, "ps_module[npsc]/I");
-   // pstags->Branch("psc_counter", psc_counter, "psc_counter[npsc]/I");
-   // pstags->Branch("psc_peak", psc_peak, "psc_peak[npsc]/F");
-   // pstags->Branch("psc_pint", psc_pint, "psc_pint[npsc]/F");
-   // pstags->Branch("psc_npe", psc_npe, "psc_npe[npsc]/F");
-   // pstags->Branch("psc_t", psc_t, "psc_t[npsc]/F");
-   // pstags->Branch("psc_tadc", psc_tadc, "psc_tadc[npsc]/F");
-   // pstags->Branch("psc_ttdc", psc_ttdc, "psc_ttdc[npsc]/F");
-   // pstags->Branch("psc_toth", psc_toth, "psc_toth[npsc]/F");
-   // pstags->Branch("psc_pmax", psc_pmax, "psc_pmax[npsc]/F");
-   // pstags->Branch("psc_ped", psc_ped, "psc_ped[npsc]/F");
-   // pstags->Branch("psc_multi", psc_multi, "psc_multi[npsc]/I");
-   // pstags->Branch("psc_qf", psc_qf, "psc_qf[npsc]/I");
-   // pstags->Branch("psc_bg", psc_bg, "psc_bg[npsc]/I");
-   // pstags->Branch("psc_has_adc", psc_has_adc, "psc_has_adc[npsc]/I");
-   // pstags->Branch("psc_has_tdc", psc_has_tdc, "psc_has_tdc[npsc]/I");
-   // pstags->Branch("psc_nped", psc_nped, "psc_nped[npsc]/I");
-   // pstags->Branch("psc_nint", psc_nint, "psc_nint[npsc]/I");
    // pstags->Branch("psc_raw_waveform", &psc_raw_waveform, 30000, 1);
 
    locTreeBranchRegister.Register_Single<Int_t>("npairps");
@@ -568,27 +466,11 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("nleft_ps", "npairps");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("nright_ps", "npairps");
 
-   // pstags->Branch("npairps", &npairps, "npairps/I[0,999]");
-   // pstags->Branch("Epair", Epair, "Epair[npairps]/F");
-   // pstags->Branch("tpair", tpair, "tpair[npairps]/F");
-   // pstags->Branch("psleft_peak", psleft_peak, "psleft_peak[npairps]/F");
-   // pstags->Branch("psright_peak", psright_peak, "psright_peak[npairps]/F");
-   // pstags->Branch("psleft_pint", psleft_pint, "psleft_pint[npairps]/F");
-   // pstags->Branch("psright_pint", psright_pint, "psright_pint[npairps]/F");
-   // pstags->Branch("psleft_time", psleft_time, "psleft_time[npairps]/F");
-   // pstags->Branch("psright_time", psright_time, "psright_time[npairps]/F");
-   // pstags->Branch("psEleft", psEleft, "psEleft[npairps]/F");
-   // pstags->Branch("psEright", psEright, "psEright[npairps]/F");
-   // pstags->Branch("pstleft", pstleft, "pstleft[npairps]/F");
-   // pstags->Branch("pstright", pstright, "pstright[npairps]/F");
-   // pstags->Branch("nleft_ps", nleft_ps, "nleft_ps[npairps]/I");
-   // pstags->Branch("nright_ps", nright_ps, "nright_ps[npairps]/I");
-
    locTreeBranchRegister.Register_Single<Int_t>("npairpsc");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscleft_seqno", "npairpsc");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscright_seqno", "npairpsc");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscleft_module", "npairpsc");
-   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscright_medule", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscright_module", "npairpsc");
    locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_peak", "npairpsc");
    locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_peak", "npairpsc");
    locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_pint", "npairpsc");
@@ -603,26 +485,6 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_ped", "npairpsc");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscleft_qf", "npairpsc");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscright_qf", "npairpsc");
-
-   // pstags->Branch("npairpsc", &npairpsc, "npairpsc/I[0,999]");
-   // pstags->Branch("pscleft_seqno", pscleft_seqno, "pscleft_seqno[npairpsc]/I");
-   // pstags->Branch("pscright_seqno", pscright_seqno, "pscright_seqno[npairpsc]/I");
-   // pstags->Branch("pscleft_module", pscleft_module, "pscleft_module[npairpsc]/I");
-   // pstags->Branch("pscright_module", pscright_module, "pscright_module[npairpsc]/I");
-   // pstags->Branch("pscleft_peak", pscleft_peak, "pscleft_peak[npairpsc]/F");
-   // pstags->Branch("pscright_peak", pscright_peak, "pscright_peak[npairpsc]/F");
-   // pstags->Branch("pscleft_pint", pscleft_pint, "pscleft_pint[npairpsc]/F");
-   // pstags->Branch("pscright_pint", pscright_pint, "pscright_pint[npairpsc]/F");
-   // pstags->Branch("pscleft_ttdc", pscleft_ttdc, "pscleft_ttdc[npairpsc]/F");
-   // pstags->Branch("pscright_ttdc", pscright_ttdc, "pscright_ttdc[npairpsc]/F");
-   // pstags->Branch("pscleft_tadc", pscleft_tadc, "pscleft_tadc[npairpsc]/F");
-   // pstags->Branch("pscright_tadc", pscright_tadc, "pscright_tadc[npairpsc]/F");
-   // pstags->Branch("pscleft_t", pscleft_t, "pscleft_t[npairpsc]/F");
-   // pstags->Branch("pscright_t", pscright_t, "pscright_t[npairpsc]/F");
-   // pstags->Branch("pscleft_ped", pscleft_ped, "pscleft_ped[npairpsc]/F");
-   // pstags->Branch("pscright_ped", pscright_ped, "pscright_ped[npairpsc]/F");
-   // pstags->Branch("pscleft_qf", pscleft_qf, "pscleft_qf[npairpsc]/I");
-   // pstags->Branch("pscright_qf", pscright_qf, "pscright_qf[npairpsc]/I");
 
    //REGISTER BRANCHES
    dTreeInterface->Create_Branches(locTreeBranchRegister);
@@ -1364,22 +1226,23 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    std::vector<const DPSPair*>::iterator ipair;
    npairps = 0;
    for (ipair = ps_pairs.begin(); ipair != ps_pairs.end(); ++ipair) {
-      Epair[npairps] = (*ipair)->left->E + (*ipair)->right->E;
-      tpair[npairps] = ((*ipair)->left->t + (*ipair)->right->t)/2;
-      psleft_peak[npairps] = (*ipair)->left->pulse_peak;
-      psright_peak[npairps] = (*ipair)->right->pulse_peak;
-      psleft_pint[npairps] = (*ipair)->left->integral;
-      psright_pint[npairps] = (*ipair)->right->integral;
-      psleft_time[npairps] = (*ipair)->left->t_tile;
-      psright_time[npairps] = (*ipair)->right->t_tile;
-      psEleft[npairps] = (*ipair)->left->E;
-      psEright[npairps] = (*ipair)->right->E;
-      pstleft[npairps] = (*ipair)->left->t;
-      pstright[npairps] = (*ipair)->right->t;
-      nleft_ps[npairps] = (*ipair)->right->ntiles;
-      nright_ps[npairps] = (*ipair)->right->ntiles;
+      dTreeFillData.Fill_Array<Float_t>("Epair",(*ipair)->left->E+(*ipair)->right->E,npairps);
+      dTreeFillData.Fill_Array<Float_t>("tpair",((*ipair)->left->t+(*ipair)->right->t)/2,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psleft_peak",(*ipair)->left->pulse_peak,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psright_peak",(*ipair)->right->pulse_peak,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psleft_pint",(*ipair)->left->integral,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psright_pint",(*ipair)->right->integral,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psleft_time",(*ipair)->left->t_tile,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psright_time",(*ipair)->right->t_tile,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psEleft",(*ipair)->left->E,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psEright",(*ipair)->right->E,npairps);
+      dTreeFillData.Fill_Array<Float_t>("pstleft",(*ipair)->left->t,npairps);
+      dTreeFillData.Fill_Array<Float_t>("pstright",(*ipair)->right->t,npairps);
+      dTreeFillData.Fill_Array<Int_t>("nleft_ps",(*ipair)->right->ntiles,npairps);
+      dTreeFillData.Fill_Array<Int_t>("nright_ps",(*ipair)->right->ntiles,npairps);
       ++npairps;
    }
+   dTreeFillData.Fill_Single<Int_t>("npairps",npairps);
 
    std::vector<const DPSCPair*> psc_pairs;
    event->Get(psc_pairs);
@@ -1398,45 +1261,45 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
          tpsc_per_module[1][mod1] = (*icpair)->ee.second->time_tdc;
          ++npsc_per_module[1][mod1];
       }
-      pscleft_seqno[npairpsc] = npsc_per_module[0][mod0] - 1;
-      pscright_seqno[npairpsc] = npsc_per_module[1][mod1] - 1;
-      pscleft_module[npairpsc] = (*icpair)->ee.first->module;
-      pscright_module[npairpsc] = (*icpair)->ee.second->module;
-      pscleft_peak[npairpsc] = (*icpair)->ee.first->pulse_peak;
-      pscright_peak[npairpsc] = (*icpair)->ee.second->pulse_peak;
-      pscleft_pint[npairpsc] = (*icpair)->ee.first->integral;
-      pscright_pint[npairpsc] = (*icpair)->ee.second->integral;
-      pscleft_ttdc[npairpsc] = (*icpair)->ee.first->time_tdc;
-      pscright_ttdc[npairpsc] = (*icpair)->ee.second->time_tdc;
-      pscleft_tadc[npairpsc] = (*icpair)->ee.first->time_fadc;
-      pscright_tadc[npairpsc] = (*icpair)->ee.second->time_fadc;
-      pscleft_t[npairpsc] = (*icpair)->ee.first->t;
-      pscright_t[npairpsc] = (*icpair)->ee.second->t;
-      pscleft_ped[npairpsc] = 999;
-      pscright_ped[npairpsc] = 999;
-      pscleft_qf[npairpsc] = 999;
-      pscright_qf[npairpsc] = 999;
+      dTreeFillData.Fill_Array<Int_t>("pscleft_seqno",npsc_per_module[0][mod0]-1,npairpsc);
+      dTreeFillData.Fill_Array<Int_t>("pscright_seqno",npsc_per_module[1][mod1]-1,npairpsc);
+      dTreeFillData.Fill_Array<Int_t>("pscleft_module",(*icpair)->ee.first->module,npairpsc);
+      dTreeFillData.Fill_Array<Int_t>("pscright_module",(*icpair)->ee.second->module,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_peak",(*icpair)->ee.first->pulse_peak,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_peak",(*icpair)->ee.second->pulse_peak,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_pint",(*icpair)->ee.first->integral,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_pint",(*icpair)->ee.second->integral,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_ttdc",(*icpair)->ee.first->time_tdc,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_ttdc",(*icpair)->ee.second->time_tdc,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_tadc",(*icpair)->ee.first->time_fadc,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_tadc",(*icpair)->ee.second->time_fadc,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_t",(*icpair)->ee.first->t,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_t",(*icpair)->ee.second->t,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_ped",999,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_ped",999,npairpsc);
+      dTreeFillData.Fill_Array<Int_t>("pscleft_qf",999,npairpsc);
+      dTreeFillData.Fill_Array<Int_t>("pscright_qf",999,npairpsc);
       std::vector<const DPSCDigiHit*> digi_hits;
       (*icpair)->ee.first->Get(digi_hits);
       std::vector<const DPSCDigiHit*>::iterator apsc;
       for (apsc = digi_hits.begin(); apsc != digi_hits.end(); ++apsc) {
-         pscleft_ped[npairpsc] = (*apsc)->pedestal;
-         pscleft_qf[npairpsc] = (*apsc)->QF;
+	 dTreeFillData.Fill_Array<Float_t>("pscleft_ped",(*apsc)->pedestal,npairpsc);
+	 dTreeFillData.Fill_Array<Int_t>("pscleft_qf",(*apsc)->QF,npairpsc);
       }
       (*icpair)->ee.second->Get(digi_hits);
       for (apsc = digi_hits.begin(); apsc != digi_hits.end(); ++apsc) {
-         pscright_ped[npairpsc] = (*apsc)->pedestal;
-         pscright_qf[npairpsc] = (*apsc)->QF;
+	 dTreeFillData.Fill_Array<Float_t>("pscright_ped",(*apsc)->pedestal,npairpsc);
+	 dTreeFillData.Fill_Array<Int_t>("pscright_qf",(*apsc)->QF,npairpsc);
       }
       npairpsc++;
    }
+   dTreeFillData.Fill_Single<Int_t>("npairpsc",npairpsc);
 
 #ifdef VERBOSE
    printf("Filling pstags with ntagm=%d, ntagh=%d, npairps=%d, npairpsc=%d\n",
           ntagm, ntagh, npairps, npairpsc);
 #endif
    dTreeInterface->Fill(dTreeFillData);
-   //pstags->Fill();
 
    lock_svc->RootUnLock();
 }
