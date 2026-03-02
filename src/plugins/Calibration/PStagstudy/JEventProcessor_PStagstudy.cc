@@ -16,7 +16,6 @@
 
 #include "JEventProcessor_PStagstudy.h"
 #include <JANA/JApplication.h>
-#include <JANA/Services/JLockService.h>
 
 using namespace std;
 using namespace jana;
@@ -300,11 +299,14 @@ JEventProcessor_PStagstudy::GetDetectorIndex(const DTranslationTable *ttab,
    return index;
 }
 
+//define static local variable //declared in header file
+thread_local DTreeFillData JEventProcessor_PStagstudy::dTreeFillData;
+
 void JEventProcessor_PStagstudy::Init() {
 
    // lock all root operations
    auto app = GetApplication();
-   auto lock_svc = app->GetService<JLockService>();
+   lock_svc = app->GetService<JLockService>();
 
    bc_factory = new DBeamCurrent_factory();
    bc_factory->SetApplication(app);
@@ -520,8 +522,6 @@ void JEventProcessor_PStagstudy::Init() {
 void JEventProcessor_PStagstudy::BeginRun(const std::shared_ptr<const JEvent>& event) {
 
    // lock all root operations
-   auto app = GetApplication();
-   auto lock_svc = app->GetService<JLockService>();
    lock_svc->RootWriteLock();
 
    bc_factory->BeginRun(event);
@@ -587,17 +587,12 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    // reconstruction algorithm) should be done outside of any mutex lock
    // since multiple threads may call this method at the same time.
 
-   auto app = GetApplication();
-   auto lock_svc = app->GetService<JLockService>();
-   lock_svc->RootWriteLock();
-
    bc_factory->Process(event);
    double ticks_per_sec = bc_factory->ticks_per_sec;
 
    std::vector<const DCODAEventInfo*> event_info;
    event->Get(event_info);
    if (event_info.size() == 0) {
-      lock_svc->RootUnLock();
       return;
    }
 
@@ -625,15 +620,14 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    int trig_bits = fp_trig_mask > 0 ? 10 + fp_trig_mask : trig_mask;
 #ifdef SELECT_TRIGGER_TYPE
    if ((trig_bits & (1 << SELECT_TRIGGER_TYPE)) == 0) {
-      lock_svc->RootUnLock();
       return;
    }
 #endif
  
-   runno = event_info[0]->run_number;
-   eventno = event_info[0]->event_number;
-   timestamp = event_info[0]->avg_timestamp;
-   trigger = trig_bits;
+   int runno = event_info[0]->run_number;
+   int eventno = event_info[0]->event_number;
+   unsigned long int timestamp = event_info[0]->avg_timestamp;
+   int trigger = trig_bits;
    dTreeFillData.Fill_Single<Int_t>("runno",runno);
    dTreeFillData.Fill_Single<Int_t>("eventno",eventno);
    dTreeFillData.Fill_Single<Int_t>("trgigger",trigger);
@@ -668,7 +662,6 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    if (! within_time_limits) {
       if ((eventno % 100000) < 2)
          std::cerr << "event " << eventno << " is outside time limits, discarding" << std::endl;
-      lock_svc->RootUnLock();
       return;
    }
 
@@ -683,7 +676,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    std::vector<const DRFTime*> rf_times;
    event->Get(rf_times, "PSC");
    std::vector<const DRFTime*>::iterator irf;
-   nrf = 0;
+   int nrf = 0;
    for (irf = rf_times.begin(); irf != rf_times.end(); ++irf) {
       dTreeFillData.Fill_Array<Int_t>("rf_sys",0x4000,nrf);
       dTreeFillData.Fill_Array<Double_t>("rf_time",(*irf)->dTime,nrf);
@@ -707,7 +700,6 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
       std::cout << "Serious error in PStagstudy plugin - "
                 << "unable to acquire the DAQ translation table!"
                 << std::endl;
-      lock_svc->RootUnLock();
       return;
    }
    const DTranslationTable *ttab = ttables[0];
@@ -728,7 +720,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    }
    std::vector<const DTAGMHit*>::iterator itagm;
    int ntagm_per_channel[6][128] = {0};
-   ntagm = 0;
+   int ntagm = 0;
    for (itagm = tagm_hits.begin(); itagm != tagm_hits.end(); ++itagm) {
       int row = (*itagm)->row;
       int column = (*itagm)->column;
@@ -791,7 +783,9 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
                // f_nopeak = ((*ptagm)->QF_vpeak_not_found)? 1 : 0;
                // f_badped = ((*ptagm)->QF_bad_pedestal)? 1 : 0;
             }
+	    lock_svc->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
             tagm_hpedestal[channel]->Fill(tagm_ped[ntagm]);
+	    lock_svc->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
          }
       }
       int maxbin(tagm_hpedestal[channel]->GetMaximumBin());
@@ -870,7 +864,9 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
                   // f_nopeak = ((*ptagm)->QF_vpeak_not_found)? 1 : 0;
                   // f_badped = ((*ptagm)->QF_bad_pedestal)? 1 : 0;
                }
+	       lock_svc->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
                tagm_hpedestal[channel]->Fill(tagm_ped[ntagm]);
+	       lock_svc->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
             }
          }
          int maxbin(tagm_hpedestal[channel]->GetMaximumBin());
@@ -909,7 +905,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    }
    std::vector<const DTAGHHit*>::iterator itagh;
    int ntagh_per_counter[512] = {0};
-   ntagh = 0;
+   int ntagh = 0;
    for (itagh = tagh_hits.begin(); itagh != tagh_hits.end(); ++itagh) {
       dTreeFillData.Fill_Array<Int_t>("tagh_seqno",ntagh_per_counter[(*itagh)->counter_id]++,ntagh);
       dTreeFillData.Fill_Array<Int_t>("tagh_counter",(*itagh)->counter_id,ntagh);
@@ -968,7 +964,9 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
                // f_nopeak = ((*ptagh)->QF_vpeak_not_found)? 1 : 0;
                // f_badped = ((*ptagh)->QF_bad_pedestal)? 1 : 0;
             }
-            tagh_hpedestal[channel]->Fill(tagh_ped[ntagh]);
+	    lock_svc->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	    tagh_hpedestal[channel]->Fill(tagh_ped[ntagh]);
+	    lock_svc->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
          }
       }
       int maxbin(tagh_hpedestal[channel]->GetMaximumBin());
@@ -1039,7 +1037,9 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
                   // f_nopeak = ((*ptagh)->QF_vpeak_not_found)? 1 : 0;
                   // f_badped = ((*ptagh)->QF_bad_pedestal)? 1 : 0;
                }
+	       lock_svc->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
                tagh_hpedestal[channel]->Fill(tagh_ped[ntagh]);
+	       lock_svc->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
             }
          }
          int maxbin(tagh_hpedestal[channel]->GetMaximumBin());
@@ -1071,7 +1071,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    event->Get(ps_hits);
    std::vector<const DPSHit*>::iterator ips;
    int nps_per_counter[512] = {0};
-   nps = 0;
+   int nps = 0;
    for (ips = ps_hits.begin(); ips != ps_hits.end(); ++ips) {
       dTreeFillData.Fill_Array<Int_t>("ps_arm",(*ips)->arm,nps);
       dTreeFillData.Fill_Array<Int_t>("ps_column",(*ips)->column,nps);
@@ -1135,7 +1135,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    event->Get(psc_hits);
    std::vector<const DPSCHit*>::iterator ipsc;
    int npsc_per_counter[512] = {0};
-   npsc = 0;
+   int npsc = 0;
    for (ipsc = psc_hits.begin(); ipsc != psc_hits.end(); ++ipsc) {
       dTreeFillData.Fill_Array<Int_t>("psc_arm",(*ipsc)->arm,npsc);
       dTreeFillData.Fill_Array<Int_t>("psc_module",(*ipsc)->module,npsc);
@@ -1211,7 +1211,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    std::vector<const DBeamPhoton*> beams;
    event->Get(beams);
    std::vector<const DBeamPhoton*>::iterator ibeam;
-   nbeam = 0;
+   int nbeam = 0;
    for (ibeam = beams.begin(); ibeam != beams.end(); ++ibeam) {
       dTreeFillData.Fill_Array<Int_t>("beam_sys",(*ibeam)->dSystem,nbeam);
       dTreeFillData.Fill_Array<Float_t>("beam_E",(*ibeam)->energy(),nbeam);
@@ -1224,7 +1224,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    std::vector<const DPSPair*> ps_pairs;
    event->Get(ps_pairs);
    std::vector<const DPSPair*>::iterator ipair;
-   npairps = 0;
+   int npairps = 0;
    for (ipair = ps_pairs.begin(); ipair != ps_pairs.end(); ++ipair) {
       dTreeFillData.Fill_Array<Float_t>("Epair",(*ipair)->left->E+(*ipair)->right->E,npairps);
       dTreeFillData.Fill_Array<Float_t>("tpair",((*ipair)->left->t+(*ipair)->right->t)/2,npairps);
@@ -1249,7 +1249,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    std::vector<const DPSCPair*>::iterator icpair;
    int npsc_per_module[2][9] = {0};
    double tpsc_per_module[2][9] = {0};
-   npairpsc = 0;
+   int npairpsc = 0;
    for (icpair = psc_pairs.begin(); icpair != psc_pairs.end(); ++icpair) {
       int mod0 = (*icpair)->ee.first->module;
       int mod1 = (*icpair)->ee.second->module;
@@ -1300,8 +1300,6 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
           ntagm, ntagh, npairps, npairpsc);
 #endif
    dTreeInterface->Fill(dTreeFillData);
-
-   lock_svc->RootUnLock();
 }
 
 
