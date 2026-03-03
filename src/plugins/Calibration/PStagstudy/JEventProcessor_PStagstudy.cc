@@ -697,10 +697,10 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    }
    const DTranslationTable *ttab = ttables[0];
 
-   tagm_raw_waveform.clear();
-   tagh_raw_waveform.clear();
-   ps_raw_waveform.clear();
-   psc_raw_waveform.clear();
+   // tagm_raw_waveform.clear();
+   // tagh_raw_waveform.clear();
+   // ps_raw_waveform.clear();
+   // psc_raw_waveform.clear();
 
    std::vector<const DTAGMHit*> tagm_hits;
    event->Get(tagm_hits, "Calib");
@@ -882,7 +882,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
 	    }
          }
       }
-      tagm_raw_waveform.push_back(trace);
+      //tagm_raw_waveform.push_back(trace);
       ntagm++;
    }
    dTreeFillData.Fill_Single<Int_t>("ntagm",ntagm);
@@ -1055,7 +1055,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
             }
          }
       }
-      tagh_raw_waveform.push_back(trace);
+      //tagh_raw_waveform.push_back(trace);
       ntagh++;
    }
    dTreeFillData.Fill_Single<Int_t>("ntagh",ntagh);
@@ -1119,7 +1119,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
             }
          }
       }
-      ps_raw_waveform.push_back(trace);
+      //ps_raw_waveform.push_back(trace);
       nps++;
    }
    dTreeFillData.Fill_Single<Int_t>("nps",nps);
@@ -1196,7 +1196,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
             }
          }
       }
-      ps_raw_waveform.push_back(trace);
+      //ps_raw_waveform.push_back(trace);
       npsc++;
    }
    dTreeFillData.Fill_Single<Int_t>("npsc",npsc);
