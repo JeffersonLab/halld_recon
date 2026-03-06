@@ -75,7 +75,8 @@ void DCTOFPoint_factory::Process(const std::shared_ptr<const JEvent> &event)
 	  myDCTOFPoint->pos.SetY(myDCTOFPoint->pos.y()+y);
 	  myDCTOFPoint->t = t;
 	  myDCTOFPoint->dE= dE;
-	  
+
+    
 	  mData.push_back(myDCTOFPoint);
 	}
       }
