@@ -737,6 +737,14 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ChiSq_Timing"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Timing"), locArraySizeString, dInitNumTrackArraySize);
 
+	// FMWPC matching data
+	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc1"), locArraySizeString, dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc2"), locArraySizeString, dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc3"), locArraySizeString, dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc4"), locArraySizeString, dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc5"), locArraySizeString, dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc6"), locArraySizeString, dInitNumTrackArraySize);
+
 	//HIT ENERGY
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_TOF"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_ST"), locArraySizeString, dInitNumTrackArraySize);
@@ -1836,6 +1844,9 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	shared_ptr<const DFCALSingleHitMatchParams> locFCALSingleHitMatchParams
 	  = locChargedTrackHypothesis->Get_FCALSingleHitMatchParams();
 
+	shared_ptr<const DFMWPCMatchParams>locFMWPCMatchParams
+	  = locChargedTrackHypothesis->Get_FMWPCMatchParams();
+
 	const DECALShower* locECALShower = NULL;
 	shared_ptr<const DECALShowerMatchParams> locECALShowerMatchParams
 	  =locChargedTrackHypothesis->Get_ECALShowerMatchParams();
@@ -1935,6 +1946,47 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	double locECALEnergy = (locECALShower != NULL) ? locECALShower->E : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_ECAL"), locECALEnergy, locArrayIndex);
 
+	int locNumFmwpc1=0;
+	int locNumFmwpc2=0;
+	int locNumFmwpc3=0;
+	int locNumFmwpc4=0;
+	int locNumFmwpc5=0;
+	int locNumFmwpc6=0;
+	if (locFMWPCMatchParams!=nullptr){
+	  for (size_t i=0;i<locFMWPCMatchParams->dLayers.size();i++){
+	    switch(locFMWPCMatchParams->dLayers[i]){
+	    case 1:
+	      locNumFmwpc1=locFMWPCMatchParams->dLayers[i];
+	      break;
+	    case 2:
+	      locNumFmwpc2=locFMWPCMatchParams->dLayers[i];
+	      break;
+	    case 3:
+	      locNumFmwpc3=locFMWPCMatchParams->dLayers[i];
+	      break;
+	    case 4:
+	      locNumFmwpc4=locFMWPCMatchParams->dLayers[i];
+	      break;
+	    case 5:
+	      locNumFmwpc5=locFMWPCMatchParams->dLayers[i];
+	      break;
+	    case 6:
+	      locNumFmwpc5=locFMWPCMatchParams->dLayers[i];
+	      break;
+	    default:
+	      break;
+	    } 
+	  }
+	}
+	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc1"),locNumFmwpc1, locArrayIndex);	
+	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc2"),locNumFmwpc2, locArrayIndex);
+	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc3"),locNumFmwpc3, locArrayIndex);	
+	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc4"),locNumFmwpc4, locArrayIndex);
+	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc5"),locNumFmwpc5, locArrayIndex);	
+	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "Fmwpc6"),locNumFmwpc6, locArrayIndex);
+	cout << locNumFmwpc1  << " " << locNumFmwpc2 << " " << locNumFmwpc3
+	     << " " << 	locNumFmwpc4  << " " << locNumFmwpc5 << " " << locNumFmwpc6 << endl;
+	  
 	//if(locECALSingleHitMatchParams!=nullptr){
 	//  locECALEnergy = locECALSingleHitMatchParams->dEHit;
 	//  locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_ECAL"), locECALEnergy, locArrayIndex);
