@@ -375,6 +375,8 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_nint", "ntagm");
 
    // pstags->Branch("tagm_raw_waveform", &tagm_raw_waveform, 30000, 1);
+   locTreeBranchRegister.Register_Single<Int_t>("tagm_nraw");
+   locTreeBranchRegister.Register_FundamentalArray<UShort_t>("tagm_raw_waveform", "tagm_nraw");
 
    locTreeBranchRegister.Register_Single<Int_t>("ntagh");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_seqno", "ntagh");
@@ -401,6 +403,8 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_nint", "ntagh");
 
    // pstags->Branch("tagh_raw_waveform", &tagh_raw_waveform, 30000, 1);
+   locTreeBranchRegister.Register_Single<Int_t>("tagh_nraw");
+   locTreeBranchRegister.Register_FundamentalArray<UShort_t>("tagh_raw_waveform", "tagh_nraw");
 
    locTreeBranchRegister.Register_Single<Int_t>("nbeam");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("beam_sys", "nbeam");
@@ -427,6 +431,8 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_nint", "nps");
 
    // pstags->Branch("ps_raw_waveform", &ps_raw_waveform, 30000, 1);
+   locTreeBranchRegister.Register_Single<Int_t>("ps_nraw");
+   locTreeBranchRegister.Register_FundamentalArray<UShort_t>("ps_raw_waveform", "ps_nraw");
 
    locTreeBranchRegister.Register_Single<Int_t>("npsc");
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_seqno", "npsc");
@@ -451,6 +457,8 @@ void JEventProcessor_PStagstudy::Init() {
    locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_nint", "npsc");
 
    // pstags->Branch("psc_raw_waveform", &psc_raw_waveform, 30000, 1);
+   locTreeBranchRegister.Register_Single<Int_t>("psc_nraw");
+   locTreeBranchRegister.Register_FundamentalArray<UShort_t>("psc_raw_waveform", "psc_nraw");
 
    locTreeBranchRegister.Register_Single<Int_t>("npairps");
    locTreeBranchRegister.Register_FundamentalArray<Float_t>("Epair", "npairps");
@@ -697,10 +705,10 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    }
    const DTranslationTable *ttab = ttables[0];
 
-   // tagm_raw_waveform.clear();
-   // tagh_raw_waveform.clear();
-   // ps_raw_waveform.clear();
-   // psc_raw_waveform.clear();
+   tagm_raw_waveform.clear();
+   tagh_raw_waveform.clear();
+   ps_raw_waveform.clear();
+   psc_raw_waveform.clear();
 
    std::vector<const DTAGMHit*> tagm_hits;
    event->Get(tagm_hits, "Calib");
@@ -869,7 +877,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
             bsum[1] += tagm_hpedestal[channel]->GetBinContent(maxbin + i) *
                        tagm_hpedestal[channel]->GetXaxis()->GetBinCenter(maxbin + i);
          }
-	 dTreeFillData.Fill_Array<Float_t>("tagm_base",bsum[1]/bsum[0],ntagm);
+         dTreeFillData.Fill_Array<Float_t>("tagm_base",bsum[1]/bsum[0],ntagm);
       }
       std::vector<unsigned short> trace;
       std::vector<const Df250WindowRawData*>::iterator itrace;
@@ -879,13 +887,23 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
          if (chaninfo.det_sys == DTranslationTable::TAGM) {
             if ((int)chaninfo.tagm.row == row && (int)chaninfo.tagm.col == column) {
                trace = (*itrace)->samples;
-	    }
+            }
          }
       }
-      //tagm_raw_waveform.push_back(trace);
+      tagm_raw_waveform.push_back(trace);
       ntagm++;
    }
    dTreeFillData.Fill_Single<Int_t>("ntagm",ntagm);
+   int tagm_nraw = 0;
+   for (unsigned int col=0; col < tagm_raw_waveform.size(); ++col) {
+      for (unsigned int i=0; i < tagm_raw_waveform[i].size(); ++i) {
+         dTreeFillData.Fill_Array<UShort_t>("tagm_raw_waveform",
+                                            tagm_raw_waveform[col][i],
+                                            tagm_nraw);
+         tagm_nraw++;
+      }
+   }
+   dTreeFillData.Fill_Single<Int_t>("tagm_nraw",tagm_nraw);
 
    std::vector<const DTAGHHit*> tagh_hits;
    event->Get(tagh_hits, "Calib");
@@ -1055,10 +1073,20 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
             }
          }
       }
-      //tagh_raw_waveform.push_back(trace);
+      tagh_raw_waveform.push_back(trace);
       ntagh++;
    }
    dTreeFillData.Fill_Single<Int_t>("ntagh",ntagh);
+   int tagh_nraw = 0;
+   for (unsigned int col=0; col < tagh_raw_waveform.size(); ++col) {
+      for (unsigned int i=0; i < tagh_raw_waveform[i].size(); ++i) {
+         dTreeFillData.Fill_Array<UShort_t>("tagh_raw_waveform",
+                                            tagh_raw_waveform[col][i],
+                                            tagh_nraw);
+         tagh_nraw++;
+      }
+   }
+   dTreeFillData.Fill_Single<Int_t>("tagn_nraw",tagh_nraw);
 
    std::vector<const DPSHit*> ps_hits;
    event->Get(ps_hits);
@@ -1119,10 +1147,20 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
             }
          }
       }
-      //ps_raw_waveform.push_back(trace);
+      ps_raw_waveform.push_back(trace);
       nps++;
    }
    dTreeFillData.Fill_Single<Int_t>("nps",nps);
+   int ps_nraw = 0;
+   for (unsigned int col=0; col < ps_raw_waveform.size(); ++col) {
+      for (unsigned int i=0; i < ps_raw_waveform[i].size(); ++i) {
+         dTreeFillData.Fill_Array<UShort_t>("ps_raw_waveform",
+                                            ps_raw_waveform[col][i],
+                                            ps_nraw);
+         ps_nraw++;
+      }
+   }
+   dTreeFillData.Fill_Single<Int_t>("ps_nraw",ps_nraw);
 
    std::vector<const DPSCHit*> psc_hits;
    event->Get(psc_hits);
@@ -1196,10 +1234,20 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
             }
          }
       }
-      //ps_raw_waveform.push_back(trace);
+      psc_raw_waveform.push_back(trace);
       npsc++;
    }
    dTreeFillData.Fill_Single<Int_t>("npsc",npsc);
+   int psc_nraw = 0;
+   for (unsigned int col=0; col < psc_raw_waveform.size(); ++col) {
+      for (unsigned int i=0; i < psc_raw_waveform[i].size(); ++i) {
+         dTreeFillData.Fill_Array<UShort_t>("psc_raw_waveform",
+                                            psc_raw_waveform[col][i],
+                                            psc_nraw++);
+         psc_nraw++;
+      }
+   }
+   dTreeFillData.Fill_Single<Int_t>("psc_nraw",psc_nraw);
 
    std::vector<const DBeamPhoton*> beams;
    event->Get(beams);
