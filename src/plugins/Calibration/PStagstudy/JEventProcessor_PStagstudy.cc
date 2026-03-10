@@ -705,11 +705,6 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    }
    const DTranslationTable *ttab = ttables[0];
 
-   tagm_raw_waveform.clear();
-   tagh_raw_waveform.clear();
-   ps_raw_waveform.clear();
-   psc_raw_waveform.clear();
-
    std::vector<const DTAGMHit*> tagm_hits;
    event->Get(tagm_hits, "Calib");
    std::vector<std::vector<float> > timelist;
