@@ -25,23 +25,12 @@ class JEventProcessor_PStagstudy : public JEventProcessor {
    DTreeInterface* dTreeInterface;
    static thread_local DTreeFillData dTreeFillData;
 
-   unsigned long int epochtime;
    unsigned long int epoch_reference;
-   unsigned long int bctime;
-   unsigned long int beamcurrent;
 
    DBeamCurrent_factory *bc_factory;
 
    TH1D *tagm_hpedestal[128];
    TH1D *tagh_hpedestal[300];
-
-   float tagm_ped[999];
-   float tagm_tlast[999];
-   float tagm_plast[999];
-
-   float tagh_ped[999];
-   float tagh_tlast[999];
-   float tagh_plast[999];
 
    const DTranslationTable::DChannelInfo GetDetectorIndex(const DTranslationTable *ttab,
                                                           DTranslationTable::csc_t csc);
