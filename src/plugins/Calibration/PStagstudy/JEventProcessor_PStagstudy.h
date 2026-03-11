@@ -38,16 +38,10 @@ class JEventProcessor_PStagstudy : public JEventProcessor {
    float tagm_ped[999];
    float tagm_tlast[999];
    float tagm_plast[999];
-   std::vector<std::vector<unsigned short> > tagm_raw_waveform;
 
    float tagh_ped[999];
    float tagh_tlast[999];
    float tagh_plast[999];
-   std::vector<std::vector<unsigned short> > tagh_raw_waveform;
-
-   std::vector<std::vector<unsigned short> > ps_raw_waveform;
-
-   std::vector<std::vector<unsigned short> > psc_raw_waveform;
 
    const DTranslationTable::DChannelInfo GetDetectorIndex(const DTranslationTable *ttab,
                                                           DTranslationTable::csc_t csc);

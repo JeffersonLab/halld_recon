@@ -717,6 +717,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    std::vector<const DTAGMHit*>::iterator itagm;
    int ntagm_per_channel[6][128] = {0};
    int ntagm = 0;
+   std::vector<std::vector<unsigned short> > tagm_raw_waveform;
    for (itagm = tagm_hits.begin(); itagm != tagm_hits.end(); ++itagm) {
       int row = (*itagm)->row;
       int column = (*itagm)->column;
@@ -912,6 +913,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    std::vector<const DTAGHHit*>::iterator itagh;
    int ntagh_per_counter[512] = {0};
    int ntagh = 0;
+   std::vector<std::vector<unsigned short> > tagh_raw_waveform;
    for (itagh = tagh_hits.begin(); itagh != tagh_hits.end(); ++itagh) {
       dTreeFillData.Fill_Array<Int_t>("tagh_seqno",ntagh_per_counter[(*itagh)->counter_id]++,ntagh);
       dTreeFillData.Fill_Array<Int_t>("tagh_counter",(*itagh)->counter_id,ntagh);
@@ -1081,13 +1083,14 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
          tagh_nraw++;
       }
    }
-   dTreeFillData.Fill_Single<Int_t>("tagn_nraw",tagh_nraw);
+   dTreeFillData.Fill_Single<Int_t>("tagh_nraw",tagh_nraw);
 
    std::vector<const DPSHit*> ps_hits;
    event->Get(ps_hits);
    std::vector<const DPSHit*>::iterator ips;
    int nps_per_counter[512] = {0};
    int nps = 0;
+   std::vector<std::vector<unsigned short> > ps_raw_waveform;
    for (ips = ps_hits.begin(); ips != ps_hits.end(); ++ips) {
       dTreeFillData.Fill_Array<Int_t>("ps_arm",(*ips)->arm,nps);
       dTreeFillData.Fill_Array<Int_t>("ps_column",(*ips)->column,nps);
@@ -1162,6 +1165,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    std::vector<const DPSCHit*>::iterator ipsc;
    int npsc_per_counter[512] = {0};
    int npsc = 0;
+   std::vector<std::vector<unsigned short> > psc_raw_waveform;
    for (ipsc = psc_hits.begin(); ipsc != psc_hits.end(); ++ipsc) {
       dTreeFillData.Fill_Array<Int_t>("psc_arm",(*ipsc)->arm,npsc);
       dTreeFillData.Fill_Array<Int_t>("psc_module",(*ipsc)->module,npsc);
