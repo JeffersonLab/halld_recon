@@ -588,7 +588,6 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    // reconstruction algorithm) should be done outside of any mutex lock
    // since multiple threads may call this method at the same time.
 
-   bc_factory->Process(event);
    double ticks_per_sec = bc_factory->ticks_per_sec;
 
    std::vector<const DCODAEventInfo*> event_info;
