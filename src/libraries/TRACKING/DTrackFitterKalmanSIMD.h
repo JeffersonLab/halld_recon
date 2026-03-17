@@ -103,6 +103,7 @@ typedef struct{
   double uwire,vstrip,uvar,vvar,z,dE;
   double nr,nz;
   int status;
+  int layer;
   const DFDCPseudo *hit;
 }DKalmanSIMDFDCHit_t;
 
@@ -252,7 +253,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double GetEnergyVariance(double ds,double beta2,double K_rho_Z_over_A);
 
   double GetFDCDriftDistance(double time, double Bz) const {
-    return fdc_drift_distance(time, Bz);
+    return fdc_drift_distance(0,time, Bz);
   }
 
  protected:
@@ -296,7 +297,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   unsigned int locate(vector<double>&xx,double x);
   
   double fdc_drift_variance(double t) const;
-  double fdc_drift_distance(double t,double Bz) const;
+  double fdc_drift_distance(int layer,double t,double Bz) const;
 
   void ResetKalmanSIMD(void);
   jerror_t GetProcessNoise(double z,double ds,double chi2c_factor,
@@ -571,6 +572,10 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double DRIFT_RES_PARMS[6];
   // parameters for time-to-distance function for FDC
   double DRIFT_FUNC_PARMS[6];
+  double D_AT_T_HIGH;
+  vector<vector<double>>dDriftParms;
+  vector<double>dDriftDistanceAtTHigh;
+  int dDriftVersion;
 
   // Identity matrix
   DMatrix5x5 I5x5;

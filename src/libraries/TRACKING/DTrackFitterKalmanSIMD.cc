@@ -252,45 +252,34 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
 
 }
 
-#define FDC_T0_OFFSET 17.6
-// Interpolate on a table to convert time to distance for the fdc
-/*
-   double DTrackFitterKalmanSIMD::fdc_drift_distance(double t,double Bz) const {
-   double a=93.31,b=4.614,Bref=2.143;
-   t*=(a+b*Bref)/(a+b*Bz);
-   int id=int((t+FDC_T0_OFFSET)/2.);
-   if (id<0) id=0;
-   if (id>138) id=138;
-   double d=fdc_drift_table[id];  
-   if (id!=138){
-   double frac=0.5*(t+FDC_T0_OFFSET-2.*double(id));
-   double dd=fdc_drift_table[id+1]-fdc_drift_table[id];
-   d+=frac*dd;
-   }
-
-   return d;
-   }
-   */
-
 // parametrization of time-to-distance for FDC
-double DTrackFitterKalmanSIMD::fdc_drift_distance(double time,double Bz) const {
+double DTrackFitterKalmanSIMD::fdc_drift_distance(int layer,double time,double Bz) const {
   if (time<0.) return 0.;
   double d=0.; 
   time/=1.+FDC_DRIFT_BSCALE_PAR1+FDC_DRIFT_BSCALE_PAR2*Bz*Bz;
-  double tsq=time*time;
   double t_high=DRIFT_FUNC_PARMS[4];
-  
-  if (time<t_high){
-    d=DRIFT_FUNC_PARMS[0]*sqrt(time)+DRIFT_FUNC_PARMS[1]*time
-      +DRIFT_FUNC_PARMS[2]*tsq+DRIFT_FUNC_PARMS[3]*tsq*time;
+  if (dDriftVersion==0){
+    if (time<t_high){
+      d=DRIFT_FUNC_PARMS[0]*sqrt(time);
+      for (unsigned int i=1;i<4;i++){
+	d+=DRIFT_FUNC_PARMS[i]*pow(time,i);
+      }
+    }
+    else{
+      d=D_AT_T_HIGH+DRIFT_FUNC_PARMS[5]*(time-t_high);
+    }
   }
-  else{
-    double t_high_sq=t_high*t_high;
-    d=DRIFT_FUNC_PARMS[0]*sqrt(t_high)+DRIFT_FUNC_PARMS[1]*t_high
-      +DRIFT_FUNC_PARMS[2]*t_high_sq+DRIFT_FUNC_PARMS[3]*t_high_sq*t_high;
-    d+=DRIFT_FUNC_PARMS[5]*(time-t_high);
+  else {
+    if (time<t_high){
+      d=dDriftParms[layer][0]*sqrt(time);
+      for (unsigned int i=1;i<4;i++){
+	d+=dDriftParms[layer][i]*pow(time,i);
+      }
+    }
+    else{
+      d=dDriftDistanceAtTHigh[layer]+DRIFT_FUNC_PARMS[5]*(time-t_high);
+    }
   }
-    
   return d;
 }
 
@@ -352,6 +341,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    }
    else dECALz=1000.;
    if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
+
    geom->GetFMWPCZ_vec(dFMWPCz_vec);
    geom->GetFMWPCSize(dFMWPCsize);
    geom->GetCTOFZ(dCTOFz);
@@ -623,42 +613,55 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    DRIFT_RES_PARMS[5]=drift_res_ext["res_slope"]; 
 
    // Time-to-distance function parameters for FDC
+   map<string,int>drift_version;
+   jcalib->Get("FDC/drift_version",drift_version);
    map<string,double>drift_func_parms;
-   jcalib->Get("FDC/drift_function_parms",drift_func_parms); 
-   DRIFT_FUNC_PARMS[0]=drift_func_parms["p0"];   
-   DRIFT_FUNC_PARMS[1]=drift_func_parms["p1"];
-   DRIFT_FUNC_PARMS[2]=drift_func_parms["p2"]; 
-   DRIFT_FUNC_PARMS[3]=drift_func_parms["p3"];
+   dDriftVersion=drift_version["num"];
+   if (dDriftVersion==0){
+     jcalib->Get("FDC/drift_function_parms",drift_func_parms);
+     DRIFT_FUNC_PARMS[0]=drift_func_parms["p0"];
+     DRIFT_FUNC_PARMS[1]=drift_func_parms["p1"];
+     DRIFT_FUNC_PARMS[2]=drift_func_parms["p2"];
+     DRIFT_FUNC_PARMS[3]=drift_func_parms["p3"];
+   }
+   else if (jcalib->Get("FDC/drift_function_parms_v2", tvals)==false){
+     for(unsigned int i=0; i<tvals.size(); i++){
+       map<string, double> &row = tvals[i];
+       vector<double>parms;
+       parms.push_back(row["p0"]);
+       parms.push_back(row["p1"]);
+       parms.push_back(row["p2"]);
+       parms.push_back(row["p3"]);
+       dDriftParms.push_back(parms);
+     }
+   }
    DRIFT_FUNC_PARMS[4]=1000.;
    DRIFT_FUNC_PARMS[5]=0.;
    map<string,double>drift_func_ext;
    if (jcalib->Get("FDC/drift_function_ext",drift_func_ext)==false){
      DRIFT_FUNC_PARMS[4]=drift_func_ext["p4"]; 
-     DRIFT_FUNC_PARMS[5]=drift_func_ext["p5"]; 
+     DRIFT_FUNC_PARMS[5]=drift_func_ext["p5"];
+     D_AT_T_HIGH=DRIFT_FUNC_PARMS[0]*sqrt(DRIFT_FUNC_PARMS[4]);
+     for (unsigned int i=1;i<4;i++){
+       D_AT_T_HIGH+=DRIFT_FUNC_PARMS[i]*pow(DRIFT_FUNC_PARMS[4],i);
+     }
+     for (size_t i=0;i<dDriftParms.size();i++){
+       double d_at_t_high=dDriftParms[i][0]*sqrt(DRIFT_FUNC_PARMS[4]);
+       for (unsigned int j=1;j<4;j++){
+	 d_at_t_high+=dDriftParms[i][j]*pow(DRIFT_FUNC_PARMS[4],j);
+       }
+       dDriftDistanceAtTHigh.push_back(d_at_t_high);
+     }
    }
+   
+	       
    // Factors for taking care of B-dependence of drift time for FDC
    map<string, double> fdc_drift_parms;
    jcalib->Get("FDC/fdc_drift_parms", fdc_drift_parms);
    FDC_DRIFT_BSCALE_PAR1 = fdc_drift_parms["bscale_par1"];
    FDC_DRIFT_BSCALE_PAR2 = fdc_drift_parms["bscale_par2"];
 
-
-   /*
-      if (jcalib->Get("FDC/fdc_drift2", tvals)==false){
-      for(unsigned int i=0; i<tvals.size(); i++){
-      map<string, float> &row = tvals[i];
-      iter_float iter = row.begin();
-      fdc_drift_table[i] = iter->second;
-      }
-      }
-      else{
-      jerr << " FDC time-to-distance table not available... bailing..." << endl;
-      exit(0);
-      }
-      */
-
    for (unsigned int i=0;i<5;i++)I5x5(i,i)=1.;
-
 
    // center of the target
    map<string, double> targetparms;
@@ -1130,6 +1133,7 @@ void DTrackFitterKalmanSIMD::AddFDCHit(const DFDCPseudo *fdchit){
    hit->nr=0.;
    hit->nz=0.;
    hit->dE=1e6*fdchit->dE;
+   hit->layer=fdchit->wire->layer-1;
    hit->hit=fdchit;
    hit->status=good_hit;
 
@@ -4399,7 +4403,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){	
 	  if (my_fdchits[id]->hit!=NULL){
 	    double drift=(doca>0.0?1.:-1.)
-	      *fdc_drift_distance(drift_time,forward_traj[k].B);
+	      *fdc_drift_distance(my_fdchits[id]->layer,drift_time,forward_traj[k].B);
 	    Mdiff(0)+=drift;
  
 	    // Variance in drift distance
@@ -5567,8 +5571,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S){
       // get material properties from the Root Geometry
       pos.SetXYZ(S(state_x),S(state_y),z);
       if (geom->FindMatKalman(pos,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
-               chi2c_factor,chi2a_factor,chi2a_corr,
-               last_material_map)
+			      chi2c_factor,chi2a_factor,chi2a_corr,
+			      last_material_map)
             !=NOERROR){
          _DBG_ << "Material error in ExtrapolateToVertex! " << endl;
          break;
@@ -5813,8 +5817,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
       double chi2c_factor=0.,chi2a_factor=0.,chi2a_corr=0.;
       DVector3 pos3d(xy.X(),xy.Y(),Sc(state_z));
       if (geom->FindMatKalman(pos3d,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
-               chi2c_factor,chi2a_factor,chi2a_corr,
-               last_material_map)
+			      chi2c_factor,chi2a_factor,chi2a_corr,
+			      last_material_map)
             !=NOERROR){
          _DBG_ << "Material error in ExtrapolateToVertex! " << endl;
          break;
@@ -7319,7 +7323,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                double drift = 0.0;
                int left_right = -999;
                if (USE_FDC_DRIFT_TIMES) {
-                 drift = (du > 0.0 ? 1.0 : -1.0) * fdc_drift_distance(drift_time, forward_traj[m].B);
+                 drift = (du > 0.0 ? 1.0 : -1.0) * fdc_drift_distance(my_fdchits[id]->layer,drift_time, forward_traj[m].B);
                  left_right = (du > 0.0 ? +1 : -1);
                }
 
@@ -7399,7 +7403,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                   double drift_shift = 0.0;
                   if(USE_FDC_DRIFT_TIMES){
                      if (drift_time < 0.) drift_shift = drift;
-                     else drift_shift = (du>0.0?1.:-1.)*fdc_drift_distance(drift_time+t0shift,forward_traj[m].B);
+                     else drift_shift = (du>0.0?1.:-1.)*fdc_drift_distance(my_fdchits[id]->layer,drift_time+t0shift,forward_traj[m].B);
                   }
                   alignmentDerivatives[FDCTrackD::dW_dt0]= (drift_shift-drift)/t0shift;
 
@@ -9590,7 +9594,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
        double drift_time=my_fdchits[id]->t-mT0-(*rit).t*TIME_UNIT_CONVERSION;
        if (my_fdchits[id]->hit!=NULL){
 	 if (fit_type==kTimeBased){
-	   double drift=(doca>0.0?1.:-1.)*fdc_drift_distance(drift_time,(*rit).B);
+	   double drift=(doca>0.0?1.:-1.)*fdc_drift_distance(my_fdchits[id]->layer,drift_time,(*rit).B);
 	   Mdiff(0)=drift-doca;
  
 	   // Variance in drift distance
@@ -10020,7 +10024,7 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
 	double drift_time=my_fdchits[my_id]->t-mT0-traj.t*TIME_UNIT_CONVERSION;
 	double sign=(doca>0.0)?1.:-1.;
 	if (my_fdchits[my_id]->hit!=NULL){
-	  double drift=sign*fdc_drift_distance(drift_time,traj.B); 
+	  double drift=sign*fdc_drift_distance(my_fdchits[id]->layer,drift_time,traj.B); 
 	  Mdiff(0)+=drift;
 		  
 	  // Variance in drift distance
