@@ -991,7 +991,6 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 		    << " doca: " << pulls[iPull].d
 		    << " docaphi: " << pulls[iPull].docaphi
 		    << " z: " << pulls[iPull].z
-		    << " cos(theta_rel): " << pulls[iPull].cosThetaRel
 		    << " tcorr: " << pulls[iPull].tcorr 
 		    << endl;
             }
@@ -5550,7 +5549,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S){
 
    // material properties
    double rho_Z_over_A=0.,LnI=0.,K_rho_Z_over_A=0.,Z=0.;
-   double chi2c_factor=0.,chi2a_factor=0.,chi2a_corr=0.;
    DVector3 pos;  // current position along trajectory
 
    double r2=r2_old;
@@ -5571,7 +5569,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S){
       // get material properties from the Root Geometry
       pos.SetXYZ(S(state_x),S(state_y),z);
       if (geom->FindMatKalman(pos,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
-			      chi2c_factor,chi2a_factor,chi2a_corr,
 			      last_material_map)
             !=NOERROR){
          _DBG_ << "Material error in ExtrapolateToVertex! " << endl;
@@ -5814,10 +5811,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
          && r2<R2_MAX){  
       // get material properties from the Root Geometry
       double rho_Z_over_A=0.,LnI=0.,K_rho_Z_over_A=0.,Z=0;
-      double chi2c_factor=0.,chi2a_factor=0.,chi2a_corr=0.;
       DVector3 pos3d(xy.X(),xy.Y(),Sc(state_z));
       if (geom->FindMatKalman(pos3d,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
-			      chi2c_factor,chi2a_factor,chi2a_corr,
 			      last_material_map)
             !=NOERROR){
          _DBG_ << "Material error in ExtrapolateToVertex! " << endl;
