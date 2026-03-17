@@ -107,6 +107,26 @@ void DTRDSegment_factory_extrapolation::Process(const std::shared_ptr<const JEve
     myTRDSegment->var_y=var_y;
     myTRDSegment->var_tx=var_tx;
     myTRDSegment->var_ty=var_ty;
+
+    myTRDSegment->NumPoints = segments_TRDPoints[i].size();
+    myTRDSegment->NumStripClustersX = 0;
+    myTRDSegment->NumStripClustersY = 0;
+    myTRDSegment->NumHitsX = 0;
+    myTRDSegment->NumHitsY = 0;
+
+    for (unsigned int j=0;j<segments_TRDPoints[i].size();j++){
+      const DTRDPoint *point = segments_TRDPoints[i][j];
+      const vector<const DTRDStripCluster*> stripClusters = point->AssociatedStripClusters;
+      for (const DTRDStripCluster* stripCluster: stripClusters) {
+        if (stripCluster->plane==0) {
+          myTRDSegment->NumStripClustersX++;
+          myTRDSegment->NumHitsX += stripCluster->members.size();
+        } else if (stripCluster->plane==1) {
+          myTRDSegment->NumStripClustersY++;
+          myTRDSegment->NumHitsY += stripCluster->members.size();
+        }
+      }
+    }
     
     Insert(myTRDSegment);  
   }

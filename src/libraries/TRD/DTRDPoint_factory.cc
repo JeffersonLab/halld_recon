@@ -130,6 +130,9 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 				newPoint->AddAssociatedObject(clusX.clus);
 				newPoint->AddAssociatedObject(clusY.clus);
 
+				newPoint->AssociatedStripClusters.push_back(clusX.clus);
+				newPoint->AssociatedStripClusters.push_back(clusY.clus);
+
 				Insert(newPoint);
 			}
 		}
