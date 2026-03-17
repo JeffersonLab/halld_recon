@@ -45,7 +45,7 @@ struct Extrapolation {
 };
 
 
-void draw_TRD_EventMonitor(TString root_file = "/work/halld2/home/nseptian/TRD-DEV/hd_root_131346_TRDOnline.root") {
+void draw_TRD_EventMonitor(TString root_file = "/work/halld2/home/nseptian/TRD-DEV/hd_root_130834_TRDOnline.root") {
     
     TFile *f = TFile::Open(root_file);
     TDirectory *dir = (TDirectory*)f->Get("TRD");
