@@ -297,12 +297,11 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    }
    pthread_mutex_unlock(&print_mutex);
 
-	// load information on which detectors are installed
-	map<string,string> trd_installed;
-	bool GEM_INSTALLED = false;
-	DEvent::GetCalib(event, "/TRD/install_status", trd_installed);
-	if(atoi(trd_installed["status"].data()) == 1)
-		GEM_INSTALLED = true;
+   // load information on which detectors are installed
+   map<string,string> trd_installed;
+   bool GEM_INSTALLED = false;
+   DEvent::GetCalib(event, "/TRD/install_status", trd_installed);
+   if(atoi(trd_installed["status"].data()) == 1) GEM_INSTALLED = true;
 
    // Some useful values
    two_m_e=2.*ELECTRON_MASS;
@@ -381,7 +380,12 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    }
 
    // Get z positions of fdc wire planes
-   geom->GetFDCZ(fdc_z_wires);
+   vector<vector<DFDCWire*>>fdcwires;
+   geom->GetFDCWires(fdcwires);
+   for (size_t i=0;i<fdcwires.size();i++){
+     double z=0.5*(fdcwires[i][0]->origin.z()+fdcwires[i][95]->origin.z());
+     fdc_z_wires.push_back(z);
+   }
 
    auto app = event->GetJApplication();
    ADD_VERTEX_POINT=false; 
