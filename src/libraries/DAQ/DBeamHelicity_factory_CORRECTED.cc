@@ -18,6 +18,8 @@ using namespace std;
 //------------------
 void DBeamHelicity_factory_CORRECTED::Init()
 {
+	auto app = GetApplication();
+	app->SetDefaultParameter("HELICITY:REJECT_TSETTLE", REJECT_TSETTLE, "Reject events when the helicity is changing (t_settle is on). (default: 1)");
 
 	return; //NOERROR;
 }
@@ -50,6 +52,12 @@ void DBeamHelicity_factory_CORRECTED::Process(const std::shared_ptr<const JEvent
 	
 	//for(auto beam_helicity : locBeamHelicities) {
 	for(size_t loc_i = 0; loc_i < locBeamHelicities.size(); ++loc_i) {
+  		// make some (optional) quality selections
+		if(!locBeamHelicities[loc_i]->valid) continue;
+  		if(REJECT_TSETTLE && locBeamHelicities[loc_i]->t_settle) {
+  			return;
+  		}
+	
 		DBeamHelicity *new_beam_helicity = new DBeamHelicity(*locBeamHelicities[loc_i]);
 		new_beam_helicity->helicity *= dCorrectionFactor;
 		
