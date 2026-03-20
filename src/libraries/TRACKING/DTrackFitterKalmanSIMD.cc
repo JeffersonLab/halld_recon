@@ -3994,8 +3994,10 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
 			   central_traj[k].rho_Z_over_A,
 			   central_traj[k].LnI,central_traj[k].Z);
 	    }
-
-	    if (BrentCentral(dedx,xy,z0w,origin,dir,Sc,ds2)!=NOERROR) return MOMENTUM_OUT_OF_RANGE;
+	    kalman_error_t error=BrentCentral(dedx,xy,z0w,origin,dir,Sc,ds2);
+	    if (error!=BRENT_SUCCEEDED){
+	      return error;
+	    }
 
 	    //Step along the reference trajectory and compute the new covariance matrix
 	    StepStateAndCovariance(xy0,ds2,dedx,S0,J,Cc);
@@ -7493,20 +7495,13 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                      <<" resi_a " << resi_a
                      <<endl;
                }
-
-	       double scale=1./sqrt(1.+tx*tx+ty*ty);
-	       double cosThetaRel=0.;
-	       if (my_fdchits[id]->hit!=NULL){
-		 my_fdchits[id]->hit->wire->udir.Dot(DVector3(scale*tx,scale*ty,scale));
-	       }
                DTrackFitter::pull_t thisPull = pull_t(resi_a,sqrt(V(0,0)),
 						      forward_traj[m].s,
 						      fdc_updates[id].tdrift,
 						      fdc_updates[id].doca,
 						      NULL,my_fdchits[id]->hit,
+						      0.,forward_traj[m].z,
 						      0.,
-						      forward_traj[m].z,
-						      cosThetaRel,0.,
 						      resi,sqrt(V(1,1)));
                thisPull.left_right = left_right;
                thisPull.AddTrackDerivatives(alignmentDerivatives);
@@ -7621,7 +7616,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
             DVector2 dir=my_cdchits[id]->dir;
             double z0wire=my_cdchits[id]->z0wire;
             //BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy,z0wire,origin,dir,myS,myds);
-            if(BrentCentral(dEdx,xy,z0wire,origin,dir,myS,myds)!=NOERROR) return VALUE_OUT_OF_RANGE;
+            if(BrentCentral(dEdx,xy,z0wire,origin,dir,myS,myds)!=BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
             if(DEBUG_HISTS) alignDerivHists[0]->Fill(myds);
             DVector2 wirepos=origin+(myS(state_z)-z0wire)*dir;
             double cosstereo=my_cdchits[id]->cosstereo;
@@ -7672,7 +7667,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                xy_shifted.Set(central_traj[m].xy.X()-alignS(state_D)*sin(alignS(state_phi)),
                      central_traj[m].xy.Y()+alignS(state_D)*cos(alignS(state_phi)));
                if (BrentCentral(dEdx,xy_shifted,z0_shifted,origin_shifted,
-                        dir_shifted,alignS,alignds)!=NOERROR) return VALUE_OUT_OF_RANGE;
+                        dir_shifted,alignS,alignds)!=BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if (BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0_shifted,origin_shifted,
                //         dir_shifted,alignS,alignds)!=NOERROR) return VALUE_OUT_OF_RANGE;
@@ -7696,7 +7691,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                xy_shifted.Set(central_traj[m].xy.X()-alignS(state_D)*sin(alignS(state_phi)),
                      central_traj[m].xy.Y()+alignS(state_D)*cos(alignS(state_phi)));
                if (BrentCentral(dEdx,xy_shifted,z0_shifted,origin_shifted,
-                        dir_shifted,alignS,alignds)!=NOERROR) return VALUE_OUT_OF_RANGE;
+                        dir_shifted,alignS,alignds)!=BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if(BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0_shifted,origin_shifted,
                //         dir_shifted,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
@@ -7719,7 +7714,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                xy_shifted.Set(central_traj[m].xy.X()-alignS(state_D)*sin(alignS(state_phi)),
                      central_traj[m].xy.Y()+alignS(state_D)*cos(alignS(state_phi)));
                if (BrentCentral(dEdx,xy_shifted,z0_shifted,origin_shifted,
-                        dir_shifted,alignS,alignds)!=NOERROR) return VALUE_OUT_OF_RANGE;
+                        dir_shifted,alignS,alignds)!=BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if(BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0_shifted,origin_shifted,
                //         dir_shifted,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
@@ -7744,7 +7739,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                dir_shifted=dir+shift;
                cosstereo_shifted = cos((wireDir+DVector3(wdirShift,0.,0.)).Angle(DVector3(0.,0.,1.)));
                if (BrentCentral(dEdx,xy_shifted,z0_shifted,origin_shifted,
-                        dir_shifted,alignS,alignds)!=NOERROR) return VALUE_OUT_OF_RANGE;
+                        dir_shifted,alignS,alignds)!=BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if(BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0_shifted,origin_shifted,
                //         dir_shifted,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
@@ -7768,7 +7763,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                dir_shifted=dir+shift;
                cosstereo_shifted = cos((wireDir+DVector3(0.,wdirShift,0.)).Angle(DVector3(0.,0.,1.)));
                if (BrentCentral(dEdx,xy_shifted,z0_shifted,origin_shifted,
-                        dir_shifted,alignS,alignds)!=NOERROR) return VALUE_OUT_OF_RANGE;
+                        dir_shifted,alignS,alignds)!=BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if(BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0_shifted,origin_shifted,
                //         dir_shifted,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
@@ -7791,7 +7786,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                      central_traj[m].xy.Y()+alignS(state_D)*cos(alignS(state_phi)));
                cosstereo_shifted = cos((wireDir+DVector3(0.,0.,wdirShift)).Angle(DVector3(0.,0.,1.)));
                if (BrentCentral(dEdx,xy_shifted,z0_shifted,origin_shifted,
-                        dir_shifted,alignS,alignds)!=NOERROR) return VALUE_OUT_OF_RANGE;
+                        dir_shifted,alignS,alignds)!=BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if(BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0_shifted,origin_shifted,
                //         dir_shifted,alignS,alignds)!=NOERROR) return VALUE_OUT_OF_RANGE;
@@ -7818,7 +7813,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                alignds=0.;
                xy_shifted.Set(central_traj[m].xy.X()-alignS(state_D)*sin(alignS(state_phi)),
                      central_traj[m].xy.Y()+alignS(state_D)*cos(alignS(state_phi)));
-               if(BrentCentral(dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
+               if(BrentCentral(dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if(BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
                wirepos_shifted=origin+(alignS(state_z)-z0wire)*dir;
@@ -7835,7 +7830,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                alignds=0.;
                xy_shifted.Set(central_traj[m].xy.X()-alignS(state_D)*sin(alignS(state_phi)),
                      central_traj[m].xy.Y()+alignS(state_D)*cos(alignS(state_phi)));
-               if(BrentCentral(dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
+               if(BrentCentral(dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if(BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
                wirepos_shifted=origin+(alignS(state_z)-z0wire)*dir;
@@ -7852,7 +7847,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                alignds=0.;
                xy_shifted.Set(central_traj[m].xy.X()-alignS(state_D)*sin(alignS(state_phi)),
                      central_traj[m].xy.Y()+alignS(state_D)*cos(alignS(state_phi)));
-               if(BrentCentral(dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
+               if(BrentCentral(dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if(BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
                wirepos_shifted=origin+(alignS(state_z)-z0wire)*dir;
@@ -7869,7 +7864,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                alignds=0.;
                xy_shifted.Set(central_traj[m].xy.X()-alignS(state_D)*sin(alignS(state_phi)),
                      central_traj[m].xy.Y()+alignS(state_D)*cos(alignS(state_phi)));
-               if(BrentCentral(dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
+               if(BrentCentral(dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if(BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
                wirepos_shifted=origin+(alignS(state_z)-z0wire)*dir;
@@ -7886,7 +7881,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                alignds=0.;
                xy_shifted.Set(central_traj[m].xy.X()-alignS(state_D)*sin(alignS(state_phi)),
                      central_traj[m].xy.Y()+alignS(state_D)*cos(alignS(state_phi)));
-               if(BrentCentral(dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
+               if(BrentCentral(dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
                if (alignds < dscut_min || alignds > dscut_max) return VALUE_OUT_OF_RANGE;
                //if(BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dEdx,xy_shifted,z0wire,origin,dir,alignS,alignds) != NOERROR) return VALUE_OUT_OF_RANGE;
                wirepos_shifted=origin+(alignS(state_z)-z0wire)*dir;
@@ -7935,16 +7930,10 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
 
             if (DEBUG_LEVEL>1 && (!isfinite(VRes) || VRes < 0.0) ) _DBG_ << " SmoothCentral Problem: VRes is " << VRes << " = " << Vhit << " - " << Vtrack << endl;
 
-	    double lambda=atan(Ss(state_tanl));
-	    double sinl=sin(lambda);
-	    double cosl=cos(lambda);
-	    double cosThetaRel=my_cdchits[id]->hit->wire->udir.Dot(DVector3(cosphi*cosl,
-								 sinphi*cosl,
-								 sinl));
             pull_t thisPull(cdc_updates[id].doca-d,sqrt(VRes),
 			    central_traj[m].s,cdc_updates[id].tdrift,
 			    d,my_cdchits[id]->hit,NULL,
-			    diff.Phi(),myS(state_z),cosThetaRel,
+			    diff.Phi(),myS(state_z),
 			    cdc_updates[id].tcorr);
 
             thisPull.AddTrackDerivatives(alignmentDerivatives);
@@ -8360,13 +8349,8 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
 
    if (DEBUG_LEVEL>1 && (!isfinite(V) || V < 0.0) ) _DBG_ << " Problem: V is " << V << endl;
 
-   double tx=Ss(state_tx);
-   double ty=Ss(state_ty);
-   double scale=1./sqrt(1.+tx*tx+ty*ty);
-   double cosThetaRel=hit->hit->wire->udir.Dot(DVector3(scale*tx,scale*ty,scale));
-
    pull_t thisPull(update.doca-d,sqrt(V),traj.s,update.tdrift,d,hit->hit,
-		   NULL,diff.Phi(),new_z,cosThetaRel,update.tcorr);
+		   NULL,diff.Phi(),new_z,update.tcorr);
    thisPull.AddTrackDerivatives(alignmentDerivatives);
    my_pulls.push_back(thisPull);
    return NOERROR;
@@ -8510,36 +8494,36 @@ jerror_t DTrackFitterKalmanSIMD::BrentForward(double z, double dedx, const doubl
    return NOERROR;
 }
 
-jerror_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, const double z0w, const DVector2 &origin, const DVector2 &dir, DMatrix5x1 &Sc, double &ds){
+kalman_error_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, const double z0w, const DVector2 &origin, const DVector2 &dir, DMatrix5x1 &Sc, double &ds){
+   if (BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dedx,xy,z0w,
+		       origin,dir,Sc,ds)!=NOERROR){
+      return MOMENTUM_OUT_OF_RANGE;
+   }
 
    DVector2 wirexy=origin;
    wirexy+=(Sc(state_z)-z0w)*dir;
 
-   // new doca
-   double doca2=(xy-wirexy).Mod2();
-   double old_doca2=doca2;
-
-   if (BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dedx,xy,z0w,
-            origin,dir,Sc,ds)!=NOERROR){
-      return VALUE_OUT_OF_RANGE;
+   // doca
+   double old_doca2=(xy-wirexy).Mod2();
+   if (old_doca2>3.){
+     return POSITION_OUT_OF_RANGE;
    }
-
+   
    unsigned int maxSteps=3;
    unsigned int stepCounter=0;
 
    if (fabs(ds)<EPS3){
       double my_ds=ds;
-      old_doca2=doca2;
       Step(xy,-mStepSizeS,Sc,dedx);
       my_ds-=mStepSizeS;
       wirexy=origin;
       wirexy+=(Sc(state_z)-z0w)*dir;
-      doca2=(xy-wirexy).Mod2();
+      double doca2=(xy-wirexy).Mod2();
       while(doca2<old_doca2 && stepCounter<maxSteps){
          old_doca2=doca2;
          // Bail if the transverse momentum has dropped below some minimum
          if (fabs(Sc(state_q_over_pt))>Q_OVER_PT_MAX){
-            return VALUE_OUT_OF_RANGE;
+            return MOMENTUM_OUT_OF_RANGE;
          }
 
          // Step through the field
@@ -8556,7 +8540,7 @@ jerror_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, const d
       double ds2=0.;
       if (BrentsAlgorithm(-mStepSizeS,-mStepSizeS,dedx,xy,z0w,
                origin,dir,Sc,ds2)!=NOERROR){
-         return VALUE_OUT_OF_RANGE;
+         return MOMENTUM_OUT_OF_RANGE;
       }
       ds=my_ds+ds2;
    }
@@ -8568,15 +8552,13 @@ jerror_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, const d
       wirexy+=(Sc(state_z)-z0w)*dir;
 
       // doca
-      old_doca2=doca2;
-      doca2=(xy-wirexy).Mod2();
-
+      double doca2=(xy-wirexy).Mod2();
       while(doca2<old_doca2 && stepCounter<maxSteps){
          old_doca2=doca2;
 
          // Bail if the transverse momentum has dropped below some minimum
          if (fabs(Sc(state_q_over_pt))>Q_OVER_PT_MAX){
-            return VALUE_OUT_OF_RANGE;
+            return MOMENTUM_OUT_OF_RANGE;
          }
 
          // Step through the field
@@ -8594,11 +8576,11 @@ jerror_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, const d
       double ds2=0.;
       if (BrentsAlgorithm(mStepSizeS,mStepSizeS,dedx,xy,z0w,
                origin,dir,Sc,ds2)!=NOERROR){
-         return VALUE_OUT_OF_RANGE;
+         return MOMENTUM_OUT_OF_RANGE;
       }
       ds=my_ds+ds2;
    }
-   return NOERROR;
+   return BRENT_SUCCEEDED;
 }
 
 // Find extrapolations to detectors outside of the tracking volume
@@ -8610,10 +8592,9 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   // material properties
   double rho_Z_over_A=0.,LnI=0.,K_rho_Z_over_A=0.,Z=0.;
 
-  // Position variables
+  // Position variable
   double z=forward_traj[0].z;
-  double newz=z,dz=0.;
-
+ 
   // Current time and path length
   double t=forward_traj[0].t;
   double s=forward_traj[0].s;
@@ -8706,8 +8687,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     if (s_to_boundary<ds) ds=s_to_boundary;
     if (ds<MIN_STEP_SIZE) ds=MIN_STEP_SIZE;
     if (ds<0.5 && z<406. && r2>65.*65.) ds=0.5;
-    dz=ds*dz_ds;
-    newz=z+dz;
+    double newz=z+ds*dz_ds;
 
     if (hit_tof==false && newz>dTOFz){
       newz=dTOFz+EPS;
@@ -9002,7 +8982,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
   
   // Position variables
   S=forward_traj[0].S;
-  double z=forward_traj[0].z,newz=z,dz=0.; 
+  double z=forward_traj[0].z;
 
   // Current time and path length
   double t=forward_traj[0].t;
@@ -9057,8 +9037,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
     if (ds>mStepSizeS) ds=mStepSizeS;
     if (s_to_boundary<ds) ds=s_to_boundary;
     if (ds<MIN_STEP_SIZE) ds=MIN_STEP_SIZE;
-    dz=ds*dz_ds;
-    newz=z+dz;
+    double newz=z+ds*dz_ds;
 
     bool got_fdc_hit=false;
     if (fdc_plane<24 && newz>fdc_z_wires[fdc_plane]){
