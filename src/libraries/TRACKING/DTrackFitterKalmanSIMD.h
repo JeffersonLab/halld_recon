@@ -80,6 +80,7 @@ enum kalman_error_t{
   EXTRAPOLATION_FAILED,
   FIT_FAILED,
   FIT_NOT_DONE,
+  BRENT_SUCCEEDED,
 };
 
 enum find_doca_error_t{
@@ -366,12 +367,9 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
             const DVector2 &origin, 
             const DVector2 &dir, DMatrix5x1 &S, 
             double &dz);
-  jerror_t BrentCentral(double dedx, 
-        DVector2 &xy, 
-        const double z0w, 
-        const DVector2 &origin, 
-        const DVector2 &dir, 
-        DMatrix5x1 &Sc, double &ds);
+  kalman_error_t BrentCentral(double dedx,DVector2 &xy,const double z0w,
+			      const DVector2 &origin,const DVector2 &dir,
+			      DMatrix5x1 &Sc,double &ds);
   
   jerror_t PropagateForwardCDC(int length,int &index,double &z,double &r2,
 			       DMatrix5x1 &S, bool &stepped_to_boundary); 
