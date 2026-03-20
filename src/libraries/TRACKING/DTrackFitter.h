@@ -260,7 +260,6 @@ class DTrackFitter: public JObject{
 
 	private:
 		int DEBUG_LEVEL;
-		string MATERIAL_MAP_MODEL;			
 
 		// Prohibit default constructor
 		DTrackFitter();
