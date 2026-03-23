@@ -8052,7 +8052,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
    DVector2 origin=hit->origin;
    DVector2 dir=hit->dir;
    double z0wire=hit->z0wire;
-   if(BrentForward(z,dEdx,z0wire,origin,dir,myS,mydz) != NOERROR) return VALUE_OUT_OF_RANGE;
+   if(BrentForward(z,dEdx,z0wire,origin,dir,myS,mydz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
    if(DEBUG_HISTS)alignDerivHists[23]->Fill(mydz);
    double new_z=z+mydz;
    DVector2 wirepos=origin+(new_z-z0wire)*dir;
@@ -8105,7 +8105,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       origin_shifted=origin+shift;
       dir_shifted=dir;
       z0_shifted=z0wire;
-      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE; 
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8127,7 +8127,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       origin_shifted=origin+shift;
       dir_shifted=dir;
       z0_shifted=z0wire;
-      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE;
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8148,7 +8148,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       origin_shifted=origin;
       dir_shifted=dir;
       z0_shifted=z0wire+wposShift;
-      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE;
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8171,7 +8171,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       z0_shifted=z0wire;
       dir_shifted=dir+shift;
       cosstereo_shifted = cos((wireDir+DVector3(wdirShift,0.,0.)).Angle(DVector3(0.,0.,1.)));
-      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE;
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8193,7 +8193,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       z0_shifted=z0wire;
       dir_shifted=dir+shift;
       cosstereo_shifted = cos((wireDir+DVector3(0.,wdirShift,0.)).Angle(DVector3(0.,0.,1.)));
-      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE;
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8214,7 +8214,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       dir_shifted.Set(wireDir.X()/(wireDir.Z()+wdirShift), wireDir.Y()/(wireDir.Z()+wdirShift));
       z0_shifted=z0wire;
       cosstereo_shifted = cos((wireDir+DVector3(0.,0.,wdirShift)).Angle(DVector3(0.,0.,1.)));
-      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE;
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0_shifted,origin_shifted,dir_shifted,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8239,7 +8239,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       // dS0
       alignS=Ss+trackShiftS0;
       aligndz=0.;
-      if(BrentForward(z,dEdx,z0wire,origin,dir,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0wire,origin,dir,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE;
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0wire,origin,dir,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8256,7 +8256,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       // dS1
       alignS=Ss+trackShiftS1;
       aligndz=0.;
-      if(BrentForward(z,dEdx,z0wire,origin,dir,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0wire,origin,dir,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE;
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0wire,origin,dir,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8273,7 +8273,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       // dS2
       alignS=Ss+trackShiftS2;
       aligndz=0.;
-      if(BrentForward(z,dEdx,z0wire,origin,dir,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0wire,origin,dir,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE;
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0wire,origin,dir,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8290,7 +8290,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       // dS3
       alignS=Ss+trackShiftS3;
       aligndz=0.;
-      if(BrentForward(z,dEdx,z0wire,origin,dir,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0wire,origin,dir,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE;
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0wire,origin,dir,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8307,7 +8307,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
       // dS4
       alignS=Ss+trackShiftS4;
       aligndz=0.;
-      if(BrentForward(z,dEdx,z0wire,origin,dir,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
+      if(BrentForward(z,dEdx,z0wire,origin,dir,alignS,aligndz) != BRENT_SUCCEEDED) return VALUE_OUT_OF_RANGE;
       if(aligndz < dzcut_min || aligndz > dzcut_max) return VALUE_OUT_OF_RANGE;
       //if(BrentsAlgorithm(z,-mStepSizeZ,dEdx,z0wire,origin,dir,alignS,aligndz) != NOERROR) return VALUE_OUT_OF_RANGE;
       new_z_shifted=z+aligndz;
@@ -8385,8 +8385,11 @@ void DTrackFitterKalmanSIMD::TransformCovariance(DMatrix5x5 &C){
 
 }
 
-jerror_t DTrackFitterKalmanSIMD::BrentForward(double z, double dedx, const double z0w,
+kalman_error_t DTrackFitterKalmanSIMD::BrentForward(double z, double dedx, const double z0w,
       const DVector2 &origin, const DVector2 &dir, DMatrix5x1 &S, double &dz){
+   if (BrentsAlgorithm(z,-mStepSizeZ,dedx,z0w,origin,dir,S,dz)!=NOERROR){
+      return MOMENTUM_OUT_OF_RANGE;
+   }
 
    DVector2 wirepos=origin;
    wirepos+=(z-z0w)*dir;
@@ -8394,8 +8397,8 @@ jerror_t DTrackFitterKalmanSIMD::BrentForward(double z, double dedx, const doubl
    double dy=S(state_y)-wirepos.Y();
    double doca2 = dx*dx+dy*dy;
 
-   if (BrentsAlgorithm(z,-mStepSizeZ,dedx,z0w,origin,dir,S,dz)!=NOERROR){
-      return VALUE_OUT_OF_RANGE;
+   if (doca2>3.) {
+     return POSITION_OUT_OF_RANGE;
    }
 
    double newz = z+dz;
@@ -8439,7 +8442,7 @@ jerror_t DTrackFitterKalmanSIMD::BrentForward(double z, double dedx, const doubl
       // Find the true doca
       double dz2=0.;
       if (BrentsAlgorithm(newz,-mStepSizeZ,dedx,z0w,origin,dir,S,dz2)!=NOERROR){
-         return VALUE_OUT_OF_RANGE;
+         return MOMENTUM_OUT_OF_RANGE;
       }
       newz=ztemp+dz2;
 
@@ -8484,14 +8487,14 @@ jerror_t DTrackFitterKalmanSIMD::BrentForward(double z, double dedx, const doubl
       // Find the true doca
       double dz2=0.;
       if (BrentsAlgorithm(newz,mStepSizeZ,dedx,z0w,origin,dir,S,dz2)!=NOERROR){
-         return VALUE_OUT_OF_RANGE;
+         return MOMENTUM_OUT_OF_RANGE;
       }
       newz=ztemp+dz2;
 
       // Change in z relative to where we started for this wire
       dz=newz-z;
    }
-   return NOERROR;
+   return BRENT_SUCCEEDED;
 }
 
 kalman_error_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, const double z0w, const DVector2 &origin, const DVector2 &dir, DMatrix5x1 &Sc, double &ds){
@@ -9710,7 +9713,7 @@ DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
     }
     
     // We have bracketed the minimum doca:  use Brent's agorithm
-    if (BrentForward(z,dedx,z0w,origin,dir,S,dz)!=NOERROR){
+    if (BrentForward(z,dedx,z0w,origin,dir,S,dz)!=BRENT_SUCCEEDED){
       return BRENT_FAILED;
     }
     // Step the state and covariance through the field
