@@ -362,11 +362,9 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 			   const DVector2 &origin,
 			   const DVector2 &dir,DMatrix5x1 &S,
 			   double &dz_out);
-  jerror_t BrentForward(double z, double dedx, 
-            const double z0w,
-            const DVector2 &origin, 
-            const DVector2 &dir, DMatrix5x1 &S, 
-            double &dz);
+  kalman_error_t BrentForward(double z,double dedx,const double z0w,
+			      const DVector2 &origin,const DVector2 &dir,
+			      DMatrix5x1 &S,double &dz);
   kalman_error_t BrentCentral(double dedx,DVector2 &xy,const double z0w,
 			      const DVector2 &origin,const DVector2 &dir,
 			      DMatrix5x1 &Sc,double &ds);
