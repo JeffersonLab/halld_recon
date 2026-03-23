@@ -1194,25 +1194,22 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
    // Get offsets tweaking nominal geometry from calibration database
    JCalibration * jcalib = jcalman->GetJCalibration(runnumber);
    vector<map<string,double> >vals;
-   vector<fdc_wire_offset_t>fdc_wire_offsets;
+   vector<double>fdc_wire_z_offsets;
    if (jcalib->Get("FDC/wire_alignment",vals)==false){
       for(unsigned int i=0; i<vals.size(); i++){
          map<string,double> &row = vals[i];
-
-         // Get the offsets from the calibration database 
-         fdc_wire_offset_t temp;
-         temp.du=row["dU"];
-         //temp.du=0.;
-
-         temp.dphi=row["dPhi"];
-         //temp.dphi=0.;
-
-         temp.dz=row["dZ"];
-         //  temp.dz=0.;
-
-         fdc_wire_offsets.push_back(temp);
+         fdc_wire_z_offsets.push_back(row["dZ"]);
       }
    }
+   vector<double>fdc_wire_u_offsets;
+   vector<double>fdc_wire_v_offsets;
+   if (jcalib->Get("FDC/cell_offsets",vals)==false){
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      fdc_wire_u_offsets.push_back(row["xshift"]);
+      fdc_wire_v_offsets.push_back(row["yshift"]);
+    }
+  }
 
    vector<fdc_wire_rotation_t>fdc_wire_rotations;
    if (jcalib->Get("FDC/cell_rotations",vals)==false){
@@ -1231,8 +1228,9 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
 
    // Generate the vector of wire plane parameters
    for(int i=0; i<FDC_NUM_LAYERS; i++){
-      double angle=-stereo_angles[i]*M_PI/180.+fdc_wire_offsets[i].dphi;
-
+     double angle=-stereo_angles[i]*M_PI/180.;
+     double angle2=angle + M_PI_2;
+     
       vector<DFDCWire *>temp;
       for(int j=0; j<WIRES_PER_PLANE; j++){
          unsigned int pack_id=i/6;
@@ -1244,19 +1242,21 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
 
          // find coordinates of center of wire in rotated system
          float u = U_OF_WIRE_ZERO + WIRE_SPACING*(float)(j);
-         w->u=u+fdc_wire_offsets[i].du;
+         w->u=u+fdc_wire_u_offsets[i];
 
          // Rotate coordinates into lab system and set the wire's origin
          // Note that the FDC measures "angle" such that angle=0
          // corresponds to the anode wire in the vertical direction
          // (i.e. at phi=90 degrees).
-         float x = u*sin(angle + M_PI/2.0);
-         float y = u*cos(angle + M_PI/2.0);
+         float x = u*sin(angle2);
+         float y = u*cos(angle2);
          w->origin.SetXYZ(x,y,0.);
          w->origin.RotateX(ThetaX[pack_id]+fdc_wire_rotations[i].dPhiX);
          w->origin.RotateY(ThetaY[pack_id]+fdc_wire_rotations[i].dPhiY);
          w->origin.RotateZ(ThetaZ[pack_id]+fdc_wire_rotations[i].dPhiZ);
-         DVector3 globalOffsets(dX[pack_id],dY[pack_id],z_wires[i]+fdc_wire_offsets[i].dz);
+         DVector3 globalOffsets(dX[pack_id]-fdc_wire_v_offsets[i]*cos(angle2),
+				dY[pack_id]+fdc_wire_v_offsets[i]*sin(angle2),
+				z_wires[i]+fdc_wire_z_offsets[i]);
          w->origin+=globalOffsets;
 
          // Length of wire is set by active radius
