@@ -457,10 +457,6 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    if (FAST_TRACKING_MODE) USE_PASS1_TIME_MODE=true;
    app->SetDefaultParameter("KALMAN:USE_PASS1_TIME_MODE",USE_PASS1_TIME_MODE); 
 
-   USE_FDC_DRIFT_TIMES=true;
-   app->SetDefaultParameter("TRKFIT:USE_FDC_DRIFT_TIMES",
-         USE_FDC_DRIFT_TIMES);
-
    RECOVER_BROKEN_TRACKS=true;
    app->SetDefaultParameter("KALMAN:RECOVER_BROKEN_TRACKS",RECOVER_BROKEN_TRACKS);
 
@@ -4405,7 +4401,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	// Residual for coordinate transverse to wire
 	Mdiff(0)=-doca;
 	double drift_time=my_fdchits[id]->t-mT0-forward_traj[k].t*TIME_UNIT_CONVERSION;
-	if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){	
+	if (fit_type==kTimeBased){
 	  if (my_fdchits[id]->hit!=NULL){
 	    double drift=(doca>0.0?1.:-1.)
 	      *fdc_drift_distance(my_fdchits[id]->layer,drift_time,forward_traj[k].B);
@@ -7321,12 +7317,8 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                         -tv*sinalpha));	
                double drift_time=my_fdchits[id]->t-mT0
                   -forward_traj[m].t*TIME_UNIT_CONVERSION;
-               double drift = 0.0;
-               int left_right = -999;
-               if (USE_FDC_DRIFT_TIMES) {
-                 drift = (du > 0.0 ? 1.0 : -1.0) * fdc_drift_distance(my_fdchits[id]->layer,drift_time, forward_traj[m].B);
-                 left_right = (du > 0.0 ? +1 : -1);
-               }
+	       double drift = (du > 0.0 ? 1.0 : -1.0) * fdc_drift_distance(my_fdchits[id]->layer,drift_time, forward_traj[m].B);
+	       int left_right = (du > 0.0 ? +1 : -1);
 
                double resi_a = drift - doca;
 
@@ -7402,11 +7394,9 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                   // dDOCAW/dt0
                   double t0shift=4.;//ns
                   double drift_shift = 0.0;
-                  if(USE_FDC_DRIFT_TIMES){
-                     if (drift_time < 0.) drift_shift = drift;
-                     else drift_shift = (du>0.0?1.:-1.)*fdc_drift_distance(my_fdchits[id]->layer,drift_time+t0shift,forward_traj[m].B);
-                  }
-                  alignmentDerivatives[FDCTrackD::dW_dt0]= (drift_shift-drift)/t0shift;
+		  if (drift_time < 0.) drift_shift = drift;
+		  else drift_shift = (du>0.0?1.:-1.)*fdc_drift_distance(my_fdchits[id]->layer,drift_time+t0shift,forward_traj[m].B);
+		  alignmentDerivatives[FDCTrackD::dW_dt0]= (drift_shift-drift)/t0shift;
 
                   // dDOCAW/dx
                   alignmentDerivatives[FDCTrackD::dDOCAW_dx] = cosa/sqrt(1 + pow(tx*cosa - ty*sina,2));
@@ -8397,7 +8387,7 @@ kalman_error_t DTrackFitterKalmanSIMD::BrentForward(double z, double dedx, const
    double dy=S(state_y)-wirepos.Y();
    double doca2 = dx*dx+dy*dy;
 
-   if (doca2>3.) {
+   if (doca2>4.) {
      return POSITION_OUT_OF_RANGE;
    }
 
@@ -8508,7 +8498,7 @@ kalman_error_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, c
 
    // doca
    double old_doca2=(xy-wirexy).Mod2();
-   if (old_doca2>3.){
+   if (old_doca2>4.){
      return POSITION_OUT_OF_RANGE;
    }
    
@@ -10001,7 +9991,7 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
       // Difference between measurement and projection
       Mdiff(1)=v-(vpred+mydoca*lorentz_factor);
       Mdiff(0)=-mydoca;
-      if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){
+      if (fit_type==kTimeBased){
 	double drift_time=my_fdchits[my_id]->t-mT0-traj.t*TIME_UNIT_CONVERSION;
 	double sign=(doca>0.0)?1.:-1.;
 	if (my_fdchits[my_id]->hit!=NULL){
