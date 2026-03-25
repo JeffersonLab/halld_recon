@@ -777,15 +777,13 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
    // }
 
 
-   mT0=0.,mT0MinimumDriftTime=1e6;
+   mT0=0.;
    mVarT0=25.;
 
    mCDCInternalStepSize=0.5;
    //mCDCInternalStepSize=1.0;
    //mCentralStepSize=0.75;
    mCentralStepSize=0.75;
-
-   mT0Detector=SYS_CDC;
 
    IsHadron=true;
    IsElectron=false;
@@ -904,25 +902,23 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    }
 
    // start time and variance
-   if (fit_type==kTimeBased || USE_PASS1_TIME_MODE){
-      mT0=input_params.t0();
-      switch(input_params.t0_detector()){
-      case SYS_TOF:
-	mVarT0=0.01;
-	break;
-      case SYS_CDC:
-	mVarT0=7.5;
-	break;
-      case SYS_FDC:
-	mVarT0=7.5;
-	break;
-      case SYS_BCAL:
-	mVarT0=0.25;
-	break;
-      default:
-	mVarT0=0.09;
-	break;
-      }
+   mT0=input_params.t0();
+   switch(input_params.t0_detector()){
+   case SYS_TOF:
+     mVarT0=0.01;
+     break;
+   case SYS_CDC:
+     mVarT0=7.5;
+     break;
+   case SYS_FDC:
+     mVarT0=7.5;
+     break;
+   case SYS_BCAL:
+     mVarT0=0.25;
+     break;
+   default:
+     mVarT0=0.09;
+     break;
    }
    
    //_DBG_ << SystemName(input_params.t0_detector()) << " " << mT0 <<endl;
@@ -966,9 +962,9 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    double charge = GetCharge();
    fit_params.setPosition(pos);
    fit_params.setMomentum(mom);
-   fit_params.setTime(mT0MinimumDriftTime);
+   fit_params.setTime(mT0);
    fit_params.setPID(IDTrack(charge, MASS));
-   fit_params.setT0(mT0MinimumDriftTime,4.,mT0Detector);
+   fit_params.setT0(mT0,sqrt(mVarT0),input_params.t0_detector());
 
    if (DEBUG_LEVEL>0){
       _DBG_ << "----- Pass: " 
@@ -986,7 +982,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 	      _DBG_ << " ring: " <<  pulls[iPull].cdc_hit->wire->ring
 		    << " straw: " << pulls[iPull].cdc_hit->wire->straw  
 		    << " Residual: " << pulls[iPull].resi
-		    << " Err: " << pulls[iPull].err
+		    << " Err: " << sqrt(pulls[iPull].var)
 		    << " tdrift: " << pulls[iPull].tdrift
 		    << " doca: " << pulls[iPull].d
 		    << " docaphi: " << pulls[iPull].docaphi
@@ -1117,7 +1113,7 @@ void DTrackFitterKalmanSIMD::AddTRDHit(const DTRDPoint *trdhit){
 void DTrackFitterKalmanSIMD::AddFDCHit(const DFDCPseudo *fdchit){
    DKalmanSIMDFDCHit_t *hit= new DKalmanSIMDFDCHit_t;
 
-   hit->t=fdchit->time;
+   hit->t=fdchit->time-mT0;
    hit->uwire=fdchit->w;
    hit->vstrip=fdchit->s;
    hit->uvar=0.0833; // (1.0 cm)^2/12
@@ -1151,7 +1147,7 @@ void DTrackFitterKalmanSIMD::AddCDCHit (const DCDCTrackHit *cdchit){
          one_over_uz*cdchit->wire->udir.y());
    hit->z0wire=cdchit->wire->origin.z();
    hit->cosstereo=cos(cdchit->wire->stereo);
-   hit->tdrift=cdchit->tdrift;
+   hit->tdrift=cdchit->tdrift-mT0;
    my_cdchits.push_back(hit);
 }
 
@@ -4033,7 +4029,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
                while (dphi<-M_PI) dphi+=2*M_PI;
                if (mywire->origin.Y()<0) dphi*=-1.;
 
-               tdrift=my_cdchits[cdc_index]->tdrift-mT0
+               tdrift=my_cdchits[cdc_index]->tdrift
                   -central_traj[k_minus_1].t*TIME_UNIT_CONVERSION;
                double B=central_traj[k_minus_1].B;
                ComputeCDCDrift(dphi,delta,tdrift,B,measurement,V,tcorr);
@@ -4579,7 +4575,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    FindSag(dx,dy,newz-z0w,my_cdchits[cdc_index]->hit->wire,delta,dphi);
 
 	    // Find drift time and distance	    
-	    tdrift=my_cdchits[cdc_index]->tdrift-mT0
+	    tdrift=my_cdchits[cdc_index]->tdrift
 	      -forward_traj[k_minus_1].t*TIME_UNIT_CONVERSION;
 	    double B=forward_traj[k_minus_1].B;
 	    ComputeCDCDrift(dphi,delta,tdrift,B,dm,Vc,tcorr);
@@ -5082,7 +5078,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 	  double delta=0,dphi=0.;
 	  FindSag(dx,dy,newz-z0w,my_cdchits[cdc_index]->hit->wire,delta,dphi);
 	  // Find drift time and distance
-	  tdrift=my_cdchits[cdc_index]->tdrift-mT0
+	  tdrift=my_cdchits[cdc_index]->tdrift
 	    -forward_traj[k_minus_1].t*TIME_UNIT_CONVERSION;
 	  double B=forward_traj[k_minus_1].B;
 	  ComputeCDCDrift(dphi,delta,tdrift,B,dm,V,tcorr);
@@ -7315,8 +7311,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                double tv=tx*sina+ty*cosa;
                double resi=v-(vpred_uncorrected+doca*(nz_sinalpha_plus_nr_cosalpha
                         -tv*sinalpha));	
-               double drift_time=my_fdchits[id]->t-mT0
-                  -forward_traj[m].t*TIME_UNIT_CONVERSION;
+               double drift_time=fdc_updates[id].tdrift;
 	       double drift = (du > 0.0 ? 1.0 : -1.0) * fdc_drift_distance(my_fdchits[id]->layer,drift_time, forward_traj[m].B);
 	       int left_right = (du > 0.0 ? +1 : -1);
 
@@ -7485,14 +7480,14 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                      <<" resi_a " << resi_a
                      <<endl;
                }
-               DTrackFitter::pull_t thisPull = pull_t(resi_a,sqrt(V(0,0)),
+               DTrackFitter::pull_t thisPull = pull_t(resi_a,V(0,0),
 						      forward_traj[m].s,
 						      fdc_updates[id].tdrift,
 						      fdc_updates[id].doca,
 						      NULL,my_fdchits[id]->hit,
 						      0.,forward_traj[m].z,
 						      0.,
-						      resi,sqrt(V(1,1)));
+						      resi,V(1,1));
                thisPull.left_right = left_right;
                thisPull.AddTrackDerivatives(alignmentDerivatives);
                forward_pulls.push_back(thisPull);
@@ -7920,7 +7915,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
 
             if (DEBUG_LEVEL>1 && (!isfinite(VRes) || VRes < 0.0) ) _DBG_ << " SmoothCentral Problem: VRes is " << VRes << " = " << Vhit << " - " << Vtrack << endl;
 
-            pull_t thisPull(cdc_updates[id].doca-d,sqrt(VRes),
+            pull_t thisPull(cdc_updates[id].doca-d,VRes,
 			    central_traj[m].s,cdc_updates[id].tdrift,
 			    d,my_cdchits[id]->hit,NULL,
 			    diff.Phi(),myS(state_z),
@@ -8339,7 +8334,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
 
    if (DEBUG_LEVEL>1 && (!isfinite(V) || V < 0.0) ) _DBG_ << " Problem: V is " << V << endl;
 
-   pull_t thisPull(update.doca-d,sqrt(V),traj.s,update.tdrift,d,hit->hit,
+   pull_t thisPull(update.doca-d,V,traj.s,update.tdrift,d,hit->hit,
 		   NULL,diff.Phi(),new_z,update.tcorr);
    thisPull.AddTrackDerivatives(alignmentDerivatives);
    my_pulls.push_back(thisPull);
@@ -8900,31 +8895,11 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
 
   // Deal with points within fiducial volume of chambers
   unsigned int fdc_plane=0;
-  mT0Detector=SYS_NULL;
-  mT0MinimumDriftTime=1e6;
   for (int k=intersected_start_counter?index_beyond_start_counter:inner_index;k>=0;k--){
     double z=forward_traj[k].z;
     double t=forward_traj[k].t;
     double s=forward_traj[k].s;
     DMatrix5x1 S=forward_traj[k].S;
-
-    // Find estimate for t0 using earliest drift time
-    if (forward_traj[k].h_id>999){
-      unsigned int index=forward_traj[k].h_id-1000;
-      double dt=my_cdchits[index]->tdrift-t*TIME_UNIT_CONVERSION;
-      if (dt<mT0MinimumDriftTime){
-	mT0MinimumDriftTime=dt;
-	mT0Detector=SYS_CDC;
-      }
-    }
-    else if (forward_traj[k].h_id>0){
-      unsigned int index=forward_traj[k].h_id-1;
-      double dt=my_fdchits[index]->t-t*TIME_UNIT_CONVERSION;  
-      if (dt<mT0MinimumDriftTime){
-	mT0MinimumDriftTime=dt;
-	mT0Detector=SYS_FDC;
-      }
-    }
 
     //multiple scattering terms
     if (k>0){
@@ -9198,23 +9173,11 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
   }
   
   // Deal with points within fiducial volume of chambers
-  mT0Detector=SYS_NULL;
-  mT0MinimumDriftTime=1e6;
   for (int k=index_beyond_start_counter;k>=0;k--){ 
     S=central_traj[k].S;
     xy=central_traj[k].xy;
     double t=central_traj[k].t;
     double s=central_traj[k].s;
-    
-    // Find estimate for t0 using earliest drift time
-    if (central_traj[k].h_id>0){
-      unsigned int index=central_traj[k].h_id-1;
-      double dt=my_cdchits[index]->tdrift-t*TIME_UNIT_CONVERSION;  
-      if (dt<mT0MinimumDriftTime){
-	mT0MinimumDriftTime=dt;
-	mT0Detector=SYS_CDC;
-      }
-    }
 
     //multiple scattering terms
     if (k>0){
