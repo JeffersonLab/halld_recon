@@ -805,15 +805,35 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
 //-----------------
 DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 {
-   // Reset member data and free an memory associated with the last fit,
+   // Reset member data and free any memory associated with the last fit,
    // but some of which only for wire-based fits 
    ResetKalmanSIMD();
 
    // Check that we have enough FDC and CDC hits to proceed
    if (cdchits.size()==0 && fdchits.size()<4) return kFitNotDone;
    if (cdchits.size()+fdchits.size() < 6) return kFitNotDone;
-   
-   // Copy hits from base class into structures specific to DTrackFitterKalmanSIMD  
+
+   // start time and variance
+   mT0=input_params.t0();
+   switch(input_params.t0_detector()){
+   case SYS_TOF:
+     mVarT0=0.01;
+     break;
+   case SYS_CDC:
+     mVarT0=7.5;
+     break;
+   case SYS_FDC:
+     mVarT0=7.5;
+     break;
+   case SYS_BCAL:
+     mVarT0=0.25;
+     break;
+   default:
+     mVarT0=0.09;
+     break;
+   }
+
+   // Copy hits from base class into structures specific to DTrackFitterKalmanSIMD
    if (USE_CDC_HITS) 
      for(unsigned int i=0; i<cdchits.size(); i++)AddCDCHit(cdchits[i]);
    if (USE_FDC_HITS)
@@ -900,27 +920,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
       // the fit
       fdc_used_in_fit=vector<bool>(my_fdchits.size());
    }
-
-   // start time and variance
-   mT0=input_params.t0();
-   switch(input_params.t0_detector()){
-   case SYS_TOF:
-     mVarT0=0.01;
-     break;
-   case SYS_CDC:
-     mVarT0=7.5;
-     break;
-   case SYS_FDC:
-     mVarT0=7.5;
-     break;
-   case SYS_BCAL:
-     mVarT0=0.25;
-     break;
-   default:
-     mVarT0=0.09;
-     break;
-   }
-   
+ 
    //_DBG_ << SystemName(input_params.t0_detector()) << " " << mT0 <<endl;
 
    //Set the mass
@@ -4396,7 +4396,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
        
 	// Residual for coordinate transverse to wire
 	Mdiff(0)=-doca;
-	double drift_time=my_fdchits[id]->t-mT0-forward_traj[k].t*TIME_UNIT_CONVERSION;
+	double drift_time=my_fdchits[id]->t-forward_traj[k].t*TIME_UNIT_CONVERSION;
 	if (fit_type==kTimeBased){
 	  if (my_fdchits[id]->hit!=NULL){
 	    double drift=(doca>0.0?1.:-1.)
@@ -8493,7 +8493,7 @@ kalman_error_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, c
 
    // doca
    double old_doca2=(xy-wirexy).Mod2();
-   if (old_doca2>4.){
+   if (old_doca2>3.){
      return POSITION_OUT_OF_RANGE;
    }
    
@@ -9431,7 +9431,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	   FindSag(dx,dy,newz-z0w,my_cdchits[cdc_index]->hit->wire,delta,dphi);
 	   
 	   // Find drift time and distance	    
-	   double tdrift=my_cdchits[cdc_index]->tdrift-mT0
+	   double tdrift=my_cdchits[cdc_index]->tdrift
 	     -(*rit).t*TIME_UNIT_CONVERSION;
 	   double tcorr=0.,dmeas=0.;
 	   double B=(*rit).B;
@@ -9525,7 +9525,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
        Mdiff(1)=my_fdchits[id]->vstrip-vpred-doca*lorentz_factor;
 
        // Residual for coordinate transverse to wire
-       double drift_time=my_fdchits[id]->t-mT0-(*rit).t*TIME_UNIT_CONVERSION;
+       double drift_time=my_fdchits[id]->t-(*rit).t*TIME_UNIT_CONVERSION;
        if (my_fdchits[id]->hit!=NULL){
 	 if (fit_type==kTimeBased){
 	   double drift=(doca>0.0?1.:-1.)*fdc_drift_distance(my_fdchits[id]->layer,drift_time,(*rit).B);
@@ -9955,7 +9955,7 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
       Mdiff(1)=v-(vpred+mydoca*lorentz_factor);
       Mdiff(0)=-mydoca;
       if (fit_type==kTimeBased){
-	double drift_time=my_fdchits[my_id]->t-mT0-traj.t*TIME_UNIT_CONVERSION;
+	double drift_time=my_fdchits[my_id]->t-traj.t*TIME_UNIT_CONVERSION;
 	double sign=(doca>0.0)?1.:-1.;
 	if (my_fdchits[my_id]->hit!=NULL){
 	  double drift=sign*fdc_drift_distance(my_fdchits[id]->layer,drift_time,traj.B); 
