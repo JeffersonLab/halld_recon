@@ -459,7 +459,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
 
    RECOVER_BROKEN_TRACKS=true;
    app->SetDefaultParameter("KALMAN:RECOVER_BROKEN_TRACKS",RECOVER_BROKEN_TRACKS);
-
+   
    NUM_CDC_SIGMA_CUT=5.0;
    NUM_FDC_SIGMA_CUT=5.0;
    app->SetDefaultParameter("KALMAN:NUM_CDC_SIGMA_CUT",NUM_CDC_SIGMA_CUT,
@@ -512,6 +512,9 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    if (WRITE_ML_TRAINING_OUTPUT){
      mlfile.open("mltraining.dat");
    }
+   
+   DOCA_CUT=4.;
+   app->SetDefaultParameter("KALMAN:DOCA_CUT",DOCA_CUT);
 
    JCalibration *jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
    vector< map<string, double> > tvals;
@@ -8382,7 +8385,7 @@ kalman_error_t DTrackFitterKalmanSIMD::BrentForward(double z, double dedx, const
    double dy=S(state_y)-wirepos.Y();
    double doca2 = dx*dx+dy*dy;
 
-   if (doca2>4.) {
+   if (doca2>DOCA_CUT) {
      return POSITION_OUT_OF_RANGE;
    }
 
@@ -8493,7 +8496,7 @@ kalman_error_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, c
 
    // doca
    double old_doca2=(xy-wirexy).Mod2();
-   if (old_doca2>3.){
+   if (old_doca2>DOCA_CUT){
      return POSITION_OUT_OF_RANGE;
    }
    

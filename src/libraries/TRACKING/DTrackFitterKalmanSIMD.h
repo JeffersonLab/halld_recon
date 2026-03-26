@@ -493,7 +493,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   
   // Moliere fraction F and functions that depend on it
   double MOLIERE_FRACTION,MOLIERE_RATIO1,MOLIERE_RATIO2;
-  double MS_SCALE_FACTOR;
+  double MS_SCALE_FACTOR,DOCA_CUT;
 
   // tables of time-to-drift values
   vector<double>cdc_drift_table;
