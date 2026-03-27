@@ -72,7 +72,7 @@ shared_ptr<DKinFitParticle> DKinFitUtils::Make_BeamParticle(int locPID, int locC
 
 	if(dDebugLevel > 5)
 	{
-		cout << "DKinFitUtils: Beam particle created. Printing:" << endl;
+		Get_DebugStream()  << "DKinFitUtils: Beam particle created. Printing:" << endl;
 		locKinFitParticle->Print_ParticleParams();
 	}
 
@@ -90,7 +90,7 @@ shared_ptr<DKinFitParticle> DKinFitUtils::Make_TargetParticle(int locPID, int lo
 
 	if(dDebugLevel > 5)
 	{
-		cout << "DKinFitUtils: Target particle created. Printing:" << endl;
+		Get_DebugStream()  << "DKinFitUtils: Target particle created. Printing:" << endl;
 		locKinFitParticle->Print_ParticleParams();
 	}
 
@@ -115,7 +115,7 @@ shared_ptr<DKinFitParticle> DKinFitUtils::Make_DetectedParticle(int locPID, int 
 
 	if(dDebugLevel > 5)
 	{
-		cout << "DKinFitUtils: Detected particle created. Printing:" << endl;
+		Get_DebugStream() << "DKinFitUtils: Detected particle created. Printing:" << endl;
 		locKinFitParticle->Print_ParticleParams();
 	}
 
@@ -141,7 +141,7 @@ shared_ptr<DKinFitParticle> DKinFitUtils::Make_DetectedShower(int locPID, double
 
 	if(dDebugLevel > 5)
 	{
-		cout << "DKinFitUtils: Detected shower created. Printing:" << endl;
+		Get_DebugStream()  << "DKinFitUtils: Detected shower created. Printing:" << endl;
 		locKinFitParticle->Print_ParticleParams();
 	}
 
@@ -159,7 +159,7 @@ shared_ptr<DKinFitParticle> DKinFitUtils::Make_MissingParticle(int locPID, int l
 
 	if(dDebugLevel > 5)
 	{
-		cout << "DKinFitUtils: Missing particle created. Printing:" << endl;
+		Get_DebugStream()  << "DKinFitUtils: Missing particle created. Printing:" << endl;
 		locKinFitParticle->Print_ParticleParams();
 	}
 
@@ -178,7 +178,7 @@ shared_ptr<DKinFitParticle> DKinFitUtils::Make_DecayingParticle(int locPID, int 
 
 	if(dDebugLevel > 5)
 	{
-		cout << "DKinFitUtils: Decaying particle created. Printing:" << endl;
+		Get_DebugStream()  << "DKinFitUtils: Decaying particle created. Printing:" << endl;
 		locKinFitParticle->Print_ParticleParams();
 	}
 
@@ -281,7 +281,7 @@ shared_ptr<DKinFitParticle> DKinFitUtils::Clone_KinFitParticle(const shared_ptr<
 	dParticleMap_OutputToInput[locClonedKinFitParticle] = locKinFitParticle;
 
 	if(dDebugLevel > 20)
-		cout << "Cloned Particle: PID, input, output = " << locKinFitParticle->Get_PID() << ", " << locKinFitParticle << ", " << locClonedKinFitParticle << endl;
+		Get_DebugStream()  << "Cloned Particle: PID, input, output = " << locKinFitParticle->Get_PID() << ", " << locKinFitParticle << ", " << locClonedKinFitParticle << endl;
 
 	//clone covariance matrix
 	auto locCovarianceMatrix = locClonedKinFitParticle->Get_CovarianceMatrix();
@@ -552,7 +552,7 @@ TLorentzVector DKinFitUtils::Calc_DecayingP4(const DKinFitParticle* locKinFitPar
 		locP4Sum += locStateSignMultiplier*locP4; //all but enclosed decaying particle: will instead get p4 from decay products (may still need to propagate it below)
 
 	if(dDebugLevel > 30)
-		cout << "PID, sign, pxyzE = " << locKinFitParticle->Get_PID() << ", " << locStateSignMultiplier << ", " << locP4.Px() << ", " << locP4.Py() << ", " << locP4.Pz() << ", " << locP4.E() << endl;
+		Get_DebugStream() << "PID, sign, pxyzE = " << locKinFitParticle->Get_PID() << ", " << locStateSignMultiplier << ", " << locP4.Px() << ", " << locP4.Py() << ", " << locP4.Pz() << ", " << locP4.E() << endl;
 
 	if(!locDontPropagateAtAllFlag && (locKinFitParticleType != d_MissingParticle) && (locKinFitParticleType != d_TargetParticle) && locCommonVertexFitFlag && locChargedBFieldFlag && ((locKinFitParticleType != d_DecayingParticle) || !locDontPropagateDecayingP3Flag))
 	{
@@ -562,7 +562,7 @@ TLorentzVector DKinFitUtils::Calc_DecayingP4(const DKinFitParticle* locKinFitPar
 
 		TVector3 locDeltaXCrossH = locDeltaX.Cross(locH);
 		if(dDebugLevel > 30)
-			cout << "propagate pxyz by: " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.X() << ", " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.Y() << ", " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.Z() << endl;
+			Get_DebugStream() << "propagate pxyz by: " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.X() << ", " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.Y() << ", " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.Z() << endl;
 
 		locP4Sum.SetVect(locP4Sum.Vect() - locStateSignMultiplier*locA*locDeltaXCrossH);
 	}
@@ -571,7 +571,7 @@ TLorentzVector DKinFitUtils::Calc_DecayingP4(const DKinFitParticle* locKinFitPar
 	{
 		//enclosed decaying particle
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_DecayingP4() Decaying Particle; PID = " << locKinFitParticle->Get_PID() << endl;
+			Get_DebugStream() << "DKinFitter: Calc_DecayingP4() Decaying Particle; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		//replace the decaying particle with the particles it's momentum is derived from
 		//initial state
@@ -579,7 +579,7 @@ TLorentzVector DKinFitUtils::Calc_DecayingP4(const DKinFitParticle* locKinFitPar
 		for(auto& locParticle : locFromInitialState)
 		{
 			if(dDebugLevel > 30)
-				cout << "decaying, partially replace with init-state PID = " << locParticle->Get_PID() << endl;
+				Get_DebugStream() << "decaying, partially replace with init-state PID = " << locParticle->Get_PID() << endl;
 			auto locNextStateSignMultiplier = Get_IsDecayingParticleDefinedByProducts(locKinFitParticle) ? -1.0*locStateSignMultiplier : locStateSignMultiplier;
 			locP4Sum += Calc_DecayingP4(locParticle.get(), false, locNextStateSignMultiplier, locDontPropagateAtAllFlag);
 		}
@@ -589,7 +589,7 @@ TLorentzVector DKinFitUtils::Calc_DecayingP4(const DKinFitParticle* locKinFitPar
 		for(auto& locParticle : locFromFinalState)
 		{
 			if(dDebugLevel > 30)
-				cout << "decaying, partially replace with final-state PID = " << locParticle->Get_PID() << endl;
+				Get_DebugStream() << "decaying, partially replace with final-state PID = " << locParticle->Get_PID() << endl;
 			//If defined by invariant mass: add p4s of final state particles
 			//If defined by missing mass: add p4s of init state, subtract final state
 			auto locNextStateSignMultiplier = Get_IsDecayingParticleDefinedByProducts(locKinFitParticle) ? locStateSignMultiplier : -1.0*locStateSignMultiplier;
@@ -1022,16 +1022,16 @@ bool DKinFitUtils::Calc_PathLength(const DKinFitParticle* locKinFitParticle, con
 
 	if(dDebugLevel >= 20)
 	{
-		cout << "Calc_PathLength: Combined matrix: " << endl;
+		Get_DebugStream() << "Calc_PathLength: Combined matrix: " << endl;
 		Print_Matrix(locTempMatrix);
-		cout << "Calc_PathLength: Transform matrix: " << endl;
+		Get_DebugStream() << "Calc_PathLength: Transform matrix: " << endl;
 		Print_Matrix(locTransformationMatrix);
 	}
 
 	locTempMatrix.Similarity(locTransformationMatrix);
 	if(dDebugLevel >= 20)
 	{
-		cout << "path/life matrix: " << endl;
+		Get_DebugStream() << "path/life matrix: " << endl;
 		Print_Matrix(locTempMatrix);
 	}
 
@@ -1039,8 +1039,8 @@ bool DKinFitUtils::Calc_PathLength(const DKinFitParticle* locKinFitParticle, con
 	locRestFrameLifetimePair.second = sqrt(locTempMatrix(1, 1));
 	if(dDebugLevel >= 20)
 	{
-		cout << "calced path, sigma = " << locPathLengthPair.first << ", " << locPathLengthPair.second << endl;
-		cout << "calced lifetime, sigma = " << locRestFrameLifetimePair.first << ", " << locRestFrameLifetimePair.second << endl;
+		Get_DebugStream() << "calced path, sigma = " << locPathLengthPair.first << ", " << locPathLengthPair.second << endl;
+		Get_DebugStream() << "calced lifetime, sigma = " << locRestFrameLifetimePair.first << ", " << locRestFrameLifetimePair.second << endl;
 	}
 
 	return true;
@@ -1061,7 +1061,7 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 	TVector3 locBField = Get_IsBFieldNearBeamline() ? Get_BField(locPosition) : TVector3(0.0, 0.0, 0.0);
 	TVector3 locCommonVertex = locKinFitParticle->Get_CommonVertex();
 	if(dDebugLevel > 50)
-		cout << "jacobian: decay product: PID = " << locKinFitParticle->Get_PID() << endl;
+		Get_DebugStream() << "jacobian: decay product: PID = " << locKinFitParticle->Get_PID() << endl;
 
 	//This section is calculated assuming that the p4 is NEEDED at the COMMON vertex
 		//if not, need a factor of -1 on delta-x, and on the derivatives wrst the vertices
@@ -1108,7 +1108,7 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 	else if(locChargedBFieldFlag && locCommonVertexFitFlag && (locKinFitParticleType != d_DecayingParticle))
 	{
 		if(dDebugLevel > 50)
-			cout << "jacobian: partials part 1" << endl;
+			Get_DebugStream() << "jacobian: partials part 1" << endl;
 
 		locJacobian(0, locPxParamIndex) = 1.0;
 		locJacobian(1, locPxParamIndex + 1) = 1.0;
@@ -1135,7 +1135,7 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 	else if(locNeutralShowerFlag)
 	{
 		if(dDebugLevel > 50)
-			cout << "jacobian: partials part 2" << endl;
+			Get_DebugStream() << "jacobian: partials part 2" << endl;
 
 		double locEOverPSq = locP4.E()/locP4.Vect().Mag2();
 		locJacobian(0, locEParamIndex) = locEOverPSq*locP4.Px();
@@ -1173,7 +1173,7 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 	else if((locKinFitParticleType == d_MissingParticle) || ((locKinFitParticleType == d_DecayingParticle) && (locPxParamIndex >= 0)))
 	{
 		if(dDebugLevel > 50)
-			cout << "jacobian: partials part 3" << endl;
+			Get_DebugStream() << "jacobian: partials part 3" << endl;
 
 		//missing or open-ended-decaying particle: p3 is unknown (not derivable)
 		locJacobian(0, locPxParamIndex) = 1.0;
@@ -1183,13 +1183,13 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 	else if(locKinFitParticleType == d_DecayingParticle)
 	{
 		if(dDebugLevel > 50)
-			cout << "jacobian: partials part 4" << endl;
+			Get_DebugStream() << "jacobian: partials part 4" << endl;
 
 		//charged, enclosed decaying particle in a b-field
 		if(locChargedBFieldFlag && locKinFitParticle->Get_FitCommonVertexFlag() && !locDontPropagateDecayingP3Flag)
 		{
 			if(dDebugLevel > 50)
-				cout << "jacobian: partials part 4a" << endl;
+				Get_DebugStream() << "jacobian: partials part 4a" << endl;
 
 			//vertex factors
 			locJacobian(0, locVxParamIndex + 1) += locA*locH.Z();
@@ -1217,7 +1217,7 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 		for(auto& locParticle : locFromInitialState)
 		{
 			if(dDebugLevel > 30)
-				cout << "decaying, partially replace with init-state PID = " << locParticle->Get_PID() << endl;
+				Get_DebugStream() << "decaying, partially replace with init-state PID = " << locParticle->Get_PID() << endl;
 			auto locNextStateSignMultiplier = Get_IsDecayingParticleDefinedByProducts(locKinFitParticle) ? -1.0*locStateSignMultiplier : locStateSignMultiplier;
 			Calc_DecayingParticleJacobian(locParticle.get(), false, locNextStateSignMultiplier, locNumEta, locAdditionalPxParamIndices, locJacobian); //decaying particle multiplier * 1.0
 		}
@@ -1227,7 +1227,7 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 		for(auto& locParticle : locFromFinalState)
 		{
 			if(dDebugLevel > 30)
-				cout << "decaying, partially replace with final-state PID = " << locParticle->Get_PID() << endl;
+				Get_DebugStream() << "decaying, partially replace with final-state PID = " << locParticle->Get_PID() << endl;
 			//If defined by invariant mass: add p4s of final state particles
 			//If defined by missing mass: add p4s of init state, subtract final state
 			auto locNextStateSignMultiplier = Get_IsDecayingParticleDefinedByProducts(locKinFitParticle) ? locStateSignMultiplier : -1.0*locStateSignMultiplier;
@@ -1237,7 +1237,7 @@ void DKinFitUtils::Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFi
 	else
 	{
 		if(dDebugLevel > 50)
-			cout << "jacobian: partials part 5" << endl;
+			Get_DebugStream() << "jacobian: partials part 5" << endl;
 
 		// either no common vertex constraint, charged and detected but b-field = 0, or neutral particle with pre-ordained vertex (e.g. beam particle)
 		locJacobian(0, locPxParamIndex) = 1.0;
@@ -1250,7 +1250,7 @@ shared_ptr<const DKinFitChain> DKinFitUtils::Build_OutputKinFitChain(const share
 {
 	if(dDebugLevel > 20)
 	{
-		cout << "DKinFitUtils::Build_OutputKinFitChain(): Printing input chain." << endl;
+		Get_DebugStream() << "DKinFitUtils::Build_OutputKinFitChain(): Printing input chain." << endl;
 		locInputKinFitChain->Print_InfoToScreen();
 	}
 
@@ -1301,7 +1301,7 @@ shared_ptr<const DKinFitChain> DKinFitUtils::Build_OutputKinFitChain(const share
 
 	if(dDebugLevel > 20)
 	{
-		cout << "DKinFitUtils::Build_OutputKinFitChain(): Printing output chain." << endl;
+		Get_DebugStream() << "DKinFitUtils::Build_OutputKinFitChain(): Printing output chain." << endl;
 		locOutputKinFitChain->Print_InfoToScreen();
 	}
 
@@ -1313,8 +1313,8 @@ void DKinFitUtils::Print_Matrix(const TMatrixD& locMatrix) const
 	for(int loc_i = 0; loc_i < locMatrix.GetNrows(); ++loc_i)
 	{
 		for(int loc_j = 0; loc_j < locMatrix.GetNcols(); ++loc_j)
-			cout << locMatrix(loc_i, loc_j) << ", ";
-		cout << endl;
+			Get_DebugStream() << locMatrix(loc_i, loc_j) << ", ";
+		Get_DebugStream() << endl;
 	}
 }
 
@@ -1323,8 +1323,7 @@ void DKinFitUtils::Print_Matrix(const TMatrixF& locMatrix) const
 	for(int loc_i = 0; loc_i < locMatrix.GetNrows(); ++loc_i)
 	{
 		for(int loc_j = 0; loc_j < locMatrix.GetNcols(); ++loc_j)
-			cout << locMatrix(loc_i, loc_j) << ", ";
-		cout << endl;
+			Get_DebugStream() << locMatrix(loc_i, loc_j) << ", ";
+		Get_DebugStream() << endl;
 	}
 }
-

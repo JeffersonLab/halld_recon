@@ -143,7 +143,7 @@ void DKinFitter::Prepare_ConstraintsAndParticles(void)
 	//Print constraint info
 	if(dDebugLevel > 5)
 	{
-		cout << "DKinFitter: Pre-fit constraint info:" << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: Pre-fit constraint info:" << endl;
 		auto locConstraintIterator = dKinFitConstraints.begin();
 		for(; locConstraintIterator != dKinFitConstraints.end(); ++locConstraintIterator)
 			(*locConstraintIterator)->Print_ConstraintInfo();
@@ -157,7 +157,7 @@ void DKinFitter::Prepare_ConstraintsAndParticles(void)
 	//Print cloned constraint info
 	if(dDebugLevel > 10)
 	{
-		cout << "DKinFitter: Cloned (Fit) constraint info:" << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: Cloned (Fit) constraint info:" << endl;
 		auto locConstraintIterator = dKinFitConstraints.begin();
 		for(; locConstraintIterator != dKinFitConstraints.end(); ++locConstraintIterator)
 			(*locConstraintIterator)->Print_ConstraintInfo();
@@ -324,7 +324,7 @@ void DKinFitter::Set_MatrixSizes(void)
 		bool locChargedBFieldFlag = (locKinFitParticle->Get_Charge() != 0) && dKinFitUtils->Get_IsBFieldNearBeamline();
 
 		if(dDebugLevel >= 20)
-			cout << "PID, pointer, is in p4/mass/vert/indirectv, accel = " << locKinFitParticle->Get_PID() << ", " << locKinFitParticle << ", " << locIsInP4Constraint << ", " << locIsInMassConstraint << ", " << locIsInVertexConstraint << ", " << locIsIndirectlyInVertexConstraint << ", " << locChargedBFieldFlag << endl;
+			dKinFitUtils->Get_DebugStream() << "PID, pointer, is in p4/mass/vert/indirectv, accel = " << locKinFitParticle->Get_PID() << ", " << locKinFitParticle << ", " << locIsInP4Constraint << ", " << locIsInMassConstraint << ", " << locIsInVertexConstraint << ", " << locIsIndirectlyInVertexConstraint << ", " << locChargedBFieldFlag << endl;
 		if(!locKinFitParticle->Get_IsNeutralShowerFlag())
 		{
 			if(locIsInP4Constraint || locIsInMassConstraint || Get_IsConstrainingVertex(locKinFitParticle) || locIsIndirectlyInVertexConstraint)
@@ -379,7 +379,7 @@ void DKinFitter::Set_MatrixSizes(void)
 	}
 
 	if(dDebugLevel > 10)
-		cout << "DKinFitter: Num measurables, unknowns, constraints = " << dNumEta << ", " << dNumXi << ", " << dNumF << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: Num measurables, unknowns, constraints = " << dNumEta << ", " << dNumXi << ", " << dNumF << endl;
 }
 
 void DKinFitter::Resize_Matrices(void)
@@ -707,11 +707,11 @@ void DKinFitter::Fill_InputMatrices(void)
 
 	if(dDebugLevel > 20)
 	{
-		cout << "DKinFitter: dEta: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dEta: " << endl;
 		dKinFitUtils->Print_Matrix(dEta);
-		cout << "DKinFitter: dVY: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dVY: " << endl;
 		dKinFitUtils->Print_Matrix(dVY);
-		cout << "DKinFitter: dXi: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dXi: " << endl;
 		dKinFitUtils->Print_Matrix(dXi);
 		for(locParticleIterator = dKinFitParticles.begin(); locParticleIterator != dKinFitParticles.end(); ++locParticleIterator)
 			(*locParticleIterator)->Print_ParticleParams();
@@ -754,7 +754,7 @@ bool DKinFitter::Fit_Reaction(void)
 	Set_FinalTrackInfo(); //Update_ParticleParams() already called: at the end of the last iteration 
 
 	if(dDebugLevel > 5)
-		cout << "DKinFitter: Final dChiSq, dNDF, dConfidenceLevel = " << dChiSq << ", " << dNDF << ", " << dConfidenceLevel << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: Final dChiSq, dNDF, dConfidenceLevel = " << dChiSq << ", " << dNDF << ", " << dConfidenceLevel << endl;
 
 	dKinFitStatus = d_KinFitSuccessful;
 	return true;
@@ -771,27 +771,27 @@ bool DKinFitter::Iterate(void)
 		{
 			//sometimes the chisq will walk (very slightly) forever, without any real meaningful change in the variables
 			if(dDebugLevel > 10)
-				cout << "DKinFitter: At maximum number of iterations, this chisq, last chisq, last resort cutoff = " << dChiSq << ", " << locPreviousChiSq << ", " << dConvergenceChiSqDiff_LastResort << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: At maximum number of iterations, this chisq, last chisq, last resort cutoff = " << dChiSq << ", " << locPreviousChiSq << ", " << dConvergenceChiSqDiff_LastResort << endl;
 			if((fabs(dChiSq - locPreviousChiSq) <= dConvergenceChiSqDiff_LastResort) && (dChiSq >= 0.0))
 				break; //close enough
 			if(dDebugLevel > 10)
-				cout << "DKinFitter: Exceeded maximum number of iterations.  Returning false." << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Exceeded maximum number of iterations.  Returning false." << endl;
 			dKinFitStatus = d_KinFitTooManyIterations;
 			return false; //diverging!
 		}
 
 		locPreviousChiSq = dChiSq;
 		if(dDebugLevel > 20)
-			cout << "DKinFitter: Begin iteration" << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Begin iteration" << endl;
 
 		Calc_dF();
 		if(dDebugLevel > 20)
 		{
-			cout << "DKinFitter: dF: " << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: dF: " << endl;
 			dKinFitUtils->Print_Matrix(dF);
-			cout << "DKinFitter: dF_dXi: " << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: dF_dXi: " << endl;
 			dKinFitUtils->Print_Matrix(dF_dXi);
-			cout << "DKinFitter: dF_dEta: " << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: dF_dEta: " << endl;
 			dKinFitUtils->Print_Matrix(dF_dEta);
 		}
 
@@ -816,9 +816,9 @@ bool DKinFitter::Iterate(void)
 			dXi += locDeltaXi;
 			if(dDebugLevel > 20)
 			{
-				cout << "DKinFitter: locDeltaXi: " << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: locDeltaXi: " << endl;
 				dKinFitUtils->Print_Matrix(locDeltaXi);
-				cout << "DKinFitter: dXi: " << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: dXi: " << endl;
 				dKinFitUtils->Print_Matrix(dXi);
 			}
 
@@ -837,11 +837,11 @@ bool DKinFitter::Iterate(void)
 
 		if(dDebugLevel > 20)
 		{
-			cout << "DKinFitter: dLambda: " << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: dLambda: " << endl;
 			dKinFitUtils->Print_Matrix(dLambda);
-			cout << "DKinFitter: dEta: " << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: dEta: " << endl;
 			dKinFitUtils->Print_Matrix(dEta);
-			cout << "DKinFitter: dChiSq = " << dChiSq << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: dChiSq = " << dChiSq << endl;
 			auto locParticleIterator = dKinFitParticles.begin();
 			for(; locParticleIterator != dKinFitParticles.end(); ++locParticleIterator)
 				(*locParticleIterator)->Print_ParticleParams();
@@ -862,16 +862,16 @@ bool DKinFitter::Calc_dS(void)
 	dS = locTempMatrix;
 	if(dDebugLevel > 20)
 	{
-		cout << "DKinFitter: dS: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dS: " << endl;
 		dKinFitUtils->Print_Matrix(dS);
-		cout << "determinant magnitude = " << fabs(dS.Determinant()) << endl;
+		dKinFitUtils->Get_DebugStream() << "determinant magnitude = " << fabs(dS.Determinant()) << endl;
 	}
 	
 	TDecompLU locDecompLU_S(dS);
 	//debugging step: lowering Tol by iterations to pass.
 	if( locDecompLU_S.Decompose() && fabs(dS.Determinant()==0.0) )
 	{
-	    if(dDebugLevel > 10) cout << "trying to lower Tol = "<< dS.GetTol() << "\n" << endl;
+	    if(dDebugLevel > 10) dKinFitUtils->Get_DebugStream() << "trying to lower Tol = "<< dS.GetTol() << "\n" << endl;
 		TMatrixD matrixLU_dS = locDecompLU_S.GetLU();
 
 		//Search for smallest diagonal term in matrixLU_dS
@@ -888,7 +888,7 @@ bool DKinFitter::Calc_dS(void)
 	    {
 	      //cout << "Old Tol = "<< dS.GetTol() << "\n" << endl;
 	      dS.SetTol(minDiagElement/2);
-	      if(dDebugLevel > 10) cout << "New Tol is set at " << minDiagElement/2 << "\n"  << endl;
+	      if(dDebugLevel > 10) dKinFitUtils->dKinFitUtils->Get_DebugStream() << "New Tol is set at " << minDiagElement/2 << "\n"  << endl;
 	    }
 
 	}
@@ -897,14 +897,14 @@ bool DKinFitter::Calc_dS(void)
 	if((!locDecompLU_S.Decompose()) || (fabs(dS.Determinant()) < 1.0E-300))
 	{
 		if(dDebugLevel > 10)
-			cout << "DKinFitter: dS not invertible.  Returning false." << endl;
+			dKinFitUtils->dKinFitUtils->Get_DebugStream() << "DKinFitter: dS not invertible.  Returning false." << endl;
 		return false; // matrix is not invertible
 	}
 	dS_Inverse = dS;
 	dS_Inverse.Invert();
 	if(dDebugLevel > 20)
 	{
-		cout << "DKinFitter: dS_Inverse: " << endl;
+		dKinFitUtils->dKinFitUtils->Get_DebugStream() << "DKinFitter: dS_Inverse: " << endl;
 		dKinFitUtils->Print_Matrix(dS_Inverse);
 	}
 
@@ -922,23 +922,23 @@ bool DKinFitter::Calc_dU(void)
 	dU_Inverse = locTempMatrix;
 	if(dDebugLevel > 20)
 	{
-		cout << "DKinFitter: dU_Inverse: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dU_Inverse: " << endl;
 		dKinFitUtils->Print_Matrix(dU_Inverse);
-		cout << "determinant magnitude = " << fabs(dU_Inverse.Determinant()) << endl;
+		dKinFitUtils->Get_DebugStream() << "determinant magnitude = " << fabs(dU_Inverse.Determinant()) << endl;
 	}
 	TDecompLU locDecompLU_VXiInv(dU_Inverse);
 	//check to make sure that the matrix is decomposable and has a non-zero determinant
 	if((!locDecompLU_VXiInv.Decompose()) || (fabs(dU_Inverse.Determinant()) < 1.0E-300))
 	{
 		if(dDebugLevel > 10)
-			cout << "DKinFitter: dU_Inverse not invertible.  Returning false." << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: dU_Inverse not invertible.  Returning false." << endl;
 		return false; // matrix is not invertible
 	}
 	dU = dU_Inverse;
 	dU.Invert();
 	if(dDebugLevel > 20)
 	{
-		cout << "DKinFitter: dU: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dU: " << endl;
 		dKinFitUtils->Print_Matrix(dU);
 	}
 	return true;
@@ -954,9 +954,9 @@ void DKinFitter::Calc_dVdEta(void)
 		dV = dVEta;
 		if(dDebugLevel > 20)
 		{
-			cout << "DKinFitter: dVEta: " << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: dVEta: " << endl;
 			dKinFitUtils->Print_Matrix(dVEta);
-			cout << "DKinFitter: dV: " << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: dV: " << endl;
 			dKinFitUtils->Print_Matrix(dV);
 		}
 		return;
@@ -989,9 +989,9 @@ void DKinFitter::Calc_dVdEta(void)
 
 	if(dDebugLevel > 20)
 	{
-		cout << "DKinFitter: dVEta: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dVEta: " << endl;
 		dKinFitUtils->Print_Matrix(dVEta);
-		cout << "DKinFitter: dV: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dV: " << endl;
 		dKinFitUtils->Print_Matrix(dV);
 	}
 }
@@ -1011,7 +1011,7 @@ void DKinFitter::Calc_dF(void)
 		{
 			int locFIndex = locKinFitConstraint_P4->Get_FIndex();
 			if(dDebugLevel > 10)
-				cout << "DKinFitter: P4 Constraint, F index = " << locFIndex << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: P4 Constraint, F index = " << locFIndex << endl;
 
 			//initial state
 			auto locInitialParticles = locKinFitConstraint_P4->Get_InitialParticles();
@@ -1032,14 +1032,14 @@ void DKinFitter::Calc_dF(void)
 		{
 			int locFIndex = locKinFitConstraint_Mass->Get_FIndex();
 			if(dDebugLevel > 10)
-				cout << "DKinFitter: Mass Constraint, F index = " << locFIndex << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Mass Constraint, F index = " << locFIndex << endl;
 
 			auto locDecayingParticle = locKinFitConstraint_Mass->Get_DecayingParticle();
 			double locTargetedMass = locDecayingParticle->Get_Mass();
 
 			TLorentzVector locXP4 = dKinFitUtils->Calc_DecayingP4_ByP3Derived(locDecayingParticle.get(), true);
 			if(dDebugLevel > 30)
-				cout << "Final decaying pxyzE is: " << locXP4.Px() << ", " << locXP4.Py() << ", " << locXP4.Pz() << ", " << locXP4.E() << endl;
+				dKinFitUtils->Get_DebugStream() << "Final decaying pxyzE is: " << locXP4.Px() << ", " << locXP4.Py() << ", " << locXP4.Pz() << ", " << locXP4.E() << endl;
 			dF(locFIndex, 0) += locXP4.M2() - locTargetedMass*locTargetedMass;
 
 			Calc_dF_MassDerivs(locFIndex, locDecayingParticle.get(), locXP4, 1.0, true);
@@ -1060,7 +1060,7 @@ void DKinFitter::Calc_dF(void)
 				bool locIsDecayingFlag = (locKinFitParticleType == d_DecayingParticle);
 				locFIndex = locKinFitConstraint_Vertex->Get_FIndex(locKinFitParticle);
 				if(dDebugLevel > 10)
-					cout << "DKinFitter: F index, locIsDecayingFlag = " << locFIndex << ", " << locIsDecayingFlag << endl;
+					dKinFitUtils->Get_DebugStream() << "DKinFitter: F index, locIsDecayingFlag = " << locFIndex << ", " << locIsDecayingFlag << endl;
 
 				Calc_dF_Vertex(locFIndex, locKinFitParticle.get(), NULL, 1.0);
 			}
@@ -1130,7 +1130,7 @@ void DKinFitter::Calc_dF_P4(int locFIndex, const DKinFitParticle* locKinFitParti
 	}
 
 	if(dDebugLevel > 30)
-		cout << "PID, sign, pxyzE = " << locKinFitParticle->Get_PID() << ", " << locStateSignMultiplier << ", " << locP4.Px() << ", " << locP4.Py() << ", " << locP4.Pz() << ", " << locP4.E() << endl;
+		dKinFitUtils->Get_DebugStream() << "PID, sign, pxyzE = " << locKinFitParticle->Get_PID() << ", " << locStateSignMultiplier << ", " << locP4.Px() << ", " << locP4.Py() << ", " << locP4.Pz() << ", " << locP4.E() << endl;
 
 	if(locCommonVertexFitFlag && locChargedBFieldFlag && (locKinFitParticleType != d_TargetParticle) && (locKinFitParticleType != d_MissingParticle))
 	{
@@ -1140,7 +1140,7 @@ void DKinFitter::Calc_dF_P4(int locFIndex, const DKinFitParticle* locKinFitParti
 
 		TVector3 locDeltaXCrossH = locDeltaX.Cross(locH);
 		if(dDebugLevel > 30)
-			cout << "propagate pxyz by: " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.X() << ", " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.Y() << ", " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.Z() << endl;
+			dKinFitUtils->Get_DebugStream() << "propagate pxyz by: " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.X() << ", " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.Y() << ", " << -1.0*locStateSignMultiplier*locA*locDeltaXCrossH.Z() << endl;
 		dF(locFIndex + 1, 0) -= locStateSignMultiplier*locA*locDeltaXCrossH.X();
 		dF(locFIndex + 2, 0) -= locStateSignMultiplier*locA*locDeltaXCrossH.Y();
 		dF(locFIndex + 3, 0) -= locStateSignMultiplier*locA*locDeltaXCrossH.Z();
@@ -1149,13 +1149,13 @@ void DKinFitter::Calc_dF_P4(int locFIndex, const DKinFitParticle* locKinFitParti
 	if(locKinFitParticleType == d_TargetParticle)
 	{
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_P4() Section 1; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_P4() Section 1; PID = " << locKinFitParticle->Get_PID() << endl;
 		return; //target params are fixed: no partial derivatives
 	}
 	else if(locNeutralShowerFlag)
 	{
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_P4() Section 3; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_P4() Section 3; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		dF_dEta(locFIndex, locEParamIndex) = locStateSignMultiplier;
 
@@ -1196,7 +1196,7 @@ void DKinFitter::Calc_dF_P4(int locFIndex, const DKinFitParticle* locKinFitParti
 	{
 		//missing particle or open-ended decaying particle: p3 is unknown
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_P4() Section 4; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_P4() Section 4; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		dF_dXi(locFIndex, locPxParamIndex) = locStateSignMultiplier*locP4.Px()/locP4.E();
 		dF_dXi(locFIndex, locPxParamIndex + 1) = locStateSignMultiplier*locP4.Py()/locP4.E();
@@ -1210,11 +1210,11 @@ void DKinFitter::Calc_dF_P4(int locFIndex, const DKinFitParticle* locKinFitParti
 	{
 		//enclosed decaying particle
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_P4() Section 5; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_P4() Section 5; PID = " << locKinFitParticle->Get_PID() << endl;
 		if(locChargedBFieldFlag && locCommonVertexFitFlag)
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_P4() Section 5a" << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_P4() Section 5a" << endl;
 			//vertex factors
 				//locVertexSignMultiplier is needed because the signs for Vx & CommonVx might be switched
 			dF_dXi(locFIndex + 1, locVxParamIndex + 1) += locStateSignMultiplier*locVertexSignMultiplier*locA*locH.Z();
@@ -1243,7 +1243,7 @@ void DKinFitter::Calc_dF_P4(int locFIndex, const DKinFitParticle* locKinFitParti
 		for(; locParticleIterator != locFromInitialState.end(); ++locParticleIterator)
 		{
 			if(dDebugLevel > 30)
-				cout << "decaying, partially replace with init-state PID = " << (*locParticleIterator)->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "decaying, partially replace with init-state PID = " << (*locParticleIterator)->Get_PID() << endl;
 			auto locNextStateSignMultiplier = dKinFitUtils->Get_IsDecayingParticleDefinedByProducts(locKinFitParticle) ? -1.0*locStateSignMultiplier : locStateSignMultiplier;
 			Calc_dF_P4(locFIndex, (*locParticleIterator).get(), locNextStateSignMultiplier);
 		}
@@ -1253,7 +1253,7 @@ void DKinFitter::Calc_dF_P4(int locFIndex, const DKinFitParticle* locKinFitParti
 		for(locParticleIterator = locFromFinalState.begin(); locParticleIterator != locFromFinalState.end(); ++locParticleIterator)
 		{
 			if(dDebugLevel > 30)
-				cout << "decaying, partially replace with final-state PID = " << (*locParticleIterator)->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "decaying, partially replace with final-state PID = " << (*locParticleIterator)->Get_PID() << endl;
 			//If defined by invariant mass: add p4s of final state particles
 			//If defined by missing mass: add p4s of init state, subtract final state
 			auto locNextStateSignMultiplier = dKinFitUtils->Get_IsDecayingParticleDefinedByProducts(locKinFitParticle) ? locStateSignMultiplier : -1.0*locStateSignMultiplier;
@@ -1264,7 +1264,7 @@ void DKinFitter::Calc_dF_P4(int locFIndex, const DKinFitParticle* locKinFitParti
 	{
 		//detected charged particle in b-field (can be beam particle) & in vertex fit
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_P4() Section 2; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_P4() Section 2; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		dF_dEta(locFIndex, locPxParamIndex) = locStateSignMultiplier*locP4.Px()/locP4.E();
 		dF_dEta(locFIndex, locPxParamIndex + 1) = locStateSignMultiplier*locP4.Py()/locP4.E();
@@ -1296,7 +1296,7 @@ void DKinFitter::Calc_dF_P4(int locFIndex, const DKinFitParticle* locKinFitParti
 	{
 		// either no common vertex constraint, charged and detected but b-field = 0, or neutral particle with pre-ordained vertex (e.g. beam particle)
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_P4() Section 6; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_P4() Section 6; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		dF_dEta(locFIndex, locPxParamIndex) = locStateSignMultiplier*locP4.Px()/locP4.E();
 		dF_dEta(locFIndex, locPxParamIndex + 1) = locStateSignMultiplier*locP4.Py()/locP4.E();
@@ -1353,18 +1353,18 @@ void DKinFitter::Calc_dF_MassDerivs(size_t locFIndex, const DKinFitParticle* loc
 	TVector3 locPXCrossH = locXP4.Vect().Cross(locH);
 
 	if(dDebugLevel > 30)
-		cout << "PID, sign, pxyzE = " << locKinFitParticle->Get_PID() << ", " << locStateSignMultiplier << ", " << locP4.Px() << ", " << locP4.Py() << ", " << locP4.Pz() << ", " << locP4.E() << endl;
+		dKinFitUtils->Get_DebugStream() << "PID, sign, pxyzE = " << locKinFitParticle->Get_PID() << ", " << locStateSignMultiplier << ", " << locP4.Px() << ", " << locP4.Py() << ", " << locP4.Pz() << ", " << locP4.E() << endl;
 
 	if(locKinFitParticleType == d_TargetParticle)
 	{
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_MassDerivs() Section 1; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_MassDerivs() Section 1; PID = " << locKinFitParticle->Get_PID() << endl;
 		return; //target params are fixed: no partial derivatives
 	}
 	else if(locNeutralShowerFlag)
 	{
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_MassDerivs() Section 3; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_MassDerivs() Section 3; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		double locEOverPSq = locP4.E()/locP4.Vect().Mag2();
 		dF_dEta(locFIndex, locEParamIndex) = 2.0*locStateSignMultiplier*(locXP4.E() - locEOverPSq*locXP4.Vect().Dot(locP4.Vect()));
@@ -1382,7 +1382,7 @@ void DKinFitter::Calc_dF_MassDerivs(size_t locFIndex, const DKinFitParticle* loc
 	{
 		//missing or open-ended-decaying particle: p3 is unknown (not derivable)
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_MassDerivs() Section 4; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_MassDerivs() Section 4; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		dF_dXi(locFIndex, locPxParamIndex) = 2.0*locStateSignMultiplier*(locP4.Px()*locXP4.E()/locP4.E() - locXP4.Px());
 		dF_dXi(locFIndex, locPxParamIndex + 1) = 2.0*locStateSignMultiplier*(locP4.Py()*locXP4.E()/locP4.E() - locXP4.Py());
@@ -1392,12 +1392,12 @@ void DKinFitter::Calc_dF_MassDerivs(size_t locFIndex, const DKinFitParticle* loc
 	{
 		//enclosed decaying particle
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_MassDerivs() Section 5; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_MassDerivs() Section 5; PID = " << locKinFitParticle->Get_PID() << endl;
 		if(locChargedBFieldFlag && locCommonVertexFitFlag && !locIsConstrainedParticle)
 		{
 			//if locKinFitSubConstraint_P4 is NULL is first particle; don't include: replace it
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_MassDerivs() Section 5a" << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_MassDerivs() Section 5a" << endl;
 
 			dF_dXi(locFIndex, locVxParamIndex) += 2.0*locStateSignMultiplier*locVertexSignMultiplier*locA*locPXCrossH.X();
 			dF_dXi(locFIndex, locVxParamIndex + 1) += 2.0*locStateSignMultiplier*locVertexSignMultiplier*locA*locPXCrossH.Y();
@@ -1415,7 +1415,7 @@ void DKinFitter::Calc_dF_MassDerivs(size_t locFIndex, const DKinFitParticle* loc
 		for(; locParticleIterator != locFromInitialState.end(); ++locParticleIterator)
 		{
 			if(dDebugLevel > 30)
-				cout << "decaying, partially replace with init-state PID = " << (*locParticleIterator)->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "decaying, partially replace with init-state PID = " << (*locParticleIterator)->Get_PID() << endl;
 			auto locNextStateSignMultiplier = dKinFitUtils->Get_IsDecayingParticleDefinedByProducts(locKinFitParticle) ? -1.0*locStateSignMultiplier : locStateSignMultiplier;
 			Calc_dF_MassDerivs(locFIndex, (*locParticleIterator).get(), locXP4, locNextStateSignMultiplier, false);
 		}
@@ -1425,7 +1425,7 @@ void DKinFitter::Calc_dF_MassDerivs(size_t locFIndex, const DKinFitParticle* loc
 		for(locParticleIterator = locFromFinalState.begin(); locParticleIterator != locFromFinalState.end(); ++locParticleIterator)
 		{
 			if(dDebugLevel > 30)
-				cout << "decaying, partially replace with final-state PID = " << (*locParticleIterator)->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "decaying, partially replace with final-state PID = " << (*locParticleIterator)->Get_PID() << endl;
 			//If defined by invariant mass: add p4s of final state particles
 			//If defined by missing mass: add p4s of init state, subtract final state
 			auto locNextStateSignMultiplier = dKinFitUtils->Get_IsDecayingParticleDefinedByProducts(locKinFitParticle) ? locStateSignMultiplier : -1.0*locStateSignMultiplier;
@@ -1436,7 +1436,7 @@ void DKinFitter::Calc_dF_MassDerivs(size_t locFIndex, const DKinFitParticle* loc
 	{
 		//detected charged particle in b-field (can be beam particle) & in vertex fit
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_MassDerivs() Section 2; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_MassDerivs() Section 2; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		dF_dEta(locFIndex, locPxParamIndex) = 2.0*locStateSignMultiplier*(locP4.Px()*locXP4.E()/locP4.E() - locXP4.Px());
 		dF_dEta(locFIndex, locPxParamIndex + 1) = 2.0*locStateSignMultiplier*(locP4.Py()*locXP4.E()/locP4.E() - locXP4.Py());
@@ -1454,7 +1454,7 @@ void DKinFitter::Calc_dF_MassDerivs(size_t locFIndex, const DKinFitParticle* loc
 	{
 		// either no common vertex constraint, charged and detected but b-field = 0, or neutral particle with pre-ordained vertex (e.g. beam particle)
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_MassDerivs() Section 6; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_MassDerivs() Section 6; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		dF_dEta(locFIndex, locPxParamIndex) = 2.0*locStateSignMultiplier*(locP4.Px()*locXP4.E()/locP4.E() - locXP4.Px());
 		dF_dEta(locFIndex, locPxParamIndex + 1) = 2.0*locStateSignMultiplier*(locP4.Py()*locXP4.E()/locP4.E() - locXP4.Py());
@@ -1471,7 +1471,7 @@ void DKinFitter::Calc_dF_Vertex(size_t locFIndex, const DKinFitParticle* locKinF
 	if((locKinFitParticleType == d_TargetParticle) || (locKinFitParticleType == d_MissingParticle))
 	{
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_Vertex() Section 1; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 1; PID = " << locKinFitParticle->Get_PID() << endl;
 		return; //no partial derivatives
 	}
 
@@ -1497,7 +1497,7 @@ void DKinFitter::Calc_dF_Vertex(size_t locFIndex, const DKinFitParticle* locKinF
 	{
 		auto locNextStateSignMultiplier = dKinFitUtils->Get_IsDecayingParticleDefinedByProducts(locKinFitParticle) ? -1.0*locStateSignMultiplier : locStateSignMultiplier;
 		if(dDebugLevel > 30)
-			cout << "decaying, partially replace with init-state PID = " << (*locParticleIterator)->Get_PID() << ", next sign multiplier: " << locNextStateSignMultiplier << endl;
+			dKinFitUtils->Get_DebugStream() << "decaying, partially replace with init-state PID = " << (*locParticleIterator)->Get_PID() << ", next sign multiplier: " << locNextStateSignMultiplier << endl;
 		Calc_dF_Vertex(locFIndex, (*locParticleIterator).get(), locKinFitParticle, locNextStateSignMultiplier);
 	}
 
@@ -1509,7 +1509,7 @@ void DKinFitter::Calc_dF_Vertex(size_t locFIndex, const DKinFitParticle* locKinF
 		//If defined by missing mass: add p4s of init state, subtract final state
 		auto locNextStateSignMultiplier = dKinFitUtils->Get_IsDecayingParticleDefinedByProducts(locKinFitParticle) ? locStateSignMultiplier : -1.0*locStateSignMultiplier;
 		if(dDebugLevel > 30)
-			cout << "decaying, partially replace with final-state PID = " << (*locParticleIterator)->Get_PID() << ", next sign multiplier: " << locNextStateSignMultiplier << endl;
+			dKinFitUtils->Get_DebugStream() << "decaying, partially replace with final-state PID = " << (*locParticleIterator)->Get_PID() << ", next sign multiplier: " << locNextStateSignMultiplier << endl;
 		Calc_dF_Vertex(locFIndex, (*locParticleIterator).get(), locKinFitParticle, locNextStateSignMultiplier);
 	}
 }
@@ -1535,7 +1535,7 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
   if((locCharge != 0) && IsNonZeroBField && ((locKinFitParticleType == d_DetectedParticle) || (locKinFitParticleType == d_BeamParticle))){
     //detected charged particle in b-field (can be beam particle)
     if(dDebugLevel > 30)
-      cout << "DKinFitter: Calc_dF_Vertex() Section 2; PID = " << locKinFitParticle->Get_PID() << endl;
+      dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 2; PID = " << locKinFitParticle->Get_PID() << endl;
 
     TVector3 locH = locBField.Unit();
     TVector3 locPCrossH = locMomentum.Cross(locH);
@@ -1629,8 +1629,8 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
   else if((locCharge != 0) && IsNonZeroBField && (locKinFitParticleType == d_DecayingParticle)){
     //constraining this decaying charged particle in b-field //one-time contributions from decaying particle, does not include the particles it is replaced by (elsewhere)
     if(dDebugLevel > 30)
-      cout << "DKinFitter: Calc_dF_Vertex() Section 3; PID = " << locKinFitParticle->Get_PID() << endl;
-	
+      dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 3; PID = " << locKinFitParticle->Get_PID() << endl;
+
     TVector3 locH = locBField.Unit();
     double locA = -0.00299792458*(double(locCharge))*locBField.Mag();
 
@@ -1734,8 +1734,8 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 	  dF(locFIndex + 1, 0) = locMomentum.Z()*locDeltaX.X() - locMomentum.X()*locDeltaX.Z();
 	  
 	  if(dDebugLevel > 30)
-	    cout << "DKinFitter: Calc_dF_Vertex() Section 4a; PID = " << locKinFitParticle->Get_PID() << endl;
-	  
+	    dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 4a; PID = " << locKinFitParticle->Get_PID() << endl;
+
 	  dF_dXi(locFIndex, locVxParamIndex + 1) += locMomentum.Z();
 	  dF_dXi(locFIndex, locVxParamIndex + 2) += -1.0*locMomentum.Y();
 	  dF_dXi(locFIndex + 1, locVxParamIndex) += -1.0*locMomentum.Z();
@@ -1752,8 +1752,8 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 	  dF(locFIndex + 1, 0) = locMomentum.X()*locDeltaX.Y() - locMomentum.Y()*locDeltaX.X();
 	  
 	  if(dDebugLevel > 30)
-	    cout << "DKinFitter: Calc_dF_Vertex() Section 4b; PID = " << locKinFitParticle->Get_PID() << endl;
-	  
+	    dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 4b; PID = " << locKinFitParticle->Get_PID() << endl;
+
 	  dF_dXi(locFIndex, locVxParamIndex + 1) += locMomentum.Z();
 	  dF_dXi(locFIndex, locVxParamIndex + 2) += -1.0*locMomentum.Y();
 	  dF_dXi(locFIndex + 1, locVxParamIndex) += locMomentum.Y();
@@ -1770,8 +1770,8 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 	  dF(locFIndex + 1, 0) = locMomentum.X()*locDeltaX.Y() - locMomentum.Y()*locDeltaX.X();
 	  
 	  if(dDebugLevel > 30)
-	    cout << "DKinFitter: Calc_dF_Vertex() Section 4c; PID = " << locKinFitParticle->Get_PID() << endl;
-	  
+	    dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 4c; PID = " << locKinFitParticle->Get_PID() << endl;
+
 	  dF_dXi(locFIndex, locVxParamIndex) += -1.0*locMomentum.Z();
 	  dF_dXi(locFIndex, locVxParamIndex + 2) += locMomentum.X();
 	  dF_dXi(locFIndex + 1, locVxParamIndex) += locMomentum.Y();
@@ -1792,8 +1792,8 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 	  dF(locFIndex + 1, 0) = locMomentum.Z()*locDeltaX.X() - locMomentum.X()*locDeltaX.Z();
 	  
 	  if(dDebugLevel > 30)
-	    cout << "DKinFitter: Calc_dF_Vertex() Section 5a; PID = " << locKinFitParticle->Get_PID() << endl;
-	  
+	    dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 5a; PID = " << locKinFitParticle->Get_PID() << endl;
+
 	  dF_dEta(locFIndex, locPxParamIndex + 1) = locDeltaX.Z();
 	  dF_dEta(locFIndex, locPxParamIndex + 2) = -1.0*locDeltaX.Y();
 	  dF_dEta(locFIndex + 1, locPxParamIndex) = -1.0*locDeltaX.Z();
@@ -1815,8 +1815,8 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 	  dF(locFIndex + 1, 0) = locMomentum.X()*locDeltaX.Y() - locMomentum.Y()*locDeltaX.X();
 	  
 	  if(dDebugLevel > 30)
-	    cout << "DKinFitter: Calc_dF_Vertex() Section 5b; PID = " << locKinFitParticle->Get_PID() << endl;
-	  
+	    dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 5b; PID = " << locKinFitParticle->Get_PID() << endl;
+
 	  dF_dEta(locFIndex, locPxParamIndex + 1) = locDeltaX.Z();
 	  dF_dEta(locFIndex, locPxParamIndex + 2) = -1.0*locDeltaX.Y();
 	  dF_dEta(locFIndex + 1, locPxParamIndex) = locDeltaX.Y();
@@ -1838,8 +1838,8 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 	  dF(locFIndex + 1, 0) = locMomentum.X()*locDeltaX.Y() - locMomentum.Y()*locDeltaX.X();
 	  
 	  if(dDebugLevel > 30)
-	    cout << "DKinFitter: Calc_dF_Vertex() Section 5c; PID = " << locKinFitParticle->Get_PID() << endl;
-	  
+	    dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 5c; PID = " << locKinFitParticle->Get_PID() << endl;
+
 	  dF_dEta(locFIndex, locPxParamIndex) = -1.0*locDeltaX.Z();
 	  dF_dEta(locFIndex, locPxParamIndex + 2) = locDeltaX.X();
 	  dF_dEta(locFIndex + 1, locPxParamIndex) = locDeltaX.Y();
@@ -1880,7 +1880,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_Accel(size_t locFIndex, const DKinFitPa
 	{
 		//detected charged particle in b-field (can be beam particle)
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_Vertex() Section 6; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 6; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		TVector3 locQ, locM, locD;
 		double locJ;
@@ -1927,7 +1927,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_Accel(size_t locFIndex, const DKinFitPa
 	else if(locKinFitParticle->Get_IsNeutralShowerFlag() && (locKinFitParticle->Get_Mass() < 0.00001))
 	{
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_Vertex() Section 7; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 7; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		TVector3 locQ, locM, locD;
 		double locJ;
@@ -1969,7 +1969,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_Accel(size_t locFIndex, const DKinFitPa
 	else if((locKinFitParticleType == d_DetectedParticle) || (locKinFitParticleType == d_BeamParticle))
 	{
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_Vertex() Section 8; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 8; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		//detected/beam, non-accelerating particle
 		TVector3 locQ, locM, locD;
@@ -1997,7 +1997,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_Accel(size_t locFIndex, const DKinFitPa
 	{
 		//missing, or open-ended decaying particle
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_Vertex() Section 9; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 9; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		TVector3 locQ, locM, locD;
 		double locJ;
@@ -2024,7 +2024,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_Accel(size_t locFIndex, const DKinFitPa
 	{
 		//decaying charged particle in b-field (doesn't include contributions from the particles it is replaced by here)
 		if(dDebugLevel > 30)
-			cout << "DKinFitter: Calc_dF_Vertex() Section 10; PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 10; PID = " << locKinFitParticle->Get_PID() << endl;
 
 		TVector3 locQ, locM, locD;
 		double locJ;
@@ -2095,7 +2095,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		if(locVertexConstraintFlag == 1) //1 & 2 //pz is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 11a; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 11a; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dEta(locFIndex, locPxParamIndex + 1) = locStateSignMultiplier*locDeltaX_DecayingSource.Z();
 			dF_dEta(locFIndex, locPxParamIndex + 2) = -1.0*locStateSignMultiplier*locDeltaX_DecayingSource.Y();
@@ -2112,7 +2112,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		else if(locVertexConstraintFlag == 2) //1 & 3 //py is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 11b; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 11b; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dEta(locFIndex, locPxParamIndex + 1) = locStateSignMultiplier*locDeltaX_DecayingSource.Z();
 			dF_dEta(locFIndex, locPxParamIndex + 2) = -1.0*locStateSignMultiplier*locDeltaX_DecayingSource.Y();
@@ -2129,7 +2129,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		else //2 & 3 //px is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 11c; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 11c; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dEta(locFIndex, locPxParamIndex) = -1.0*locStateSignMultiplier*locDeltaX_DecayingSource.Z();
 			dF_dEta(locFIndex, locPxParamIndex + 2) = locStateSignMultiplier*locDeltaX_DecayingSource.X();
@@ -2166,7 +2166,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		if(locVertexConstraintFlag == 1) //1 & 2 //pz is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 12a; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 12a; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dEta(locFIndex, locEParamIndex) = locStateSignMultiplier*locEnergy*locPiCrossDeltaXX.X()/locMomentum.Mag2();
 			dF_dEta(locFIndex + 1, locEParamIndex) = locStateSignMultiplier*locEnergy*locPiCrossDeltaXX.Y()/locMomentum.Mag2();
@@ -2181,7 +2181,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		else if(locVertexConstraintFlag == 2) //1 & 3 //py is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 12b; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 12b; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dEta(locFIndex, locEParamIndex) = locStateSignMultiplier*locEnergy*locPiCrossDeltaXX.X()/locMomentum.Mag2();
 			dF_dEta(locFIndex + 1, locEParamIndex) = locStateSignMultiplier*locEnergy*locPiCrossDeltaXX.Z()/locMomentum.Mag2();
@@ -2196,7 +2196,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		else //2 & 3 //px is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 12c; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 12c; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dEta(locFIndex, locEParamIndex) = locStateSignMultiplier*locEnergy*locPiCrossDeltaXX.Y()/locMomentum.Mag2();
 			dF_dEta(locFIndex + 1, locEParamIndex) = locStateSignMultiplier*locEnergy*locPiCrossDeltaXX.Z()/locMomentum.Mag2();
@@ -2232,7 +2232,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		if(locVertexConstraintFlag == 1) //1 & 2 //pz is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 13a; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 13a; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dEta(locFIndex, locPxParamIndex + 1) = locDeltaX_DecayingSource.Z();
 			dF_dEta(locFIndex, locPxParamIndex + 2) = -1.0*locDeltaX_DecayingSource.Y();
@@ -2242,7 +2242,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		else if(locVertexConstraintFlag == 2) //1 & 3 //py is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 13b; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 13b; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dEta(locFIndex, locPxParamIndex + 1) = locDeltaX_DecayingSource.Z();
 			dF_dEta(locFIndex, locPxParamIndex + 2) = -1.0*locDeltaX_DecayingSource.Y();
@@ -2252,7 +2252,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		else //2 & 3 //px is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 13c; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 13c; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dEta(locFIndex, locPxParamIndex) = -1.0*locDeltaX_DecayingSource.Z();
 			dF_dEta(locFIndex, locPxParamIndex + 2) = locDeltaX_DecayingSource.X();
@@ -2271,7 +2271,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		if(locVertexConstraintFlag == 1) //1 & 2 //pz is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 14a; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 14a; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dXi(locFIndex, locPxParamIndex + 1) = locDeltaX_DecayingSource.Z();
 			dF_dXi(locFIndex, locPxParamIndex + 2) = -1.0*locDeltaX_DecayingSource.Y();
@@ -2281,7 +2281,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		else if(locVertexConstraintFlag == 2) //1 & 3 //py is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 14b; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 14b; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dXi(locFIndex, locPxParamIndex + 1) = locDeltaX_DecayingSource.Z();
 			dF_dXi(locFIndex, locPxParamIndex + 2) = -1.0*locDeltaX_DecayingSource.Y();
@@ -2291,7 +2291,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		else //2 & 3 //px is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 14c; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 14c; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dXi(locFIndex, locPxParamIndex) = -1.0*locDeltaX_DecayingSource.Z();
 			dF_dXi(locFIndex, locPxParamIndex + 2) = locDeltaX_DecayingSource.X();
@@ -2314,7 +2314,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		if(locVertexConstraintFlag == 1) //1 & 2 //pz is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 15a; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 15a; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dXi(locFIndex, locVxParamIndex) -= locA*locStateSignMultiplier*(locDeltaX_DecayingSource.Y()*locH.Y() + locDeltaX_DecayingSource.Z()*locH.Z());
 			dF_dXi(locFIndex, locVxParamIndex + 1) += locA*locStateSignMultiplier*locDeltaX_DecayingSource.Y()*locH.X();
@@ -2326,7 +2326,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		else if(locVertexConstraintFlag == 2) //1 & 3 //py is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 15b; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 15b; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dXi(locFIndex, locVxParamIndex) -= locA*locStateSignMultiplier*(locDeltaX_DecayingSource.Y()*locH.Y() + locDeltaX_DecayingSource.Z()*locH.Z());
 			dF_dXi(locFIndex, locVxParamIndex + 1) += locA*locStateSignMultiplier*locDeltaX_DecayingSource.Y()*locH.X();
@@ -2338,7 +2338,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 		else //2 & 3 //px is largest
 		{
 			if(dDebugLevel > 30)
-				cout << "DKinFitter: Calc_dF_Vertex() Section 15c; PID = " << locKinFitParticle->Get_PID() << endl;
+				dKinFitUtils->Get_DebugStream() << "DKinFitter: Calc_dF_Vertex() Section 15c; PID = " << locKinFitParticle->Get_PID() << endl;
 
 			dF_dXi(locFIndex, locVxParamIndex) += locA*locStateSignMultiplier*locDeltaX_DecayingSource.X()*locH.Y();
 			dF_dXi(locFIndex, locVxParamIndex + 1) -= locA*locStateSignMultiplier*(locDeltaX_DecayingSource.X()*locH.X() + locDeltaX_DecayingSource.Z()*locH.Z());
@@ -2548,8 +2548,8 @@ void DKinFitter::Calc_Pulls(void)
 		map<DKinFitPullType, double> locParticlePulls;
 		if(dDebugLevel >= 50)
 		{
-			cout << "pulls: PID = " << locKinFitParticle->Get_PID() << endl;
-			cout << "e, px, vx, t param indices = " << int(locKinFitParticle->Get_EParamIndex()) << ", " << int(locKinFitParticle->Get_PxParamIndex()) << ", " << int(locKinFitParticle->Get_VxParamIndex()) << ", " << int(locKinFitParticle->Get_TParamIndex()) << endl;
+			dKinFitUtils->Get_DebugStream() << "pulls: PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "e, px, vx, t param indices = " << int(locKinFitParticle->Get_EParamIndex()) << ", " << int(locKinFitParticle->Get_PxParamIndex()) << ", " << int(locKinFitParticle->Get_VxParamIndex()) << ", " << int(locKinFitParticle->Get_TParamIndex()) << endl;
 		}
 
 		int locParamIndex = locKinFitParticle->Get_EParamIndex();
@@ -2598,24 +2598,24 @@ void DKinFitter::Calc_Pulls(void)
 
 	if(dDebugLevel > 20)
 	{
-		cout << "DKinFitter: dEpsilon: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dEpsilon: " << endl;
 		dKinFitUtils->Print_Matrix(dEpsilon);
-		cout << "DKinFitter: dVY: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dVY: " << endl;
 		dKinFitUtils->Print_Matrix(dVY);
-		cout << "DKinFitter: Pulls: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: Pulls: " << endl;
 		map<shared_ptr<DKinFitParticle>, map<DKinFitPullType, double> >::iterator locIterator;
 		for(locIterator = dPulls.begin(); locIterator != dPulls.end(); ++locIterator)
 		{
 			map<DKinFitPullType, double>& locParticlePulls = locIterator->second;
 			auto locKinFitParticle = locIterator->first;
 			TVector3 locMomentum = locKinFitParticle->Get_Momentum();
-			cout << "particle PID, p3 = " << locKinFitParticle->Get_PID() << ", " << locMomentum.Px() << ", " << locMomentum.Py() << ", " << locMomentum.Pz() << ":" << endl;
+			dKinFitUtils->Get_DebugStream() << "particle PID, p3 = " << locKinFitParticle->Get_PID() << ", " << locMomentum.Px() << ", " << locMomentum.Py() << ", " << locMomentum.Pz() << ":" << endl;
 			for(size_t loc_i = 0; loc_i < 8; ++loc_i)
 			{
 				if(locParticlePulls.find((DKinFitPullType)loc_i) != locParticlePulls.end())
-					cout << locParticlePulls[(DKinFitPullType)loc_i] << ", ";
+					dKinFitUtils->Get_DebugStream() << locParticlePulls[(DKinFitPullType)loc_i] << ", ";
 			}
-			cout << endl;
+			dKinFitUtils->Get_DebugStream() << endl;
 		}
 	}
 }
@@ -2649,11 +2649,11 @@ void DKinFitter::Set_FinalTrackInfo(void)
 
 		if(dDebugLevel >= 50)
 		{
-			cout << "PROPAGATED FINAL TRACK INFO: PID = " << locKinFitParticle->Get_PID() << endl;
-			cout << "p_xyz, v_xyzt = " << locMomentum.Px() << ", " << locMomentum.Py() << ", " << locMomentum.Pz() << ", " << locSpacetimeVertex.X() << ", " << locSpacetimeVertex.Y() << ", " << locSpacetimeVertex.Z() << ", " << locSpacetimeVertex.T() << endl;
-			cout << "common v_xyzt = " << locKinFitParticle->Get_CommonVertex().X() << ", " << locKinFitParticle->Get_CommonVertex().Y() << ", " << locKinFitParticle->Get_CommonVertex().Z() << ", " << locKinFitParticle->Get_CommonTime() << endl;
-			cout << "path length & uncert = " << locPathLengthPair.first << ", " << locPathLengthPair.second << endl;
-			cout << "sizes = " << locCovarianceMatrix->GetNrows() << ", " << locCovarianceMatrix->GetNcols() << endl;
+			dKinFitUtils->Get_DebugStream() << "PROPAGATED FINAL TRACK INFO: PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "p_xyz, v_xyzt = " << locMomentum.Px() << ", " << locMomentum.Py() << ", " << locMomentum.Pz() << ", " << locSpacetimeVertex.X() << ", " << locSpacetimeVertex.Y() << ", " << locSpacetimeVertex.Z() << ", " << locSpacetimeVertex.T() << endl;
+			dKinFitUtils->Get_DebugStream() << "common v_xyzt = " << locKinFitParticle->Get_CommonVertex().X() << ", " << locKinFitParticle->Get_CommonVertex().Y() << ", " << locKinFitParticle->Get_CommonVertex().Z() << ", " << locKinFitParticle->Get_CommonTime() << endl;
+			dKinFitUtils->Get_DebugStream() << "path length & uncert = " << locPathLengthPair.first << ", " << locPathLengthPair.second << endl;
+			dKinFitUtils->Get_DebugStream() << "sizes = " << locCovarianceMatrix->GetNrows() << ", " << locCovarianceMatrix->GetNcols() << endl;
 		}
 
 		//no need to set the covariance matrix: already updated
@@ -2754,7 +2754,7 @@ void DKinFitter::Update_CovarianceMatrices(bool locDecayingParticlesOnlyFlag)
 
 		if(dDebugLevel >= 50)
 		{
-			cout << "JACOBIAN MATRIX:" << endl;
+			dKinFitUtils->Get_DebugStream() << "JACOBIAN MATRIX:" << endl;
 			dKinFitUtils->Print_Matrix(locJacobian);
 		}
 
@@ -2785,7 +2785,7 @@ void DKinFitter::Update_CovarianceMatrices(bool locDecayingParticlesOnlyFlag)
 
 			if(dDebugLevel >= 50)
 			{
-				cout << "FULL ERROR MATRIX (for calculated cov for enclosed decaying particle):" << endl;
+				dKinFitUtils->Get_DebugStream() << "FULL ERROR MATRIX (for calculated cov for enclosed decaying particle):" << endl;
 				dKinFitUtils->Print_Matrix(locTempCovarianceMatrix);
 			}
 
@@ -2800,7 +2800,7 @@ void DKinFitter::Update_CovarianceMatrices(bool locDecayingParticlesOnlyFlag)
 
 		if(dDebugLevel >= 50)
 		{
-			cout << "FINAL COV MATRIX (enclosed decaying particle):" << endl;
+			dKinFitUtils->Get_DebugStream() << "FINAL COV MATRIX (enclosed decaying particle):" << endl;
 			dKinFitUtils->Print_Matrix(*locCovarianceMatrix);
 		}
 	}
@@ -2842,10 +2842,10 @@ void DKinFitter::Update_CovarianceMatrices(bool locDecayingParticlesOnlyFlag)
 
 		if(dDebugLevel >= 50)
 		{
-			cout << "SETTING FINAL TRACK INFO: PID = " << locKinFitParticle->Get_PID() << endl;
-			cout << "E, px, vx, t param indices = " << locEParamIndex << ", " << locPxParamIndex << ", " << locVxParamIndex << ", " << locTParamIndex << endl;
-			cout << "E, px, vx, t cov matrix indices = " << locCovMatrixEParamIndex << ", " << locCovMatrixPxParamIndex << ", " << locCovMatrixVxParamIndex << ", " << locCovMatrixTParamIndex << endl;
-			cout << "sizes = " << locCovarianceMatrix.GetNrows() << ", " << locCovarianceMatrix.GetNcols() << ", " << locKinFitMatrix.GetNrows() << ", " << locKinFitMatrix.GetNcols() << endl;
+			dKinFitUtils->Get_DebugStream() << "SETTING FINAL TRACK INFO: PID = " << locKinFitParticle->Get_PID() << endl;
+			dKinFitUtils->Get_DebugStream() << "E, px, vx, t param indices = " << locEParamIndex << ", " << locPxParamIndex << ", " << locVxParamIndex << ", " << locTParamIndex << endl;
+			dKinFitUtils->Get_DebugStream() << "E, px, vx, t cov matrix indices = " << locCovMatrixEParamIndex << ", " << locCovMatrixPxParamIndex << ", " << locCovMatrixVxParamIndex << ", " << locCovMatrixTParamIndex << endl;
+			dKinFitUtils->Get_DebugStream() << "sizes = " << locCovarianceMatrix.GetNrows() << ", " << locCovarianceMatrix.GetNcols() << ", " << locKinFitMatrix.GetNrows() << ", " << locKinFitMatrix.GetNcols() << endl;
 		}
 
 		//set localized terms first
@@ -3022,9 +3022,8 @@ void DKinFitter::Update_CovarianceMatrices(bool locDecayingParticlesOnlyFlag)
 
 		if(dDebugLevel >= 50)
 		{
-			cout << "FINAL COV MATRIX:" << endl;
+			dKinFitUtils->Get_DebugStream() << "FINAL COV MATRIX:" << endl;
 			dKinFitUtils->Print_Matrix(locCovarianceMatrix);
 		}
 	} //end set cov matrix loop
 }
-
