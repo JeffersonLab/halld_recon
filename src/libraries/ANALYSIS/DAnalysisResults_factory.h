@@ -71,6 +71,8 @@ class DAnalysisResults_factory : public JFactoryT<DAnalysisResults>
 
 		bool dRequireKinFitConvergence = true;
 		unsigned int dKinFitDebugLevel = 0;
+		std::string dKinFitDebugOutFile = "";
+		std::unique_ptr<std::ofstream> dKinFitDebugStream;
 		DKinFitter* dKinFitter = nullptr;
 		DKinFitUtils_GlueX* dKinFitUtils = nullptr;
 		map<pair<set<shared_ptr<DKinFitConstraint>>, bool>, DKinFitResults*> dConstraintResultsMap; //used for determining if kinfit results will be identical //bool: update cov matrix flag
@@ -99,4 +101,3 @@ class DAnalysisResults_factory : public JFactoryT<DAnalysisResults>
 };
 
 #endif // _DAnalysisResults_factory_
-
