@@ -888,7 +888,7 @@ bool DKinFitter::Calc_dS(void)
 	    {
 	      //cout << "Old Tol = "<< dS.GetTol() << "\n" << endl;
 	      dS.SetTol(minDiagElement/2);
-	      if(dDebugLevel > 10) dKinFitUtils->dKinFitUtils->Get_DebugStream() << "New Tol is set at " << minDiagElement/2 << "\n"  << endl;
+	      if(dDebugLevel > 10) dKinFitUtils->Get_DebugStream() << "New Tol is set at " << minDiagElement/2 << "\n"  << endl;
 	    }
 
 	}
@@ -897,14 +897,14 @@ bool DKinFitter::Calc_dS(void)
 	if((!locDecompLU_S.Decompose()) || (fabs(dS.Determinant()) < 1.0E-300))
 	{
 		if(dDebugLevel > 10)
-			dKinFitUtils->dKinFitUtils->Get_DebugStream() << "DKinFitter: dS not invertible.  Returning false." << endl;
+			dKinFitUtils->Get_DebugStream() << "DKinFitter: dS not invertible.  Returning false." << endl;
 		return false; // matrix is not invertible
 	}
 	dS_Inverse = dS;
 	dS_Inverse.Invert();
 	if(dDebugLevel > 20)
 	{
-		dKinFitUtils->dKinFitUtils->Get_DebugStream() << "DKinFitter: dS_Inverse: " << endl;
+		dKinFitUtils->Get_DebugStream() << "DKinFitter: dS_Inverse: " << endl;
 		dKinFitUtils->Print_Matrix(dS_Inverse);
 	}
 

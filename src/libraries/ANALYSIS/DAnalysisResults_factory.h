@@ -71,7 +71,7 @@ class DAnalysisResults_factory : public JFactoryT<DAnalysisResults>
 
 		bool dRequireKinFitConvergence = true;
 		unsigned int dKinFitDebugLevel = 0;
-		std::string dKinFitDebugOutFile = "";
+		std::string dKinFitLogFile = "";
 		std::unique_ptr<std::ofstream> dKinFitDebugStream;
 		DKinFitter* dKinFitter = nullptr;
 		DKinFitUtils_GlueX* dKinFitUtils = nullptr;
