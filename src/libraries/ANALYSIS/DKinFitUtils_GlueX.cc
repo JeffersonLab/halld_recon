@@ -198,6 +198,7 @@ shared_ptr<const DKinFitChain> DKinFitUtils_GlueX::Make_KinFitChain(const DReact
 		Get_DebugStream() << "DKinFitUtils_GlueX: Create DKinFitChain." << endl;
 
 	auto locKinFitChain = dResourcePool_KinFitChain->Get_SharedResource();
+	locKinFitChain->Set_DebugStream(dDebugStream);
 	locKinFitChain->Set_DefinedParticleStepIndex(-1); //unless changed below
 
 	//Make chain, excluding decaying particles
@@ -386,6 +387,7 @@ shared_ptr<DKinFitChainStep> DKinFitUtils_GlueX::Make_KinFitChainStep(const DRea
 {
 	//Start and register new step
 	auto locKinFitChainStep = dResourcePool_KinFitChainStep->Get_SharedResource();
+	locKinFitChainStep->Set_DebugStream(dDebugStream);
 	locKinFitChainStep->Set_ConstrainDecayingMassFlag(false); //unless changed later
 
 	//get the steps
