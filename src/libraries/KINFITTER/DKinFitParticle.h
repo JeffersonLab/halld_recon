@@ -145,6 +145,11 @@ class DKinFitParticle : public DResettable
 
 		bool Get_IsNeutralShowerFlag(void) const{return dIsNeutralShowerFlag;}
 
+		// ACQUIRE DEREFENCED OUTPUT STREAM
+		ostream& Get_DebugStream(void) const { return *dDebugStream; }
+		// SET OUTPUT STREAM
+		void Set_DebugStream(ostream* out_stream) { dDebugStream = out_stream; }
+		
 	private:
 
 		DKinFitParticleType dKinFitParticleType;
@@ -190,6 +195,9 @@ class DKinFitParticle : public DResettable
 		bool dVertexP4AtProductionVertex;
 
 		bool dIsNeutralShowerFlag;
+		
+		// output stream
+		ostream* dDebugStream = &cout;
 };
 
 inline DKinFitParticle::DKinFitParticle(void)
@@ -308,4 +316,3 @@ inline void DKinFitParticle::Print_ParticleParams(void) const
 }
 
 #endif // _DKinFitParticle_
-

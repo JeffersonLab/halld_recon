@@ -34,7 +34,7 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 		/***************************************************************** INITIALIZE ***************************************************************/
 
 		//STRUCTORS
-		DKinFitUtils(void);
+		DKinFitUtils(ostream* out_stream = &cout);
 		virtual ~DKinFitUtils(void){};
 		
 		//RESET: IF YOU OVERRIDE THESE IN THE DERIVED CLASS, BE SURE TO CALL THE BASE CLASS FUNCTIONS!
@@ -146,7 +146,7 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 		bool dLinkVerticesFlag;
 		int dDebugLevel;
 		bool dUpdateCovarianceMatricesFlag;
-		ostream* dDebugStream = &cout;
+		ostream* dDebugStream; // set by ctor, defaults to std::cout
 
 		shared_ptr<DResourcePool<DKinFitChainStep>> dResourcePool_KinFitChainStep;
 		shared_ptr<DResourcePool<DKinFitChain>> dResourcePool_KinFitChain;
