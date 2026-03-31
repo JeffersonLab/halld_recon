@@ -9,6 +9,7 @@
 #include "BCAL/DBCALShower.h"
 #include "FCAL/DFCALShower.h"
 #include "CCAL/DCCALShower.h"
+#include "ECAL/DECALShower.h"
 #include "DANA/DEvent.h"
 #include "DANA/DObjectID.h"
 
@@ -289,15 +290,31 @@ bool DEventRFBunch_factory::Find_NeutralTimes(const std::shared_ptr<const JEvent
 
 	for( size_t i = 0; i < fcalShowers.size(); ++i ){
 
-	  DVector3 locHitPoint = fcalShowers[i]->getPosition();
-	  DVector3 locPath = locHitPoint - dTargetCenter;
-	  double locPathLength = locPath.Mag();
-	  if(!(locPathLength > 0.0))
-	    continue;
-	  
-	  double locFlightTime = locPathLength/29.9792458;
-	  double locHitTime = fcalShowers[i]->getTime();
-	  locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, fcalShowers[i] ) );
+		DVector3 locHitPoint = fcalShowers[i]->getPosition();
+		DVector3 locPath = locHitPoint - dTargetCenter;
+		double locPathLength = locPath.Mag();
+		if(!(locPathLength > 0.0))
+			continue;
+
+		double locFlightTime = locPathLength/29.9792458;
+		double locHitTime = fcalShowers[i]->getTime();
+		locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, fcalShowers[i] ) );
+	}
+
+	vector< const DECALShower* > ecalShowers;
+	event->Get( ecalShowers );
+
+	for( size_t i = 0; i < ecalShowers.size(); ++i ){
+
+		DVector3 locHitPoint = ecalShowers[i]->pos;
+		DVector3 locPath = locHitPoint - dTargetCenter;
+		double locPathLength = locPath.Mag();
+		if(!(locPathLength > 0.0))
+			continue;
+
+		double locFlightTime = locPathLength/29.9792458;
+		double locHitTime = ecalShowers[i]->t;
+		locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, ecalShowers[i] ) );
 	}
 
 	vector< const DBCALShower* > bcalShowers;
@@ -305,15 +322,15 @@ bool DEventRFBunch_factory::Find_NeutralTimes(const std::shared_ptr<const JEvent
 
 	for( size_t i = 0; i < bcalShowers.size(); ++i ){
 
-	  DVector3 locHitPoint( bcalShowers[i]->x, bcalShowers[i]->y, bcalShowers[i]->z );
-	  DVector3 locPath = locHitPoint - dTargetCenter;
-	  double locPathLength = locPath.Mag();
-	  if(!(locPathLength > 0.0))
-	    continue;
-	  
-	  double locFlightTime = locPathLength/29.9792458;
-	  double locHitTime = bcalShowers[i]->t;
-	  locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, bcalShowers[i] ) );
+		DVector3 locHitPoint( bcalShowers[i]->x, bcalShowers[i]->y, bcalShowers[i]->z );
+		DVector3 locPath = locHitPoint - dTargetCenter;
+		double locPathLength = locPath.Mag();
+		if(!(locPathLength > 0.0))
+		continue;
+
+		double locFlightTime = locPathLength/29.9792458;
+		double locHitTime = bcalShowers[i]->t;
+		locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, bcalShowers[i] ) );
 	}
 	/*
 	vector< const DCCALShower* > ccalShowers;
@@ -321,15 +338,15 @@ bool DEventRFBunch_factory::Find_NeutralTimes(const std::shared_ptr<const JEvent
 
 	for( size_t i = 0; i < ccalShowers.size(); ++i ){
 
-	  DVector3 locHitPoint( ccalShowers[i]->x, ccalShowers[i]->y, ccalShowers[i]->z );
-	  DVector3 locPath = locHitPoint - dTargetCenter;
-	  double locPathLength = locPath.Mag();
-	  if(!(locPathLength > 0.0))
-	    continue;
-	  
-	  double locFlightTime = locPathLength/29.9792458;
-	  double locHitTime = ccalShowers[i]->time;
-	  locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, ccalShowers[i] ) );
+		DVector3 locHitPoint( ccalShowers[i]->x, ccalShowers[i]->y, ccalShowers[i]->z );
+		DVector3 locPath = locHitPoint - dTargetCenter;
+		double locPathLength = locPath.Mag();
+		if(!(locPathLength > 0.0))
+			continue;
+
+		double locFlightTime = locPathLength/29.9792458;
+		double locHitTime = ccalShowers[i]->time;
+		locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, ccalShowers[i] ) );
 	}
 	*/  
 	return (locTimes.size() > 1);
@@ -434,54 +451,55 @@ int DEventRFBunch_factory::Break_TieVote_Tracks(map<int, vector<const JObject*> 
 
 int DEventRFBunch_factory::Break_TieVote_Neutrals(map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts)
 {
-  //Break tie with highest total shower energy
+	//Break tie with highest total shower energy
 
-  int locBestRFBunchShift = 0;
-  double locHighestTotalEnergy = 0.0;
+	int locBestRFBunchShift = 0;
+	double locHighestTotalEnergy = 0.0;
 
-  set<int>::const_iterator locSetIterator = locBestRFBunchShifts.begin();
-  for(; locSetIterator != locBestRFBunchShifts.end(); ++locSetIterator)
-    {
-      int locRFBunchShift = *locSetIterator;
-      double locTotalEnergy = 0.0;
-
-      const vector<const JObject*>& locVoters = locNumBeamBucketsShiftedMap[locRFBunchShift];
-      for(size_t loc_i = 0; loc_i < locVoters.size(); ++loc_i)
+	set<int>::const_iterator locSetIterator = locBestRFBunchShifts.begin();
+	for(; locSetIterator != locBestRFBunchShifts.end(); ++locSetIterator)
 	{
-	  // the pointers in locVoters that we care about will either be those to DBCALShower
-	  // or DFCALShower objects -- figure out which and record the energy
-	  
-	  const DFCALShower* fcalShower = dynamic_cast< const DFCALShower* >( locVoters[loc_i] );
-	  
-	  if( fcalShower != NULL ){
+		int locRFBunchShift = *locSetIterator;
+		double locTotalEnergy = 0.0;
 
-	    locTotalEnergy += fcalShower->getEnergy();
-	  }
-	  else{
-	    
-	    const DBCALShower* bcalShower = dynamic_cast< const DBCALShower* >( locVoters[loc_i] );
-	    if( bcalShower != NULL ){
-	      
-	      locTotalEnergy += bcalShower->E;
-	    }
-	    else{
-	      const DCCALShower* ccalShower = dynamic_cast< const DCCALShower* >( locVoters[loc_i] );
-	      if( ccalShower != NULL ){
-		
-		locTotalEnergy += ccalShower->E;
-	      }
-	    }
-	  }
+		const vector<const JObject*>& locVoters = locNumBeamBucketsShiftedMap[locRFBunchShift];
+		for(size_t loc_i = 0; loc_i < locVoters.size(); ++loc_i)
+		{
+			// the pointers in locVoters that we care about will either be those to DBCALShower,
+			// DFCALShower, or DECALShower objects -- figure out which and record the energy
+
+			const DFCALShower* fcalShower = dynamic_cast< const DFCALShower* >( locVoters[loc_i] );
+			if( fcalShower != NULL ){
+				locTotalEnergy += fcalShower->getEnergy();
+			}
+			else{
+				const DBCALShower* bcalShower = dynamic_cast< const DBCALShower* >( locVoters[loc_i] );
+				if( bcalShower != NULL ){
+					locTotalEnergy += bcalShower->E;
+				}
+				else{
+					const DECALShower* ecalShower = dynamic_cast< const DECALShower* >( locVoters[loc_i] );
+					if( ecalShower != NULL ){
+						locTotalEnergy += ecalShower->E;
+					}
+					else {
+						const DCCALShower* ccalShower = dynamic_cast< const DCCALShower* >( locVoters[loc_i] );
+						if( ccalShower != NULL ){
+							locTotalEnergy += ccalShower->E;
+						}
+					}
+				}
+			}
+		}
+
+		if(locTotalEnergy > locHighestTotalEnergy)
+		{
+			locHighestTotalEnergy = locTotalEnergy;
+			locBestRFBunchShift = locRFBunchShift;
+		}
 	}
-      
-      if(locTotalEnergy > locHighestTotalEnergy)
-	{
-	  locHighestTotalEnergy = locTotalEnergy;
-	  locBestRFBunchShift = locRFBunchShift;
-	}
-    }
-  
-  return locBestRFBunchShift;
+
+	return locBestRFBunchShift;
 }
 
 

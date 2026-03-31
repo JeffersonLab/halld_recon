@@ -27,6 +27,7 @@
 #include <TRACKING/DTrackTimeBased.h>
 #include <START_COUNTER/DSCHit.h>
 #include <BCAL/DBCALShower.h>
+#include <ECAL/DECALShower.h>
 #include <TOF/DTOFPoint.h>
 #include <PID/DBeamPhoton.h>
 
@@ -72,6 +73,7 @@ class DEventRFBunch_factory_CalorimeterOnly : public JFactoryT<DEventRFBunch>
 		bool USE_FCAL;
 		bool USE_BCAL;
 		bool USE_CCAL;
+		bool USE_ECAL;
 
 		void Init() override;
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
