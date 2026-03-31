@@ -277,42 +277,42 @@ inline set<shared_ptr<DKinFitParticle>> DKinFitParticle::Get_FromAllParticles(vo
 
 inline void DKinFitParticle::Print_ParticleParams(void) const
 {
-	cout << "DKinFitParticle: Particle Type Enum, pointer: " << dKinFitParticleType << ", " << this << endl;
+	Get_DebugStream() << "DKinFitParticle: Particle Type Enum, pointer: " << dKinFitParticleType << ", " << this << endl;
 
-	cout << "DKinFitParticle: Particle PID, Q, Mass = " << dPID << ", " << int(dCharge) << ", " << dMass << endl;
-	cout << "DKinFitParticle: Particle P3, V3, T, path length = " << dMomentum.Px() << ", " << dMomentum.Py() << ", " << dMomentum.Pz() << ", ";
-	cout << dSpacetimeVertex.X() << ", " << dSpacetimeVertex.Y() << ", " << dSpacetimeVertex.Z() << ", " << dSpacetimeVertex.T() << ", " << dPathLength << endl;
-	cout << "DKinFitParticle: Particle Common V3, Common T, ShowerE = " << dCommonSpacetimeVertex.X() << ", " << dCommonSpacetimeVertex.Y();
-	cout << ", " << dCommonSpacetimeVertex.Z() << ", " << dCommonSpacetimeVertex.T() << ", " << dShowerEnergy << endl;
+	Get_DebugStream() << "DKinFitParticle: Particle PID, Q, Mass = " << dPID << ", " << int(dCharge) << ", " << dMass << endl;
+	Get_DebugStream() << "DKinFitParticle: Particle P3, V3, T, path length = " << dMomentum.Px() << ", " << dMomentum.Py() << ", " << dMomentum.Pz() << ", ";
+	Get_DebugStream() << dSpacetimeVertex.X() << ", " << dSpacetimeVertex.Y() << ", " << dSpacetimeVertex.Z() << ", " << dSpacetimeVertex.T() << ", " << dPathLength << endl;
+	Get_DebugStream() << "DKinFitParticle: Particle Common V3, Common T, ShowerE = " << dCommonSpacetimeVertex.X() << ", " << dCommonSpacetimeVertex.Y();
+	Get_DebugStream() << ", " << dCommonSpacetimeVertex.Z() << ", " << dCommonSpacetimeVertex.T() << ", " << dShowerEnergy << endl;
 
-	cout << "DKinFitParticle: FitCommonVertexFlag, FitCommonTimeFlag, dVertexP4AtProductionVertex, dIsNeutralShowerFlag = ";
-	cout << Get_FitCommonVertexFlag() << ", " << Get_FitCommonTimeFlag() << ", " << dVertexP4AtProductionVertex << ", " << dIsNeutralShowerFlag << endl;
+	Get_DebugStream() << "DKinFitParticle: FitCommonVertexFlag, FitCommonTimeFlag, dVertexP4AtProductionVertex, dIsNeutralShowerFlag = ";
+	Get_DebugStream() << Get_FitCommonVertexFlag() << ", " << Get_FitCommonTimeFlag() << ", " << dVertexP4AtProductionVertex << ", " << dIsNeutralShowerFlag << endl;
 	if(dCovarianceMatrix != NULL)
 	{
-		cout << "DKinFitParticle: CovMatrix Diagonal Terms: ";
+		Get_DebugStream() << "DKinFitParticle: CovMatrix Diagonal Terms: ";
 		for(int loc_i = 0; loc_i < dCovarianceMatrix->GetNcols(); ++loc_i)
-			cout << (*dCovarianceMatrix)(loc_i, loc_i) << ", ";
-		cout << endl;
+			Get_DebugStream() << (*dCovarianceMatrix)(loc_i, loc_i) << ", ";
+		Get_DebugStream() << endl;
 	}
 
-	cout << "DKinFitParticle: Particle E, Px, Vx, Common Vx, T, Common T indices = " << int(dEParamIndex) << ", " << int(dPxParamIndex) << ", ";
-	cout << int(dVxParamIndex) << ", " << int(dCommonVxParamIndex) << ", " << int(dTParamIndex) << ", " << int(dCommonTParamIndex) << endl;
+	Get_DebugStream() << "DKinFitParticle: Particle E, Px, Vx, Common Vx, T, Common T indices = " << int(dEParamIndex) << ", " << int(dPxParamIndex) << ", ";
+	Get_DebugStream() << int(dVxParamIndex) << ", " << int(dCommonVxParamIndex) << ", " << int(dTParamIndex) << ", " << int(dCommonTParamIndex) << endl;
 
-	cout << "dFromInitialState size, PIDs: " << dFromInitialState.size();
+	Get_DebugStream() << "dFromInitialState size, PIDs: " << dFromInitialState.size();
 	for(auto& locKinFitParticle : dFromInitialState)
-		cout << ", " << locKinFitParticle->Get_PID();
-	cout << endl;
+		Get_DebugStream() << ", " << locKinFitParticle->Get_PID();
+	Get_DebugStream() << endl;
 
-	cout << "dFromFinalState size, PIDs: " << dFromFinalState.size();
+	Get_DebugStream() << "dFromFinalState size, PIDs: " << dFromFinalState.size();
 	for(auto& locKinFitParticle : dFromFinalState)
-		cout << ", " << locKinFitParticle->Get_PID();
-	cout << endl;
+		Get_DebugStream() << ", " << locKinFitParticle->Get_PID();
+	Get_DebugStream() << endl;
 
 	auto locFromAllParticles = Get_FromAllParticles();
-	cout << "FromAllButDecaying size, PIDs: " << locFromAllParticles.size();
+	Get_DebugStream() << "FromAllButDecaying size, PIDs: " << locFromAllParticles.size();
 	for(auto& locKinFitParticle : locFromAllParticles)
-		cout << ", " << locKinFitParticle->Get_PID();
-	cout << endl;
+		Get_DebugStream() << ", " << locKinFitParticle->Get_PID();
+	Get_DebugStream() << endl;
 }
 
 #endif // _DKinFitParticle_
