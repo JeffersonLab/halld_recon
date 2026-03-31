@@ -42,6 +42,9 @@ DGeometry::DGeometry(JGeometry *jgeom, DGeometryManager *dgeoman, JApplication* 
 	pthread_mutex_init(&materials_mutex, nullptr);
 
 	ReadMaterialMaps();
+
+	PRINT_POSITIONS=false;
+	app->SetDefaultParameter("GEOMETRY:PRINT_POSITIONS",PRINT_POSITIONS);
 }
 
 //---------------------------------
@@ -1786,6 +1789,11 @@ bool DGeometry::GetECALZ(double &z_ecal) const
       jgeom->SetVerbose(1);   // reenable error messages
      
       z_ecal += FCALCenter[2]+CrystalEcalpos[2]-0.5*block[2];
+
+      if (PRINT_POSITIONS){
+	cout << "ECAL front position: " << z_ecal << " cm" << endl;
+      }
+      
       return true;
     }
   }
@@ -1996,6 +2004,11 @@ bool DGeometry::GetFCALZ(double &z_fcal) const
       return false;
    }else{
       z_fcal = ForwardEMcalpos[2];
+
+      if (PRINT_POSITIONS){
+	cout << "FCAL front position: " << z_fcal << " cm" << endl;
+      }
+      
       return true;
    }
 }
@@ -2297,6 +2310,11 @@ bool DGeometry::GetTOFZ(double &CenterVPlane,double &CenterHPlane,
   // also save position midway between the two planes
   CenterMPlane=0.5*(CenterHPlane+CenterVPlane);
 
+  if (PRINT_POSITIONS){
+    cout << "TOF plane#1 z=" << CenterHPlane << " cm" <<endl;
+    cout << "TOF plane#2 z=" << CenterVPlane << " cm" <<endl;
+  }
+  
   return true;
 }
 
@@ -2542,6 +2560,11 @@ bool DGeometry::GetTargetZ(double &z_target) const
    if(gluex_target_exists) {
      z_target = xyz_vessel[2] + xyz_target[2] + xyz_detector[2];
      jgeom->SetVerbose(1);   // reenable error messages
+     
+     if (PRINT_POSITIONS){
+       cout << "Target center z=" << z_target << " cm " << endl;
+     }
+     
      return true;
    }
 
@@ -2726,6 +2749,7 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
     	loaded_paddle_offsets = true;
     
     // Create vectors of positions and normal vectors for each paddle
+    DVector3 nose_position;
     for (unsigned int i=0;i<30;i++){
       double phi=ThetaZ+dSCdphi*(double(i)+0.5);
       double sinphi=sin(phi);
@@ -2776,6 +2800,11 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
 	dirvec.push_back(dir);
 	posvec.push_back(DVector3(oldray.X()+dx,oldray.Y()+dy,oldray.Z()+z0));
       }
+
+      if (PRINT_POSITIONS){
+	nose_position+=posvec[posvec.size()-1];
+      }
+      
       posvec.push_back(DVector3(ray.X()+dx,ray.Y()+dy,ray.Z()+z0)); //SAVE THE ENDPOINT OF THE LAST PLANE
       pos.push_back(posvec);
       norm.push_back(dirvec);
@@ -2783,6 +2812,13 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
       posvec.clear();
       dirvec.clear();
     }
+    
+    if (PRINT_POSITIONS){
+      nose_position*=1./30.;
+      cout << "Start counter nose position:" <<endl;
+      nose_position.Print();
+    }
+    
   }
   return got_sc;
 }
