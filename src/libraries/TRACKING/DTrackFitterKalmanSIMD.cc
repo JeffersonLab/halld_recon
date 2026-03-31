@@ -678,6 +678,15 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
      app->SetDefaultParameter("KALMAN:VERTEX_POSITION",TARGET_Z);
    }
 
+   PRINT_POSITIONS=false;
+   app->SetDefaultParameter("GEOMETRY:PRINT_POSITIONS",PRINT_POSITIONS);
+   if (PRINT_POSITIONS){
+     for (unsigned int i=0;i<24;i++){
+       cout << "FDC plane#" << i+1 << " z=" << fdc_z_wires[i] << endl;
+     }
+   }
+   
+
    // Beam position and direction
    map<string, double> beam_vals;
    jcalib->Get("PHOTON_BEAM/beam_spot",beam_vals);
