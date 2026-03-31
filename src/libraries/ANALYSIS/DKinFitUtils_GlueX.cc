@@ -195,7 +195,7 @@ shared_ptr<const DKinFitChain> DKinFitUtils_GlueX::Make_KinFitChain(const DReact
 {
 	//locKinFitType input in case want to do a different fit
 	if(dDebugLevel > 10)
-		cout << "DKinFitUtils_GlueX: Create DKinFitChain." << endl;
+		Get_DebugStream() << "DKinFitUtils_GlueX: Create DKinFitChain." << endl;
 
 	auto locKinFitChain = dResourcePool_KinFitChain->Get_SharedResource();
 	locKinFitChain->Set_DefinedParticleStepIndex(-1); //unless changed below
@@ -319,7 +319,7 @@ shared_ptr<const DKinFitChain> DKinFitUtils_GlueX::Make_KinFitChain(const DReact
 
 	if(dDebugLevel > 10)
 	{
-		cout << "DKinFitUtils_GlueX: DKinFitChain Created. Printing:" << endl;
+		Get_DebugStream() << "DKinFitUtils_GlueX: DKinFitChain Created. Printing:" << endl;
 		locKinFitChain->Print_InfoToScreen();
 	}
 
@@ -368,16 +368,16 @@ pair<set<shared_ptr<DKinFitParticle>>, set<shared_ptr<DKinFitParticle>>> DKinFit
 
 	if(dDebugLevel >= 10)
 	{
-		cout << "DKinFitUtils_GlueX::Get_StepParticles_NonNull:" << endl;
-		cout << "reaction, step-index, non-fixed-mass particle index: " << locReaction->Get_ReactionName() << ", " << locStepIndex << ", " << locNonFixedMassParticleIndex << endl;
-		cout << "Chain: " << endl;
+		Get_DebugStream() << "DKinFitUtils_GlueX::Get_StepParticles_NonNull:" << endl;
+		Get_DebugStream() << "reaction, step-index, non-fixed-mass particle index: " << locReaction->Get_ReactionName() << ", " << locStepIndex << ", " << locNonFixedMassParticleIndex << endl;
+		Get_DebugStream() << "Chain: " << endl;
 		locKinFitChain->Print_InfoToScreen();
-		cout << "Init-particles:" << endl;
+		Get_DebugStream() << "Init-particles:" << endl;
 		for(auto& locParticle : locInitialParticles)
-			cout << locParticle->Get_PID() << ", " << locParticle << endl;
-		cout << "Final-particles:" << endl;
+			Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
+		Get_DebugStream() << "Final-particles:" << endl;
 		for(auto& locParticle : locFinalParticles)
-			cout << locParticle->Get_PID() << ", " << locParticle << endl;
+			Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
 	}
 	return std::make_pair(locInitialParticles, locFinalParticles);
 }
@@ -489,7 +489,7 @@ shared_ptr<DKinFitChainStep> DKinFitUtils_GlueX::Make_KinFitChainStep(const DRea
 set<shared_ptr<DKinFitConstraint>> DKinFitUtils_GlueX::Create_Constraints(const DReactionVertexInfo* locReactionVertexInfo, const DReaction* locReaction, const DParticleCombo* locParticleCombo, const shared_ptr<const DKinFitChain>& locKinFitChain, DKinFitType locKinFitType, vector<shared_ptr<DKinFitConstraint_Vertex>>& locSortedVertexConstraints)
 {
 	if(dDebugLevel > 10)
-		cout << "DKinFitUtils_GlueX: Create constraints." << endl;
+		Get_DebugStream() << "DKinFitUtils_GlueX: Create constraints." << endl;
 
 	//All constraints
 	set<shared_ptr<DKinFitConstraint>> locAllConstraints;
@@ -630,7 +630,7 @@ set<shared_ptr<DKinFitConstraint>> DKinFitUtils_GlueX::Create_Constraints(const 
 	locAllConstraints.insert(locSortedVertexConstraints.begin(), locSortedVertexConstraints.end());
 
 	if(dDebugLevel > 10)
-		cout << "DKinFitUtils_GlueX: All Constraints Created." << endl;
+		Get_DebugStream() << "DKinFitUtils_GlueX: All Constraints Created." << endl;
 
 	return locAllConstraints;
 }
@@ -914,4 +914,3 @@ bool DKinFitUtils_GlueX::Propagate_TrackInfoToCommonVertex(DKinematicData* locKi
 	locKinematicData->setErrorMatrix(locCovarianceMatrix);
 	return true;
 }
-
