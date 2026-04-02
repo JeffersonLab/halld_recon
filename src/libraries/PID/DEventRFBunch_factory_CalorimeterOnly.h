@@ -27,7 +27,6 @@
 #include <TRACKING/DTrackTimeBased.h>
 #include <START_COUNTER/DSCHit.h>
 #include <BCAL/DBCALShower.h>
-#include <ECAL/DECALShower.h>
 #include <TOF/DTOFPoint.h>
 #include <PID/DBeamPhoton.h>
 

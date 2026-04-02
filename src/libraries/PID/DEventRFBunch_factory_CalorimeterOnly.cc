@@ -7,6 +7,7 @@
 #include "BCAL/DBCALShower.h"
 #include "FCAL/DFCALShower.h"
 #include "CCAL/DCCALShower.h"
+#include "ECAL/DECALShower.h"
 
 #include "DANA/DEvent.h"
 
@@ -146,7 +147,7 @@ bool DEventRFBunch_factory_CalorimeterOnly::Find_NeutralTimes(const std::shared_
 	if(USE_ECAL) {
 		vector< const DECALShower* > ecalShowers;
 		event->Get( ecalShowers );
-
+		
 		for( size_t i = 0; i < ecalShowers.size(); ++i ){
 			DVector3 locHitPoint = ecalShowers[i]->pos;
 			DVector3 locPath = locHitPoint - dTargetCenter;
