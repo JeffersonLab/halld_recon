@@ -156,9 +156,9 @@ inline void DKinFitConstraint_Spacetime::Print_ConstraintInfo(void) const
 {
 	DKinFitConstraint_Vertex::Print_ConstraintInfo();
 
-	cout << "DKinFitConstraint_Spacetime: Only-time-constrained particle PID's, pointers: " << endl;
+	Get_DebugStream() << "DKinFitConstraint_Spacetime: Only-time-constrained particle PID's, pointers: " << endl;
 	for(auto& locParticle : dOnlyConstrainTimeParticles)
-		cout << locParticle->Get_PID() << ", " << locParticle << endl;
+		Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
 }
 
 #endif // _DKinFitConstraint_Spacetime_
