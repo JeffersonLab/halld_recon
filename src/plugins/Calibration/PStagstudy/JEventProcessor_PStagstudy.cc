@@ -249,21 +249,21 @@ std::map<int, int> fadc250_channel_from_rowcolumn;
 //#define SELECT_TRIGGER_TYPE 3
 
 void report_bad_pmax(const DTAGMHit *itagm) {
-   std::cout << "  DTAGMHit: column=" << itagm->column
-             << " row=" << itagm->row << std::endl;
+   jout << "  DTAGMHit: column=" << itagm->column
+        << " row=" << itagm->row << std::endl;
    std::vector<const DTAGMDigiHit*> digi_hits;
    itagm->Get(digi_hits);
    std::vector<const DTAGMDigiHit*>::iterator atagm;
    for (atagm = digi_hits.begin(); atagm != digi_hits.end(); ++atagm) {
-      std::cout << "    DTAGMDigiHit: column=" << (*atagm)->column
-                << " row=" << (*atagm)->row << std::endl;
+      jout << "    DTAGMDigiHit: column=" << (*atagm)->column
+           << " row=" << (*atagm)->row << std::endl;
    }
    std::vector<const DTAGMTDCDigiHit*> tdc_digi_hits;
    itagm->Get(tdc_digi_hits);
    std::vector<const DTAGMTDCDigiHit*>::iterator ttagm;
    for (ttagm = tdc_digi_hits.begin(); ttagm != tdc_digi_hits.end(); ++ttagm) {
-      std::cout << "    DTAGMTDCDigiHit: column=" << (*ttagm)->column
-                << " row=" << (*ttagm)->row << std::endl;
+      jout << "    DTAGMTDCDigiHit: column=" << (*ttagm)->column
+           << " row=" << (*ttagm)->row << std::endl;
    }
 }
 
@@ -328,7 +328,7 @@ void JEventProcessor_PStagstudy::Init() {
    app->SetDefaultParameter("PSTAGSTUDY_BEAM_CURRENT_RECORD",
                             beam_current_record_url,
                             "Path/URL to the ROOT file containing the beam current tree");
-   LOG << "PStagstudy: using beam current record URL: " << beam_current_record_url << LOG_END;
+   jout << "PStagstudy: using beam current record URL: " << beam_current_record_url << std::endl;
 
    string treeName = "tree_pstags";
    string treeFile = "tree_PStags.root";
@@ -542,20 +542,20 @@ void JEventProcessor_PStagstudy::BeginRun(const std::shared_ptr<const JEvent>& e
    beam_current_from_epics.clear();
    TFile *bcfile = TFile::Open(beam_current_record_url.c_str());
    if (!bcfile || bcfile->IsZombie()) {
-      std::cout << "JEventProcessor_PStagstudy::brun error - "
-                << "failed to open EPICS beam current record at url "
-                << beam_current_record_url << std::endl
-                << "...continuing on without beam current information from EPICS"
-                << std::endl;
+      jerr << "JEventProcessor_PStagstudy::brun error - "
+           << "failed to open EPICS beam current record at url "
+           << beam_current_record_url << std::endl
+           << "...continuing on without beam current information from EPICS"
+           << std::endl;
       return;
    }
    TTree *bctree = dynamic_cast<TTree*>(bcfile->Get(beam_current_record_tree.c_str()));
    if (!bctree) {
-      std::cout << "JEventProcessor_PStagstudy::brun error - "
-                << "failed to read tree " << beam_current_record_tree
-                << " from " << beam_current_record_url << std::endl
-                << "...continuing on without beam current information from EPICS"
-                << std::endl;
+      jerr << "JEventProcessor_PStagstudy::brun error - "
+           << "failed to read tree " << beam_current_record_tree
+           << " from " << beam_current_record_url << std::endl
+           << "...continuing on without beam current information from EPICS"
+           << std::endl;
       bcfile->Close();
       return;
    }
@@ -572,9 +572,9 @@ void JEventProcessor_PStagstudy::BeginRun(const std::shared_ptr<const JEvent>& e
          break;
    }
    bcfile->Close();
-   std::cout << "JEventProcessor_PStagstudy::brun read "
-             << beam_current_from_epics.size() << " records"
-             << " from EPICS for run " << runno << std::endl;
+   jout << "JEventProcessor_PStagstudy::brun read "
+        << beam_current_from_epics.size() << " records"
+        << " from EPICS for run " << runno << std::endl;
 
 }
 
@@ -598,7 +598,7 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    event->Get(scalers);
    std::vector<const DTSscalers*>::iterator isc;
    for (isc = scalers.begin(); isc != scalers.end(); ++isc) {
-      std::cout << "scalers found with time " << (*isc)->time << std::endl;
+      jout << "scalers found with time " << (*isc)->time << std::endl;
    }
 
    // only examine PS triggers
@@ -635,8 +635,8 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    event->Get(controls);
    std::vector<const DCODAControlEvent*>::iterator ictrl;
    for (ictrl = controls.begin(); ictrl != controls.end(); ++ictrl) {
-      std::cout << "found control event with unix_time "
-                << (*ictrl)->unix_time << std::endl;
+      jout << "found control event with unix_time "
+           << (*ictrl)->unix_time << std::endl;
       lock_svc->RootWriteLock();
       epoch_reference = (*ictrl)->unix_time;
       lock_svc->RootUnLock();
@@ -647,8 +647,8 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    std::vector<const DBeamCurrent*>::iterator icur;
    unsigned long int beamcurrent = 0;
    for (icur = currents.begin(); icur != currents.end(); ++icur) {
-      // std::cout << "found DBeamCurrent with t "
-      //           << (*icur)->t << std::endl;
+      // jout << "found DBeamCurrent with t "
+      //      << (*icur)->t << std::endl;
       beamcurrent = (*icur)->Ibeam;
    } 
 
@@ -697,9 +697,9 @@ void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& ev
    std::vector<const DTranslationTable*> ttables;
    event->Get(ttables);
    if (ttables.size() != 1) {
-      std::cout << "Serious error in PStagstudy plugin - "
-                << "unable to acquire the DAQ translation table!"
-                << std::endl;
+      jerr << "Serious error in PStagstudy plugin - "
+           << "unable to acquire the DAQ translation table!"
+           << std::endl;
       return;
    }
    const DTranslationTable *ttab = ttables[0];
