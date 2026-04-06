@@ -44,13 +44,8 @@ DTrackFitter::DTrackFitter(const std::shared_ptr<const JEvent>& event)
 
 	bfield = geo_manager->GetBfield(run_number);
 	geom = geo_manager->GetDGeometry(run_number);
+	RootGeom = geo_manager->GetRootGeom(run_number);
 
-	RootGeom=NULL;
-	MATERIAL_MAP_MODEL = "DGeometry";
-	app->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL",MATERIAL_MAP_MODEL);
-	if(MATERIAL_MAP_MODEL=="DRootGeom"){
-	  RootGeom = geo_manager->GetRootGeom(run_number);
-	}
 	// Create the extrapolation vectors
 	vector<Extrapolation_t>myvector;
 	extrapolations.emplace(SYS_BCAL,myvector);

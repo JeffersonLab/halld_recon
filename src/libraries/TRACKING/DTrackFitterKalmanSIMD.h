@@ -80,6 +80,7 @@ enum kalman_error_t{
   EXTRAPOLATION_FAILED,
   FIT_FAILED,
   FIT_NOT_DONE,
+  BRENT_SUCCEEDED,
 };
 
 enum find_doca_error_t{
@@ -361,17 +362,12 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 			   const DVector2 &origin,
 			   const DVector2 &dir,DMatrix5x1 &S,
 			   double &dz_out);
-  jerror_t BrentForward(double z, double dedx, 
-            const double z0w,
-            const DVector2 &origin, 
-            const DVector2 &dir, DMatrix5x1 &S, 
-            double &dz);
-  jerror_t BrentCentral(double dedx, 
-        DVector2 &xy, 
-        const double z0w, 
-        const DVector2 &origin, 
-        const DVector2 &dir, 
-        DMatrix5x1 &Sc, double &ds);
+  kalman_error_t BrentForward(double z,double dedx,const double z0w,
+			      const DVector2 &origin,const DVector2 &dir,
+			      DMatrix5x1 &S,double &dz);
+  kalman_error_t BrentCentral(double dedx,DVector2 &xy,const double z0w,
+			      const DVector2 &origin,const DVector2 &dir,
+			      DMatrix5x1 &Sc,double &ds);
   
   jerror_t PropagateForwardCDC(int length,int &index,double &z,double &r2,
 			       DMatrix5x1 &S, bool &stepped_to_boundary); 
@@ -497,7 +493,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   
   // Moliere fraction F and functions that depend on it
   double MOLIERE_FRACTION,MOLIERE_RATIO1,MOLIERE_RATIO2;
-  double MS_SCALE_FACTOR;
+  double MS_SCALE_FACTOR,DOCA_CUT;
 
   // tables of time-to-drift values
   vector<double>cdc_drift_table;
@@ -509,11 +505,9 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double short_drift_Bscale_par1,short_drift_Bscale_par2;
 
   // Vertex time
-  double mT0,mT0MinimumDriftTime;
+  double mT0;
   // Variance in vertex time
   double mVarT0;
-  // Detector giving t0
-  DetectorSystem_t mT0Detector;
 
   // indexes for kink/break-point analysis
   unsigned int break_point_cdc_index,break_point_step_index;
@@ -535,7 +529,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   bool USE_PASS1_TIME_MODE,FAST_TRACKING_MODE;
   int RING_TO_SKIP,PLANE_TO_SKIP;
   double PHOTON_ENERGY_CUTOFF;
-  bool USE_FDC_DRIFT_TIMES,USE_TRD_DRIFT_TIMES;
+  bool USE_TRD_DRIFT_TIMES;
   bool ALIGNMENT,ALIGNMENT_CENTRAL,ALIGNMENT_FORWARD;
   double COVARIANCE_SCALE_FACTOR_FORWARD, COVARIANCE_SCALE_FACTOR_CENTRAL;
 
@@ -601,6 +595,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   TH2I *brentCheckHists[2];
 
   bool WRITE_ML_TRAINING_OUTPUT;
+  bool PRINT_POSITIONS;
   ofstream mlfile;
 
  private:
