@@ -141,9 +141,9 @@
 	  auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
 	  if( min_events < 1 ) min_events = 1E4;
 	  if( Nevents >= min_events ) {
-	    cout << "RF Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+	    cout << "bad_hits flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
 	    rs_SavePad("bad_hits", 0);
-	    rs_ResetAllMacroHistos("//bad_hits");
+	    rs_ResetAllMacroHistos("//HistMacro_bad_hits");
 
             // fill epics pv 
 
