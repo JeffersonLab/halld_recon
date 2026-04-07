@@ -357,6 +357,7 @@ void DFCALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
     
     // energy weighted time provides better resolution:
     double cTime = cluster->getTimeEWeight();
+    double cTimeMaxE=cluster->getTimeMaxE();
   
     double zback=m_FCALfront + fcalGeom->blockLength();
     double c_effective=FCAL_C_EFFECTIVE;
@@ -380,12 +381,18 @@ void DFCALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       //the back of the detector. Here we correct for the time that it 
       //takes the Cherenkov light to reach the back of the detector
       //so that the t reported is roughly the time of the shower at the
-      //position pos_corrected	
-      cTime -= ( zback - pos_corrected.Z() )/c_effective;
+      //position pos_corrected
+      double dTimeLightPropagation=( zback - pos_corrected.Z() )/c_effective;
+      cTime -= dTimeLightPropagation;
+      cTimeMaxE -= dTimeLightPropagation;
 
       //Apply time-walk correction/global timing offset
-      cTime += ( timeConst0  +  timeConst1 * Ecorrected  +  timeConst2 * TMath::Power( Ecorrected, 2 ) +
-		 timeConst3 * TMath::Power( Ecorrected, 3 )  +  timeConst4 * TMath::Power( Ecorrected, 4 ) );
+      double dTimeWalk=( timeConst0  +  timeConst1 * Ecorrected
+			 + timeConst2 * TMath::Power( Ecorrected, 2 )
+			 + timeConst3 * TMath::Power( Ecorrected, 3 )
+			 + timeConst4 * TMath::Power( Ecorrected, 4 ) );
+      cTime += dTimeWalk;
+      cTimeMaxE += dTimeWalk;
 
       // Make the DFCALShower object
       DFCALShower* shower = new DFCALShower;
@@ -397,6 +404,7 @@ void DFCALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
 	shower->setPosition( pos_log );
       shower->setPosition_log( pos_log ); 
       shower->setTime ( cTime );
+      shower->setTimeMaxE(cTimeMaxE);
 
       FillCovarianceMatrix( shower );
 
