@@ -76,6 +76,8 @@ bool DCutAction_AllTracksHaveDetectorMatch::Perform_Action(const std::shared_ptr
 			continue;
 		if(locChargedTrackHypothesis->Get_FCALShowerMatchParams() != NULL)
 			continue;
+		if(locChargedTrackHypothesis->Get_ECALShowerMatchParams() != NULL)
+			continue;
 		return false;
 	}
 	return true;
@@ -1094,6 +1096,15 @@ bool DCutAction_TrackShowerEOverP::Perform_Action(const std::shared_ptr<const JE
 
 			const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
 			locShowerEOverP = locFCALShower->getEnergy()/locP;
+		}
+		else if(dDetector == SYS_ECAL)
+		{
+			auto locECALShowerMatchParams = locChargedTrackHypothesis->Get_ECALShowerMatchParams();
+			if(locECALShowerMatchParams == NULL)
+				continue;
+
+			const DECALShower* locECALShower = locECALShowerMatchParams->dECALShower;
+			locShowerEOverP = locECALShower->E/locP;
 		}
 		else if(dDetector == SYS_BCAL)
 		{
