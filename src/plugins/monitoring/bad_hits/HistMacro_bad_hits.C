@@ -1,5 +1,5 @@
-// hnamepath: /bad_hits/hroc
-// hnamepath: /bad_hits/hroc_slot
+// hnamepath: /bad_hits/roc
+// hnamepath: /bad_hits/roc_slot
 // hnamepath: /bad_hits/num_events
 //
 // e-mail: njarvis@jlab.org
@@ -29,7 +29,7 @@
 	
 	locDirectory->cd(); // cd to bad_hits
 
-	TH2I *locHistroc = (TH2I*)gDirectory->Get("roc");
+	TH1I *locHistroc = (TH1I*)gDirectory->Get("roc");
 	if (!locHistroc){
 		std::cout << "HistMacro_bad_hits: Unable to find histogram!" << std::endl;
 	   return;
@@ -41,35 +41,42 @@
 	   return;
 	}
 
+	double total_error_count = 0;
+	if (locHistroc) {
+	  total_error_count = locHistroc->GetEntries();
+	}
 
 	// find the 3 rocids with the most problems
 	int rocid[3] = {0};
-	int count[3] = {0};
 	
-        for (int i=1; i<=locHistroc->GetXaxis()->GetNbins(); i++) {
-	  int nerrors = locHistroc->GetBinContent(i);
+        if (total_error_count > 0) {	
+	
+	  int count[3] = {0};
+	
+	  for (int i=1; i<=locHistroc->GetXaxis()->GetNbins(); i++) {
+	    int nerrors = locHistroc->GetBinContent(i);
 
-          if (nerrors > count[0]) {
-	    count[2] = count[1];
-	    count[1] = count[0];
-	    rocid[2] = rocid[1];
-	    rocid[1] = rocid[0];
+	    if (nerrors > count[0]) {
+	      count[2] = count[1];
+	      count[1] = count[0];
+	      rocid[2] = rocid[1];
+	      rocid[1] = rocid[0];
 
-	    count[0] = nerrors;
-	    rocid[0] = i;
+	      count[0] = nerrors;
+	      rocid[0] = i;
 	    
-          } else if (nerrors > count[1]) {
-	    count[2] = count[1];
-	    rocid[2] = rocid[1];
-	    count[1] = nerrors;
-	    rocid[1] = i;
+	    } else if (nerrors > count[1]) {
+	      count[2] = count[1];
+	      rocid[2] = rocid[1];
+	      count[1] = nerrors;
+	      rocid[1] = i;
 	    
-          }else if (nerrors > count[2]) {
-	    count[2] = nerrors;
-	    rocid[2] = i;
-          }
+	    }else if (nerrors > count[2]) {
+	      count[2] = nerrors;
+	      rocid[2] = i;
+	    }
+	  }
 	}
-
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -136,8 +143,32 @@
 	  if( Nevents >= min_events ) {
 	    cout << "RF Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
 	    rs_SavePad("bad_hits", 0);
-	    rs_ResetAllMacroHistos("//HistMacro_bad_hits");
+	    rs_ResetAllMacroHistos("//bad_hits");
 
+            // fill epics pv 
+
+	    int returncode = 0;
+	    double epicsval = total_error_count;
+
+	    char syscmd[100];
+	    sprintf(syscmd,"caput HD:monitoring:ai:bad_hits %.1f",epicsval);
+	    
+	    try {
+	      returncode = system(syscmd);
+	    }
+
+	    catch (const std::exception& e) {
+	      std::cout << "Could not use system command ";
+	      std::cout << e.what() << endl;
+	      std::cout << "Bad hits count: " << total_error_count << endl;
+	    }
+
+	    if (returncode) {
+	      std::cout << "Could not use caput";
+	      std::cout << "Bad hits count: " << total_error_count << endl;
+	    }
+
+	    
 	  }
 	}
 #endif
