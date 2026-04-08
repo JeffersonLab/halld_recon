@@ -8,7 +8,8 @@
 //
 //  This plot should be completely empty (white).
 //  
-//  Any filled cells indicate a data format problem with an fadc.
+//  Any filled cells indicate a data problem.  
+//  If they are in a F1TDC crate there's not
 //
 //  If there are many filled cells, stop the DAQ, reboot the bad ROC (the ROCid is on the plot's x-axis) and restart the DAQ.  If that does not clear the error, contact a DAQ expert. 
 //  
@@ -46,11 +47,14 @@
 	  total_error_count = locHistroc->GetEntries();
 	}
 
+	double errors_to_report_in_epics = 0;
+	
 	// find the 3 rocids with the most problems
 	int rocid[3] = {0};
 	
         if (total_error_count > 0) {	
-	
+
+	  
 	  int count[3] = {0};
 	
 	  for (int i=1; i<=locHistroc->GetXaxis()->GetNbins(); i++) {
@@ -75,6 +79,17 @@
 	      count[2] = nerrors;
 	      rocid[2] = i;
 	    }
+
+	    // don't report errors in FDC F1TDCs to epics
+	    // these are slots F1TDCV3 <slot number="3" type="F1TDCV3"> 
+	    
+	    if (i==51) continue;
+	    if (i==54) continue;
+	    if (i==63) continue;	    
+	    if (i==64) continue;
+	    
+	    errors_to_report_in_epics += nerrors;
+	    	    
 	  }
 	}
 
@@ -148,7 +163,7 @@
             // fill epics pv 
 
 	    int returncode = 0;
-	    double epicsval = total_error_count;
+	    double epicsval = errors_to_report_in_epics;
 
 	    char syscmd[100];
 	    sprintf(syscmd,"caput HD:monitoring:ai:bad_hits %.1f",epicsval);
@@ -160,12 +175,12 @@
 	    catch (const std::exception& e) {
 	      std::cout << "Could not use system command ";
 	      std::cout << e.what() << endl;
-	      std::cout << "Bad hits count: " << total_error_count << endl;
+	      std::cout << "Bad hits count: " << errors_to_report_in_epics << endl;
 	    }
 
 	    if (returncode) {
 	      std::cout << "Could not use caput";
-	      std::cout << "Bad hits count: " << total_error_count << endl;
+	      std::cout << "Bad hits count: " << errors_to_report_in_epics << endl;
 	    }
 
 	    
