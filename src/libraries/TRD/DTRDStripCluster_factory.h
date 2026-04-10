@@ -41,8 +41,8 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 			Point(const DTRDHit *hit, double x, double y, double weight) : hit(hit), x(x), y(y), weight(weight), visited(false), clusterId(-1) {}
 		};
 		double PointsDistance(Point p1, Point p2){
-		  //return sqrt(pow(p1.x/8.-p2.x/8., 2) + pow(p1.y-p2.y, 2));
-		  return fabs(p1.y-p2.y);
+		  return sqrt(pow(p1.x/8.-p2.x/8., 2) + pow(p1.y-p2.y, 2));
+		//   return fabs(p1.y-p2.y);
 		}
 		void ExpandCluster(vector<Point> &points, Point &point, int clusterId, double eps, int minPts);
 		void DBSCAN(vector<Point> &points, double eps, int minPts);
@@ -58,6 +58,28 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 				}
 			}
 			return p_max;
+		}
+		double GetClusterPosWidth(vector<Point> &points, int clusterId) {
+			double min_y = 1e9;
+			double max_y = -1e9;
+			for (auto &point : points) {
+				if (point.clusterId == clusterId) {
+					if (point.y < min_y) min_y = point.y;
+					if (point.y > max_y) max_y = point.y;
+				}
+			}
+			return max_y - min_y;
+		}
+		double GetClusterTimeWidth(vector<Point> &points, int clusterId) {
+			double min_x = 1e9;
+			double max_x = -1e9;
+			for (auto &point : points) {
+				if (point.clusterId == clusterId) {
+					if (point.x < min_x) min_x = point.x;
+					if (point.x > max_x) max_x = point.x;
+				}
+			}
+			return max_x - min_x;
 		}
 			
 	protected:
@@ -76,6 +98,7 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 		double eps;
 		int minPts;
 		double min_total_q;
+		double max_pos_width;
 
 		// int MinClustSize;
 		// double MinClustWidth;
@@ -83,10 +106,10 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 		// double zStart;
 		// double zEnd;
 
-  const int NUM_X_STRIPS = 720;
-  //const int NUM_Y_STRIPS = 432;
-  const int NUM_Y_STRIPS = 528; // but only 432 are instrumented?
-  const double STRIP_PITCH=0.1;
+  	const int NUM_X_STRIPS = 720;
+  	//const int NUM_Y_STRIPS = 432;
+  	const int NUM_Y_STRIPS = 528; // but only 432 are instrumented?
+  	const double STRIP_PITCH=0.1;
 
 };
 

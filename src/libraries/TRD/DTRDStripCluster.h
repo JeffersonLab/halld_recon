@@ -32,6 +32,10 @@ class DTRDStripCluster : public JObject
 
   double q_max;
   double t_max;
+
+  // size of the cluster in the plane, might be useful to tag the ringing noises
+  double pos_width;
+  double time_width;
  
 
   // can be removed if we don't use raw data clustering
