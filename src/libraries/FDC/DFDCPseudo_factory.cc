@@ -139,23 +139,6 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     _DBG_<< "FDC geometry not available!" <<endl;
     USE_FDC=false;
   }
-  if (USE_FDC){
-     // Get package offsets
-    vector<double>offsets;
-    dgeom->Get("//posXYZ[@volume='forwardDC_package_1']/@X_Y_Z",offsets);
-    dX[0]=offsets[0];
-    dY[0]=offsets[1];
-    dgeom->Get("//posXYZ[@volume='forwardDC_package_2']/@X_Y_Z",offsets);
-    dX[1]=offsets[0];
-    dY[1]=offsets[1]; 
-    dgeom->Get("//posXYZ[@volume='forwardDC_package_3']/@X_Y_Z",offsets);
-    dX[2]=offsets[0];
-    dY[2]=offsets[1];
-    dgeom->Get("//posXYZ[@volume='forwardDC_package_4']/@X_Y_Z",offsets);
-    dX[3]=offsets[0];
-    dY[3]=offsets[1];
-  }
- 
   // Get offsets tweaking nominal geometry from calibration database
   vector<map<string,double> >vals;
   if (jcalib->Get("FDC/cell_offsets",vals)==false){
@@ -167,6 +150,8 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
       yshifts.push_back(row["yshift"]);
     }
   }
+
+
   // Get FDC resolution parameters from database
   map<string, double> fdcparms;
   FDC_RES_PAR1=0.;
@@ -241,15 +226,6 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     d_uv=(TH1F*)gROOT->FindObject("d_uv");
     if (!d_uv) d_uv=new TH1F("d_uv","d_uv",100,0,50);
 
-
-    for (unsigned int i=0;i<24;i++){
-      char hname[80];
-      sprintf(hname,"Hxy%d",i);
-      Hxy[i]=(TH2F *) gROOT->FindObject(hname);
-      if (!Hxy[i]){
-	Hxy[i]=new TH2F(hname,hname,4000,-50,50,200,-50,50);
-      }
-    }
     root_lock->RootUnLock();
   }
 }
@@ -582,10 +558,11 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     newPseu->t_v = vpeaks[j].t;
                     newPseu->cluster_u = upeaks[i];
                     newPseu->cluster_v = vpeaks[j];
-                    newPseu->w      = wire->u+xshifts[ilay];
-                    newPseu->dw     = 0.; // place holder
-                    newPseu->w_c    = x_from_strips+xshifts[ilay];
+                    newPseu->w      = wire->u;
+		    newPseu->w_c    = x_from_strips+xshifts[ilay];
+;
                     newPseu->s      = y_from_strips+yshifts[ilay];
+;
                     newPseu->ds = FDC_RES_PAR1/q_from_pulse_height+FDC_RES_PAR2;
                     //newPseu->ds=0.011/q_from_pulse_height+5e-3+2.14e-10*pow(q_from_pulse_height,6);
                     newPseu->wire   = wire;
@@ -611,10 +588,7 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                        continue;
                     }
                     double sinangle=newPseu->wire->udir(0);
-                    double cosangle=newPseu->wire->udir(1); 
-                    unsigned int pack_id=(layer-1)/6;
-                    newPseu->s+=dY[pack_id]*cosangle+dX[pack_id]*sinangle; 
-
+                    double cosangle=newPseu->wire->udir(1);
                     newPseu->xy.Set((newPseu->w)*cosangle+(newPseu->s)*sinangle,
                           -(newPseu->w)*sinangle+(newPseu->s)*cosangle);
 
@@ -633,7 +607,6 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     Insert(newPseu);
 
                     if (DEBUG_HISTS){
-                       Hxy[ilay]->Fill(newPseu->w_c,newPseu->s);
                        if (ilay==6) dx_vs_dE->Fill(q_from_pulse_height,0.2588*delta_x);
                     }
 

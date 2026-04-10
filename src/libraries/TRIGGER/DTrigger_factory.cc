@@ -60,6 +60,13 @@ void DTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 		jerr << "Unable to get MC_TRIGGER_TAG from /ANALYSIS/dtrigger_types !" << endl;
 		return; // RESOURCE_UNAVAILABLE;
 	}
+
+	// we can't save empty strings in CCDB, or at least if we do they won't be read back properly
+	// so we need to have some placeholder string stored in CCDB
+	if( DATA_SIM_TRIGGER_TAG == "NULL" )
+		DATA_SIM_TRIGGER_TAG = "";
+	if( MC_TRIGGER_TAG == "NULL" )
+		MC_TRIGGER_TAG = "";
 	
 }
 

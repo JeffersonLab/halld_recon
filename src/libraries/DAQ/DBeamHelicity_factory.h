@@ -38,6 +38,7 @@ class DBeamHelicity_factory:public JFactoryT<DBeamHelicity>{
 		uint32_t helicityDecoderCalcPolarity(uint32_t event_polarity, uint32_t seed, uint32_t delay);
 
 		bool PREFER_PROMPT_HELICITY_DATA;
+		
 		uint32_t dHDBoardDelay;
 };
 

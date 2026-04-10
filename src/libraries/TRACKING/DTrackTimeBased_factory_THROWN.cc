@@ -29,7 +29,6 @@ DTrackTimeBased_factory_THROWN::DTrackTimeBased_factory_THROWN()
 	fitter = NULL;
 	hitselector=NULL;
 	
-	RootGeom = NULL;
 	geom = NULL;
 }
 
@@ -126,7 +125,6 @@ void DTrackTimeBased_factory_THROWN::Process(const std::shared_ptr<const JEvent>
 		DVector3 mom = track->momentum();
 		rt->SetMass(thrown->mass());
 		rt->SetDGeometry(geom);
-		rt->SetDRootGeom(RootGeom);
 		rt->Swim(pos, mom, track->charge());
 
 		// Find hits that should be on this track and add them as associated objects

@@ -85,7 +85,7 @@ public :
   double t_u,t_v; ///< time of the two cathode clusters
   double phi_u,phi_v; ///< rotation angles for cathode planes
   centroid_t cluster_u, cluster_v; ///< Cathode cluster centroids, Useful for gain/strip pitch calibration.
-  double w,dw; ///< local coordinate of pseudopoint in the direction perpendicular to the wires and its uncertainty
+  double w; ///< local coordinate of pseudopoint in the direction perpendicular to the wires
   double w_c; /// < wire position computed from cathode data, assuming the avalanche occurs at the wire
   double s,ds; ///< local coordinate of pseudopoint in the direction along the wire and its uncertainty
   const DFDCWire* wire; ///< DFDCWire for this wire 

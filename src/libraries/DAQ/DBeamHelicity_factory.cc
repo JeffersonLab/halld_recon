@@ -32,6 +32,7 @@ void DBeamHelicity_factory::Init()
 	
 	auto app = GetApplication();
 	app->SetDefaultParameter("PREFER_PROMPT_HELICITY_DATA", PREFER_PROMPT_HELICITY_DATA, "If both prompt and delayed helicity data are in the data stream, prefer the prompt. (default: true)");
+	app->SetDefaultParameter("HELICITY:HB_SHIFT", dHDBoardDelay, "Helicity board bits to shift to get prompt helicity. (default: 8)");
 
 	return; //NOERROR;
 }
@@ -55,12 +56,6 @@ void DBeamHelicity_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
         jerr << "Unable to get correction from /ELECTRON_BEAM/helicity_board_shift !" << endl;
 	}
 	// Constants for determined helicity pattern? (from Ken) 
-
-
-	// override parameters on command line
-	auto app = GetApplication();
-	app->SetDefaultParameter("HELICITY:HB_SHIFT", dHDBoardDelay, "Helicity board bits to shift to get prompt helicity. (default: 8)");
-	
 	
 	return; //NOERROR;
 }
@@ -119,8 +114,8 @@ void DBeamHelicity_factory::Process(const std::shared_ptr<const JEvent>& event){
   	  locBeamHelicity = Make_DBeamHelicity(locHELIDigiHits);
   }
   
-
   if(locBeamHelicity == nullptr)  return;
+  
   
   Insert(locBeamHelicity);
   

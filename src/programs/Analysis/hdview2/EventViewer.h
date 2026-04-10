@@ -120,9 +120,7 @@ public:
     hdv_mainframe *hdvmf = nullptr;
     hdv_fulllistframe *fulllistmf=NULL;
     hdv_debugerframe *debugermf;
-    DRootGeom *RootGeom;
     DGeometry *geom;
-    string MATERIAL_MAP_MODEL;
     double RMAX_INTERIOR; // Used to allow user to extend drawing range of charged tracks
     double RMAX_EXTERIOR; // Used to allow user to extend drawing range of charged tracks
     double ZMAX;         // Used to allow user to extend drawing range of charged tracks
