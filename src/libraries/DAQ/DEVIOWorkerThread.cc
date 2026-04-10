@@ -2597,11 +2597,16 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 					uint32_t chan_on_chip = (*iptr>>16) & 0x07;
 					uint32_t time         = (*iptr>> 0) & 0xFFFF;
 					uint32_t channel      = F1TDC_channel(chip, chan_on_chip, modtype);
+					bool res_status       = (*iptr>>26) & 0x1;
+					
 					if(VERBOSE>7) cout << "      Found F1 data  : chip=" << chip << " chan=" << chan_on_chip  << " time=" << time << endl;
+				   
 					if(pe){
-					  
-						auto hit = pe->NEW_DF1TDCHit(rocid, slot, channel, itrigger, trig_time_f1header, time, *iptr, MODULE_TYPE(modtype));
-						if(hit->res_status==0){
+					        // don't make the hit if the TDC was unlocked
+					        if (res_status) {
+						        pe->NEW_DF1TDCHit(rocid, slot, channel, itrigger, trig_time_f1header, time, *iptr, MODULE_TYPE(modtype));
+						} else { 
+
 							static uint32_t Nwarnings=0;
 							if(Nwarnings<10) jerr << "ERROR: F1 TDC chip \"unlocked\" flag set! BadHit created." << ((++Nwarnings == 10) ? " -- last warning":"") << endl;
                                                         pe->NEW_DBadHit(rocid,slot);   
