@@ -2690,22 +2690,22 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 				slot       = ((*iptr)>>22) & 0x1F;
 				itrigger   = ((*iptr)>> 0) & 0x3FFFFF;
 				pe = *pe_iter++;
-				//   cout << pe << endl;
+
 				//if(itrigger != last_itrigger) pe = *pe_iter++;
 				//last_itrigger = itrigger;
 				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
 				if( slot != slot_bh ){
 				  
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;
-					jerr << "pe : " << pe << endl;
 				        jerr << "Attempting to create a new BadHit to store rocid " << rocid << " and slot " << slot_bh << endl;
 					
 					if (pe) {
+					  if(VERBOSE>7) jerr << "original pe : " << pe << endl;
 					  
 					  pe = *(current_parsed_events.begin())++;    // use the first available, in case a block was truncated
 
-					  pe->NEW_DBadHit(rocid,slot_bh);   // assume block header was correct
-					  jerr << "Created new BadHit" << endl;
+					  if (pe) pe->NEW_DBadHit(rocid,slot_bh);   // assume block header was correct
+					  if (pe) jerr << "Created new BadHit" << endl;
 
 					}
 					
