@@ -929,6 +929,7 @@ void DTrackHitSelectorALT2::GetFDCHits(double Bz,double q,
 	var_lambda = extrapolations[k].theta2ms_sum/3.;
 	// the above expression seems to lead to overestimation of  the uncertainty in the dip angle after the wire-based pass..
 	//var_lambda*=0.01;
+
 	// Variance in phi due to multiple scattering
 	var_phi=var_lambda*(1.+tanl2); 
 

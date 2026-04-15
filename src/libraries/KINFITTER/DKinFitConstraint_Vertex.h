@@ -138,14 +138,13 @@ inline void DKinFitConstraint_Vertex::Set_CommonVxParamIndex(char locCommonVxPar
 
 inline void DKinFitConstraint_Vertex::Print_ConstraintInfo(void) const
 {
-	cout << "DKinFitConstraint_Vertex: Full-constrained particle PID's, pointers: " << endl;
+	Get_DebugStream() << "DKinFitConstraint_Vertex: Full-constrained particle PID's, pointers: " << endl;
 	for(auto& locParticle : dFullConstrainParticles)
-		cout << locParticle->Get_PID() << ", " << locParticle << endl;
+		Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
 
-	cout << "DKinFitConstraint_Vertex: No-constrain particle PID's, pointers: " << endl;
+	Get_DebugStream() << "DKinFitConstraint_Vertex: No-constrain particle PID's, pointers: " << endl;
 	for(auto& locParticle : dNoConstrainParticles)
-		cout << locParticle->Get_PID() << ", " << locParticle << endl;
+		Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
 }
 
 #endif // _DKinFitConstraint_Vertex_
-

@@ -80,6 +80,7 @@ class DSourceComboP4Handler
 
 		int dDebugLevel = 0;
 		bool dPrintCutFlag = false;
+  bool dFastTrackingMode=false;
 
 		//Get/Set Cuts
 		void Define_DefaultCuts(void);

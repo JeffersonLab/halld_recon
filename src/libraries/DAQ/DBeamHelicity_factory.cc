@@ -32,6 +32,7 @@ void DBeamHelicity_factory::Init()
 	
 	auto app = GetApplication();
 	app->SetDefaultParameter("PREFER_PROMPT_HELICITY_DATA", PREFER_PROMPT_HELICITY_DATA, "If both prompt and delayed helicity data are in the data stream, prefer the prompt. (default: true)");
+	app->SetDefaultParameter("HELICITY:HB_SHIFT", dHDBoardDelay, "Helicity board bits to shift to get prompt helicity. (default: 8)");
 
 	return; //NOERROR;
 }
@@ -55,12 +56,6 @@ void DBeamHelicity_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
         jerr << "Unable to get correction from /ELECTRON_BEAM/helicity_board_shift !" << endl;
 	}
 	// Constants for determined helicity pattern? (from Ken) 
-
-
-	// override parameters on command line
-	auto app = GetApplication();
-	app->SetDefaultParameter("HELICITY:HB_SHIFT", dHDBoardDelay, "Helicity board bits to shift to get prompt helicity. (default: 8)");
-	
 	
 	return; //NOERROR;
 }
@@ -119,8 +114,8 @@ void DBeamHelicity_factory::Process(const std::shared_ptr<const JEvent>& event){
   	  locBeamHelicity = Make_DBeamHelicity(locHELIDigiHits);
   }
   
-
   if(locBeamHelicity == nullptr)  return;
+  
   
   Insert(locBeamHelicity);
   
@@ -162,6 +157,7 @@ DBeamHelicity *DBeamHelicity_factory::Make_DBeamHelicity(const DHelicityData *lo
 {
 	if(!checkPredictor(locHelicityData->last_helicity_state_pattern_sync)) {
 		jerr << "Consistency check of Helicity Decoder Board data failed!" << endl;
+		reportPredictorError(locHelicityData->last_helicity_state_pattern_sync);
 		return nullptr;
 	}
 
@@ -214,6 +210,19 @@ bool DBeamHelicity_factory::checkPredictor(uint32_t testval) const
 	return (rval == lval);
 }
 
+//------------------
+// reportPredictorError
+//------------------
+void DBeamHelicity_factory::reportPredictorError(uint32_t testval) const
+{
+	UInt_t rval = (testval)&0x3fffffff;
+	UInt_t lval = (testval>>2)&0x3fffffff;
+	lval = advanceSeed(lval);
+	lval = advanceSeed(lval);
+	
+	jerr << "  Bad word: 0x" << hex << testval << endl;
+	jerr << "     Compare 0x" << rval << " to 0x" << lval << dec << endl;
+}
 
 //------------------
 // EndRun

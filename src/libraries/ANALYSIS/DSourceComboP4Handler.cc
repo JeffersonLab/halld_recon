@@ -521,8 +521,13 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 	japp->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
 	japp->SetDefaultParameter("COMBO:PRINT_CUTS", dPrintCutFlag);
 	japp->SetDefaultParameter("COMBO:MAX_MASSIVE_NEUTRAL_BETA", dMaxMassiveNeutralBeta);
+	japp->SetDefaultParameter("TRKFIT:FAST_TRACKING_MODE", dFastTrackingMode);
 
 	Define_DefaultCuts();
+	if (dFastTrackingMode){
+	  dMissingMassSquaredCuts_TF1Params[UnknownParticle]=std::make_pair(vector<double>{-1}, vector<double>{1});
+	  dMissingEnergyCuts_TF1Params=std::make_pair(vector<double>{-10.0}, vector<double>{10.0});
+	}
 	Get_CommandLineCuts_IM();
 	Get_CommandLineCuts_MM2();
 	Get_CommandLineCuts_MissingEnergy();

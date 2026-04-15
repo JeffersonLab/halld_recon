@@ -125,7 +125,7 @@ class DFDCPseudo_factory : public JFactoryT<DFDCPseudo> {
 		TH2F *qv_vs_qu, *dtv_vs_dtu;
 		TH2F *uv_dt_vs_u,*uv_dt_vs_v,*v_wire_dt_vs_wire;
 		TH2F *tv_vs_tu,*u_wire_dt_vs_wire;
-		TH2F *Hxy[24],*ut_vs_u,*vt_vs_v;
+		TH2F *ut_vs_u,*vt_vs_v;
 		TH2F *v_vs_u,*dx_vs_dE;
 		TH1F *u_cl_size, *v_cl_size, *u_cl_n, *v_cl_n, *x_dist_2, *x_dist_3, *x_dist_23, *x_dist_33;
 		TH1F *d_uv;

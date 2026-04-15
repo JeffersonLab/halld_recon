@@ -10,6 +10,7 @@
 #include "DMCTrigger_factory.h"
 #include "DL1MCTrigger_factory.h"
 #include "DL1MCTrigger_factory_DATA.h"
+#include "DL1MCTrigger_factory_CPP.h"
 #include "DL3Trigger_factory.h"
 #include "DL1Trigger_factory.h"
 #include "DTrigger_factory.h"
@@ -19,6 +20,7 @@ void TRIGGER_init(JFactorySet *factorySet) {
 	factorySet->Add(new DMCTrigger_factory());
 	factorySet->Add(new DL1MCTrigger_factory());
 	factorySet->Add(new DL1MCTrigger_factory_DATA());
+	factorySet->Add(new DL1MCTrigger_factory_CPP());
 	factorySet->Add(new DL3Trigger_factory());
 	factorySet->Add(new DL1Trigger_factory());
 	factorySet->Add(new DTrigger_factory());

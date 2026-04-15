@@ -123,6 +123,7 @@ class DSourceComboTimeHandler
 		const DAnalysisUtilities* dAnalysisUtilities;
 		int dDebugLevel = 0;
 		bool dPrintCutFlag = false;
+  bool dFastTrackingMode=false;
 
 		//EXPERIMENT INFORMATION
 		DVector3 dTargetCenter;

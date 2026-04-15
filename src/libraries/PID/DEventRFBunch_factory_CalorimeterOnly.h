@@ -72,6 +72,7 @@ class DEventRFBunch_factory_CalorimeterOnly : public JFactoryT<DEventRFBunch>
 		bool USE_FCAL;
 		bool USE_BCAL;
 		bool USE_CCAL;
+		bool USE_ECAL;
 
 		void Init() override;
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;

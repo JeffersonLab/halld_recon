@@ -35,7 +35,7 @@ class DParticleID;
 /// and uses it to fit the DTrackCandidate objects which it grabs
 /// also using the default Tag.
 /// 
-/// The DTrackWireBased objects are wire-based tracks (no drift time 
+/// The DTrackWireBased objects are wire-based tracks (by default no drift time 
 /// information is used). As such, this is hardwired to set the fit type for 
 /// the DTrackFitter to kWireBased. See the DTrackTimeBased classes for the
 /// time-based counterpart.
@@ -62,6 +62,7 @@ class DTrackWireBased_factory:public JFactoryT<DTrackWireBased>{
 		int DEBUG_LEVEL;
 		DTrackFitter *fitter;
 		DReferenceTrajectory *rt;
+  vector<double>sc_phi;
 
 		vector<int> mass_hypotheses_positive;
 		vector<int> mass_hypotheses_negative;
@@ -71,7 +72,7 @@ class DTrackWireBased_factory:public JFactoryT<DTrackWireBased>{
 		void FilterDuplicates(void);
 		void DoFit(unsigned int c_id,const DTrackCandidate *candidate,
 			   DReferenceTrajectory *rt, const std::shared_ptr<const JEvent>& event,
-			   double mass);
+			   double mass,double t0,DetectorSystem_t t0_detector);
 		void AddMissingTrackHypothesis(vector<DTrackWireBased*>&tracks_to_add,
 					       const DTrackWireBased *src_track,
 					       double my_mass,double q);
@@ -91,6 +92,9 @@ class DTrackWireBased_factory:public JFactoryT<DTrackWireBased>{
 		bool USE_HITS_FROM_CANDIDATE;
 		double MIN_FIT_P;
 		double PROTON_MOM_THRESH;
+  double SC_DPHI_CUT,BCAL_CUT;
+  unsigned int MIN_BCAL_MATCHES;
+  bool haveStartCounter;
 		bool dIsNoFieldFlag;
 
 		const DParticleID* dPIDAlgorithm;

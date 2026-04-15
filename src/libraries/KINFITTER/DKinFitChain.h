@@ -41,13 +41,19 @@ class DKinFitChain : public DResettable
 
 		//PRINT INFO
 		void Print_InfoToScreen(void) const;
-
+		
+		// ACQUIRE DEREFENCED OUTPUT STREAM
+		ostream& Get_DebugStream(void) const { return *dDebugStream; }
+		void Set_DebugStream(ostream* out_stream) { dDebugStream = out_stream; }
 	private:
 
 		vector<shared_ptr<DKinFitChainStep>> dKinFitChainSteps;
 		map<shared_ptr<DKinFitParticle>, char> dDecayStepIndices; //key is decaying particle, value is the step representing the particle decay
 		signed char dDefinedParticleStepIndex = -1; //step containing the missing or open-ended-decaying particle, -1 if none
 		bool dIsInclusiveChannelFlag = false; //i.e. does the missing particle have PID 0 (unknown)
+		
+		// output stream
+		ostream* dDebugStream = &cout;
 };
 
 inline void DKinFitChain::Reset(void)
@@ -90,16 +96,16 @@ inline void DKinFitChain::Print_InfoToScreen(void) const
 {
 	for(size_t loc_i = 0; loc_i < dKinFitChainSteps.size(); ++loc_i)
 	{
-		cout << "DKinFitChain: Printing step " << loc_i << endl;
+		Get_DebugStream() << "DKinFitChain: Printing step " << loc_i << endl;
 		dKinFitChainSteps[loc_i]->Print_InfoToScreen();
 	}
 
-	cout << "DKinFitChain: PID, Pointer, decay-step indices:" << endl;
+	Get_DebugStream() << "DKinFitChain: PID, Pointer, decay-step indices:" << endl;
 	auto locIterator = dDecayStepIndices.begin();
 	for(; locIterator != dDecayStepIndices.end(); ++locIterator)
-		cout << locIterator->first->Get_PID() << ", " << locIterator->first << ", " << int(locIterator->second) << endl;
+		Get_DebugStream() << locIterator->first->Get_PID() << ", " << locIterator->first << ", " << int(locIterator->second) << endl;
 
-	cout << "DKinFitChain: defined particle step index, inclusive channel flag = " << int(dDefinedParticleStepIndex) << ", " << dIsInclusiveChannelFlag << endl;
+	Get_DebugStream() << "DKinFitChain: defined particle step index, inclusive channel flag = " << int(dDefinedParticleStepIndex) << ", " << dIsInclusiveChannelFlag << endl;
 }
 
 #endif // _DKinFitChain_

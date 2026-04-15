@@ -130,14 +130,13 @@ inline bool DKinFitConstraint_P4::Get_IsDefinedParticleInFinalState(void) const
 
 inline void DKinFitConstraint_P4::Print_ConstraintInfo(void) const
 {
-	cout << "DKinFitConstraint_P4: Initial-state particle PID's, pointers: " << endl;
+	Get_DebugStream() << "DKinFitConstraint_P4: Initial-state particle PID's, pointers: " << endl;
 	for(auto& locParticle : dInitialParticles)
-		cout << locParticle->Get_PID() << ", " << locParticle << endl;
+		Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
 
-	cout << "DKinFitConstraint_P4: Final-state particle PID's, pointers: " << endl;
+	Get_DebugStream() << "DKinFitConstraint_P4: Final-state particle PID's, pointers: " << endl;
 	for(auto& locParticle : dFinalParticles)
-		cout << locParticle->Get_PID() << ", " << locParticle << endl;
+		Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
 }
 
 #endif // _DKinFitConstraint_P4_
-

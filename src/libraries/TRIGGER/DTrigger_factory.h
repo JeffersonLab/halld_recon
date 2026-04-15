@@ -20,6 +20,7 @@ class DTrigger_factory : public JFactoryT<DTrigger>
 
 	private:
 		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override; 
 		void Process(const std::shared_ptr<const JEvent>& event) override;
 		
 		bool EMULATE_BCAL_LED_TRIGGER;
@@ -29,6 +30,9 @@ class DTrigger_factory : public JFactoryT<DTrigger>
 		
 		unsigned int BCAL_LED_NHITS_THRESHOLD;
 		unsigned int FCAL_LED_NHITS_THRESHOLD;
+		
+		string MC_TRIGGER_TAG = "";
+		string DATA_SIM_TRIGGER_TAG = "DATA";
 };
 
 #endif // _DTrigger_factory_

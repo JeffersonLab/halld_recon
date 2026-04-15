@@ -505,7 +505,7 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 	locEvent->Get(locChargedTracks, "PreSelect");
 
 	std::vector<const DBeamHelicity*> locBeamHelicities;
-	locEvent->Get(locBeamHelicities);
+	locEvent->Get(locBeamHelicities, "CORRECTED");
 
 	// The following declares containers for all types in F1Types
 	// (defined at top of this file) and fills them.
