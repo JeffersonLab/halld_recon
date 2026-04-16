@@ -301,8 +301,8 @@ void JEventProcessor_TRD_online::Init() {
             }
         }
         
-        hPoint_ZVsX_Event[i] = new TH2I(Form("Point_ZVsX_Event%d",i),Form("TRD Point X vs. Z;Z [cm];X [cm]",i),100,528,533,100,-90,-10);
-        hPoint_ZVsY_Event[i] = new TH2I(Form("Point_ZVsY_Event%d",i),Form("TRD Point Y vs. Z;Z [cm];Y [cm]",i),100,528,533,100,-70,-30);        
+        hPoint_ZVsX_Event[i] = new TH2I(Form("Point_ZVsX_Event%d",i),"TRD Point X vs. Z;Z [cm];X [cm]",100,528,533,100,-90,-10);
+        hPoint_ZVsY_Event[i] = new TH2I(Form("Point_ZVsY_Event%d",i),"TRD Point Y vs. Z;Z [cm];Y [cm]",100,528,533,100,-70,-30);        
     }
 
     NEventsTrack = 0;

@@ -792,8 +792,13 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumClusters_X_TRD"), locArraySizeString, dInitNumTrackArraySize);
 		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumClusters_Y_TRD"), locArraySizeString, dInitNumTrackArraySize);
 		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumPoints_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "MaxDEPointX_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "MaxDEPointY_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "MaxDEPointT_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "MaxDEPointDE_TRD"), locArraySizeString, dInitNumTrackArraySize);
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_X_TRD"), locArraySizeString, dInitNumTrackArraySize);
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_Y_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "DepositedEnergy_TRD"), locArraySizeString, dInitNumTrackArraySize);
 	}
 
 }
@@ -2067,8 +2072,13 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 		int locTRDNumClustersX = 0;
 		int locTRDNumClustersY = 0;
 		int locTRDNumPoints = 0;
+		float locTRDMaxEnergyPointX = 999;
+		float locTRDMaxEnergyPointY = 999;
+		float locTRDMaxEnergyPointT = 999;
+		float locTRDMaxEnergyPointEnergy = 999;
 		float locTRDExtrapolatedX = 999;
 		float locTRDExtrapolatedY = 999;
+		float locTRDTotalEnergy = 999;
 		auto locTRDMatchParams = locChargedTrackHypothesis->Get_TRDMatchParams();
 		int locIsTRDMatched = (locTRDMatchParams != NULL) ? 1 : 0;
 		if(locTRDMatchParams != NULL) {
@@ -2078,8 +2088,13 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 			locTRDNumClustersX = locTRDSegment->NumStripClustersX;
 			locTRDNumClustersY = locTRDSegment->NumStripClustersY;
 			locTRDNumPoints = locTRDSegment->NumPoints;
+			locTRDMaxEnergyPointX = locTRDSegment->maxE_point_x;
+			locTRDMaxEnergyPointY = locTRDSegment->maxE_point_y;
+			locTRDMaxEnergyPointT = locTRDSegment->maxE_point_t;
+			locTRDMaxEnergyPointEnergy = locTRDSegment->maxE_point_dE;
 			locTRDExtrapolatedX = locTRDSegment->x;
 			locTRDExtrapolatedY = locTRDSegment->y;
+			locTRDTotalEnergy = locTRDSegment->total_dE;
 		}
 		
 		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "IsTRDMatched"), locIsTRDMatched, locArrayIndex);
@@ -2088,8 +2103,14 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumClusters_X_TRD"), locTRDNumClustersX, locArrayIndex);
 		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumClusters_Y_TRD"), locTRDNumClustersY, locArrayIndex);
 		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumPoints_TRD"), locTRDNumPoints, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "MaxDEPointX_TRD"), locTRDMaxEnergyPointX, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "MaxDEPointY_TRD"), locTRDMaxEnergyPointY, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "MaxDEPointT_TRD"), locTRDMaxEnergyPointT, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "MaxDEPointDE_TRD"), locTRDMaxEnergyPointEnergy, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_X_TRD"),	locTRDExtrapolatedX, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_Y_TRD"), locTRDExtrapolatedY, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "DepositedEnergy_TRD"), locTRDTotalEnergy, locArrayIndex);
+
 	}
 }
 

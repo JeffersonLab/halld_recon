@@ -113,19 +113,29 @@ void DTRDSegment_factory_extrapolation::Process(const std::shared_ptr<const JEve
     myTRDSegment->NumStripClustersY = 0;
     myTRDSegment->NumHitsX = 0;
     myTRDSegment->NumHitsY = 0;
+    myTRDSegment->maxE_point_dE = 0.0;
+    myTRDSegment->total_dE = 0.0;
 
     for (unsigned int j=0;j<segments_TRDPoints[i].size();j++){
       const DTRDPoint *point = segments_TRDPoints[i][j];
       const vector<const DTRDStripCluster*> stripClusters = point->AssociatedStripClusters;
       for (const DTRDStripCluster* stripCluster: stripClusters) {
-        if (stripCluster->plane==0) {
+        if (stripCluster->plane==1) {
           myTRDSegment->NumStripClustersX++;
           myTRDSegment->NumHitsX += stripCluster->members.size();
-        } else if (stripCluster->plane==1) {
+        } else if (stripCluster->plane==2) {
           myTRDSegment->NumStripClustersY++;
           myTRDSegment->NumHitsY += stripCluster->members.size();
         }
       }
+      // Store the point with the maximum energy deposition in the segment
+      if (point->dE > myTRDSegment->maxE_point_dE) {
+        myTRDSegment->maxE_point_x = point->x;
+        myTRDSegment->maxE_point_y = point->y;
+        myTRDSegment->maxE_point_t = point->time;
+        myTRDSegment->maxE_point_dE = point->dE;
+      }
+      myTRDSegment->total_dE += point->dE;
     }
     
     Insert(myTRDSegment);  
@@ -187,7 +197,7 @@ void DTRDSegment_factory_extrapolation::FitLine(const vector<const DTRDPoint *>&
 
 void DTRDSegment_factory_extrapolation::FindSegmentPoints(vector<TrackPoint> &trackPoints, vector<DTrackFitter::Extrapolation_t> &trackExtrapolations, double distToExtrp)
 {
-  for (int itrack=0;itrack<trackExtrapolations.size();itrack++){
+  for (unsigned int itrack=0;itrack<trackExtrapolations.size();itrack++){
     DTrackFitter::Extrapolation_t extrapolation = trackExtrapolations[itrack];
     double x0 = extrapolation.position.x();
     double y0 = extrapolation.position.y();
