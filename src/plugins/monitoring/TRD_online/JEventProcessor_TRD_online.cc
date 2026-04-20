@@ -20,6 +20,8 @@ using namespace std;
 #include <TH2.h>
 #include <TH3.h>
 #include <TProfile.h>
+#include <fstream>
+#include <iostream>
 
 // root hist pointers
 // fix constants for now
@@ -27,6 +29,9 @@ static const int NTRDplanes = 2;
 static const int NTRD_xstrips = 720;
 static const int NTRD_ystrips = 432;
 static TH1I *trd_num_events;
+static ofstream outputTextFile;
+static ofstream outputTextFile2;
+//static ofstream outputTextFileTemp;
 
 static TH1I *hDigiHit_NHits;
 static TH1I *hDigiHit_NPKs;
@@ -46,12 +51,14 @@ static TH1I *hHit_Time[NTRDplanes];
 static TH1I *hHit_PulseHeight[NTRDplanes];
 static TH2I *hHit_TimeVsStrip[NTRDplanes];
 static TH2I *hHit_TimeVsdE[NTRDplanes];
+static TH2D *hHit_TimeVsdE_Max[NTRDplanes];
 static TH2I *hHit_StripVsdE[NTRDplanes];
 
 const int NEventsClusterMonitor = 10;
 static TH1I *hCluster_NClusters;
 static TH2I *hClusterHits_TimeVsStrip[NTRDplanes];
 static TH2I *hCluster_TimeVsStrip[NTRDplanes];
+static TH2D *hCluster_TimeVsdE_Max[NTRDplanes];
 static TH2I *hClusterHits_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
 static TH2I *hCluster_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
 static TH2I *hDigiHit_TimeVsStripEvent[NTRDplanes][NEventsClusterMonitor];
@@ -73,6 +80,7 @@ static TH2I *hPoint_ZYDisplay;
 static TH2I *hPoint_dE_XY;
 static TH2I *hPoint_TimeVsdEX;
 static TH2I *hPoint_TimeVsdEY;
+static TH2D *hPoint_TimeVsdE_Max;
 
 static TH3I *hPointH_XYT;
 static TH1I *hPointH_NHits;
@@ -91,6 +99,9 @@ static TH2I *hPointH_ZYDisplay;
 static TH2I *hPointH_dE_XY;
 static TH2I *hPointH_TimeVsdEX;
 static TH2I *hPointH_TimeVsdEY;
+static TH2D *hPointH_TimeVsdE_Max;
+static TH2D *hPointH_TimeVsdE_el_Max;
+static TH2D *hPointH_TimeVsdE_pi_Max;
 
 static TH1I *hSegment_NHits;
 static TH1I *hSegment_TX;
@@ -138,7 +149,10 @@ void JEventProcessor_TRD_online::Init() {
     trdDir->cd();
     // book hists
     trd_num_events = new TH1I("trd_num_events","TRD Number of Events",1,0.5,1.5);
-
+	outputTextFile.open("TRDOnline_pointHits_electron_candidate_list.txt");
+	outputTextFile2.open("TRDOnline_points_electron_candidate_list.txt");
+	//outputTextFileTemp.open("TRDOnline_all_electrons.txt");
+	
     // digihit-level hists
     trdDir->cd();
     gDirectory->mkdir("DigiHit")->cd();
@@ -183,6 +197,7 @@ void JEventProcessor_TRD_online::Init() {
         hHit_TimeVsStrip[i] = new TH2I(Form("Hit_TimeVsStrip_Plane%d",i),Form("TRD Plane %d Time vs. Strip;Strip;8*(Peak Time) [ns]",i),NTRDstrips,0.5,0.5+NTRDstrips,225,0.0,1800.0);
 		hHit_StripVsdE[i] = new TH2I(Form("Hit_StripVsdE_Plane%d",i),Form("TRD Plane %d Hit Charge vs. Strip;Strip;dE [q]",i),NTRDstrips,0.5,0.5+NTRDstrips,350,0.,3500.0);
 		hHit_TimeVsdE[i] = new TH2I(Form("Hit_TimeVsdE_Plane%d",i),Form("TRD Plane %d Hit Charge vs. Time;dE [q];8*(Peak Time) [ns]",i),350,0.,3500.,225,0.0,1800.0);
+		hHit_TimeVsdE_Max[i] = new TH2D(Form("Hit_TimeVsdE_Max_Plane%d",i),Form("TRD Plane %d Max Hit Charge vs. Time;8*(Peak Time) [ns];Max dE [q]",i),150,0.,1200.,350,0.,3500.);
 		
 	}
     
@@ -200,6 +215,9 @@ void JEventProcessor_TRD_online::Init() {
     hPointH_dE_XY = new TH2I("PointH_dE_XY","TRD Point Charge Corr. in X,Y;X Strip dE [q]; Y Strip dE [q]",350,0.,3500.,350,0.,3500.);
     hPointH_TimeVsdEX= new TH2I("PointH_TimeVsdEX","TRD Point Charge of X in Time;X Strip dE [q];8*(Peak Time) [ns]",350,0.,3500.,225,0.,1800.);
     hPointH_TimeVsdEY= new TH2I("PointH_TimeVsdEY","TRD Point Charge of Y in Time;Y Strip dE [q];8*(Peak Time) [ns]",350,0.,3500.,225,0.,1800.);
+	hPointH_TimeVsdE_Max= new TH2D("PointH_TimeVsdE_Max","TRD Max Point Charge in Time;8*(Peak Time) [ns];Max dE [q]",150,0.,1200.,350,0.,3500.);
+	hPointH_TimeVsdE_el_Max= new TH2D("PointH_TimeVsdE_el_Max","TRD Max Point Charge in Time (El Cut Passed);8*(Peak Time) [ns];Max dE [q]",150,0.,1200.,350,0.,3500.);
+	hPointH_TimeVsdE_pi_Max= new TH2D("PointH_TimeVsdE_pi_Max","TRD Max Point Charge in Time (El Cut Failed);8*(Peak Time) [ns];Max dE [q]",150,0.,1200.,350,0.,3500.);
     hPointH_OccupancyX = new TH1I("PointH_OccupancyX","TRD Point X;X [cm]",750,-85,-10);
     hPointH_OccupancyY = new TH1I("PointH_OccupancyY","TRD Point Y;Y [cm]",400,-70,-30);
     hPointH_XYDisplay = new TH2I("PointH_XYDisplay","TRD XY 2D Point Display ;X [cm];Y [cm]",750,-85,-10,400,-70,-30);
@@ -222,6 +240,7 @@ void JEventProcessor_TRD_online::Init() {
     hPoint_dE_XY = new TH2I("Point_dE_XY","TRD Point Charge Corr. in X,Y;X Strip dE [q]; Y Strip dE [q]",350,0.,3500.,350,0.,3500.);
     hPoint_TimeVsdEX= new TH2I("Point_TimeVsdEX","TRD Point Charge of X in Time;X Strip dE [q];8*(Peak Time) [ns]",350,0.,3500.,225,0.,1800.);
     hPoint_TimeVsdEY= new TH2I("Point_TimeVsdEY","TRD Point Charge of Y in Time;Y Strip dE [q];8*(Peak Time) [ns]",350,0.,3500.,225,0.,1800.);
+	hPoint_TimeVsdE_Max= new TH2D("Point_TimeVsdE_Max","TRD Max Point Charge in Time;8*(Peak Time) [ns];Max dE [q]",150,0.,1200,500,0.,10000.);
     hPoint_OccupancyX = new TH1I("Point_OccupancyX","TRD Point X;X [cm]; ",750,-85,-10);
     hPoint_OccupancyY = new TH1I("Point_OccupancyY","TRD Point Y;Y [cm]; ",400,-70,-30);
     hPoint_XYDisplay = new TH2I("Point_XYDisplay","TRD XY 2D Point Display ;X [cm];Y [cm]",750,-85,-10,400,-70,-30);
@@ -236,7 +255,7 @@ void JEventProcessor_TRD_online::Init() {
 
     gDirectory->mkdir("Cluster")->cd();
     hCluster_NClusters = new TH1I("Cluster_NClusters","TRD number of cluster per event;clusters;events",100,0.5,0.5+100);
-
+	
     // histograms for each plane
     for(int i=0; i<NTRDplanes; i++) {
         int NTRDstrips = 0.;
@@ -247,6 +266,8 @@ void JEventProcessor_TRD_online::Init() {
 
             hClusterHits_TimeVsStrip[i] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d",i),Form("TRD Plane %d Cluster Hits Time vs. Strip;8*(Peak Time) [ns];Strip",i),225,0,1800.0,NTRDstrips,0.5,0.5+NTRDstrips);
             hCluster_TimeVsStrip[i] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d",i),Form("TRD Plane %d Cluster Time vs. Strip;8*(Peak Time) [ns];Strip",i),225,0.,1800.0,NTRDstrips,0.5,0.5+NTRDstrips);
+		hCluster_TimeVsdE_Max[i] = new TH2D(Form("Cluster_TimeVsdE_Max_Plane%d",i),Form("TRD Plane %d Max Cluster Charge in Time;8*(Peak Time) [ns];Max dE [q]",i),150,0.,1200.,800,0.,10000.);
+		
         for(int j=0; j<NEventsClusterMonitor; j++) {
             hClusterHits_TimeVsStripEvent[i][j] = new TH2I(Form("ClusterHits_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Hits Time vs. Strip;8*(Peak Time) [ns];Strip",i),225,0,1800.0,NTRDstrips,0.5,0.5+NTRDstrips);
             hCluster_TimeVsStripEvent[i][j] = new TH2I(Form("Cluster_TimeVsStrip_Plane%d_Event%d",i,j),Form("TRD Plane %d Cluster Time vs. Strip;8*(Peak Time) [ns];Strip",i),225,0.,1800.0,NTRDstrips,0.5,0.5+NTRDstrips);
@@ -291,7 +312,7 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     // since multiple threads may call this method at the same time.
 	
 	auto eventnumber = event->GetEventNumber();
-	
+	auto runnumber = event->GetRunNumber();
 /*
     // Get trigger words and filter on PS trigger (if it exists?)
     const DL1Trigger *trig_words = nullptr;
@@ -327,6 +348,8 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 	vector<const DTRDSegment*> segments;
     event->Get(segments);
 	
+	//if (runnumber>130853&&runnumber<131357) outputTextFileTemp<<runnumber<<" "<<eventnumber<<endl;
+	
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
     lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -356,10 +379,24 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     ///////////////////////////
 	
     if (hits.size() > 0) hHit_NHits->Fill(hits.size());
+	float hit_maxQ_x = 0., hit_maxQ_y = 0.;
+	float hit_maxTime_x = 0., hit_maxTime_y = 0.;
     for (const auto& hit : hits) {
 	    int plane = hit->plane-1;
-		if (plane == 0) hHit_NHits_[plane]->Fill(hits.size());
-		else if (plane == 1) hHit_NHits_[plane]->Fill(hits.size());
+		if (plane == 0) {
+			hHit_NHits_[plane]->Fill(hits.size());
+			if (hit->q > hit_maxQ_x) {
+				hit_maxQ_x = hit->q;
+				hit_maxTime_x = hit->t;
+			}
+		}
+		else if (plane == 1) {
+			hHit_NHits_[plane]->Fill(hits.size());
+			if (hit->q > hit_maxQ_y) {
+                hit_maxQ_y = hit->q;
+                hit_maxTime_y = hit->t;
+            }
+		}
 	    hHit_Occupancy[plane]->Fill(hit->strip);
 	    hHit_Time[plane]->Fill(hit->t);
 	    hHit_PulseHeight[plane]->Fill(hit->pulse_height);
@@ -373,6 +410,8 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
         int NPK = locAssociatedDigiHit->NPK;
 		hHit_NPKs->Fill(NPK);
     }
+	if (hit_maxQ_x > 0.) hHit_TimeVsdE_Max[0]->Fill(hit_maxTime_x, hit_maxQ_x);
+	if (hit_maxQ_y > 0.) hHit_TimeVsdE_Max[1]->Fill(hit_maxTime_y, hit_maxQ_y);
 	
 	///////////////////////////
     //    TRD Clusters       //
@@ -401,15 +440,32 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 
         eventClusterCount++;
     }
+	
 	if (clusters.size() > 0) hCluster_NClusters->Fill(clusters.size());
+	float cluster_maxQ_x = 0., cluster_maxQ_y = 0.;
+    float cluster_maxTime_x = 0., cluster_maxTime_y = 0.;
     for (const auto& cluster : clusters) {
         int plane = cluster->plane-1;
         double pos = 0.;
-        if (plane == 0) pos = cluster->pos.x();
-        else pos = cluster->pos.y();
-
+        if (plane == 0) {
+			pos = cluster->pos.x();
+			if (cluster->q_tot > cluster_maxQ_x) {
+                cluster_maxQ_x = cluster->q_tot;
+                cluster_maxTime_x = cluster->t_avg;
+            }
+		}
+        else if (plane == 1) {
+			pos = cluster->pos.y();
+			if (cluster->q_tot > cluster_maxQ_y) {
+                cluster_maxQ_y = cluster->q_tot;
+                cluster_maxTime_y = cluster->t_avg;
+            }
+		}
         hCluster_TimeVsStrip[plane]->Fill(cluster->t_avg, pos);
     }
+	if (cluster_maxQ_x > 0.) hCluster_TimeVsdE_Max[0]->Fill(cluster_maxTime_x, cluster_maxQ_x);
+    if (cluster_maxQ_y > 0.) hCluster_TimeVsdE_Max[1]->Fill(cluster_maxTime_y, cluster_maxQ_y);
+
 
     for (const auto& hit : hits) {
         int plane = hit->plane-1;
@@ -422,6 +478,8 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
 	
 	//Points based on clusters
 	if (points.size() > 0) hPoint_NHits->Fill(points.size());
+	float point_maxdE=0.;
+	float point_maxTime=0.;
     for (const auto& point : points) {
         hPoint_XYT->Fill(point->x,point->y,point->time);
 	    hPoint_Time->Fill(point->time);
@@ -439,9 +497,20 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
         hPoint_XYDisplay->Fill(point->x,point->y);
 		hPoint_ZXDisplay->Fill(point->x,point->z);
 		hPoint_ZYDisplay->Fill(point->y,point->z);
+		if (point->dE > point_maxdE) {
+            point_maxdE = point->dE;
+            point_maxTime = point->time;
+        }
     }
+	if (point_maxdE > 0.) {
+		hPoint_TimeVsdE_Max->Fill(point_maxTime, point_maxdE);
+		outputTextFile2<<runnumber<<" "<<eventnumber<<endl;
+	}
+	
 	//Points based on Hits
 	if (pointHits.size() > 0) hPointH_NHits->Fill(pointHits.size());
+	float pointH_maxdE=0.;
+    float pointH_maxTime=0.;
     for (const auto& point : pointHits) {
         hPointH_XYT->Fill(point->x,point->y,point->time);
         hPointH_Time->Fill(point->time);
@@ -459,7 +528,20 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
         hPointH_XYDisplay->Fill(point->x,point->y);
         hPointH_ZXDisplay->Fill(point->x,point->z);
         hPointH_ZYDisplay->Fill(point->y,point->z);
+		if (point->dE > pointH_maxdE) {
+            pointH_maxdE = point->dE;
+            pointH_maxTime = point->time;
+        }
     }
+	if (pointH_maxdE > 0.) {
+		hPointH_TimeVsdE_Max->Fill(pointH_maxTime, pointH_maxdE);
+		if (pointH_maxdE > (1500.-(2*pointH_maxTime))) {
+			hPointH_TimeVsdE_el_Max->Fill(pointH_maxTime, pointH_maxdE);
+			outputTextFile<<runnumber<<" "<<eventnumber<<endl;
+		} else {
+			hPointH_TimeVsdE_pi_Max->Fill(pointH_maxTime, pointH_maxdE);
+		}
+	}
 	
 	///////////////////////////
     //      TRD Segments       //
