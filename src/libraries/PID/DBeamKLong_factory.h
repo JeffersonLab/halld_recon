@@ -9,6 +9,7 @@
 #include <PID/DBeamKLong.h>
 #include <DANA/DApplication.h>
 #include "DResourcePool.h"
+#include "TH1I.h"
 
 class DBeamKLong_factory : public JFactoryT<DBeamKLong>
 {
@@ -40,6 +41,7 @@ class DBeamKLong_factory : public JFactoryT<DBeamKLong>
 
 		bool dEnableKLongBeamRecon;
 		double dTargetCenterZ;
+		TH1I* dHistBeamBetaFactoryPreCut = nullptr;
 
 
 		//RESOURCE POOL
