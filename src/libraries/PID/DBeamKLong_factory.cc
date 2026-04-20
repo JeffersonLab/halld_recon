@@ -9,8 +9,11 @@ using namespace std;
 
 #include "DBeamKLong_factory.h"
 
+#include <JANA/Services/JLockService.h>
+
 #include "HDGEOMETRY/DGeometry.h"
 #include "DANA/DEvent.h"
+#include "TDirectory.h"
 
 #include "DVertex.h"
 #include "particleType.h"
@@ -27,6 +30,25 @@ void DBeamKLong_factory::Init(void)
     auto app = GetApplication();
 	app->SetDefaultParameter("BEAM:ENABLE_KLONG_BEAM_RECON", dEnableKLongBeamRecon);
 
+	auto root_lock = app->GetService<JLockService>();
+	root_lock->RootWriteLock();
+	{
+		TDirectory* locSavedDir = gDirectory;
+		gDirectory->cd("/");
+		TDirectory* locIndependentDir = gDirectory->GetDirectory("Independent");
+		if(locIndependentDir == nullptr)
+			locIndependentDir = gDirectory->mkdir("Independent");
+		locIndependentDir->cd();
+		TDirectory* locDiagDir = gDirectory->GetDirectory("BeamKLongFactory");
+		if(locDiagDir == nullptr)
+			locDiagDir = gDirectory->mkdir("BeamKLongFactory");
+		locDiagDir->cd();
+
+		if(dHistBeamBetaFactoryPreCut == nullptr)
+			dHistBeamBetaFactoryPreCut = new TH1I("BeamBeta_PreCut_DBeamKLongFactory", "DBeamKLong factory #beta (pre-cut from DVertex:KLong z,t);#beta;events", 800, -0.1, 1.5);
+		locSavedDir->cd();
+	}
+	root_lock->RootUnLock();
 }
 
 //------------------
@@ -64,6 +86,15 @@ void DBeamKLong_factory::Process(const std::shared_ptr<const JEvent>& event)
     double KL_distance = ( locVertex->dSpacetimeVertex.Z() - dTargetCenterZ ) + ( 24. * 100. );
 	double KL_propagation_time = locVertex->dSpacetimeVertex.T() + (24.*100. - dTargetCenterZ) / c; // t=0 is at z=0  
     double beta = (KL_distance / KL_propagation_time) / c;
+
+	if(std::isfinite(beta) && (dHistBeamBetaFactoryPreCut != nullptr))
+	{
+		DEvent::GetLockService(event)->RootWriteLock();
+		{
+			dHistBeamBetaFactoryPreCut->Fill(beta);
+		}
+		DEvent::GetLockService(event)->RootUnLock();
+	}
     
 // cout << locVertex->dSpacetimeVertex.Z() << " " <<  dTargetCenterZ
 //      << KL_distance << " " << KL_propagation_time << " " << beta << endl;
@@ -74,7 +105,7 @@ void DBeamKLong_factory::Process(const std::shared_ptr<const JEvent>& event)
     // should make some cut based on the beam period... but for now, cut out events that are obviously too slow
     if(locVertex->dSpacetimeVertex.T() > 250.)
     	return;
-    
+
 //     cout << "in DBeamKLong_factory::evnt() ..." << endl;
 //     cout << KL_distance << " " << locVertex->dSpacetimeVertex.Z() << " " << dTargetCenterZ << endl;
 //     cout << KL_propagation_time << " " << beta << endl;
