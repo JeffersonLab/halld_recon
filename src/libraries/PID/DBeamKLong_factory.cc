@@ -9,6 +9,8 @@ using namespace std;
 
 #include "DBeamKLong_factory.h"
 
+#include <JANA/Services/JLockService.h>
+
 #include "HDGEOMETRY/DGeometry.h"
 #include "DANA/DEvent.h"
 #include "TDirectory.h"
@@ -28,20 +30,11 @@ void DBeamKLong_factory::Init(void)
     auto app = GetApplication();
 	app->SetDefaultParameter("BEAM:ENABLE_KLONG_BEAM_RECON", dEnableKLongBeamRecon);
 
-}
-
-//------------------
-// BeginRun
-//------------------
-void DBeamKLong_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
-{
- 	DGeometry *locGeometry = DEvent::GetDGeometry(event);
-    dTargetCenterZ = 0.0;
-    locGeometry->GetTargetZ(dTargetCenterZ);
-
-	DEvent::GetLockService(event)->RootWriteLock();
+	auto root_lock = app->GetService<JLockService>();
+	root_lock->RootWriteLock();
 	{
 		TDirectory* locSavedDir = gDirectory;
+		gDirectory->cd("/");
 		TDirectory* locIndependentDir = gDirectory->GetDirectory("Independent");
 		if(locIndependentDir == nullptr)
 			locIndependentDir = gDirectory->mkdir("Independent");
@@ -55,7 +48,17 @@ void DBeamKLong_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 			dHistBeamBetaFactoryPreCut = new TH1I("BeamBeta_PreCut_DBeamKLongFactory", "DBeamKLong factory #beta (pre-cut from DVertex:KLong z,t);#beta;events", 800, -0.1, 1.5);
 		locSavedDir->cd();
 	}
-	DEvent::GetLockService(event)->RootUnLock();
+	root_lock->RootUnLock();
+}
+
+//------------------
+// BeginRun
+//------------------
+void DBeamKLong_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
+{
+ 	DGeometry *locGeometry = DEvent::GetDGeometry(event);
+    dTargetCenterZ = 0.0;
+    locGeometry->GetTargetZ(dTargetCenterZ);
 
 }
 
