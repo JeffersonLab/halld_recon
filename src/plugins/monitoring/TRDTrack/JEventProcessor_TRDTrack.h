@@ -14,6 +14,9 @@
 #include <JANA/Services/JLockService.h> // Required for accessing services
 #include <TH1D.h>
 #include <TH2D.h>
+#include <TGraphErrors.h>
+#include <TGraphAsymmErrors.h>
+#include <TF1.h>
 
 class JEventProcessor_TRDTrack:public JEventProcessor{
 public:
@@ -30,13 +33,13 @@ private:
   void Finish() override;                     ///< Called after last event of last event source has been processed.
   
   //-Sim
-  TH2D *hTRDExtrapXY, *hExtrapXYHitDiff, *hTRDXCorr, *hTRDYCorr, *hFCALExtrapThetavsP, *hFCALExtrapThetavsP_Selected, *hExtrapXHitDiffvsTime, *hExtrapYHitDiffvsTime;
-  TH1D *hExtrapPx, *hExtrapPy, *hExtrapPz, *hExtrapXHitDiff, *hExtrapYHitDiff, *hFCALExtrapTheta;
+  TH2D *hTRDExtrapXY, *hExtrapXYPointDiff, *hTRDXCorr, *hTRDYCorr, *hTRDXCorr_Cut, *hTRDYCorr_Cut, *hFCALExtrapThetavsP, *hFCALExtrapThetavsP_Selected, *hExtrapXHitDiffvsTime, *hExtrapYHitDiffvsTime, *hExtrapXPointDiffvsTime, *hExtrapYPointDiffvsTime, *hExtrapXPointDiffvsX, *hExtrapYPointDiffvsY, *hResXHitDiffvsTime, *hResYHitDiffvsTime;
+  TH1D *hExtrapPx, *hExtrapPy, *hExtrapPz, *hExtrapXPointDiff, *hExtrapYPointDiff, *hFCALExtrapTheta, *hResXHitDiff_Corrected, *hResYHitDiff_Corrected;
   //-Projection
   TH2D *hExtrapXYHitDiff_el, *hExtrapXYHitDiff_pi;
   TH1D *hExtrapXHitDiff_el, *hExtrapYHitDiff_el, *hExtrapXHitDiff_pi, *hExtrapYHitDiff_pi;
   //-Cal
-  TH2D *hFCALMatchXYDisplay_el, *hFCALMatchXYDisplay_pi;
+  TH2D *hFCALMatchXYDisplay_el, *hFCALMatchXYDisplay_pi, *hFCALExtrapEPvsP_TRD;
   TH1D *hFCALExtrapE_TRD, *hFCALEP_TRD_el, *hFCALEP_TRD_pi, *hFCALEP_cut_el, *hFCALEP_cut_pi, *hFCALExtrapEP_TRD;
  
   TH2D *hFCALExtrapXY, *hFCALExtrapEPvsP, *hFCALShowerXY, *hFCALXCorr, *hFCALYCorr, *hFCALTimeCorr;
@@ -49,8 +52,15 @@ private:
   
   TH1D *hnumSeenExtrapFCAL_el, *hnumSeenExtrap_el, *hExtrapsX_el, *hExtrapsY_el, *hSeenPointsX_el, *hSeenPointsY_el, *hSeenPointsSingleX_el, *hSeenPointsSingleY_el, *hnumSeenExtrapFCAL_pi, *hnumSeenExtrap_pi, *hExtrapsX_pi, *hExtrapsY_pi, *hSeenPointsX_pi, *hSeenPointsY_pi, *hSeenPointsSingleX_pi, *hSeenPointsSingleY_pi, *hnumPointsSeen_el, *hnumPointsSeenFCAL_el, *hnumPointsSeen_pi, *hnumPointsSeenFCAL_pi;
   
-  TH2D *hnumExtrapsXY_el, *hSeenPointsSingleXY_el, *hSeenPointsXY_el, *hXHitvsTime_el, *hYHitvsTime_el, *hXHitvsTime_QW_el, *hYHitvsTime_QW_el, *hXHitvsTime_Qmax_el, *hYHitvsTime_Qmax_el, *hXHitvsTime_Qmax_QW_el, *hYHitvsTime_Qmax_QW_el, *hnumExtrapsXY_pi, *hSeenPointsSingleXY_pi, *hSeenPointsXY_pi, *hXHitvsTime_pi, *hYHitvsTime_pi, *hXHitvsTime_QW_pi, *hYHitvsTime_QW_pi,  *hXHitvsTime_Qmax_pi, *hYHitvsTime_Qmax_pi, *hXHitvsTime_Qmax_QW_pi, *hYHitvsTime_Qmax_QW_pi, *hExtrapsXY_el, *hExtrapsXY_pi;
+  TH2D *hnumExtrapsXY_el, *hSeenPointsSingleXY_el, *hSeenPointsXY_el, *hXHitvsTime_el, *hYHitvsTime_el, *hXHitvsTime_QW_el, *hYHitvsTime_QW_el, *hXHitvsTime_Qmax_el, *hYHitvsTime_Qmax_el, *hXHitvsTime_Qmax_QW_el, *hYHitvsTime_Qmax_QW_el, *hnumExtrapsXY_pi, *hSeenPointsSingleXY_pi, *hSeenPointsXY_pi, *hXHitvsTime_pi, *hYHitvsTime_pi, *hXHitvsTime_QW_pi, *hYHitvsTime_QW_pi,  *hXHitvsTime_Qmax_pi, *hYHitvsTime_Qmax_pi, *hXHitvsTime_Qmax_QW_pi, *hYHitvsTime_Qmax_QW_pi, *hExtrapsXY_el, *hExtrapsXY_pi, *hXHitvsTime_Qmax_Converted_el, *hYHitvsTime_Qmax_Converted_el, *hXHitvsTime_Qmax_Converted_pi, *hYHitvsTime_Qmax_Converted_pi, *hXHitvsTime_Converted_el, *hYHitvsTime_Converted_el, *hXHitvsTime_Converted_pi, *hYHitvsTime_Converted_pi;
+
+  TH1D *hDL1Time, *hPSPairTime;
   
+  //--Max Histos
+  TH2D *hPoint_TimeVsdE_Max_el, *hPoint_TimeVsdE_Max_pi, *hPointH_TimeVsdE_Max_el, *hPointH_TimeVsdE_Max_pi;
+  
+  TGraphErrors *hEfficiencyFitsX, *hEfficiencyFitsY, *hFluxFits, *hPulseConstFitsX, *hPulseConstFitsY, *hPulseMPVFitsX, *hPulseMPVFitsY, *hPulseSigmaFitsX, *hPulseSigmaFitsY;
+    
   std::shared_ptr<JLockService> lockService; //Used to access all the services, its value should be set inside Init()
 };
 
