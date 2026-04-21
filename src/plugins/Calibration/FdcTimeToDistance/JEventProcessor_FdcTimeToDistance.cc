@@ -131,7 +131,8 @@ void JEventProcessor_FdcTimeToDistance::Finish()
 {
   TF1 *f1=new TF1("f1","[0]*sqrt(x)+[1]*x+[2]*x*x+[3]*x*x*x",0,200);
   f1->SetParameters(0.026,0.0001,0.000001,0.00000001);
-
+  gDirectory->cd("FdcDrift");
+  
   ofstream out("fparms.dat");
   for (unsigned int m=0;m<24;m++){
     char histname[10];
@@ -145,4 +146,5 @@ void JEventProcessor_FdcTimeToDistance::Finish()
     out << f1->GetParameter(0) << " " << f1->GetParameter(1)
 	<< " " << f1->GetParameter(2) << " " << f1->GetParameter(3) << endl;
   }
+  gDirectory->cd("../");
 }
