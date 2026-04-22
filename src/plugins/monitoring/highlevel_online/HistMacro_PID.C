@@ -852,7 +852,7 @@ class FitWrapper{
 			}
 
 			// Only try adding to time series if we have more than 200 particles in peak
-			cout << "====== phi: I="<<I<<"  mean: " << pars_out[1] << " +/- " << errs_out[1] << "   sigma: "<< pars_out[2] << " +/- " << errs_out[2] << endl;
+			cout << "====== Lambda: I="<<I<<"  mean: " << pars_out[1] << " +/- " << errs_out[1] << "   sigma: "<< pars_out[2] << " +/- " << errs_out[2] << endl;
 			if( (I>200.0) && (errs_out[1]<0.07*pars_out[1]) && (errs_out[2]<0.2*pars_out[2]) ){
 
 				// Add to time series
