@@ -319,6 +319,13 @@ void JEventProcessor_highlevel_online::Init()
 	  sprintf(str, "K^{+}K^{-} inv. mass w/o reconstructed recoil;K^{+}K^{-} inv. mass (GeV)");
 	dKp_Km = new TH1I("KPlusKMinus", str, 400, 0.0, 2.0);
 
+	// K+ Lambda
+	if (isExclusive)
+	  sprintf(str, "#pi^{-}p inv. mass w/ identified proton;#pi^{-}p inv. mass (GeV)");
+	else
+	  sprintf(str, "#pi^{-}p inv. mass w/o reconstructed recoil;#pi^{-}p inv. mass (GeV)");
+	dpim_proton = new TH1I("PiMinusProton", str, 50, 1.0, 1.4);
+
 	// pi+ pi- pi0
 	if (isExclusive)
 	  sprintf(str, "#pi^{+}#pi^{-}#pi^{o} inv. mass w/ identified proton;#pi^{+}#pi^{-}#pi^{o} inv. mass (GeV)");
@@ -1213,7 +1220,68 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 			  }
 		}
 	}
+	/*************************************************************** K+ Lambda ***************************************************************/
 
+	for(auto t1 : locChargedTracks){
+		//look for proton
+		auto hypoth1 = t1->Get_Hypothesis(Proton);
+		if(!hypoth1) continue;
+
+		//timing cut
+		auto detector1 = hypoth1->t1_detector();
+		double locDeltaT = hypoth1->time() - hypoth1->t0();
+		if(fabs(locDeltaT) > dTimingCutMap[Proton][detector1]) // use same timing cuts as pion
+			continue;
+
+		const DLorentzVector &Protonmom = hypoth1->lorentzMomentum();
+
+		for(auto t2 : locChargedTracks){
+			if(t2 == t1) continue;
+
+			//look for pi-
+			auto hypoth2 = t2->Get_Hypothesis(PiMinus);
+			if(!hypoth2) continue;
+
+			//timing cut
+			auto detector2 = hypoth2->t1_detector();
+			locDeltaT = hypoth2->time() - hypoth2->t0();
+			if(fabs(locDeltaT) > dTimingCutMap[PiMinus][detector2]) // use same timing cuts as pion
+				continue;
+
+			const DLorentzVector &PiMinusmom = hypoth2->lorentzMomentum();
+			DLorentzVector LambdaP4(Protonmom + PiMinusmom);
+
+			for(auto locBeamPhoton : locBeamPhotons_InTime)
+			  {
+			    //for exclusive phi: require at least one beam photon in time with missing mass squared near 0
+			    if (isExclusive){
+			      for(auto t3 : locChargedTracks){
+				if(t3 == t1) continue;
+				if(t3 == t2) continue;
+
+				//look for K+
+				auto hypoth3 = t3->Get_Hypothesis(KPlus);
+				if(!hypoth3) continue;
+
+				//timing cut
+				auto detector3 = hypoth3->t1_detector();
+				locDeltaT = hypoth3->time() - hypoth3->t0();
+				if(fabs(locDeltaT) > dTimingCutMap[PiPlus][detector3])
+				  continue;
+
+				const DLorentzVector &KPlusmom = hypoth3->lorentzMomentum();
+
+				DLorentzVector locTargetP4(0.0, 0.0, 0.0, ParticleMass(Proton));
+				DLorentzVector locMissingP4 = locBeamPhoton->lorentzMomentum() + locTargetP4 - LambdaP4 - KPlusmom;
+				if(fabs(locMissingP4.M2()) > 0.01)
+				  continue;
+				dpim_proton->Fill(LambdaP4.M());
+				break;
+			      }
+			    }
+			  }
+		}
+	}
 	/*************************************************************** Helicity ***************************************************************/
 
 
