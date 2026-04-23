@@ -737,6 +737,14 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ChiSq_Timing"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Timing"), locArraySizeString, dInitNumTrackArraySize);
 
+	//pi/mu neural net
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "NumHits_FMWPC1"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "NumHits_FMWPC2"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "NumHits_FMWPC3"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "NumHits_FMWPC4"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "NumHits_FMWPC5"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "NumHits_FMWPC6"),locArraySizeString,dInitNumTrackArraySize);
+
 	//HIT ENERGY
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_TOF"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_ST"), locArraySizeString, dInitNumTrackArraySize);
@@ -1843,6 +1851,8 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	  locECALShower = locECALShowerMatchParams->dECALShower;
 	}
 
+	shared_ptr<const DFMWPCMatchParams>locFMWPCMatchParams = locChargedTrackHypothesis->Get_FMWPCMatchParams();
+
 	//shared_ptr<const DECALSingleHitMatchParams> locECALSingleHitMatchParams
 	//  = locChargedTrackHypothesis->Get_ECALSingleHitMatchParams();
 	
@@ -1934,6 +1944,38 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 
 	double locECALEnergy = (locECALShower != NULL) ? locECALShower->E : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_ECAL"), locECALEnergy, locArrayIndex);
+
+	int locNumFmwpc1=0;
+	int locNumFmwpc2=0;
+	int locNumFmwpc3=0;
+	int locNumFmwpc4=0;
+	int locNumFmwpc5=0;
+	int locNumFmwpc6=0;
+
+	if(locFMWPCMatchParams!=nullptr){
+		for(size_t i =0;i<locFMWPCMatchParams.size();i++){
+			switch(locFMWPCMatchParams->dLayers[i]){
+				case 1:
+					locNumFmwpc1 = locFMWPCMatchParams->dNHits();
+					break;
+				case 2:
+					locNumFmwpc2 = locFMWPCMatchParams->dNHits();
+					break;
+				case 3:
+					locNumFmwpc3 = locFMWPCMatchParams->dNHits();
+					break;
+				case 4:
+					locNumFmwpc4 = locFMWPCMatchParams->dNHits();
+					break;
+				case 5:
+					locNumFmwpc5 = locFMWPCMatchParams->dNHits();
+					break;
+				case 6:
+					locNumFmwpc6 = locFMWPCMatchParams->dNhits();
+					break;
+			}
+		}
+	}
 
 	//if(locECALSingleHitMatchParams!=nullptr){
 	//  locECALEnergy = locECALSingleHitMatchParams->dEHit;

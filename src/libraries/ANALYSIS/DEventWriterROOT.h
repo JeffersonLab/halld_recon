@@ -26,6 +26,8 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "DAQ/DBeamHelicity.h"
 
+#include <FMWPC/DCPPPiMuTrainingSampleGen.h>
+
 #include "PID/DVertex.h"
 #include "PID/DChargedTrack.h"
 #include "PID/DBeamPhoton.h"

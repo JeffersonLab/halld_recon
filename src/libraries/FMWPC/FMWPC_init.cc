@@ -17,6 +17,7 @@
 #include "DCTOFPoint_factory.h"
 #include "DFMWPCMatchedTrack_factory.h"
 #include "DCPPEpEm_factory.h"
+#include "DCPPPiMuTrainingSampleGen_factory.h"
 
 #include <JANA/JFactorySet.h>
 #include <JANA/JFactoryT.h>
@@ -40,5 +41,8 @@ void FMWPC_init(JFactorySet *factorySet) {
 
   // Factory for e+e-/ pi+pi- fitting
   factorySet->Add(new DCPPEpEm_factory());
+
+  // Factory for mu+mu-/ pi+pi- fitting
+  factorySet->Add(new DCPPPiMuTrainingSampleGen_factory());
 }
 

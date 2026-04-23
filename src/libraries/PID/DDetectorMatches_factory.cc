@@ -177,6 +177,10 @@ void DDetectorMatches_factory::MatchToBCAL(const DParticleID* locParticleID, con
 	}
 }
 
+//void DDetectorMatches_factory::MatchToFMWPC_CPP(const DTrackTimeBased* locTrackTimeBased, const vector<const DFMWPCHit*>& locFMWPCHits, DDetectorMatches* locDetectorMatches) const{
+	
+//}
+
 void DDetectorMatches_factory::MatchToFMWPC(const DTrackTimeBased* locTrackTimeBased, const vector<const DFMWPCCluster*>& locFMWPCClusters, DDetectorMatches* locDetectorMatches) const{
   auto fmwpc_projections=locTrackTimeBased->extrapolations.at(SYS_FMWPC);
   if (fmwpc_projections.size()==0) return;
@@ -199,35 +203,35 @@ void DDetectorMatches_factory::MatchToFMWPC(const DTrackTimeBased* locTrackTimeB
     int wire_trk_proj=0;
     const DFMWPCCluster* closest_fmwpc_cluster= nullptr;
     for(auto fmwpccluster : locFMWPCClusters){
-      if( fmwpccluster->layer != layer ) continue;
+      	if( fmwpccluster->layer != layer ) continue;
       
-      // Convert into local coordinates so we can work with wire numbers
-      double s=fmwpccluster->orientation==DGeometry::kFMWPC_WIRE_ORIENTATION_VERTICAL ? xpos+fmwpccluster->xoffset : ypos+fmwpccluster->yoffset;
-      wire_trk_proj = round(71.5 + s/FMWPC_WIRE_SPACING) + 1; // 1-144
+		// Convert into local coordinates so we can work with wire numbers
+		double s=fmwpccluster->orientation==DGeometry::kFMWPC_WIRE_ORIENTATION_VERTICAL ? xpos+fmwpccluster->xoffset : ypos+fmwpccluster->yoffset;
+		wire_trk_proj = round(71.5 + s/FMWPC_WIRE_SPACING) + 1; // 1-144
       
-      // If the projection is outside of the wire range then bail now
-      if( (wire_trk_proj<1) || (wire_trk_proj>144) ) continue; 
+		// If the projection is outside of the wire range then bail now
+		if( (wire_trk_proj<1) || (wire_trk_proj>144) ) continue; 
 
-      int dist=1000000;
-      if( wire_trk_proj >= fmwpccluster->first_wire ){
-	dist = wire_trk_proj - fmwpccluster->last_wire; // distance beyond last wire (will be negative if inside cluster)
-	if( dist < 0 ) dist = 0; // force dist to 0 if inside cluster
-      }else{
-	dist = fmwpccluster->first_wire - wire_trk_proj; // distance before first wire
-      }
+		int dist=1000000;
+		if( wire_trk_proj >= fmwpccluster->first_wire ){
+			dist = wire_trk_proj - fmwpccluster->last_wire; // distance beyond last wire (will be negative if inside cluster)
+			if( dist < 0 ) dist = 0; // force dist to 0 if inside cluster
+		}else{
+			dist = fmwpccluster->first_wire - wire_trk_proj; // distance before first wire
+		}
       
-      if( dist < min_dist ){
-	min_dist = dist;
-	closest_fmwpc_cluster = fmwpccluster;
-      }
+      	if( dist < min_dist ){
+			min_dist = dist;
+			closest_fmwpc_cluster = fmwpccluster;
+      	}
     }
   
     // If a DFMWPCCluster was found, add the match info to the track
     if( closest_fmwpc_cluster ){
-      int closest_wire=wire_trk_proj;
-      if (wire_trk_proj < closest_fmwpc_cluster->first_wire ) {
-	closest_wire = closest_fmwpc_cluster->first_wire;
-      }
+		int closest_wire=wire_trk_proj;
+		if (wire_trk_proj < closest_fmwpc_cluster->first_wire ) {
+			closest_wire = closest_fmwpc_cluster->first_wire;
+		}
       else if (wire_trk_proj > closest_fmwpc_cluster->last_wire){
 	closest_wire = closest_fmwpc_cluster->last_wire;
       }

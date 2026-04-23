@@ -332,7 +332,7 @@ void DCPPEpEm_factory::Process(const std::shared_ptr<const JEvent>& event)
     delete dAnalysisUtilities;
     delete dKinFitter;
     delete dKinFitUtils;
- 
+
   }
 }
 
