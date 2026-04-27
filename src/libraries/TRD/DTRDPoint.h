@@ -26,6 +26,7 @@ class DTRDPoint : public JObject {
       ///
       DTRDPoint(){}
 
+      vector<const DTRDStripCluster*> AssociatedStripClusters; ///< strip clusters associated with this point
       double x,y,z; ///< centroid positions from two planes
       double t_x,t_y; ///< time of the two cathode clusters
       double time; ///< time corresponding to this pseudopoint.
@@ -44,8 +45,8 @@ class DTRDPoint : public JObject {
          summary.add(time, "time", "%3.1f");
          summary.add(status, "status", "%d");
          summary.add(dE, "dE", "%3.1f");
-		 summary.add(dE_x, "dE_x", "%3.1f");
-		 summary.add(dE_y, "dE_y", "%3.1f");
+		   summary.add(dE_x, "dE_x", "%3.1f");
+		   summary.add(dE_y, "dE_y", "%3.1f");
       }
 
 };

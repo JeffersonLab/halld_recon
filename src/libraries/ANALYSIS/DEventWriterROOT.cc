@@ -9,6 +9,7 @@ static bool CCAL_VERBOSE_OUTPUT = false;
 static bool ECAL_VERBOSE_OUTPUT = false;
 static bool DIRC_OUTPUT = true;
 static bool FDC_VERBOSE_OUTPUT = true;
+static bool TRD_OUTPUT = true;
 
 static bool STORE_PULL_INFO = false;
 static bool STORE_ERROR_MATRIX_INFO = false;
@@ -313,6 +314,8 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 	if(params->Exists("ANALYSIS:STORE_SC_VETO_INFO"))
 	    {params->GetParameter("ANALYSIS:STORE_SC_VETO_INFO",STORE_SC_VETO_INFO); cout << "ANALYSIS:STORE_SC_VETO_INFO set to " << STORE_SC_VETO_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 
+	if(params->Exists("ANALYSIS:TRD_ROOT_OUTPUT"))
+		{params->GetParameter("ANALYSIS:TRD_ROOT_OUTPUT", TRD_OUTPUT); cout << "ANALYSIS:TRD_ROOT_OUTPUT set to " << TRD_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 
 	if(locKinFitType != d_NoFit)
 	{
@@ -780,6 +783,19 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lk_DIRC"), locArraySizeString, dInitNumTrackArraySize);
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lp_DIRC"), locArraySizeString, dInitNumTrackArraySize);
 	}
+
+	// TRD:
+	if(TRD_OUTPUT) {
+		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "IsTRDMatched"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumHits_X_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumHits_Y_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumClusters_X_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumClusters_Y_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumPoints_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_X_TRD"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_Y_TRD"), locArraySizeString, dInitNumTrackArraySize);
+	}
+
 }
 
 void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
@@ -2025,7 +2041,7 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 		double locDIRCLp = 999.;
 		auto locDIRCMatchParams = locChargedTrackHypothesis->Get_DIRCMatchParams();
 		if(locDIRCMatchParams != NULL) {
-		        locDIRCExtrapolatedX = locDIRCMatchParams->dExtrapolatedPos.X();
+		    locDIRCExtrapolatedX = locDIRCMatchParams->dExtrapolatedPos.X();
 			locDIRCExtrapolatedY = locDIRCMatchParams->dExtrapolatedPos.Y();
 			locDIRCNumPhotons = locDIRCMatchParams->dNPhotons;
 			locDIRCThetaC = locDIRCMatchParams->dThetaC;
@@ -2042,6 +2058,38 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lpi_DIRC"), locDIRCLpi, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lk_DIRC"), locDIRCLk, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lp_DIRC"), locDIRCLp, locArrayIndex);
+	}
+
+	// TRD
+	if (TRD_OUTPUT) {
+		int locTRDNumHitsX = 0;
+		int locTRDNumHitsY = 0;
+		int locTRDNumClustersX = 0;
+		int locTRDNumClustersY = 0;
+		int locTRDNumPoints = 0;
+		float locTRDExtrapolatedX = 999;
+		float locTRDExtrapolatedY = 999;
+		auto locTRDMatchParams = locChargedTrackHypothesis->Get_TRDMatchParams();
+		int locIsTRDMatched = (locTRDMatchParams != NULL) ? 1 : 0;
+		if(locTRDMatchParams != NULL) {
+			const DTRDSegment* locTRDSegment = locTRDMatchParams->dTRDSegment;
+			locTRDNumHitsX = locTRDSegment->NumHitsX;
+			locTRDNumHitsY = locTRDSegment->NumHitsY;
+			locTRDNumClustersX = locTRDSegment->NumStripClustersX;
+			locTRDNumClustersY = locTRDSegment->NumStripClustersY;
+			locTRDNumPoints = locTRDSegment->NumPoints;
+			locTRDExtrapolatedX = locTRDSegment->x;
+			locTRDExtrapolatedY = locTRDSegment->y;
+		}
+		
+		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "IsTRDMatched"), locIsTRDMatched, locArrayIndex);
+		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumHits_X_TRD"), locTRDNumHitsX, locArrayIndex);
+		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumHits_Y_TRD"), locTRDNumHitsY, locArrayIndex);
+		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumClusters_X_TRD"), locTRDNumClustersX, locArrayIndex);
+		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumClusters_Y_TRD"), locTRDNumClustersY, locArrayIndex);
+		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumPoints_TRD"), locTRDNumPoints, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_X_TRD"),	locTRDExtrapolatedX, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_Y_TRD"), locTRDExtrapolatedY, locArrayIndex);
 	}
 }
 
