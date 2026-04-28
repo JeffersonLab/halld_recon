@@ -44,7 +44,7 @@ class DBCALPoint_factory : public JFactoryT<DBCALPoint> {
   static const int BCAL_NUM_LAYERS   =  4;
   static const int BCAL_NUM_SECTORS  =  4;
 
-  bool PRINTCALIBRATION;
+  bool PRINTCALIBRATION,USE_ALTERNATE_GAINS;
 
   void Init() override;
   void BeginRun(const std::shared_ptr<const JEvent>& event) override;

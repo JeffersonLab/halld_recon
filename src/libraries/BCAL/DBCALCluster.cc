@@ -198,8 +198,9 @@ DBCALCluster::makeFromPoints(){
     double E = (**pt).E();
     double z = (**pt).z();
 
-    if(m_point_reatten_E_sum == 0)  m_E_points += E;
-    else if (z > min_z && z < max_z ) m_E_points += E;  // if a point was reconstructed outside of the BCAL we want to add it's energy but not let it contribute to the time or position recon.
+    // if(m_point_reatten_E_sum == 0)  m_E_points += E;
+    //else if (z > min_z && z < max_z ) m_E_points += E;  // if a point was reconstructed outside of the BCAL we want to add it's energy but not let it contribute to the time or position recon.
+    m_E_points+=E;
     m_E = m_E_points + m_hit_E_unattenuated_sum + m_point_reatten_E_sum ;  // add the energy sum from points to the energy sum from single ended hits
     if( E == m_E_points || ( (**pt).layer()==1 && charge == 0 ) ) charge = new_point_q;
     	
