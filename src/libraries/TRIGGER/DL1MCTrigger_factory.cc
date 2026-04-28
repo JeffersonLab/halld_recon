@@ -104,7 +104,7 @@ void DL1MCTrigger_factory::Init()
   SC_OFFSET    =  6;
 
   SIMU_BASELINE  = 0;
-  SIMU_GAIN = 0;
+  SIMU_GAIN = 1;
   SIMU_BAD_BLOCK = 0;  
   
   VERBOSE = 0;
