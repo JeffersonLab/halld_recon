@@ -31,7 +31,7 @@ public:
   // this constructor uses two hits to obtain a local z position
   DBCALPoint(const DBCALUnifiedHit& hit1, const DBCALUnifiedHit& hit2, double z_target_center, 
   			 double attenutation_length, double c_effective, double track_p0, double track_p1, double track_p2, 
-  			 const DBCALGeometry *locGeom);
+	     const DBCALGeometry *locGeom,bool use_alternate_gains);
   
   float E() const { return m_E; }
   float E_US() const { return m_E_US; }  ///< Return the attenuation corrected Energy of US Hit

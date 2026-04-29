@@ -24,6 +24,8 @@ void DBCALPoint_factory::Init() {
 	PRINTCALIBRATION = false;
 	auto app = GetApplication();
 	app->SetDefaultParameter("BCALPOINT:PRINTCALIBRATION", PRINTCALIBRATION, "Print the calibration parameters.");
+	USE_ALTERNATE_GAINS=false;
+	app->SetDefaultParameter("BCAL:USE_ALTERNATE_GAINS",USE_ALTERNATE_GAINS);
 }
 
 //----------------
@@ -203,7 +205,7 @@ void DBCALPoint_factory::Process(const std::shared_ptr<const JEvent>& event) {
     double track_p2 = -100.0; // will be updated from GetTrackParameters (dimensions: cm/ns^2)
     GetTrackParameters(table_id, track_p0, track_p1, track_p2);
 
-    DBCALPoint *point = new DBCALPoint(*uphit,*dnhit,m_z_target_center,attenuation_length,cEff,track_p0,track_p1,track_p2,m_BCALGeom);
+    DBCALPoint *point = new DBCALPoint(*uphit,*dnhit,m_z_target_center,attenuation_length,cEff,track_p0,track_p1,track_p2,m_BCALGeom,USE_ALTERNATE_GAINS);
 
     point->AddAssociatedObject(uphit);
     point->AddAssociatedObject(dnhit);

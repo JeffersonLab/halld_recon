@@ -42,7 +42,8 @@ void DBCALHit_factory::Init()
   app->SetDefaultParameter("BCAL:CORRECT_FADC_SATURATION", CORRECT_FADC_SATURATION, "Set to 1 to correct pulse integral for fADC saturation, set to 0 to not correct pulse integral. (default = 1)");
   CORRECT_SIPM_SATURATION = true;
   app->SetDefaultParameter("BCAL:CORRECT_SIPM_SATURATION", CORRECT_SIPM_SATURATION, "Set to 1 to correct for SiPM saturation, set to 0 to not correct pulse integral or peak. (default = 1)");
-
+  USE_ALTERNATE_GAINS=false;
+  app->SetDefaultParameter("BCAL:USE_ALTERNATE_GAINS",USE_ALTERNATE_GAINS);
   // cout << " CORRECT_SIPM_SATURATION=" << CORRECT_SIPM_SATURATION << endl;
 }
 
@@ -118,8 +119,11 @@ void DBCALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
        jout << "Error loading /BCAL/channel_global_offset !" << jendl;
    if(calibration->Get("/BCAL/tdiff_u_d", raw_tdiff_u_d))
        jout << "Error loading /BCAL/tdiff_u_d !" << jendl;
-    if(calibration->Get("/BCAL/bad_channels", raw_bad_channels))
-       jout << "Error loading /BCAL/bad_channels !" << endl;
+   if(calibration->Get("/BCAL/bad_channels", raw_bad_channels))
+     jout << "Error loading /BCAL/bad_channels !" << endl;
+   
+    // Alternate gain table
+   calibration->Get("BCAL/gains",gain_factors);
 
    if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_gains" << jendl;
    FillCalibTable(gains, raw_gains);
@@ -269,8 +273,14 @@ void DBCALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 	  // cout << " event=" << eventnumber << " Layer=" << digihit->layer << " integral_pedsub_measured=" << integral_pedsub_measured 
 	  //	     << " Npixels_measured=" << Npixels_measured << " Mpixels=" << Mpixels << " integral_pedsub=" << integral_pedsub << endl;
 	}
-	hit_E = gain * integral_pedsub;
-
+	if (USE_ALTERNATE_GAINS==false){
+	  hit_E = gain * integral_pedsub;
+	}
+	else {
+	  int channel=GetCalibIndex(digihit->module,digihit->layer,
+				    digihit->sector);
+	  hit_E=5.4e-5 * integral_pedsub * gain_factors[channel];
+	}
       }
       if (VERBOSE>2) printf("%5lu digihit %2i of %2lu, type %i time %4u, peak %3u, int %4.0f %.0f, ped %3.0f %.0f %5.1f %6.1f, gain %.1e, E=%5.0f MeV\n",
 							event->GetEventNumber(),i,digihits.size(),digihit->datasource,

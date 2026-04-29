@@ -45,6 +45,7 @@ void DFCALShower::setPosition_log(const DVector3& aPosition_log )
 
 void DFCALShower::setDocaTrack( const double docaTrack ){ fDocaTr = docaTrack; }
 void DFCALShower::setTimeTrack( const double tTrack ){ fTimeTr = tTrack; }
+void DFCALShower::setTimeMaxE( const double atime ){ fTimeMaxE = atime; }
 void DFCALShower::setSumU( const double sumU ){ fSumU = sumU; }
 void DFCALShower::setSumV( const double sumV ){ fSumV = sumV; }
 void DFCALShower::setE9E25( const double e9e25 ){ fE9E25 = e9e25; }

@@ -17,7 +17,7 @@ using namespace std;
 
 DBCALPoint::DBCALPoint(const DBCALUnifiedHit& hit1, const DBCALUnifiedHit& hit2, double z_target_center, 
 		double attenuation_length, double c_effective, double track_p0, double track_p1, 
-		double track_p2, const DBCALGeometry *locGeom) : m_BCALGeom(locGeom)
+		       double track_p2, const DBCALGeometry *locGeom,bool use_alternate_gains) : m_BCALGeom(locGeom)
 {
   
   // this is a problem -- both hits are on the same end...
@@ -105,7 +105,12 @@ DBCALPoint::DBCALPoint(const DBCALUnifiedHit& hit1, const DBCALUnifiedHit& hit2,
   // use these to correct the energy
   m_E_US =  ( upHit.E / attUp );
   m_E_DS =  ( downHit.E / attDown );
-  m_E =  ( m_E_US + m_E_DS ) / 2;
+  if (use_alternate_gains==false){
+    m_E =  ( m_E_US + m_E_DS ) / 2;
+  }
+  else {
+    m_E=sqrt(upHit.E*downHit.E);// absorb attentuation length correction into gain factor
+  }
   
   m_r = m_BCALGeom->r( cellId );
   //for a uniform distribution of width a, the RMS is a/sqrt(12)

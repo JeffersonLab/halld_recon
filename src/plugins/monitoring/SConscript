@@ -17,6 +17,7 @@ subdirs = [
 'fa125_temp',
 'FCAL_online',
 'FCAL_invmass',
+'FCAL2_invmass',
 'FCAL_cpp',
 'FDC_online',
 'FDC_Efficiency',

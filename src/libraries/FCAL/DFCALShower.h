@@ -32,6 +32,7 @@ class DFCALShower:public JObject{
   DVector3 getPosition_log() const;
   double getEnergy() const;  
   double getTime() const;
+  double getTimeMaxE() const;
   double getDocaTrack() const;
   double getTimeTrack() const;
   double getSumU() const;
@@ -46,6 +47,7 @@ class DFCALShower:public JObject{
   void setPosition_log( const DVector3& aPosition_log );
   void setEnergy( const double energy );  
   void setTime( const double time );
+  void setTimeMaxE( const double time );
   void setDocaTrack( const double docaTrack );
   void setTimeTrack( const double tTrack );
   void setSumU( const double sumU );
@@ -118,6 +120,7 @@ class DFCALShower:public JObject{
     summary.add(tErr(), "dt", "%5.3f");
     summary.add(getDocaTrack(), "docaTr", "%7.2f");
     summary.add(getTimeTrack(), "timeTr", "%7.2f");
+    summary.add(getTimeMaxE(), "timeMaxE", "%7.2f");
     summary.add(getSumU(), "sumU", "%7.2f");
     summary.add(getSumV(), "sumV", "%7.2f");
     summary.add(getE9E25(), "E9E25", "%7.2f");
@@ -138,7 +141,8 @@ class DFCALShower:public JObject{
  private:
 
   double fEnergy; 
-  double fTime; 
+  double fTime;
+  double fTimeMaxE;
   DVector3 fPosition;        // Shower position in the FCAL
   DVector3 fPosition_log;    // log-weighted shower position
   double fTimeTr;
@@ -174,6 +178,7 @@ inline double DFCALShower::getTime() const
 
 inline double DFCALShower::getDocaTrack() const { return fDocaTr; }
 inline double DFCALShower::getTimeTrack() const { return fTimeTr; }
+inline double DFCALShower::getTimeMaxE() const { return fTimeMaxE; }
 inline double DFCALShower::getSumU() const { return fSumU; }
 inline double DFCALShower::getSumV() const { return fSumV; }
 inline double DFCALShower::getE9E25() const { return fE9E25; }

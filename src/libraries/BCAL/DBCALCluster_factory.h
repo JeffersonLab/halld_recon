@@ -56,6 +56,7 @@ private:
                 const DBCALUnifiedHit* hit ) const; 
   
   uint32_t BCALCLUSTERVERBOSE;
+  bool USE_ALTERNATE_GAINS;
   float m_mergeSig;
   float m_moliereRadius;
   float m_clust_hit_timecut;

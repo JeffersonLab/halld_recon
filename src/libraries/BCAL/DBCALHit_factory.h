@@ -85,6 +85,8 @@ class DBCALHit_factory:public JFactoryT<DBCALHit>{
         double integral_to_peak[BCAL_NUM_ENDS][BCAL_NUM_LAYERS];     // ration of pulse integral to peak value (integral counts)
 	double sipm_npixels[BCAL_NUM_ENDS][BCAL_NUM_LAYERS];         // number of pixels per sensor(s) 
         double pixel_per_count[BCAL_NUM_ENDS][BCAL_NUM_LAYERS];   // conversion between counts and pixels
+  bool USE_ALTERNATE_GAINS;
+  vector<double>gain_factors;
 };
 
 #endif // _DBCALHit_factory_
