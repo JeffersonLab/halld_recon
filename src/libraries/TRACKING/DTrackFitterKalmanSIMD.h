@@ -594,7 +594,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   TH1I *alignDerivHists[46];
   TH2I *brentCheckHists[2];
 
-  bool WRITE_ML_TRAINING_OUTPUT;
+  bool WRITE_ML_TRAINING_OUTPUT,RUN_SMOOTHER;
   bool PRINT_POSITIONS;
   ofstream mlfile;
 

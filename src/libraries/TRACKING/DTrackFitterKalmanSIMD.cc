@@ -455,7 +455,10 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    
    USE_PASS1_TIME_MODE=false;
    if (FAST_TRACKING_MODE) USE_PASS1_TIME_MODE=true;
-   app->SetDefaultParameter("KALMAN:USE_PASS1_TIME_MODE",USE_PASS1_TIME_MODE); 
+   app->SetDefaultParameter("KALMAN:USE_PASS1_TIME_MODE",USE_PASS1_TIME_MODE);
+
+   RUN_SMOOTHER=true;
+   app->SetDefaultParameter("KALMAN:RUN_SMOOTHER",RUN_SMOOTHER); 
 
    RECOVER_BROKEN_TRACKS=true;
    app->SetDefaultParameter("KALMAN:RECOVER_BROKEN_TRACKS",RECOVER_BROKEN_TRACKS);
@@ -6500,7 +6503,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
    } //iteration
    
    IsSmoothed=false;
-   if(fit_type==kTimeBased || FAST_TRACKING_MODE){
+   if((fit_type==kTimeBased || FAST_TRACKING_MODE) && RUN_SMOOTHER){
      forward_pulls.clear();
      if (SmoothForward(forward_pulls) == NOERROR){
        IsSmoothed = true;
@@ -6822,7 +6825,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
  
    // Run the smoother
    IsSmoothed=false;
-   if(fit_type==kTimeBased || FAST_TRACKING_MODE){
+   if((fit_type==kTimeBased || FAST_TRACKING_MODE) && RUN_SMOOTHER){
      cdc_pulls.clear();
      if (SmoothForwardCDC(cdc_pulls) == NOERROR){
        IsSmoothed = true;
@@ -7134,7 +7137,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 
    // Run smoother and fill pulls vector
    IsSmoothed=false;
-   if(fit_type==kTimeBased || FAST_TRACKING_MODE){
+   if((fit_type==kTimeBased || FAST_TRACKING_MODE) && RUN_SMOOTHER){
      cdc_pulls.clear();
      if (SmoothCentral(cdc_pulls) == NOERROR){
        IsSmoothed = true;
@@ -10014,7 +10017,7 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
 	  fdc_used_in_fit[my_id]=true; 
 	  
 	  // Add some hit info to the update vector for this plane
-	  if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+	  if ((fit_type==kTimeBased || FAST_TRACKING_MODE) && RUN_SMOOTHER){
 	    fdc_updates[my_id].tdrift=drift_time;
 	    fdc_updates[my_id].tcorr=fdc_updates[my_id].tdrift;
 	    fdc_updates[my_id].doca=mydoca;
@@ -10046,7 +10049,7 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
       chisq+=my_prob*RC.Chi2(R);
       
       unsigned int my_id=used_ids[m];
-      if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+      if ((fit_type==kTimeBased || FAST_TRACKING_MODE) && RUN_SMOOTHER){
 	fdc_updates[my_id].V=RC;
       }
       if (DEBUG_LEVEL > 25) 
@@ -10063,7 +10066,7 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
   }
   
   // Save some information about the track at this plane in the update vector
-  if (fit_type==kTimeBased || FAST_TRACKING_MODE){
+  if ((fit_type==kTimeBased || FAST_TRACKING_MODE) && RUN_SMOOTHER){
     for (unsigned int m=0;m<Hlist.size();m++){
       unsigned int my_id=used_ids[m];
       fdc_updates[my_id].S=S;
