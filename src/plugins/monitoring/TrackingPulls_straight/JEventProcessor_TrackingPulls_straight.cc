@@ -135,8 +135,8 @@ void JEventProcessor_TrackingPulls_straight::Process(const std::shared_ptr<const
     // Check for NaNs
     any_nan_ = false;
     for (size_t iPull = 0; iPull < pulls.size(); iPull++) {
-      double err = pulls[iPull].err;
-      double errc = pulls[iPull].errc;
+      double err = sqrt(pulls[iPull].var);
+      double errc = sqrt(pulls[iPull].varc);
       if (err != err || errc != errc) {
         any_nan_ = true;
         break;
@@ -145,13 +145,13 @@ void JEventProcessor_TrackingPulls_straight::Process(const std::shared_ptr<const
 
     for (size_t iPull = 0; iPull < pulls.size(); iPull++) {
       double resi = pulls[iPull].resi;
-      double err = pulls[iPull].err;  // estimated error of measurement
+      double err = sqrt(pulls[iPull].var);  // estimated error of measurement
       double tdrift = pulls[iPull].tdrift;
       const DCDCTrackHit *cdc_hit = pulls[iPull].cdc_hit;
       const DFDCPseudo *fdc_hit = pulls[iPull].fdc_hit;
       double z = pulls[iPull].z;  // z position at doca
       double resic = pulls[iPull].resic;
-      double errc = pulls[iPull].errc;
+      double errc = sqrt(pulls[iPull].varc);
 
       // Fill some detector specific info
       // Fill them in order = super-hacked

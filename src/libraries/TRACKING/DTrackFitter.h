@@ -98,14 +98,14 @@ class DTrackFitter: public JObject{
 
 		class pull_t{
 		public:
-		pull_t(double resi, double err,double s=0.0,
+		pull_t(double resi, double var,double s=0.0,
 		       double tdrift=0.0, double d=0.0,
 		       const DCDCTrackHit *cdc_hit=NULL,
 		       const DFDCPseudo *fdc_hit=NULL, double docaphi=0.0,
-		       double z=0.0, double cosThetaRel=0.0,double tcorr=0.0,double resic=0.0,
-		       double errc=0.0, int left_right=0):resi(resi),err(err),s(s),tdrift(tdrift),d(d),cdc_hit(cdc_hit),fdc_hit(fdc_hit),docaphi(docaphi),z(z),cosThetaRel(cosThetaRel),tcorr(tcorr),resic(resic),errc(errc),left_right(left_right){}
+		       double z=0.0,double tcorr=0.0,double resic=0.0,
+		       double varc=0.0, int left_right=0):resi(resi),var(var),s(s),tdrift(tdrift),d(d),cdc_hit(cdc_hit),fdc_hit(fdc_hit),docaphi(docaphi),z(z),tcorr(tcorr),resic(resic),varc(varc),left_right(left_right){}
 		    double resi;	// residual of measurement
-		    double err;		// estimated error of measurement
+		    double var;		// estimated variance of measurement
 		    double s;
 		    double tdrift;      // drift time of this measurement
 		    double d;  // doca to wire
@@ -113,10 +113,9 @@ class DTrackFitter: public JObject{
 		    const DFDCPseudo *fdc_hit;
 		    double docaphi; // phi of doca in CDC straws
 		    double z;// z position at doca
-		    double cosThetaRel; // dot product between track and wire directions
 		    double tcorr; // drift time with correction for B
 		    double resic; // residual for FDC cathode measuremtns
-		    double errc;
+		    double varc;
 		    int left_right;  // left-right info. of the wire plane (-1: left or +1: right)
           vector<double> trackDerivatives;
           inline void AddTrackDerivatives(vector<double> d){ trackDerivatives = d;}
@@ -261,7 +260,6 @@ class DTrackFitter: public JObject{
 
 	private:
 		int DEBUG_LEVEL;
-		string MATERIAL_MAP_MODEL;			
 
 		// Prohibit default constructor
 		DTrackFitter();

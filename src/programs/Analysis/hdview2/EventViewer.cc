@@ -138,10 +138,7 @@ void EventViewer::Init(void)
     BCALVERBOSE = 0;
     app->SetDefaultParameter("BCALVERBOSE", BCALVERBOSE, "Verbosity level for BCAL objects and display");
 
-	MATERIAL_MAP_MODEL="DGeometry";
-	app->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL", MATERIAL_MAP_MODEL);
-
-	gMYPROC = this;
+    gMYPROC = this;
 }
 
 //------------------------------------------------------------------
@@ -155,7 +152,6 @@ void EventViewer::BeginRun(const std::shared_ptr<const JEvent>& event)
 	auto geo_manager = app->GetService<DGeometryManager>();
 	Bfield = DEvent::GetBfield(event);
 
-	RootGeom = geo_manager->GetRootGeom(runnumber);
 	geom = geo_manager->GetDGeometry(runnumber);
 	geom->GetFDCWires(fdcwires);
 
@@ -2179,17 +2175,7 @@ void EventViewer::AddKinematicDataTrack(const DKinematicData* kd, int color, dou
 	rt.Rsqmax_interior = RMAX_INTERIOR*RMAX_INTERIOR;
 	rt.Rsqmax_exterior = RMAX_EXTERIOR*RMAX_EXTERIOR;
     rt.SetZmaxTrackBoundary( ZMAX );
-
-	if(MATERIAL_MAP_MODEL=="DRootGeom"){
-		rt.SetDRootGeom(RootGeom);
-		rt.SetDGeometry(NULL);
-	}else if(MATERIAL_MAP_MODEL=="DGeometry"){
-		rt.SetDRootGeom(NULL);
-		rt.SetDGeometry(geom);
-	}else if(MATERIAL_MAP_MODEL!="NONE"){
-		_DBG_<<"WARNING: Invalid value for TRKFIT:MATERIAL_MAP_MODEL (=\""<<MATERIAL_MAP_MODEL<<"\")"<<endl;
-	}
-
+    rt.SetDGeometry(geom);
 	rt.SetMass(kd->mass());
 	rt.Swim(kd->position(), kd->momentum(), kd->charge());
 
@@ -2216,17 +2202,7 @@ void EventViewer::GetIntersectionWithCalorimeter(const DKinematicData* kd, DVect
 	rt.Rsqmax_interior = RMAX_INTERIOR*RMAX_INTERIOR;
 	rt.Rsqmax_exterior = RMAX_EXTERIOR*RMAX_EXTERIOR;
 	rt.SetZmaxTrackBoundary( ZMAX );
-
-	if(MATERIAL_MAP_MODEL=="DRootGeom"){
-		rt.SetDRootGeom(RootGeom);
-		rt.SetDGeometry(NULL);
-	}else if(MATERIAL_MAP_MODEL=="DGeometry"){
-		rt.SetDRootGeom(NULL);
-		rt.SetDGeometry(geom);
-	}else if(MATERIAL_MAP_MODEL!="NONE"){
-		_DBG_<<"WARNING: Invalid value for TRKFIT:MATERIAL_MAP_MODEL (=\""<<MATERIAL_MAP_MODEL<<"\")"<<endl;
-	}
-
+	rt.SetDGeometry(geom);
 	rt.SetMass(kd->mass());
 	rt.Swim(kd->position(), kd->momentum(), kd->charge());
 
@@ -2387,15 +2363,7 @@ _DBG_<<"mass="<<mass<<endl;
 	rt->Rsqmax_exterior = RMAX_EXTERIOR*RMAX_EXTERIOR;
 	rt->SetZmaxTrackBoundary( ZMAX );
 	rt->SetMass(mass);
-	if(MATERIAL_MAP_MODEL=="DRootGeom"){
-		rt->SetDRootGeom(RootGeom);
-		rt->SetDGeometry(NULL);
-	}else if(MATERIAL_MAP_MODEL=="DGeometry"){
-		rt->SetDRootGeom(NULL);
-		rt->SetDGeometry(geom);
-	}else if(MATERIAL_MAP_MODEL!="NONE"){
-		_DBG_<<"WARNING: Invalid value for TRKFIT:MATERIAL_MAP_MODEL (=\""<<MATERIAL_MAP_MODEL<<"\")"<<endl;
-	}
+	rt->SetDGeometry(geom);
 	rt->Swim(pos, mom, q);
 }
 

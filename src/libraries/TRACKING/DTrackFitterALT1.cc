@@ -116,15 +116,10 @@ DTrackFitterALT1::DTrackFitterALT1(const std::shared_ptr<const JEvent>& event):D
 	
 	// Set the geometry object pointers based on the material map
 	// specified via configuration parameter.
-	if(MATERIAL_MAP_MODEL=="DRootGeom"){
-		rt->SetDRootGeom(RootGeom);
-		tmprt->SetDRootGeom(RootGeom);
-	}else if(MATERIAL_MAP_MODEL=="DGeometry"){
+	if(MATERIAL_MAP_MODEL=="DGeometry"){
 		rt->SetDGeometry(geom);
 		tmprt->SetDGeometry(geom);
 	}else if(MATERIAL_MAP_MODEL=="NONE"){
-		rt->SetDRootGeom(NULL);
-		tmprt->SetDRootGeom(NULL);
 		rt->SetDGeometry(NULL);
 		tmprt->SetDGeometry(NULL);
 	}else{

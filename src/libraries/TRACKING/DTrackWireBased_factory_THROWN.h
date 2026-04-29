@@ -10,7 +10,6 @@
 
 #include <JANA/JFactoryT.h>
 #include <TRACKING/DReferenceTrajectory.h>
-#include <HDGEOMETRY/DRootGeom.h>
 #include <HDGEOMETRY/DGeometry.h>
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 #include "DTrackWireBased.h"
@@ -37,7 +36,6 @@ class DTrackWireBased_factory_THROWN:public JFactoryT<DTrackWireBased>{
 		const DParticleID* dParticleID;
 		vector<DReferenceTrajectory*> rt_pool;
 	
-		DRootGeom *RootGeom;
 		DGeometry *geom;
 		DMagneticFieldMap *bfield;
 };

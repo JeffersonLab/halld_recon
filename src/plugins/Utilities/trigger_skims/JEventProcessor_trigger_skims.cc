@@ -50,9 +50,9 @@ void JEventProcessor_trigger_skims::Init()
 
     app->SetDefaultParameter("TRIGSKIM:WRITEBCALLED", bcal_led_writeout_toggle, "Write out BCAL LED events");
     app->SetDefaultParameter("TRIGSKIM:WRITEFCALLED", fcal_led_writeout_toggle, "Write out FCAL LED events");
-    app->SetDefaultParameter("TRIGSKIM:WRITECCALLED", fcal_led_writeout_toggle, "Write out CCAL LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITECCALLED", ccal_led_writeout_toggle, "Write out CCAL LED events");
     app->SetDefaultParameter("TRIGSKIM:WRITEECALLED", ecal_led_writeout_toggle, "Write out ECAL LED events");
-    app->SetDefaultParameter("TRIGSKIM:WRITEDIRCLED", fcal_led_writeout_toggle, "Write out DIRC LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITEDIRCLED", dirc_led_writeout_toggle, "Write out DIRC LED events");
     app->SetDefaultParameter("TRIGSKIM:WRITERANDOM", random_writeout_toggle, "Write out random pulser events");
     app->SetDefaultParameter("TRIGSKIM:WRITESYNC", sync_writeout_toggle, "Write out TS sync events");
     app->SetDefaultParameter("TRIGSKIM:WRITECTOF", ctof_writeout_toggle, "Write out CTOF events");
@@ -63,6 +63,8 @@ void JEventProcessor_trigger_skims::Init()
         write_out_fcal_led = false;
     if(ccal_led_writeout_toggle == 0)
         write_out_ccal_led = false;
+    if(ecal_led_writeout_toggle == 0)
+        write_out_ecal_led = false;
     if(dirc_led_writeout_toggle == 0)
         write_out_dirc_led = false;
     if(random_writeout_toggle == 0)

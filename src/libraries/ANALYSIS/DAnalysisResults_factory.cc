@@ -105,6 +105,36 @@ void DAnalysisResults_factory::BeginRun(const std::shared_ptr<const JEvent>& loc
 		dKinFitter = new DKinFitter(dKinFitUtils);
 
 		app->SetDefaultParameter("KINFIT:DEBUG_LEVEL", dKinFitDebugLevel);
+		
+		// create and pass logfile ofstream if requested
+		app->SetDefaultParameter("KINFIT:KINFIT_LOGFILE", dKinFitLogFile);
+		if (!dKinFitLogFile.empty()) {
+		    std::ostringstream locFileName;
+		    // obtain number of threads by quering cli flag
+            uint32_t nthreads = 1;
+			if(app->GetJParameterManager()->Exists("NTHREADS")) app->GetParameter("NTHREADS", nthreads);
+			
+			// generate unique filename for current thread via factory addr
+			// users should be informed to run w/ -PNTHREADS=1 since this is messy
+			if (nthreads > 1) {
+			    std::cout << "WARNING: When logging kinfit debug info to file, run in single-threaded mode with -PNTHREADS=1 to avoid splitting logs into thread-specific files.\n";
+			    locFileName << dKinFitLogFile << "_thread_" << this << ".txt";
+			} else {
+			    locFileName << dKinFitLogFile << ".txt";
+			}
+			
+			// append rather than potentially overwrite file in case several runs are processed
+		    dKinFitDebugStream = std::make_unique<std::ofstream>(locFileName.str(), std::ios_base::app);
+						
+			if (!dKinFitDebugStream->is_open()) {
+			    std::cerr << "ERROR: Could not open kinfit log file: " << locFileName.str() << endl;
+				dKinFitDebugStream.reset(); // drop bad stream from uniqptr
+				// dKinFitUtils's DebugStream implicitly remains cout
+			} else {
+			    dKinFitUtils->Set_DebugStream(dKinFitDebugStream.get());
+			}
+		}
+
 		dKinFitter->Set_DebugLevel(dKinFitDebugLevel);
 
 		//CREATE COMBOERS

@@ -342,9 +342,9 @@ void DEventProcessor_MilleKs::Process(const std::shared_ptr<const JEvent> &event
       bool contains_bad_pulls = false;
       for (size_t iPull = 0; iPull < pip_pulls.size(); ++iPull) {
         float resi = pip_pulls[iPull].resi;  // residual of measurement
-        float err = pip_pulls[iPull].err;
+        float err = sqrt(pip_pulls[iPull].var);
         float resic = pip_pulls[iPull].resic;  // residual for FDC cathode
-        float errc = pip_pulls[iPull].errc;
+        float errc = sqrt(pip_pulls[iPull].varc);
         if (resi != resi || err != err || resic != resic || errc != errc || !isfinite(resi) || !isfinite(resic)) {
           contains_bad_pulls = true;
           break;
@@ -357,9 +357,9 @@ void DEventProcessor_MilleKs::Process(const std::shared_ptr<const JEvent> &event
       }
       for (size_t iPull = 0; iPull < pim_pulls.size(); ++iPull) {
         float resi = pim_pulls[iPull].resi;  // residual of measurement
-        float err = pim_pulls[iPull].err;
+        float err = sqrt(pim_pulls[iPull].var);
         float resic = pim_pulls[iPull].resic;  // residual for FDC cathode
-        float errc = pim_pulls[iPull].errc;
+        float errc = sqrt(pim_pulls[iPull].varc);
         if (resi != resi || err != err || resic != resic || errc != errc || !isfinite(resi) || !isfinite(resic)) {
           contains_bad_pulls = true;
           break;
@@ -379,11 +379,11 @@ void DEventProcessor_MilleKs::Process(const std::shared_ptr<const JEvent> &event
                               2528, 2710, 2907, 3104, 3313};
       for (size_t iPull = 0; iPull < pip_pulls.size(); ++iPull) {
         float resi = pip_pulls[iPull].resi;  // residual of measurement
-        float err = pip_pulls[iPull].err;    // estimated error of measurement
+        float err = sqrt(pip_pulls[iPull].var);    // estimated error of measurement
         const DCDCTrackHit *cdc_hit = pip_pulls[iPull].cdc_hit;
         const DFDCPseudo *fdc_hit = pip_pulls[iPull].fdc_hit;
         float resic = pip_pulls[iPull].resic;  // residual for FDC cathode measurement
-        float errc = pip_pulls[iPull].errc;
+        float errc = sqrt(pip_pulls[iPull].varc);
 
         vector<double> der = pip_pulls[iPull].trackDerivatives;
 
@@ -638,11 +638,11 @@ void DEventProcessor_MilleKs::Process(const std::shared_ptr<const JEvent> &event
       }
       for (size_t iPull = 0; iPull < pim_pulls.size(); ++iPull) {
         float resi = pim_pulls[iPull].resi;  // residual of measurement
-        float err = pim_pulls[iPull].err;    // estimated error of measurement
+        float err = sqrt(pim_pulls[iPull].var);    // estimated error of measurement
         const DCDCTrackHit *cdc_hit = pim_pulls[iPull].cdc_hit;
         const DFDCPseudo *fdc_hit = pim_pulls[iPull].fdc_hit;
         float resic = pim_pulls[iPull].resic;  // residual for FDC cathode measurement
-        float errc = pim_pulls[iPull].errc;
+        float errc = sqrt(pim_pulls[iPull].varc);
 
         vector<double> der = pim_pulls[iPull].trackDerivatives;
 
