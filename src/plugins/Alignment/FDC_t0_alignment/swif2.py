@@ -33,10 +33,11 @@ def main():
   subprocess.call(['swif2', 'create', work_flow])
   for runnum in run_list:
     call_list = ['swif2', 'add-job', '-workflow', work_flow, '-account', 'halld', '-partition', 'production']
-    call_list += ['-ram', '24g', '-os', 'el9', '-cores', "24", '-time', '1h']
+    call_list += ['-ram', '24g', '-os', 'el9', '-cores', "24", '-time', '4h', '-disk', '30gb']
     call_list += ['-stdout', swif_out_dir + '%s_%06d.out' % (work_flow, runnum)]
     call_list += ['-stderr', swif_out_dir + '%s_%06d.err' % (work_flow, runnum)]
     call_list += [script_dir + 'mille.py %s %d' % (input_par_file, runnum)]
+    #print(call_list)
     subprocess.call(call_list)
 
   subprocess.call(['swif2', 'run', work_flow])
