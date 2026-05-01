@@ -60,3 +60,10 @@ script to update the officiaal CCDB.
 This script should be used after `pede.py`.
 
 `./update_official_ccdb.py your_ccdb.sqlite 120297`
+
+## iter.py
+script which iterates over mille and pede for `niter` iterations.
+
+Replaces keyword `ITER` in iter_example with current number.
+
+`./iter.py your_iter_file 120297`
