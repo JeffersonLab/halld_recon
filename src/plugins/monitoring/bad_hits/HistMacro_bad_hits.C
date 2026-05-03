@@ -1,5 +1,5 @@
-// hnamepath: /bad_hits/hroc
-// hnamepath: /bad_hits/hroc_slot
+// hnamepath: /bad_hits/roc
+// hnamepath: /bad_hits/roc_slot
 // hnamepath: /bad_hits/num_events
 //
 // e-mail: njarvis@jlab.org
