@@ -183,7 +183,7 @@ string amorphous_label = "Normalized to Amorphous run 133141";
 			locHist_BeamEnergy_norm->SetLineColor(kRed-2);
 			locHist_BeamEnergy_norm->SetLineWidth(2);
 			locHist_BeamEnergy_norm->SetStats(0);		
-			locHist_BeamEnergy_norm->GetXaxis()->SetRangeUser(4, 12);
+			locHist_BeamEnergy_norm->GetXaxis()->SetRangeUser(0, 4);
 			locHist_BeamEnergy_norm->GetYaxis()->SetRangeUser(min, max);
 			locHist_BeamEnergy_norm->Draw("HIST");
 			
@@ -201,7 +201,7 @@ string amorphous_label = "Normalized to Amorphous run 133141";
 			latex.DrawLatex(6.0, 1.035*(max-min)+min, str);
 
 			latex.SetTextAngle(270);
-			latex.DrawLatex(12.5, (min+max)/2.0, amorphous_label.c_str());
+			latex.DrawLatex(4.2, (min+max)/2.0, amorphous_label.c_str());
 		}
 
 		TPad *beamenergypad = (TPad*)gDirectory->FindObjectAny("beamenergypad");

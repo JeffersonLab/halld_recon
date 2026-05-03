@@ -273,7 +273,7 @@ void JEventProcessor_highlevel_online::Init()
 	dHist_BeamEnergy_amo = new TH1I("BeamEnergy_amo", "Saved Tagger Beam Energy for AMO run;Beam Energy (GeV)", 240, 0.0, 12.0);
 
 	// Beam Energy from PS
-	dHist_PSPairEnergy = new TH1I("PSPairEnergy", "Reconstructed PS Beam Energy;Beam Energy (GeV)", 450, 3., 12.);
+	dHist_PSPairEnergy = new TH1I("PSPairEnergy", "Reconstructed PS Beam Energy;Beam Energy (GeV)", 600, 0., 12.);
 
 	// PVsTheta Time-Based Tracks
 	dHist_PVsTheta_Tracks = new TH2I("PVsTheta_Tracks", "P vs. #theta for time-based tracks;#theta#circ;p (GeV/c)", 280, 0.0, 140.0, 150, 0.0, 12.0);

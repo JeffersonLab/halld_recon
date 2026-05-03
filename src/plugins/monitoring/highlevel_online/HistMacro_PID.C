@@ -2,6 +2,7 @@
 // hnamepath: /highlevel/TwoGammaMass
 // hnamepath: /highlevel/PiPlusPiMinus
 // hnamepath: /highlevel/KPlusKMinus
+// hnamepath: /highlevel/PiMinusProton
 // hnamepath: /highlevel/PiPlusPiMinusPiZero
 // hnamepath: /highlevel/L1bits_gtp
 // hnamepath: /highlevel/PSPairEnergy
