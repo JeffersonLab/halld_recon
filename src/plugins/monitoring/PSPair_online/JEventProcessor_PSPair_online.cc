@@ -137,13 +137,13 @@ void JEventProcessor_PSPair_online::Init()
     lockService = app->GetService<JLockService>();
 
     // energy binning
-    const double Ebw_PS = 0.1;
-    const double Ebl_PS = 5.0; const double Ebl_PSarm = 2.0;
-    const double Ebh_PS = 13.0; const double Ebh_PSarm = 7.0;
+    const double Ebw_PS = 0.1/3;
+    const double Ebl_PS = 5.0/3; const double Ebl_PSarm = 2.0/3;
+    const double Ebh_PS = 13.0/3; const double Ebh_PSarm = 7.0/3;
     const int NEb_PS = int((Ebh_PS-Ebl_PS)/Ebw_PS); const int NEb_PSarm = int((Ebh_PSarm-Ebl_PSarm)/Ebw_PS);
-    const double Ebw_TAG = 0.1;
-    const double Ebl_TAG = 2.5;
-    const double Ebh_TAG = 10.5;
+    const double Ebw_TAG = 0.1/3;
+    const double Ebl_TAG = 2.5/3;
+    const double Ebh_TAG = 10.5/3;
     const int NEb_TAG = int((Ebh_TAG-Ebl_TAG)/Ebw_TAG);
     // time binning
     const double Tbw = 0.06;
