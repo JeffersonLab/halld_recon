@@ -5,7 +5,7 @@
 // hnamepath: /RF/DeltaT_RF_Itself/PSCRF_SelfDeltaT
 
 {
-	cout << "Entered macro: RF_online/HistMacro_RF_p1.C" << endl;
+  //cout << "Entered macro: RF_online/HistMacro_RF_p1.C" << endl;
 
 	TDirectory *locTopDirectory = gDirectory;
 
@@ -45,15 +45,12 @@
 	gPad->SetLogy(1);
 	if(locHist_FDCRF_SelfDeltaT != NULL)
 	{
-		TH1I* locHist = (TH1I*)locHist_FDCRF_SelfDeltaT->Clone("FDCRF_SelfDeltaT_rebinned");
-		locHist->SetTitle("RF FDC Self timing");
-		locHist->Rebin(14);
-
-		locHist->GetXaxis()->SetTitleSize(0.05);
-		locHist->GetYaxis()->SetTitleSize(0.05);
-		locHist->GetXaxis()->SetLabelSize(0.05);
-		locHist->GetYaxis()->SetLabelSize(0.05);
-		locHist->Draw();
+		locHist_FDCRF_SelfDeltaT->SetTitle("RF FDC Self timing");
+		locHist_FDCRF_SelfDeltaT->GetXaxis()->SetTitleSize(0.05);
+		locHist_FDCRF_SelfDeltaT->GetYaxis()->SetTitleSize(0.05);
+		locHist_FDCRF_SelfDeltaT->GetXaxis()->SetLabelSize(0.05);
+		locHist_FDCRF_SelfDeltaT->GetYaxis()->SetLabelSize(0.05);
+		locHist_FDCRF_SelfDeltaT->Draw();
 	}
 
 	locCanvas->cd(2);
@@ -62,15 +59,12 @@
 	gPad->SetLogy(1);
 	if(locHist_TOFRF_SelfDeltaT != NULL)
 	{
-		TH1I* locHist = (TH1I*)locHist_TOFRF_SelfDeltaT->Clone("TOFRF_SelfDeltaT_rebinned");
-		locHist->SetTitle("RF TOF Self timing");
-		locHist->Rebin(12);
-
-		locHist->GetXaxis()->SetTitleSize(0.05);
-		locHist->GetYaxis()->SetTitleSize(0.05);
-		locHist->GetXaxis()->SetLabelSize(0.05);
-		locHist->GetYaxis()->SetLabelSize(0.05);
-		locHist->Draw();
+		locHist_TOFRF_SelfDeltaT->SetTitle("RF TOF Self timing");
+		locHist_TOFRF_SelfDeltaT->GetXaxis()->SetTitleSize(0.05);
+		locHist_TOFRF_SelfDeltaT->GetYaxis()->SetTitleSize(0.05);
+		locHist_TOFRF_SelfDeltaT->GetXaxis()->SetLabelSize(0.05);
+		locHist_TOFRF_SelfDeltaT->GetYaxis()->SetLabelSize(0.05);
+		locHist_TOFRF_SelfDeltaT->Draw();
 	}
 
 	locCanvas->cd(3);
@@ -79,15 +73,12 @@
 	gPad->SetLogy(1);
 	if(locHist_TAGHRF_SelfDeltaT != NULL)
 	{
-		TH1I* locHist = (TH1I*)locHist_TAGHRF_SelfDeltaT->Clone("TAGHRF_SelfDeltaT_rebinned");
-		locHist->SetTitle("RF TAGH Self timing");
-		locHist->Rebin(14);
-
-		locHist->GetXaxis()->SetTitleSize(0.05);
-		locHist->GetYaxis()->SetTitleSize(0.05);
-		locHist->GetXaxis()->SetLabelSize(0.05);
-		locHist->GetYaxis()->SetLabelSize(0.05);
-		locHist->Draw();
+		locHist_TAGHRF_SelfDeltaT->SetTitle("RF TAGH Self timing");
+		locHist_TAGHRF_SelfDeltaT->GetXaxis()->SetTitleSize(0.05);
+		locHist_TAGHRF_SelfDeltaT->GetYaxis()->SetTitleSize(0.05);
+		locHist_TAGHRF_SelfDeltaT->GetXaxis()->SetLabelSize(0.05);
+		locHist_TAGHRF_SelfDeltaT->GetYaxis()->SetLabelSize(0.05);
+		locHist_TAGHRF_SelfDeltaT->Draw();
 	}
 
 	locCanvas->cd(4);
@@ -96,24 +87,21 @@
 	gPad->SetLogy(1);
 	if(locHist_PSCRF_SelfDeltaT != NULL)
 	{
-		TH1I* locHist = (TH1I*)locHist_PSCRF_SelfDeltaT->Clone("PSCRF_SelfDeltaT_rebinned");
-		locHist->SetTitle("RF PSC Self timing");
-		locHist->Rebin(14);
-
-		locHist->GetXaxis()->SetTitleSize(0.05);
-		locHist->GetYaxis()->SetTitleSize(0.05);
-		locHist->GetXaxis()->SetLabelSize(0.05);
-		locHist->GetYaxis()->SetLabelSize(0.05);
-		locHist->Draw();
+		locHist_PSCRF_SelfDeltaT->SetTitle("RF PSC Self timing");
+		locHist_PSCRF_SelfDeltaT->GetXaxis()->SetTitleSize(0.05);
+		locHist_PSCRF_SelfDeltaT->GetYaxis()->SetTitleSize(0.05);
+		locHist_PSCRF_SelfDeltaT->GetXaxis()->SetLabelSize(0.05);
+		locHist_PSCRF_SelfDeltaT->GetYaxis()->SetLabelSize(0.05);
+		locHist_PSCRF_SelfDeltaT->Draw();
 	}
 
-	cout << "end main part of macro: RF_online/HistMacro_RF_p1.C" << endl;
+	//cout << "end main part of macro: RF_online/HistMacro_RF_p1.C" << endl;
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------
-	cout << "check for RSAI in macro: RF_online/HistMacro_RF_p1.C" << endl;
+	//cout << "check for RSAI in macro: RF_online/HistMacro_RF_p1.C" << endl;
 	if( rs_GetFlag("Is_RSAI")==1 ){
 
-	  cout << "checking Nevents of macro: RF_online/HistMacro_RF_p1.C (" << Nevents << ")" << endl;
+	  //cout << "checking Nevents of macro: RF_online/HistMacro_RF_p1.C (" << Nevents << ")" << endl;
 
 	  auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
 	  if( min_events < 1 ) min_events = 1E5;
