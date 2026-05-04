@@ -86,7 +86,7 @@
 		max = (max_gtp>max_fp) ? max_gtp:max_fp;
 
 		const int bin_number = 8;
-		const char *bin_label[bin_number] = {"Main (1)", "BCal (3)", "PS (4)", "FCal LED (3)", "ECal LED (5)", "ECal #alpha (6)", "Random (12)", "DIRC LED (15)"};
+		const char *bin_label[bin_number] = {"BCal (1)", "BCal+FCal (3)", "PS (4)", "FCal LED (3)", "ECal LED (5)", "ECal #alpha (6)", "Random (12)", "DIRC LED (15)"};
 		TH1I *locHist_Trigger_GTP = (TH1I*) gDirectory->Get("locHist_Trigger_GTP");
                 if (!locHist_Trigger_GTP)
                   locHist_Trigger_GTP = new TH1I("locHist_Trigger_GTP", "L1 Trigger Bits", bin_number, 0, bin_number);
