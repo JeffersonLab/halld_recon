@@ -42,34 +42,84 @@
 	}
 
 
-	// find the 3 rocids with the most problems
-	int rocid[3] = {0};
-	int count[3] = {0};
-	
-        for (int i=1; i<=locHistroc->GetXaxis()->GetNbins(); i++) {
-	  int nerrors = locHistroc->GetBinContent(i);
-
-          if (nerrors > count[0]) {
-	    count[2] = count[1];
-	    count[1] = count[0];
-	    rocid[2] = rocid[1];
-	    rocid[1] = rocid[0];
-
-	    count[0] = nerrors;
-	    rocid[0] = i;
-	    
-          } else if (nerrors > count[1]) {
-	    count[2] = count[1];
-	    rocid[2] = rocid[1];
-	    count[1] = nerrors;
-	    rocid[1] = i;
-	    
-          }else if (nerrors > count[2]) {
-	    count[2] = nerrors;
-	    rocid[2] = i;
-          }
+        TH1I *hevents = (TH1I*)gDirectory->Get("num_events");
+	if (!hevents) {
+             std::cout << "HistMacro_bad_hits: unable to find /bad_hits/num_events !" << std::endl;
+	     return;
 	}
 
+        double Nevents = (double)hevents->GetBinContent(1);
+        if (debug) std::cout << "HistMacro_bad_hits: Nevents=" << Nevents << std::endl;
+
+	
+	double total_errors = locHistroc->GetEntries();
+
+        TString htitle = "Errors found in data bank(s) ";
+
+	// NB there is no bin 0.  GetBinCenter(1) = 0
+
+	if (total_errors > 0) {
+
+	  int special_bank_errs = 0;
+	  for (int i=i; i<7 ; i++) special_bank_errs += locHistroc->GetBinContent(i);
+
+	  if (special_bank_errs > 0) {
+	  
+	    TString banknames[6] = {"0:Swap ","1:TS scaler ","2:f250 scaler ","3:EPICS ","4:BOR ","5:Trigger "};
+  	    for (int i=1; i<7 ; i++) {
+	      if (locHistroc->GetBinContent(i) > 0) htitle.Append(banknames[i-1]);
+	    }
+
+	    if (special_bank_errs < (int)total_errors) htitle.Append("and ");
+
+	    cout << htitle << endl;
+	  }
+
+	  if (special_bank_errs < (int)total_errors) {
+
+	    htitle.Append("from ROCid(s) ");
+		      
+	    // find the 3 rocids with the most problems
+	    int rocid[3] = {0};
+	    int count[3] = {0};
+	
+	    for (int i=7; i<=locHistroc->GetXaxis()->GetNbins(); i++) {
+	      int nerrors = locHistroc->GetBinContent(i);
+
+	      if (nerrors > count[0]) {
+		count[2] = count[1];
+		count[1] = count[0];
+		rocid[2] = rocid[1];
+		rocid[1] = rocid[0];
+
+		count[0] = nerrors;
+		rocid[0] = i-1;
+	    
+	      } else if (nerrors > count[1]) {
+		count[2] = count[1];
+		rocid[2] = rocid[1];
+		count[1] = nerrors;
+		rocid[1] = i-1;
+	    
+	      } else if (nerrors > count[2]) {
+		count[2] = nerrors;
+		rocid[2] = i-1;
+	      }
+	    }
+
+	    int sum_rocs_counted = 0;
+	    for (int i=0; i<3 ; i++) {
+	      if (count[i] >0) htitle.Append(Form("%i ",rocid[i]));
+	      sum_rocs_counted += count[i];
+	    } 
+
+	    if (special_bank_errs + sum_rocs_counted  < (int)total_errors) htitle.Append("etc ");
+
+	  }
+
+	  htitle.Append(Form("in %.0f events",Nevents));
+
+	}
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -99,14 +149,10 @@
 		locHist->GetYaxis()->SetNdivisions(210);  
 		locHist->GetXaxis()->SetNdivisions(15);
 
-		if (rocid[2]>0) {
-		  locHist->SetTitle(Form("Format errors in rocs %i %i %i",rocid[0],rocid[1],rocid[2]));
-		} else if (rocid[1]>0) {
-		  locHist->SetTitle(Form("Format errors in rocs %i %i",rocid[0],rocid[1]));
-		} else if (rocid[0]>0) {
-		  locHist->SetTitle(Form("Format errors in roc %i",rocid[0]));		  
+		if (total_errors > 0) {
+		  locHist->SetTitle(htitle);
 		} else {
-		  locHist->SetTitle("No format errors found");
+		  locHist->SetTitle("No errors found");
 		}
 		
 		locHist->SetStats(0);
@@ -120,16 +166,6 @@
 
           if (debug) std::cout << "HistMacro_bad_hits: RSAI block" << std::endl;
 
-          double Nevents = 1.0;
-
-          TH1I *hevents = (TH1I*)gDirectory->Get("num_events");
-
-          if(hevents){
-             Nevents = (double)hevents->GetBinContent(1);
-             if (debug) std::cout << "HistMacro_bad_hits: Nevents=" << Nevents << std::endl;
-          }else{
-             std::cout << "HistMacro_bad_hits: unable to find /bad_hits/num_events !" << std::endl;
-          }
 
 	  auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
 	  if( min_events < 1 ) min_events = 1E4;
