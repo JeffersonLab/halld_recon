@@ -54,14 +54,26 @@
 	
 	double total_errors = locHistroc->GetEntries();
 
-        TString htitle = "Errors found in data bank(s) ";
+        TString htitle = "Errors found in data bank";
 
+	int num_banks = 0;
+	for (int i=1; i<=locHistroc->GetNbinsX(); i++) {
+	  if (locHistroc->GetBinContent(i) >0) num_banks++;
+	}
+
+	if (num_banks > 1) htitle.Append("s");
+	htitle.Append(" ");
+
+	
 	// NB there is no bin 0.  GetBinCenter(1) = 0
-
+	
 	if (total_errors > 0) {
 
 	  int special_bank_errs = 0;
-	  for (int i=i; i<7 ; i++) special_bank_errs += locHistroc->GetBinContent(i);
+
+	  for (int i=1 ; i<7 ; i++) {
+	    special_bank_errs += locHistroc->GetBinContent(i);
+	  }
 
 	  if (special_bank_errs > 0) {
 	  
@@ -71,13 +83,11 @@
 	    }
 
 	    if (special_bank_errs < (int)total_errors) htitle.Append("and ");
-
-	    cout << htitle << endl;
 	  }
 
 	  if (special_bank_errs < (int)total_errors) {
 
-	    htitle.Append("from ROCid(s) ");
+	    htitle.Append("from ROCid");
 		      
 	    // find the 3 rocids with the most problems
 	    int rocid[3] = {0};
@@ -107,9 +117,15 @@
 	      }
 	    }
 
+	    if (count[1] > 0) htitle.Append("s");
+	    htitle.Append(" ");
+	    
 	    int sum_rocs_counted = 0;
 	    for (int i=0; i<3 ; i++) {
-	      if (count[i] >0) htitle.Append(Form("%i ",rocid[i]));
+	      if (count[i]>0) {
+		if (i>0) htitle.Append("and ");
+	        htitle.Append(Form("%i ",rocid[i]));
+	      }
 	      sum_rocs_counted += count[i];
 	    } 
 
@@ -121,6 +137,9 @@
 
 	}
 
+
+	cout << htitle << endl;
+	
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
 	if(TVirtualPad::Pad() == NULL)
