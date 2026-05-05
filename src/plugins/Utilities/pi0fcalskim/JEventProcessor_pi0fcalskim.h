@@ -42,6 +42,8 @@ class JEventProcessor_pi0fcalskim:public JEventProcessor{
   int    MIN_BLOCKS;
   
   int SAVE_TOF_HITS;
+  
+  int TRACKING_SELECTIONS;
 
   int WRITE_ROOT;
   int WRITE_EVIO;

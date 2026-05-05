@@ -20,6 +20,9 @@
 #include "PID/DEventRFBunch.h"
 #include "HDDM/DEventWriterHDDM.h"
 #include "TOF/DTOFPoint.h"
+#include "PID/DChargedTrack.h"
+#include "PID/DChargedTrackHypothesis.h"
+
 
 #include "GlueX.h"
 #include <vector>
@@ -83,6 +86,8 @@ void JEventProcessor_pi0fcalskim::Init()
 
 	WRITE_ROOT = 0;
 	WRITE_EVIO = 1;
+	
+	TRACKING_SELECTIONS = 0;
 
 	app->SetDefaultParameter( "PI0FCALSKIM:MIN_MASS", MIN_MASS, "Minimum two-gamma invariant mass to save (default=0.0 GeV)" );
 	app->SetDefaultParameter( "PI0FCALSKIM:MAX_MASS", MAX_MASS, "Maximum two-gamma invariant mass to save (default=1.0 GeV)" );
@@ -93,6 +98,7 @@ void JEventProcessor_pi0fcalskim::Init()
 	//app->SetDefaultParameter( "PI0FCALSKIM:MIN_BLOCKS", MIN_BLOCKS );
 	//app->SetDefaultParameter( "PI0FCALSKIM:WRITE_ROOT", WRITE_ROOT );
 	app->SetDefaultParameter( "PI0FCALSKIM:SAVE_TOF_HITS", MAX_DT, "Save hits from TOF points (default=1)" );
+	app->SetDefaultParameter( "PI0FCALSKIM:TRACKING_SELECTIONS", TRACKING_SELECTIONS, "Select neutral events with one track in the CDC (default=0)" );
 
 	num_epics_events = 0;
 /*
@@ -194,6 +200,29 @@ void JEventProcessor_pi0fcalskim::Process(const std::shared_ptr<const JEvent>& e
         locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches[0]));
     }
 
+
+  if(TRACKING_SELECTIONS) {
+  		vector<const DChargedTrack *> locChargedTracks;
+  		event->Get(locChargedTracks);
+  
+  		int numCDCTracks = 0, numFDCTracks = 0;
+  		
+        for (auto *theTrack : locChargedTracks) {
+       		const DChargedTrackHypothesis *bestTrackHypo = theTrack->Get_BestTrackingFOM();
+       		
+       		if(bestTrackHypo->momentum().Theta()*TMath::RadToDeg() > 10.)
+       			numCDCTracks++;
+       		else 
+       			numFDCTracks++;
+       }
+       
+       if( (numCDCTracks==1) && (numFDCTracks==0) && (locFCALShowers.size()>0.) ) {
+       		for(unsigned int i=0; i<locFCALShowers.size(); i++)
+       			locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[i]));
+       }
+       
+  } else {
+
   DVector3 norm(0.0,0.0,-1);
   DVector3 pos,mom;
  // Double_t radius = 0;
@@ -292,7 +321,9 @@ void JEventProcessor_pi0fcalskim::Process(const std::shared_ptr<const JEvent>& e
                 locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[j]));
         }
  	  }
- 	}		
+ 	}	
+ 	
+  }	
  
  if( Candidate ){
 
