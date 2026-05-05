@@ -8,9 +8,9 @@
 //
 //  This plot should be completely empty (white).
 //  
-//  Any filled cells indicate a data format problem with an fadc.
+//  Any filled cells indicate a problem with an evio data bank, or unlocked TDCs.
 //
-//  If there are many filled cells, stop the DAQ, reboot the bad ROC (the ROCid is on the plot's x-axis) and restart the DAQ.  If that does not clear the error, contact a DAQ expert. 
+//  If there are many filled cells in one ROC, rebooting it might help.  Stop the DAQ, reboot the bad ROC (the ROCid is on the plot's x-axis) and restart the DAQ. 
 //  
 // End Guidance: ----------------------------------------
 
@@ -54,7 +54,7 @@
 	
 	double total_errors = locHistroc->GetEntries();
 
-        TString htitle = "Errors found in data bank";
+        TString htitle = "Errors in data bank";
 
 	int num_banks = 0;
 	for (int i=1; i<=locHistroc->GetNbinsX(); i++) {
@@ -77,7 +77,7 @@
 
 	  if (special_bank_errs > 0) {
 	  
-	    TString banknames[6] = {"0:Swap ","1:TS scaler ","2:f250 scaler ","3:EPICS ","4:BOR ","5:Trigger "};
+	    TString banknames[6] = {"0 (swap) ","1 (TS scalers) ","2 (f250 scalers) ","3 (EPICS) ","4 (BOR) ","5 (Triggers) "};
   	    for (int i=1; i<7 ; i++) {
 	      if (locHistroc->GetBinContent(i) > 0) htitle.Append(banknames[i-1]);
 	    }
@@ -87,7 +87,7 @@
 
 	  if (special_bank_errs < (int)total_errors) {
 
-	    htitle.Append("from ROCid");
+	    htitle.Append("from ROC");
 		      
 	    // find the 3 rocids with the most problems
 	    int rocid[3] = {0};
@@ -123,22 +123,20 @@
 	    int sum_rocs_counted = 0;
 	    for (int i=0; i<3 ; i++) {
 	      if (count[i]>0) {
-		if (i>0) htitle.Append("and ");
-	        htitle.Append(Form("%i ",rocid[i]));
+		if (i>0) htitle.Append(" and ");
+	        htitle.Append(Form("%i",rocid[i]));
 	      }
 	      sum_rocs_counted += count[i];
 	    } 
 
-	    if (special_bank_errs + sum_rocs_counted  < (int)total_errors) htitle.Append("etc ");
+	    if (special_bank_errs + sum_rocs_counted  < (int)total_errors) htitle.Append(" etc");
 
 	  }
 
-	  htitle.Append(Form("in %.0f events",Nevents));
+	  htitle.Append(Form(".  Events processed: %.0f",Nevents));
 
 	}
 
-
-	cout << htitle << endl;
 	
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -171,7 +169,7 @@
 		if (total_errors > 0) {
 		  locHist->SetTitle(htitle);
 		} else {
-		  locHist->SetTitle("No errors found");
+		  locHist->SetTitle(Form("No errors found.  Events processed: %.0f",Nevents));
 		}
 		
 		locHist->SetStats(0);
