@@ -351,7 +351,7 @@ void DL1MCTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
       trig_tmp.type          =  3;
       triggers_enabled.push_back(trig_tmp);
       
-      if(ecal_installed == 1) Load_ECAL_mask_default();
+      if(ecal_installed) Load_ECAL_mask_default();
     
       if(print_messages){ 
 	cout << " Do not use RCDB for the trigger simulation. Default (spring 2025) trigger settings with the ECAL are used." << endl;
@@ -368,101 +368,101 @@ void DL1MCTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   if (fcalGeomVect.size() < 1)
     return; // OBJECT_NOT_AVAILABLE;
   const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
-  
-  // extract the ECAL Geometry
-  vector<const DECALGeometry*> ecalGeomVect;
-  event->Get( ecalGeomVect );
-  if (ecalGeomVect.size() < 1)
-    return; // OBJECT_NOT_AVAILABLE;
-  const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
 
- 
-  
-  // ---------------------------------------------------------------
-  // ---------------- LOAD ECAL PARAMETERS FROM CCDB ---------------
-  // ---------------------------------------------------------------
-  
-  vector< double > ecal_gains_ch;
-  vector< double > ecal_pedestals_ch;
-  vector< double > ecal_bad_blocks_ch;
-  
-  if (calibration->Get("/ECAL/gains", ecal_gains_ch)){
-    jout << "DL1MCTrigger_factory: Error loading /ECAL/gains !" << jendl;
-    // Load default values of gains if CCDB table is not found
-    for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
-      for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
-	ecal_gains[ii][jj] = 1.;	
-      }
-    }
-  } else {
-    LoadECALConst(ecal_gains, ecal_gains_ch, ecalGeom);
+  if(ecal_installed){
+    // extract the ECAL Geometry
+    vector<const DECALGeometry*> ecalGeomVect;
+    event->Get( ecalGeomVect );
+    if (ecalGeomVect.size() < 1)
+      return; // OBJECT_NOT_AVAILABLE;
+    const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
     
-    if(VERBOSE == 1){
-      for(int ch = 0; ch < (int)ecal_gains_ch.size(); ch++){	
-	int row = ecalGeom.row(ch);
-	int col = ecalGeom.column(ch);	
-	// Sanity check for regular ECAL (row,col) ranges
-	if(ecalGeom.isBlockActive(row,col) && row<DECALGeometry::kECALBlocksTall
-	   && col<DECALGeometry::kECALBlocksWide){
-	  DVector2 pos = ecalGeom.positionOnFace(row,col);
-	  cout << "  ECAL GAINS:  COL =  "  <<  col << "  ROW = " << row <<  "  X = " << pos.X() <<  "  Y = " <<  pos.Y() <<  "  GAIN = " << ecal_gains[row][col] << endl;
-	} 
-      }
-      cout << endl;      
-    }        
-  }
-  
-  if (calibration->Get("/ECAL/pedestals", ecal_pedestals_ch)){
-    jout << "DL1MCTrigger_factory: Error loading /ECAL/pedestals !" << jendl;
-    // Load default values of pedestals if CCDB table is not found
-    for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
-      for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
-	ecal_pedestals[ii][jj] = 100.;	
-      }
-    }
-  } else {
-    LoadECALConst(ecal_pedestals, ecal_pedestals_ch, ecalGeom);
     
-    if(VERBOSE == 1){
-      for(int ch = 0; ch < (int)ecal_pedestals_ch.size(); ch++){
-	int row = ecalGeom.row(ch);
-	int col = ecalGeom.column(ch);
-	// Sanity check for regular ECAL (row,col) ranges
-	if(ecalGeom.isBlockActive(row,col)&&row<DECALGeometry::kECALBlocksTall
-	   && col<DECALGeometry::kECALBlocksWide){
+    // ---------------------------------------------------------------
+    // ---------------- LOAD ECAL PARAMETERS FROM CCDB ---------------
+    // ---------------------------------------------------------------
+    
+    vector< double > ecal_gains_ch;
+    vector< double > ecal_pedestals_ch;
+    vector< double > ecal_bad_blocks_ch;
+    
+    if (calibration->Get("/ECAL/gains", ecal_gains_ch)){
+      jout << "DL1MCTrigger_factory: Error loading /ECAL/gains !" << jendl;
+      // Load default values of gains if CCDB table is not found
+      for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
+	for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
+	  ecal_gains[ii][jj] = 1.;	
+	}
+      }
+    } else {
+      LoadECALConst(ecal_gains, ecal_gains_ch, ecalGeom);
+      
+      if(VERBOSE == 1){
+	for(int ch = 0; ch < (int)ecal_gains_ch.size(); ch++){	
+	  int row = ecalGeom.row(ch);
+	  int col = ecalGeom.column(ch);	
+	  // Sanity check for regular ECAL (row,col) ranges
+	  if(ecalGeom.isBlockActive(row,col) && row<DECALGeometry::kECALBlocksTall
+	     && col<DECALGeometry::kECALBlocksWide){
+	    DVector2 pos = ecalGeom.positionOnFace(row,col);
+	    cout << "  ECAL GAINS:  COL =  "  <<  col << "  ROW = " << row <<  "  X = " << pos.X() <<  "  Y = " <<  pos.Y() <<  "  GAIN = " << ecal_gains[row][col] << endl;
+	  } 
+	}
+	cout << endl;      
+      }        
+    }
+    
+    if (calibration->Get("/ECAL/pedestals", ecal_pedestals_ch)){
+      jout << "DL1MCTrigger_factory: Error loading /ECAL/pedestals !" << jendl;
+      // Load default values of pedestals if CCDB table is not found
+      for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
+	for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
+	  ecal_pedestals[ii][jj] = 100.;	
+      }
+      }
+    } else {
+      LoadECALConst(ecal_pedestals, ecal_pedestals_ch, ecalGeom);
+      
+      if(VERBOSE == 1){
+	for(int ch = 0; ch < (int)ecal_pedestals_ch.size(); ch++){
+	  int row = ecalGeom.row(ch);
+	  int col = ecalGeom.column(ch);
+	  // Sanity check for regular ECAL (row,col) ranges
+	  if(ecalGeom.isBlockActive(row,col)&&row<DECALGeometry::kECALBlocksTall
+	     && col<DECALGeometry::kECALBlocksWide){
 	  cout << "ECAL Pedestals: COL =  " << col << "  ROW =  " << row << "  Pedestal " << ecal_pedestals[row][col] << endl;
-	}
-      }	
-    }
-    cout << endl;
-  }
-
-  
-  if (calibration->Get("/ECAL/bad_block", ecal_bad_blocks_ch)){
-    jout << "DL1MCTrigger_factory: Error loading /ECAL/bad_block !" << jendl;
-    // Load default values of bad blocks if CCDB table is not found
-    for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
-      for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
-	ecal_bad_blocks[ii][jj] = 0.;	
+	  }
+	}	
       }
+      cout << endl;
     }
-  } else {
-    LoadECALConst(ecal_bad_blocks, ecal_bad_blocks_ch, ecalGeom);
     
-    if(VERBOSE == 1){
-      for(int ch = 0; ch < (int)ecal_bad_blocks_ch.size(); ch++){
-	int row = ecalGeom.row(ch);
-	int col = ecalGeom.column(ch);
-	// Sanity check for regular ECAL (row,col) ranges
-	if(ecalGeom.isBlockActive(row,col)&&row<DECALGeometry::kECALBlocksTall
-	   && col<DECALGeometry::kECALBlocksWide){
-	  cout << "ECAL Bad block:  COL =  " << col << "  ROW =  " << row << "  Bad block =  " << ecal_bad_blocks[row][col] << endl;
+    
+    if (calibration->Get("/ECAL/bad_block", ecal_bad_blocks_ch)){
+      jout << "DL1MCTrigger_factory: Error loading /ECAL/bad_block !" << jendl;
+      // Load default values of bad blocks if CCDB table is not found
+      for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
+	for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
+	  ecal_bad_blocks[ii][jj] = 0.;	
 	}
-      }	
-    }    
-  }
-
-
+      }
+    } else {
+      LoadECALConst(ecal_bad_blocks, ecal_bad_blocks_ch, ecalGeom);
+      
+      if(VERBOSE == 1){
+	for(int ch = 0; ch < (int)ecal_bad_blocks_ch.size(); ch++){
+	  int row = ecalGeom.row(ch);
+	  int col = ecalGeom.column(ch);
+	  // Sanity check for regular ECAL (row,col) ranges
+	  if(ecalGeom.isBlockActive(row,col)&&row<DECALGeometry::kECALBlocksTall
+	     && col<DECALGeometry::kECALBlocksWide){
+	    cout << "ECAL Bad block:  COL =  " << col << "  ROW =  " << row << "  Bad block =  " << ecal_bad_blocks[row][col] << endl;
+	  }
+	}	
+      }    
+    }
+  }  // ECAL installled
+  
   // ---------------------------------------------------------------
   // ---------------- LOAD ECAL PARAMETERS FROM CCDB ---------------
   // ---------------------------------------------------------------
@@ -758,7 +758,8 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	vector<const DSCHit*>    sc_hits;
 
 	event->Get(fcal_hits);
-	event->Get(ecal_hits);		
+	if(ecal_installed)
+	  event->Get(ecal_hits);	
 	event->Get(bcal_hits);
 	event->Get(sc_hits);
 
@@ -821,133 +822,135 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	// ------------------------------------------
 	// ----------  ECAL energy sum  -------------
 	// ------------------------------------------
-
-	//  ECAL energy sum	
 	double ecal_hit_en = 0;
-	
-	for (unsigned int ii = 0; ii < ecal_hits.size(); ii++){
 
-	  int row  = ecal_hits[ii]->row;
-	  int col  = ecal_hits[ii]->column;
-
+	if(ecal_installed){
+	  //  ECAL energy sum	
+	  //	  double ecal_hit_en = 0;
 	  
-	  // Shift time to simulate pile up hits
-	  double time = ecal_hits[ii]->t + time_shift;
-	  if((time < time_min) || (time > time_max)){
-	    continue;
-	  }
-	  
-	  // Check channels masked for trigger
-	  int ch_masked = 0;
-
-	  //	  if( (col >= 14 && col <= 25) && (row >= 14 && row <= 25)) ch_masked = 1;	  
-	  for(unsigned int jj = 0; jj < ecal_trig_mask.size(); jj++){	   
-
-	    if( (row == ecal_trig_mask[jj].row) && (col == ecal_trig_mask[jj].col)){	      
-	      ch_masked = 1;
-	      if(VERBOSE == 3)
-		cout << " ECAL mask found " << row << "  Col = " << col << endl;
-	      break;
-	    } 
-	  }
-	  
-	  if(ch_masked == 0){
+	  for (unsigned int ii = 0; ii < ecal_hits.size(); ii++){
 	    
-	    ecal_hit_en += ecal_hits[ii]->E;
+	    int row  = ecal_hits[ii]->row;
+	    int col  = ecal_hits[ii]->column;
+	    
+	    
+	    // Shift time to simulate pile up hits
+	    double time = ecal_hits[ii]->t + time_shift;
+	    if((time < time_min) || (time > time_max)){
+	      continue;
+	    }
+	    
+	    // Check channels masked for trigger
+	    int ch_masked = 0;
+	    
+	    //	  if( (col >= 14 && col <= 25) && (row >= 14 && row <= 25)) ch_masked = 1;	  
+	    for(unsigned int jj = 0; jj < ecal_trig_mask.size(); jj++){	   
+	      
+	      if( (row == ecal_trig_mask[jj].row) && (col == ecal_trig_mask[jj].col)){	      
+		ch_masked = 1;
+		if(VERBOSE == 3)
+		  cout << " ECAL mask found " << row << "  Col = " << col << endl;
+		break;
+	      } 
+	    }
+	    
+	    if(ch_masked == 0){
+	      
+	      ecal_hit_en += ecal_hits[ii]->E;
+	      
+	      ecal_signal ecal_tmp;
+	      ecal_tmp.merged = 0;
+	      
+	      ecal_tmp.row     = row;
+	      ecal_tmp.column  = col;
+	      
+	      ecal_tmp.energy  = ecal_hits[ii]->E;
+	      ecal_tmp.time    = time;
+	      memset(ecal_tmp.adc_amp,0,sizeof(ecal_tmp.adc_amp));
+	      memset(ecal_tmp.adc_en, 0,sizeof(ecal_tmp.adc_en));
+	      
+	      double ecal_adc_en  = ecal_tmp.energy*ECAL_ADC_PER_MEV*1000;
+	      
+	      // Account for gain fluctuations
+	      if(simu_gain_ecal && row<DECALGeometry::kECALBlocksTall
+		 && col<DECALGeometry::kECALBlocksWide){
+		
+		double gain  =  ecal_gains[row][col];
+		
+		if(gain > 0.)
+		  ecal_adc_en /= gain;
+		
+	      }
+	      
+	      status = SignalPulse(ecal_adc_en, ecal_tmp.time, ecal_tmp.adc_en, 3);
+	      status = 0;
+	      
+	      ecal_signal_hits.push_back(ecal_tmp);
+	    }
+	    
+	  }
+	  
+	  // Merge ECAL hits
+	  for(unsigned int ii = 0; ii < ecal_signal_hits.size(); ii++){	  
+	    
+	    if(ecal_signal_hits[ii].merged == 1) continue;
 	    
 	    ecal_signal ecal_tmp;
-	    ecal_tmp.merged = 0;
+	    ecal_tmp.row     = ecal_signal_hits[ii].row;
+	    ecal_tmp.column  = ecal_signal_hits[ii].column;
+	    ecal_tmp.energy  = 0.;
+	    ecal_tmp.time    = 0.;
+	    for(int kk = 0; kk < sample; kk++)	      
+	      ecal_tmp.adc_en[kk] = ecal_signal_hits[ii].adc_en[kk];
 	    
-	    ecal_tmp.row     = row;
-	    ecal_tmp.column  = col;
-
-	    ecal_tmp.energy  = ecal_hits[ii]->E;
-	    ecal_tmp.time    = time;
-	    memset(ecal_tmp.adc_amp,0,sizeof(ecal_tmp.adc_amp));
-	    memset(ecal_tmp.adc_en, 0,sizeof(ecal_tmp.adc_en));
-
-	    double ecal_adc_en  = ecal_tmp.energy*ECAL_ADC_PER_MEV*1000;
-
-	    // Account for gain fluctuations
-	    if(simu_gain_ecal && row<DECALGeometry::kECALBlocksTall
-	       && col<DECALGeometry::kECALBlocksWide){
-	      
-	      double gain  =  ecal_gains[row][col];
-
-	      if(gain > 0.)
-		ecal_adc_en /= gain;
-	      
+	    for(unsigned int jj = ii + 1; jj < ecal_signal_hits.size(); jj++){
+	      if((ecal_signal_hits[ii].row     ==  ecal_signal_hits[jj].row) &&
+		 (ecal_signal_hits[ii].column  ==  ecal_signal_hits[jj].column)){
+		
+		ecal_signal_hits[jj].merged = 1;
+		
+		for(int kk = 0; kk < sample; kk++)	      
+		  ecal_tmp.adc_en[kk] += ecal_signal_hits[jj].adc_en[kk];	
+	      }
 	    }
 	    
-	    status = SignalPulse(ecal_adc_en, ecal_tmp.time, ecal_tmp.adc_en, 3);
-	    status = 0;
-
-	    ecal_signal_hits.push_back(ecal_tmp);
-	  }
+	    ecal_merged_hits.push_back(ecal_tmp);
+	  }	
 	  
-	}
-	
-	// Merge ECAL hits
-	for(unsigned int ii = 0; ii < ecal_signal_hits.size(); ii++){	  
-	  
-	  if(ecal_signal_hits[ii].merged == 1) continue;
-	  
-	  ecal_signal ecal_tmp;
-	  ecal_tmp.row     = ecal_signal_hits[ii].row;
-	  ecal_tmp.column  = ecal_signal_hits[ii].column;
-	  ecal_tmp.energy  = 0.;
-	  ecal_tmp.time    = 0.;
-	  for(int kk = 0; kk < sample; kk++)	      
-	    ecal_tmp.adc_en[kk] = ecal_signal_hits[ii].adc_en[kk];
-	  
-	  for(unsigned int jj = ii + 1; jj < ecal_signal_hits.size(); jj++){
-	    if((ecal_signal_hits[ii].row     ==  ecal_signal_hits[jj].row) &&
-	       (ecal_signal_hits[ii].column  ==  ecal_signal_hits[jj].column)){
-
-	      ecal_signal_hits[jj].merged = 1;
-	      
-	      for(int kk = 0; kk < sample; kk++)	      
-		ecal_tmp.adc_en[kk] += ecal_signal_hits[jj].adc_en[kk];	
+	  // Add baseline fluctuations for channels with hits
+	  if(simu_baseline_ecal){
+	    for(unsigned int ii = 0; ii < ecal_merged_hits.size(); ii++){
+	      int row      =  ecal_merged_hits[ii].row;
+	      int column   =  ecal_merged_hits[ii].column;
+	      double pedestal = 100.0;
+	      if (row<DECALGeometry::kECALBlocksTall
+		  && column<DECALGeometry::kECALBlocksWide){
+		pedestal = ecal_pedestals[row][column];
+	      }
+	      AddBaseline(ecal_merged_hits[ii].adc_en, pedestal, gDRandom);       
 	    }
 	  }
 	  
-	  ecal_merged_hits.push_back(ecal_tmp);
-	}	
 	
-	// Add baseline fluctuations for channels with hits
-	if(simu_baseline_ecal){
+	  // ECAL Digitize		
 	  for(unsigned int ii = 0; ii < ecal_merged_hits.size(); ii++){
-	    int row      =  ecal_merged_hits[ii].row;
-	    int column   =  ecal_merged_hits[ii].column;
-	    double pedestal = 100.0;
-	    if (row<DECALGeometry::kECALBlocksTall
-		&& column<DECALGeometry::kECALBlocksWide){
-	      pedestal = ecal_pedestals[row][column];
-	    }
-	    AddBaseline(ecal_merged_hits[ii].adc_en, pedestal, gDRandom);       
+	    Digitize(ecal_merged_hits[ii].adc_en,ecal_merged_hits[ii].adc_amp);
 	  }
-	}
+	
+	  int ecal_hit_adc_en = 0;
+	  
+	  for(unsigned int ii = 0; ii < ecal_merged_hits.size(); ii++)
+	    for(int jj = 0; jj < sample; jj++)
+	      if( (ecal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE) > 0.)
+		ecal_hit_adc_en += (ecal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE);
+	  
+	  
+	  status += FADC_SSP(ecal_merged_hits, 3);
+	  
+	  status += GTP(3);       
 
-	
-	// ECAL Digitize		
-	for(unsigned int ii = 0; ii < ecal_merged_hits.size(); ii++){
-	  Digitize(ecal_merged_hits[ii].adc_en,ecal_merged_hits[ii].adc_amp);
-	}
-	
-	int ecal_hit_adc_en = 0;
-	
-	for(unsigned int ii = 0; ii < ecal_merged_hits.size(); ii++)
-	  for(int jj = 0; jj < sample; jj++)
-	    if( (ecal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE) > 0.)
-	      ecal_hit_adc_en += (ecal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE);
-	
-	
-	status += FADC_SSP(ecal_merged_hits, 3);
-	
-      	status += GTP(3);       
-
-	
-
+	}  // ECAL installed
+	  
 	
 	//  FCAL energy sum	
 	double fcal_hit_en = 0;
@@ -1582,54 +1585,56 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
       
   }
 
+  
   // Load ECAL Trigger Masks. Temporarily loaded from a function. Will be updated when masks are uploaded to the RCDB
-  Load_ECAL_mask();
+  if(ecal_installed){
+    Load_ECAL_mask();
 
-  for(unsigned int ii = 0; ii < ecal_trig_mask.size(); ii++){
+    for(unsigned int ii = 0; ii < ecal_trig_mask.size(); ii++){
     
-    //    cout << " ecal_trig_mask:  II = " << ii <<  " Roc = "  << ecal_trig_mask[ii].roc << "  Slot = " << ecal_trig_mask[ii].slot << " Ch = " << ecal_trig_mask[ii].ch << endl;
+      //    cout << " ecal_trig_mask:  II = " << ii <<  " Roc = "  << ecal_trig_mask[ii].roc << "  Slot = " << ecal_trig_mask[ii].slot << " Ch = " << ecal_trig_mask[ii].ch << endl;
     
-    uint32_t roc_id     =   ecal_trig_mask[ii].roc;
-    unsigned int slot   =   ecal_trig_mask[ii].slot;
-    unsigned int ch     =   ecal_trig_mask[ii].ch;
-    
-    DTranslationTable::csc_t daq_index = {roc_id, slot, ch };
-    
-    DTranslationTable::DChannelInfo channel_info;
-    
-    try {		
-      channel_info = ttab[0]->GetDetectorIndex(daq_index);	      
+      uint32_t roc_id     =   ecal_trig_mask[ii].roc;
+      unsigned int slot   =   ecal_trig_mask[ii].slot;
+      unsigned int ch     =   ecal_trig_mask[ii].ch;
+      
+      DTranslationTable::csc_t daq_index = {roc_id, slot, ch };
+      
+      DTranslationTable::DChannelInfo channel_info;
+      
+      try {		
+	channel_info = ttab[0]->GetDetectorIndex(daq_index);	      
+      }
+      
+      catch(...){
+	if(VERBOSE && print_messages) cout << "Exception: ECAL channel is not in the translation table  " <<  " Crate = " << roc_id << "  Slot = " << slot << 
+					" Channel = " << ch << endl;
+	continue;
+      } 
+      
+      int idx_col = channel_info.fcal.col;
+      int idx_row = channel_info.fcal.row;
+      
+      if(idx_col < 0)
+	ecal_trig_mask[ii].col = idx_col + 20;
+      else if(idx_col > 0) 
+	ecal_trig_mask[ii].col = idx_col + 19;
+      
+      if(idx_row < 0)
+	ecal_trig_mask[ii].row = idx_row + 20;
+      else if(idx_row > 0) 
+	ecal_trig_mask[ii].row = idx_row + 19;
+      
     }
     
-    catch(...){
-      if(VERBOSE && print_messages) cout << "Exception: ECAL channel is not in the translation table  " <<  " Crate = " << roc_id << "  Slot = " << slot << 
-				      " Channel = " << ch << endl;
-      continue;
-    } 
-
-    int idx_col = channel_info.fcal.col;
-    int idx_row = channel_info.fcal.row;
-
-    if(idx_col < 0)
-      ecal_trig_mask[ii].col = idx_col + 20;
-    else if(idx_col > 0) 
-      ecal_trig_mask[ii].col = idx_col + 19;
-    
-    if(idx_row < 0)
-      ecal_trig_mask[ii].row = idx_row + 20;
-    else if(idx_row > 0) 
-      ecal_trig_mask[ii].row = idx_row + 19;
-    
-  }
-  
-  if(VERBOSE == 1){
-    cout << "NUMBER OF MASKED ECAL CHANNELS = " << ecal_trig_mask.size() << endl;
-    for(unsigned int ii = 0; ii < ecal_trig_mask.size(); ii++){    
-      cout << " ecal_trig_mask:  II = " << ii <<  "  ROC = "  << ecal_trig_mask[ii].roc << "  Slot = " << ecal_trig_mask[ii].slot << " Ch = " << ecal_trig_mask[ii].ch << 
-	"  Column = " << ecal_trig_mask[ii].col <<  "  Row = " << ecal_trig_mask[ii].row << endl;
+    if(VERBOSE == 1){
+      cout << "NUMBER OF MASKED ECAL CHANNELS = " << ecal_trig_mask.size() << endl;
+      for(unsigned int ii = 0; ii < ecal_trig_mask.size(); ii++){    
+	cout << " ecal_trig_mask:  II = " << ii <<  "  ROC = "  << ecal_trig_mask[ii].roc << "  Slot = " << ecal_trig_mask[ii].slot << " Ch = " << ecal_trig_mask[ii].ch << 
+	  "  Column = " << ecal_trig_mask[ii].col <<  "  Row = " << ecal_trig_mask[ii].row << endl;
+      }
     }
-  }
-  
+  }  // ECAL installed
 
   
   // Load FCAL Trigger Masks
@@ -2062,14 +2067,19 @@ void DL1MCTrigger_factory::PrintTriggers(){
   cout << "USE RCDB = "  <<  use_rcdb  <<  endl;
 
   cout << endl;
-  
-  cout << "----------- ECAL ----------- " << endl << endl;
 
-  cout << "ECAL_CELL_THR  = " <<  setw(10) <<  ECAL_CELL_THR <<  endl;
-  cout << "ECAL_NSA       = " <<  setw(10) <<  ECAL_NSA      <<  endl;
-  cout << "ECAL_NSB       = " <<  setw(10) <<  ECAL_NSB      <<  endl;
-  cout << "ECAL_WINDOW    = " <<  setw(10) <<  ECAL_WINDOW   <<  endl;
-  
+  if(ecal_installed){ 
+    
+    cout << "----------- ECAL ----------- " << endl << endl;
+    
+    cout << "ECAL_CELL_THR  = " <<  setw(10) <<  ECAL_CELL_THR <<  endl;
+    cout << "ECAL_NSA       = " <<  setw(10) <<  ECAL_NSA      <<  endl;
+    cout << "ECAL_NSB       = " <<  setw(10) <<  ECAL_NSB      <<  endl;
+    cout << "ECAL_WINDOW    = " <<  setw(10) <<  ECAL_WINDOW   <<  endl;
+  } else {
+    cout << "ECAL was not installed in this run " << endl;
+    cout << endl;
+  }
   
   cout << "----------- FCAL ----------- " << endl << endl;
 
@@ -2143,17 +2153,27 @@ void DL1MCTrigger_factory::PrintTriggers(){
 
   cout << endl;
 
-  cout << "ECAL_TRIG_GAIN  =  "   <<  ECAL_TRIG_GAIN << "    FCAL_TRIG_GAIN  =  " << FCAL_TRIG_GAIN << endl;
+  if(ecal_installed){
+    cout << "ECAL_TRIG_GAIN  =  "   <<  ECAL_TRIG_GAIN << "    FCAL_TRIG_GAIN  =  " << FCAL_TRIG_GAIN << endl;
+    cout << endl;
+  }
 
-  cout << endl;
-
-  cout << "Number of modules MASKED in DAQ:  " <<  "  ECAL  =  " << ecal_trig_mask.size() << "   FCAL  =  " << fcal_trig_mask.size() << "   BCAL  =  " << bcal_trig_mask.size() << endl;
+  if(ecal_installed)
+    cout << "Number of modules MASKED in DAQ:  " <<  "  ECAL  =  " << ecal_trig_mask.size() << "   FCAL  =  " << fcal_trig_mask.size() << "   BCAL  =  " <<
+      bcal_trig_mask.size() << endl;
+  else
+    cout << "Number of modules MASKED in DAQ:  " <<  "   FCAL  =  " << fcal_trig_mask.size() << "   BCAL  =  " << bcal_trig_mask.size() << endl;
   
   cout << endl;
- 
-  cout << "SIMULATION OF GAINS:        " <<  " ECAL = " <<  simu_gain_ecal     << "   FCAL = " << simu_gain_fcal     << "   BCAL = " << simu_gain_bcal << endl;
-  cout << "SIMULATION OF BASELINES:    " <<  " ECAL = " <<  simu_baseline_ecal << "   FCAL = " << simu_baseline_fcal << "   BCAL = " << simu_baseline_bcal << endl;
 
+  if(ecal_installed){
+    cout << "SIMULATION OF GAINS:        " <<  " ECAL = " <<  simu_gain_ecal     << "   FCAL = " << simu_gain_fcal     << "   BCAL = " << simu_gain_bcal << endl;
+    cout << "SIMULATION OF BASELINES:    " <<  " ECAL = " <<  simu_baseline_ecal << "   FCAL = " << simu_baseline_fcal << "   BCAL = " << simu_baseline_bcal << endl;
+  } else {
+    cout << "SIMULATION OF GAINS:        " <<  "   FCAL = " << simu_gain_fcal     << "   BCAL = " << simu_gain_bcal << endl;
+    cout << "SIMULATION OF BASELINES:    " <<  "   FCAL = " << simu_baseline_fcal << "   BCAL = " << simu_baseline_bcal << endl; 
+  }
+    
   cout << endl;
 
   cout << "BCAL_ADC_PER_MEV = " << BCAL_ADC_PER_MEV << endl;
