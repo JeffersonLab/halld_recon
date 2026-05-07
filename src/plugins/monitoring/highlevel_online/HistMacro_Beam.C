@@ -172,7 +172,7 @@ string amorphous_label = "Normalized to Amorphous run 133141";
 			}
 			
 			// for CPP
-			//max = 1.50;
+			max = 1.50;
 			min = 0.0;
 			
 			locHist_BeamEnergy_norm->GetXaxis()->SetTitleSize(0.05);
@@ -205,7 +205,7 @@ string amorphous_label = "Normalized to Amorphous run 133141";
 		}
 
 		TPad *beamenergypad = (TPad*)gDirectory->FindObjectAny("beamenergypad");
-		if(!beamenergypad) beamenergypad = new TPad("beamenergypad", "", 0.35, 0.6, 0.895, 0.895);
+		if(!beamenergypad) beamenergypad = new TPad("beamenergypad", "", 0.35, 0.65, 0.895, 0.895);
 		beamenergypad->SetTicks();
 		beamenergypad->Draw();
 		beamenergypad->cd();
