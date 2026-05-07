@@ -69,14 +69,14 @@
 		// CPP
 		// locHist_PSPairEnergy->GetXaxis()->SetRangeUser(3.5,8.5);
 		// Low Energy
-                locHist_PSPairEnergy->GetXaxis()->SetRangeUser(0,4);
+                locHist_PSPairEnergy->GetXaxis()->SetRangeUser(0.75,1.65);
 		locHist_PSPairEnergy->SetStats(0);
 		locHist_PSPairEnergy->Draw();
 		
 		double Epeak = locHist_PSPairEnergy->GetBinCenter(locHist_PSPairEnergy->GetMaximumBin());
 
 		sprintf(str, "Epeak: %3.2f GeV", Epeak);
-		latex.DrawLatex(9.5, locHist_PSPairEnergy->GetMaximum()*0.85, str);
+		latex.DrawLatex(1.3, locHist_PSPairEnergy->GetMaximum()*0.85, str);
 	}
 
 	//------------ Beta vs. P --------------
