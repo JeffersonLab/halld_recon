@@ -95,12 +95,12 @@
   PStagmEnergyInTime->GetYaxis()->SetLabelSize(0.1);
   PStagmEnergyInTime->GetXaxis()->SetTitle("#DeltaE [GeV]");
 
-  double ISignalL = PStagmEnergyInTime->Integral(700, 750);
-  double IBackgrL = PStagmEnergyOutOfTime->Integral(700, 750);
+  double ISignalL = PStagmEnergyInTime->Integral(920, 950);
+  double IBackgrL = PStagmEnergyOutOfTime->Integral(920, 950);
   double ScaleL = ISignalL/IBackgrL;
   double ScaleLErr = TMath::Sqrt(ISignalL/IBackgrL/IBackgrL*(1.+ScaleL));
-  double ISignalR = PStagmEnergyInTime->Integral(1180, 1400);
-  double IBackgrR = PStagmEnergyOutOfTime->Integral(1180, 1400);
+  double ISignalR = PStagmEnergyInTime->Integral(1027, 1048);
+  double IBackgrR = PStagmEnergyOutOfTime->Integral(1027, 1048);
   double ScaleR = ISignalR/IBackgrR;
   double ScaleRErr = TMath::Sqrt(ISignalR/IBackgrR/IBackgrR*(1.+ScaleR));
   double ScaleErr = (1./ScaleLErr/ScaleLErr + 1./ScaleRErr/ScaleRErr);
@@ -135,8 +135,8 @@
   IBackgrL = PStaghEnergyOutOfTime->Integral(700, 750);
   ScaleL = ISignalL/IBackgrL;
   ScaleLErr = TMath::Sqrt(ISignalL/IBackgrL/IBackgrL*(1.+ScaleL));
-  ISignalR = PStaghEnergyInTime->Integral(1180, 1400);
-  IBackgrR = PStaghEnergyOutOfTime->Integral(1180, 1400);
+  ISignalR = PStaghEnergyInTime->Integral(800, 850);
+  IBackgrR = PStaghEnergyOutOfTime->Integral(800, 850);
   ScaleR = ISignalR/IBackgrR;
   ScaleRErr = TMath::Sqrt(ISignalR/IBackgrR/IBackgrR*(1.+ScaleR));
   ScaleErr = (1./ScaleLErr/ScaleLErr + 1./ScaleRErr/ScaleRErr);
