@@ -12,6 +12,7 @@
 // Routine used to create our JEventProcessor
 #include <TLorentzVector.h>
 #include "TMath.h"
+#include "ECAL/DECALShower.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALHit.h"
@@ -142,9 +143,11 @@ void JEventProcessor_pi0fcalskim::Process(const std::shared_ptr<const JEvent>& e
 {
  
   vector< const DFCALShower* > locFCALShowers;
+  vector< const DECALShower* > locECALShowers;
   vector< const DTOFPoint* > locTOFPoints;
   vector< const DVertex* > kinfitVertex;
   event->Get(locFCALShowers);
+  event->Get(locECALShowers);
   event->Get(locTOFPoints);
   event->Get(kinfitVertex);
 
@@ -217,8 +220,14 @@ void JEventProcessor_pi0fcalskim::Process(const std::shared_ptr<const JEvent>& e
        }
        
        if( (numCDCTracks==1) && (numFDCTracks==0) && (locFCALShowers.size()>0.) ) {
+       		// mark that the event should be written out
+       		Candidate = true;
+       
+       		// save the objects
        		for(unsigned int i=0; i<locFCALShowers.size(); i++)
        			locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[i]));
+       		for(unsigned int i=0; i<locECALShowers.size(); i++)
+       			locObjectsToSave.push_back(static_cast<const JObject *>(locECALShowers[i]));
        }
        
   } else {
