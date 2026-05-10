@@ -19,7 +19,7 @@ using namespace std;
 void DBeamHelicity_factory_CORRECTED::Init()
 {
 	auto app = GetApplication();
-	app->SetDefaultParameter("HELICITY:REJECT_TSETTLE", REJECT_TSETTLE, "Reject events when the helicity is changing (t_settle is on). (default: 1)");
+	app->SetDefaultParameter("CORRECTEDHELICITY:REJECT_TSETTLE", REJECT_TSETTLE, "Reject events when the helicity is changing (t_settle is on). (default: 0)");
 
 	return; //NOERROR;
 }
@@ -54,7 +54,7 @@ void DBeamHelicity_factory_CORRECTED::Process(const std::shared_ptr<const JEvent
 	for(size_t loc_i = 0; loc_i < locBeamHelicities.size(); ++loc_i) {
   		// make some (optional) quality selections
 		if(!locBeamHelicities[loc_i]->valid) continue;
-  		if(REJECT_TSETTLE && locBeamHelicities[loc_i]->t_settle) {
+  		if(REJECT_TSETTLE && (locBeamHelicities[loc_i]->t_settle==0)) {
   			return;
   		}
 	
