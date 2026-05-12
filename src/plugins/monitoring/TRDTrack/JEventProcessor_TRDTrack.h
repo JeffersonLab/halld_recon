@@ -49,7 +49,7 @@ private:
   TH1D *hnumElTracks, *hnumPiTracks, *hnumTrackMatches, *hnumTracks, *hnumTracksInTRD, *hnumTracksGoodExtrap;
   
   //--New
-  TH2D *hFCALExtrapXY_TRD, *hExtrapXYDiff_FCAL_TRD, *hFCALExtrapEPvsP_TRD, *hExtrapThetavsP_TRD, *hExtrapThetavsP_Selected_TRD, *hSeenPointsXY, *hExtrapsXY, *hSeenPointsFCALXY, *hExtrapsFCALXY, *hSeenPointsSingleXY;
+  TH2D *hFCALExtrapXY_TRD, *hExtrapXYDiff_FCAL_TRD, *hFCALExtrapEPvsP_TRD, *hExtrapThetavsP_TRD, *hExtrapThetavsP_Selected_TRD, *hSeenPointsXY, *hExtrapsXY, *hSeenPointsFCALXY, *hExtrapsFCALXY, *hSeenPointsSingleXY, *hSeenSegmentsSingleXY;
   TH1D *hExtrapTheta_TRD, *hExtrapXDiff_FCAL_TRD, *hExtrapYDiff_FCAL_TRD, *hFCALExtrapE_TRD, *hFCALExtrapEP_TRD, *hnumSeenExtrap, *hnumPointsSeen, *hnumExtrap, *hnumSeenExtrapFCAL, *hnumPointsSeenFCAL;
     
   

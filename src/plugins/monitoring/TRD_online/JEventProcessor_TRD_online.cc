@@ -53,6 +53,7 @@ const int NEventsMonitor = 100;
 static TH1I *hCluster_NClusters;
 static TH1D *hCluster_pos_width;
 static TH1D *hCluster_time_width;
+static TH1D *hCluster_time_diff;
 
 const int NMaxExtrapolations = 5;
 const int NMaxSegments = 5;
@@ -89,6 +90,7 @@ static TH1I *hNExtrapolations;
 static TH3I *hPointH_XYT;
 static TH1I *hPointH_NHits;
 static TH1I *hPointH_Time;
+static TH1I *hPointH_TimeDiff;
 static TH1I *hPointH_dE;
 static TH1I *hPointH_dEDiff;
 static TH1I *hPointH_dERatio;
@@ -203,6 +205,7 @@ void JEventProcessor_TRD_online::Init() {
     hPointH_NHits = new TH1I("PointH_NHits","TRD Calibrated Point Multiplicity;Calibrated Points;Events",100,0.5,0.5+100);
     hPointH_XYT = new TH3I("PointH_XYT","TRD 3D Points;X [cm];Y [cm];8*(Peak Time) [ns]",750,-85,-10,400,-70,-30,225,0.,1800.);
     hPointH_Time = new TH1I("PointH_Time","TRD Point Time;8*(Peak Time) [ns]; ",225,0.,1800.);
+    hPointH_TimeDiff = new TH1I("PointH_TimeDiff","TRD Point Time Diff;8*(Peak Time X - Peak Time Y) [ns]; ",225,-100.,100.);
     hPointH_dE = new TH1I("PointH_dE","TRD Point Charge;Average dE [q]; ",350,0.,3500.);
     hPointH_dEDiff = new TH1I("PointH_dEDiff","TRD Point Charge X,Y Weighted Diff.;(dE_x - dE_y)/(dE_x + dE_y); ",100,-1.,1.);
     hPointH_dERatio = new TH1I("PointH_dERatio","TRD Point dE_x / dE_y;(dE_x / dE_y); ",100,-0.,6.);
@@ -224,6 +227,7 @@ void JEventProcessor_TRD_online::Init() {
 
     gDirectory->mkdir("Cluster")->cd();
     hCluster_NClusters = new TH1I("Cluster_NClusters","TRD number of cluster per event;clusters;events",100,0.5,0.5+100);
+    hCluster_time_diff = new TH1D("Cluster_time_diff", "Cluster time difference;tx-ty [ns];cluster pairs",200,-100,100);
     hCluster_pos_width = new TH1D("Cluster_pos_width","TRD Cluster Position Width;Position Width [cm];Events",100,0.,50.);
     hCluster_time_width = new TH1D("Cluster_time_width","TRD Cluster Time Width;Time Width [ns];Events",100,0.,50.0);
 
@@ -301,8 +305,8 @@ void JEventProcessor_TRD_online::Init() {
             }
         }
         
-        hPoint_ZVsX_Event[i] = new TH2I(Form("Point_ZVsX_Event%d",i),Form("TRD Point X vs. Z;Z [cm];X [cm]",i),100,528,533,100,-90,-10);
-        hPoint_ZVsY_Event[i] = new TH2I(Form("Point_ZVsY_Event%d",i),Form("TRD Point Y vs. Z;Z [cm];Y [cm]",i),100,528,533,100,-70,-30);        
+        hPoint_ZVsX_Event[i] = new TH2I(Form("Point_ZVsX_Event%d",i),"TRD Point X vs. Z;Z [cm];X [cm]",100,528,533,100,-90,-10);
+        hPoint_ZVsY_Event[i] = new TH2I(Form("Point_ZVsY_Event%d",i),"TRD Point Y vs. Z;Z [cm];Y [cm]",100,528,533,100,-70,-30);        
     }
 
     NEventsTrack = 0;
@@ -457,6 +461,12 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
         hCluster_TimeVsPos[plane]->Fill(cluster->t_avg, pos);
         hCluster_pos_width->Fill(cluster->pos_width);
         hCluster_time_width->Fill(cluster->time_width);
+
+	//cluster time difference (all cluster pairs):
+	if(plane==0)
+	  for (const auto& cluster2 : clusters)
+	    if (cluster2->plane-1==1)
+	      hCluster_time_diff->Fill(cluster->t_avg-cluster2->t_avg);
     }
     for (const auto& hit : hits) {
 
@@ -505,6 +515,7 @@ void JEventProcessor_TRD_online::Process(const std::shared_ptr<const JEvent>& ev
     for (const auto& point : pointHits) {
         hPointH_XYT->Fill(point->x,point->y,point->time);
         hPointH_Time->Fill(point->time);
+	hPointH_TimeDiff->Fill(point->t_x - point->t_y);
         hPointH_OccupancyX->Fill(point->x);
         hPointH_OccupancyY->Fill(point->y);
         hPointH_dE->Fill(point->dE);

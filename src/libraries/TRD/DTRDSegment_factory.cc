@@ -81,15 +81,53 @@ void DTRDSegment_factory::Process(const std::shared_ptr<const JEvent>& event)
   return;
 }  
   
-void DTRDSegment_factory::FindSegments(const vector<const DTRDPoint *>&points,
+void DTRDSegment_factory::FindSegments(const vector<const DTRDPoint *>&unsorted_points,
 				      vector<vector<const DTRDPoint *>>&segments) const{
-  vector<const DTRDPoint *>mysegment_points;
-  for (unsigned int i=0;i<points.size();i++){
-    // Do some pattern recognition here
-    mysegment_points.push_back(points[i]);
-  }
-  segments.push_back(mysegment_points);
+  double MAX_T=1; //45 degrees
+  double MAX_RESID=1; // 1 cm
 
+  const int MAX_POINTS=30;
+  if (unsorted_points.size()>MAX_POINTS)
+    return;
+
+  auto points = unsorted_points;  //convert this into a non const.
+  
+  std::sort(points.begin(), points.end(), [](const DTRDPoint* a, const DTRDPoint* b) {
+        return a->z < b->z; // Change to > for descending
+    });
+  
+  std::array<bool, MAX_POINTS> matched{}; 
+  for (unsigned int i=0;i<points.size();i++){
+    if(matched[i])
+      continue;
+    // Do some pattern recognition here
+    for(unsigned int j=points.size()-1;j>i; j--){
+      if(matched[j])
+	continue;
+      double tx=(points[i]->x-points[j]->x)/(points[i]->z-points[j]->z);
+      double ty=(points[i]->y-points[j]->y)/(points[i]->z-points[j]->z);
+      if (hypot(tx,ty)>MAX_T)
+	continue;
+      vector<const DTRDPoint *>mysegment_points;
+      mysegment_points.push_back(points[i]);
+      mysegment_points.push_back(points[j]);
+      double x1=points[i]->x;
+      double y1=points[i]->y;
+      double z1=points[i]->z;
+      for(unsigned int k=i+1;k<j; k++){
+	if (matched[k])
+	  continue;
+	// check interpolation residual
+	double residx=points[k]->x-(x1+tx*(points[k]->z-z1));
+	double residy=points[k]->y-(y1+ty*(points[k]->z-z1));
+	if(hypot(residx,residy)>MAX_RESID)
+	  continue;
+	mysegment_points.push_back(points[k]);
+	matched[k]=true;
+      }
+      segments.push_back(mysegment_points);
+    }
+  }
 }
 
 

@@ -51,17 +51,17 @@ void JEventProcessor_TRDTrack::Init()
 	hnumTracksGoodExtrap=new TH1D("hnumTracksGoodExtrap","Num Charged Tracks with Extrap at TRD and FCAL Plane;Num Tracks",12,0.5,12.5);
 	hnumTracksInTRD=new TH1D("hnumTracksInTRD","Num Charged Tracks with Extrap Inside TRD Active Area;Num Tracks",12,0.5,12.5);
 	hnumTrackMatches=new TH1D("hnumTrackMatches","Num Tracks Matched with TRD;Num Tracks",3,-0.5,2.5);
-	hExtrapXDiff=new TH1D("ExtrapXDiff","Track Extrapolation X Difference from TRD Points;x(Extrap) - x(TRD Point) [cm]",500,-5.,5.);
-    hExtrapYDiff=new TH1D("ExtrapYDiff","Track Extrapolation Y Difference from TRD Points;y(Extrap) - y(TRD Point) [cm]",500,-5.,5.);
-    hExtrapXYDiff=new TH2D("ExtrapXYDiff","Track Extrapolation XY Difference from TRD Points;x(Extrap) - x(TRD Point) [cm];y(Extrap) - y(TRD Point) [cm]",500,-5.,5.,500,-5.,5.);
-    hExtrapXHitDiff=new TH1D("ExtrapXHitDiff","Track Extrapolation X Difference from TRD Point_Hits;x(Extrap) - x(TRD Point_Hit) [cm]",500,-5.,5.);
-    hExtrapYHitDiff=new TH1D("ExtrapYHitDiff","Track Extrapolation Y Difference from TRD Point_Hits;y(Extrap) - y(TRD Point_Hit) [cm]",500,-5.,5.);
-    hExtrapXYHitDiff=new TH2D("ExtrapXYHitDiff","Track Extrapolation XY Difference from TRD Point_Hits;x(Extrap) - x(TRD Point_Hit) [cm];y(Extrap) - y(TRD Point_Hit) [cm]",500,-5.,5.,500,-5.,5.);
-	hExtrapXHitDiffvsTime=new TH2D("ExtrapXHitDiffvsTime","Track Extrapolation X Difference from TRD Point_Hits vs Drift Time;x(Extrap) - x(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",500,-5.,5.,400,0.,200.*8);
-	hExtrapYHitDiffvsTime=new TH2D("ExtrapYHitDiffvsTime","Track Extrapolation Y Difference from TRD Point_Hits vs Drift Time;y(Extrap) - y(TRD Point_Hit)     [cm]; 8*(Peak Time) [ns]",500,-5.,5.,400,0.,200.*8);
-	hSegmentExtrapXDiff=new TH1D("SegmentExtrapXDiff","Track Extrapolation X Difference from TRD Segment;x(Extrap) - x(TRD Segment) [cm]",500,-5.,5.);
-    hSegmentExtrapYDiff=new TH1D("SegmentExtrapYDiff","Track Extrapolation Y Difference from TRD Segment;y(Extrap) - y(TRD Segment) [cm]",500,-5.,5.);
-    hSegmentExtrapXYDiff=new TH2D("SegmentExtrapXYDiff","Track Extrapolation XY Difference from TRD Segment;x(Extrap) - x(TRD Segment) [cm];y(Extrap) - y(TRD Segment) [cm]",500,-5.,5.,500,-5.,5.);
+	hExtrapXDiff=new TH1D("ExtrapXDiff","Track Extrapolation X Difference from TRD Points;x(Extrap) - x(TRD Point) [cm]",500,-10.,10.);
+    hExtrapYDiff=new TH1D("ExtrapYDiff","Track Extrapolation Y Difference from TRD Points;y(Extrap) - y(TRD Point) [cm]",500,-10.,10.);
+    hExtrapXYDiff=new TH2D("ExtrapXYDiff","Track Extrapolation XY Difference from TRD Points;x(Extrap) - x(TRD Point) [cm];y(Extrap) - y(TRD Point) [cm]",500,-10.,10.,500,-10.,10.);
+    hExtrapXHitDiff=new TH1D("ExtrapXHitDiff","Track Extrapolation X Difference from TRD Point_Hits;x(Extrap) - x(TRD Point_Hit) [cm]",500,-10.,10.);
+    hExtrapYHitDiff=new TH1D("ExtrapYHitDiff","Track Extrapolation Y Difference from TRD Point_Hits;y(Extrap) - y(TRD Point_Hit) [cm]",500,-10.,10.);
+    hExtrapXYHitDiff=new TH2D("ExtrapXYHitDiff","Track Extrapolation XY Difference from TRD Point_Hits;x(Extrap) - x(TRD Point_Hit) [cm];y(Extrap) - y(TRD Point_Hit) [cm]",500,-10.,10.,500,-10.,10.);
+	hExtrapXHitDiffvsTime=new TH2D("ExtrapXHitDiffvsTime","Track Extrapolation X Difference from TRD Point_Hits vs Drift Time;x(Extrap) - x(TRD Point_Hit) [cm]; 8*(Peak Time) [ns]",500,-10.,10.,400,0.,200.*8);
+	hExtrapYHitDiffvsTime=new TH2D("ExtrapYHitDiffvsTime","Track Extrapolation Y Difference from TRD Point_Hits vs Drift Time;y(Extrap) - y(TRD Point_Hit)     [cm]; 8*(Peak Time) [ns]",500,-10.,10.,400,0.,200.*8);
+	hSegmentExtrapXDiff=new TH1D("SegmentExtrapXDiff","Track Extrapolation X Difference from TRD Segment;x(Extrap) - x(TRD Segment) [cm]",500,-10.,10.);
+    hSegmentExtrapYDiff=new TH1D("SegmentExtrapYDiff","Track Extrapolation Y Difference from TRD Segment;y(Extrap) - y(TRD Segment) [cm]",500,-10.,10.);
+    hSegmentExtrapXYDiff=new TH2D("SegmentExtrapXYDiff","Track Extrapolation XY Difference from TRD Segment;x(Extrap) - x(TRD Segment) [cm];y(Extrap) - y(TRD Segment) [cm]",500,-10.,10.,500,-10.,10.);
 	hTRDExtrapXY=new TH2D("TRDExtrapXY","Track Extrapolation XY Display at TRD Plane;x(Track Extrap) [cm];y(Track Extrap) [cm]",280,-140.,140.,280,-140.,140.);
     hTRDExtrapPx=new TH1D("TRDExtrapPx","TRD Track Extrapolation X Mom.;Px [GeV/c]",200,-3.,3.);
     hTRDExtrapPy=new TH1D("TRDExtrapPy","TRD Track Extrapolation Y Mom.;Py [GeV/c]",200,-3.,3.);
@@ -71,9 +71,9 @@ void JEventProcessor_TRDTrack::Init()
     hFCALExtrapPx=new TH1D("FCALExtrapPx","FCAL Track Extrapolation X Mom.;Px [GeV/c]",200,-3.,3.);
     hFCALExtrapPy=new TH1D("FCALExtrapPy","FCAL Track Extrapolation Y Mom.;Py [GeV/c]",200,-5.,5.);
     hFCALExtrapPz=new TH1D("FCALExtrapPz","FCAL Track Extrapolation Z Mom.;Pz [GeV/c]",240,-0.1,11.9);
-	hExtrapXDiff_FCAL=new TH1D("ExtrapXDiff_FCAL","Track Extrapolation X Difference between TRD and FCAL;x(FCAL) - x(TRD Point_Hit) [cm]",500,-5.,5.);
-    hExtrapYDiff_FCAL=new TH1D("ExtrapYDiff_FCAL","Track Extrapolation Y Difference between TRD and FCAL;y(FCAL) - y(TRD Point_Hit) [cm]",500,-5.,5.);
-    hExtrapXYDiff_FCAL=new TH2D("ExtrapXYDiff_FCAL","Track Extrapolation XY Difference between TRD and FCAL;x(FCAL) - x(TRD Point_Hit) [cm];y(FCAL) - y(TRD Point_Hit) [cm]",500,-5.,5.,500,-5.,5.);
+	hExtrapXDiff_FCAL=new TH1D("ExtrapXDiff_FCAL","Track Extrapolation X Difference between TRD and FCAL;x(FCAL) - x(TRD Point_Hit) [cm]",500,-10.,10.);
+    hExtrapYDiff_FCAL=new TH1D("ExtrapYDiff_FCAL","Track Extrapolation Y Difference between TRD and FCAL;y(FCAL) - y(TRD Point_Hit) [cm]",500,-10.,10.);
+    hExtrapXYDiff_FCAL=new TH2D("ExtrapXYDiff_FCAL","Track Extrapolation XY Difference between TRD and FCAL;x(FCAL) - x(TRD Point_Hit) [cm];y(FCAL) - y(TRD Point_Hit) [cm]",500,-10.,10.,500,-10.,10.);
 	hFCALExtrapE=new TH1D("FCALExtrapE","FCAL Track Extrapolation Energy;E [GeV]",240,-0.1,11.9);
 	hFCALExtrapEP=new TH1D("FCALExtrapEP","FCAL Track Extrapolation E / P;E / P [GeV/c]",600,-0.1,2.9);
 	hFCALExtrapEPvsP=new TH2D("FCALExtrapEPvsP","FCAL Track Extrapolation E / P vs P;E / P [GeV/c]; P [GeV/c]",600,-0.1,2.9,480,-0.1,11.9);
@@ -85,9 +85,9 @@ void JEventProcessor_TRDTrack::Init()
 	hTRDYCorr=new TH2D("TRDYCorr","Y Corr. Between Track Extrapolation and TRD Point_Hits;y(Track Extrap.) [cm];y(TRD Point_Hit) [cm]",400,-70.,-30.,400,-70.,-30.);
 	//--New
 	hFCALExtrapXY_TRD=new TH2D("FCALExtrapXY_TRD","Track Extrapolation XY Display at FCAL Plane;x(Track Extrap) [cm];y(Track Extrap) [cm]",280,-140.,140.,280,-140.,140.);
-	hExtrapXDiff_FCAL_TRD=new TH1D("ExtrapXDiff_FCAL_TRD","Track Extrapolation X Difference between TRD and FCAL;x(FCAL) - x(TRD Point_Hit) [cm]",500,-5.,5.);
-    hExtrapYDiff_FCAL_TRD=new TH1D("ExtrapYDiff_FCAL_TRD","Track Extrapolation Y Difference between TRD and FCAL;y(FCAL) - y(TRD Point_Hit) [cm]",500,-5.,5.);
-    hExtrapXYDiff_FCAL_TRD=new TH2D("ExtrapXYDiff_FCAL_TRD","Track Extrapolation XY Difference between TRD and FCAL;x(FCAL) - x(TRD Point_Hit) [cm];y(FCAL) - y(TRD Point_Hit) [cm]",500,-5.,5.,500,-5.,5.);
+	hExtrapXDiff_FCAL_TRD=new TH1D("ExtrapXDiff_FCAL_TRD","Track Extrapolation X Difference between TRD and FCAL;x(FCAL) - x(TRD Point_Hit) [cm]",500,-10.,10.);
+    hExtrapYDiff_FCAL_TRD=new TH1D("ExtrapYDiff_FCAL_TRD","Track Extrapolation Y Difference between TRD and FCAL;y(FCAL) - y(TRD Point_Hit) [cm]",500,-10.,10.);
+    hExtrapXYDiff_FCAL_TRD=new TH2D("ExtrapXYDiff_FCAL_TRD","Track Extrapolation XY Difference between TRD and FCAL;x(FCAL) - x(TRD Point_Hit) [cm];y(FCAL) - y(TRD Point_Hit) [cm]",500,-10.,10.,500,-10.,10.);
     hFCALExtrapE_TRD=new TH1D("FCALExtrapE_TRD","FCAL Track Extrapolation Energy;E [GeV]",240,-0.1,11.9);
     hFCALExtrapEP_TRD=new TH1D("FCALExtrapEP_TRD","FCAL Track Extrapolation E / P;E / P [GeV/c]",600,-0.1,2.9);
     hFCALExtrapEPvsP_TRD=new TH2D("FCALExtrapEPvsP_TRD","FCAL Track Extrapolation E / P vs P;E / P [GeV/c]; P [GeV/c]",600,-0.1,2.9,480,-0.1,11.9);
@@ -98,6 +98,8 @@ void JEventProcessor_TRDTrack::Init()
 	hnumPointsSeen=new TH1D("numPointsSeen","Num Points Counted for a Track Extrapolation Seen in TRD; # Point_Hits",35,-0.5,34.5);
 	hSeenPointsXY=new TH2D("seenPointsXY","2D Point Display for Track Extrapolations Seen in TRD; x(Point_Hits) [cm]; y(Point_Hits) [cm]",75,-85.,-10.,40,-70.,-30.);
 	hSeenPointsSingleXY=new TH2D("seenPointsSingleXY","2D Single Point Display for Track Extrapolations Seen in TRD; x(Point_Hits) [cm]; y(Point_Hits) [cm]",75,-85.,-10.,40,-70.,-30.);
+	hSeenSegmentsSingleXY=new TH2D("seenSegmentssSingleXY","2D Single Segment Display for Track Extrapolations Seen in TRD; x(Segments) [cm]; y(Segments) [cm]",75,-85.,-10.,40,-70.,-30.);
+
 	hnumExtrap=new TH1D("numExtrap","Num Track Extrapolations that Enter TRD; # Track Extrap.",3,-0.5,2.5);
 	hExtrapsXY=new TH2D("ExtrapsXY","2D Display for Track Extrapolations that Pass Through TRD; x(Track Extrap.) [cm]; y(Track Extrap.) [cm]",75,-85.,-10.,40,-70.,-30.);
 	hnumSeenExtrapFCAL=new TH1D("numSeenExtrapFCAL","Num Track Extrapolations Seen at FCAL; # Track Extrap.",3,-0.5,2.5);
@@ -115,8 +117,8 @@ void JEventProcessor_TRDTrack::Init()
     hTRDMomentum_el=new TH1D("TRDMomentum_el","TRD Track Projection Mom.;Pz [GeV/c]",240,-0.1,11.9);
     hTRDTheta_el=new TH1D("TRDTheta_el","TRD Track Projection Theta;Theta [Degrees]",350,-0.1,34.9);
 	
-	hTRDSegmentMatchX_el=new TH1D("TRDSegmentMatchX_el","TRD Track Segment X Difference from Track Proj;x(Track) - x(TRD) [cm]",500,-5.,5.);
-	hTRDSegmentMatchY_el=new TH1D("TRDSegmentMatchY_el","TRD Track Segment Y Difference from Track Proj;y(Track) - y(TRD) [cm]",500,-5.,5.);
+	hTRDSegmentMatchX_el=new TH1D("TRDSegmentMatchX_el","TRD Track Segment X Difference from Track Proj;x(Track) - x(TRD) [cm]",500,-10.,10.);
+	hTRDSegmentMatchY_el=new TH1D("TRDSegmentMatchY_el","TRD Track Segment Y Difference from Track Proj;y(Track) - y(TRD) [cm]",500,-10.,10.);
   	hTRDSegmentMatchXY_el=new TH2D("TRDSegmentMatchXY_el","TRD 2D Track Segment Difference from Track Proj;x(Track) - x(TRD) [cm];y(Track) - y(TRD) [cm]",500,-5,5,500,-5,5);
   	hTRDSegmentMatchTxTy_el=new TH2D("TRDSegmentMatchTxTy_el","TRD 2D Track Segment T Difference from Track Proj;Tx(Track)-Tx(TRD);Ty(Track) - Ty(TRD)",500,-0.5,0.5,500,-0.5,0.5);
   	hTRDSegmentMatchTx_el=new TH1D("TRDSegmentMatchTx_el","TRD Track Segment Tx Difference from Track Proj;Tx(Track) - Tx(TRD)",500,-0.5,0.5);
@@ -133,12 +135,12 @@ void JEventProcessor_TRDTrack::Init()
 	hfCALMatchXYDisplay_el=new TH2D("fCALMatchXYDisplay_el","fCAL Track XY Display for TRD Matches;x(fCAL) [cm];y(fCAL) [cm]",280,-140.,140.,280,-140,140);
 	hfCALMatchXY_el=new TH2D("fCALMatchXY_el","TRD 2D Track Segment Difference from fCAL Extrapolation;x(fCAL) - x(TRD) [cm];y(fCAL) - y(TRD) [cm]",270,-22.,5.,270,-22.,5.);
 	
-	hProjectionXDiff_el=new TH1D("ProjectionXDiff_el","Track Projection X Difference from TRD Points;x(Proj) - x(TRD Point) [cm]",500,-5.,5.);
-	hProjectionYDiff_el=new TH1D("ProjectionYDiff_el","Track Projection Y Difference from TRD Points;y(Proj) - y(TRD Point) [cm]",500,-5.,5.);
-	hProjectionXYDiff_el=new TH2D("ProjectionXYDiff_el","Track Projection XY Difference from TRD Points;x(Proj) - x(TRD Point) [cm];y(Proj) - y(TRD Point) [cm]",500,-5.,5.,500,-5.,5.);
-	hProjectionXHitDiff_el=new TH1D("ProjectionXHitDiff_el","Track Projection X Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm]",500,-5.,5.);
-    hProjectionYHitDiff_el=new TH1D("ProjectionYHitDiff_el","Track Projection Y Difference from TRD Point_Hits;y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.);
-    hProjectionXYHitDiff_el=new TH2D("ProjectionXYHitDiff_el","Track Projection XY Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm];y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.,500,-5.,5.);
+	hProjectionXDiff_el=new TH1D("ProjectionXDiff_el","Track Projection X Difference from TRD Points;x(Proj) - x(TRD Point) [cm]",500,-10.,10.);
+	hProjectionYDiff_el=new TH1D("ProjectionYDiff_el","Track Projection Y Difference from TRD Points;y(Proj) - y(TRD Point) [cm]",500,-10.,10.);
+	hProjectionXYDiff_el=new TH2D("ProjectionXYDiff_el","Track Projection XY Difference from TRD Points;x(Proj) - x(TRD Point) [cm];y(Proj) - y(TRD Point) [cm]",500,-10.,10.,500,-10.,10.);
+	hProjectionXHitDiff_el=new TH1D("ProjectionXHitDiff_el","Track Projection X Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm]",500,-10.,10.);
+    hProjectionYHitDiff_el=new TH1D("ProjectionYHitDiff_el","Track Projection Y Difference from TRD Point_Hits;y(Proj) - y(TRD Point_Hit) [cm]",500,-10.,10.);
+    hProjectionXYHitDiff_el=new TH2D("ProjectionXYHitDiff_el","Track Projection XY Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm];y(Proj) - y(TRD Point_Hit) [cm]",500,-10.,10.,500,-10.,10.);
 	
 	
 	//--Pion Subdirectory
@@ -151,8 +153,8 @@ void JEventProcessor_TRDTrack::Init()
     hTRDMomentum_pi=new TH1D("TRDMomentum_pi","TRD Track Projection Mom.;Pz [GeV/c]",240,-0.1,11.9);
     hTRDTheta_pi=new TH1D("TRDTheta_pi","TRD Track Projection Theta;Theta [Degrees]",350,-0.1,34.9);
 
-    hTRDSegmentMatchX_pi=new TH1D("TRDSegmentMatchX_pi","TRD Track Segment X Difference from Track Proj;x(Track) - x(TRD) [cm]",500,-5.,5.);
-    hTRDSegmentMatchY_pi=new TH1D("TRDSegmentMatchY_pi","TRD Track Segment Y Difference from Track Proj;y(Track) - y(TRD) [cm]",500,-5.,5.);
+    hTRDSegmentMatchX_pi=new TH1D("TRDSegmentMatchX_pi","TRD Track Segment X Difference from Track Proj;x(Track) - x(TRD) [cm]",500,-10.,10.);
+    hTRDSegmentMatchY_pi=new TH1D("TRDSegmentMatchY_pi","TRD Track Segment Y Difference from Track Proj;y(Track) - y(TRD) [cm]",500,-10.,10.);
     hTRDSegmentMatchXY_pi=new TH2D("TRDSegmentMatchXY_pi","TRD 2D Track Segment Difference from Track Proj;x(Track) - x(TRD) [cm];y(Track) - y(TRD) [cm]",500,-5,5,500,-5,5);
     hTRDSegmentMatchTxTy_pi=new TH2D("TRDSegmentMatchTxTy_pi","TRD 2D Track Segment T from Track Proj;Tx(Track)-Tx(TRD);Ty(Track) - Ty(TRD)",500,-0.5,0.5,500,-0.5,0.5);
     hTRDSegmentMatchTx_pi=new TH1D("TRDSegmentMatchTx_pi","TRD Track Segment Tx Difference from Track Proj;Tx(Track) - Tx(TRD)",500,-0.5,0.5);
@@ -169,12 +171,12 @@ void JEventProcessor_TRDTrack::Init()
     hfCALMatchXYDisplay_pi=new TH2D("fCALMatchXYDisplay_pi","fCAL Track XY Display for TRD Matches;x(fCAL) [cm];y(fCAL) [cm]",280,-140.,140.,280,-140,140);
     hfCALMatchXY_pi=new TH2D("fCALMatchXY_pi","TRD 2D Track Segment Difference from fCAL Extrapolation;x(fCAL) - x(TRD) [cm];y(fCAL) - y(TRD) [cm]",270,-22.,5.,270,-22.,5.);
     
-    hProjectionXDiff_pi=new TH1D("ProjectionXDiff_pi","Track Projection X Difference from TRD Points;x(Proj) - x(TRD Point) [cm]",500,-5.,5.);
-    hProjectionYDiff_pi=new TH1D("ProjectionYDiff_pi","Track Projection Y Difference from TRD Points;y(Proj) - y(TRD Point) [cm]",500,-5.,5.);
-    hProjectionXYDiff_pi=new TH2D("ProjectionXYDiff_pi","Track Projection XY Difference from TRD Points;x(Proj) - x(TRD Point) [cm];y(Proj) - y(TRD Point) [cm]",500,-5.,5.,500,-5.,5.);
-	hProjectionXHitDiff_pi=new TH1D("ProjectionXHitDiff_pi","Track Projection X Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm]",500,-5.,5.);
-    hProjectionYHitDiff_pi=new TH1D("ProjectionYHitDiff_pi","Track Projection Y Difference from TRD Point_Hits;y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.);
-    hProjectionXYHitDiff_pi=new TH2D("ProjectionXYHitDiff_pi","Track Projection XY Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm];y(Proj) - y(TRD Point_Hit) [cm]",500,-5.,5.,500,-5.,5.);
+    hProjectionXDiff_pi=new TH1D("ProjectionXDiff_pi","Track Projection X Difference from TRD Points;x(Proj) - x(TRD Point) [cm]",500,-10.,10.);
+    hProjectionYDiff_pi=new TH1D("ProjectionYDiff_pi","Track Projection Y Difference from TRD Points;y(Proj) - y(TRD Point) [cm]",500,-10.,10.);
+    hProjectionXYDiff_pi=new TH2D("ProjectionXYDiff_pi","Track Projection XY Difference from TRD Points;x(Proj) - x(TRD Point) [cm];y(Proj) - y(TRD Point) [cm]",500,-10.,10.,500,-10.,10.);
+	hProjectionXHitDiff_pi=new TH1D("ProjectionXHitDiff_pi","Track Projection X Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm]",500,-10.,10.);
+    hProjectionYHitDiff_pi=new TH1D("ProjectionYHitDiff_pi","Track Projection Y Difference from TRD Point_Hits;y(Proj) - y(TRD Point_Hit) [cm]",500,-10.,10.);
+    hProjectionXYHitDiff_pi=new TH2D("ProjectionXYHitDiff_pi","Track Projection XY Difference from TRD Point_Hits;x(Proj) - x(TRD Point_Hit) [cm];y(Proj) - y(TRD Point_Hit) [cm]",500,-10.,10.,500,-10.,10.);
 	
 	mainDir->cd();
 }
@@ -257,12 +259,12 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
 				}
 				
 				for (const auto& point : pointHits) {
-					if (abs(trd_extrapolations[0].position.x() - point->x < 1.5) && abs(trd_extrapolations[0].position.y() - point->y < 1.5)) { //if within 1.5cm
+				  if (abs(trd_extrapolations[0].position.x() - point->x+5) < 1.5 && abs(trd_extrapolations[0].position.y() - point->y) < 1.5 && inTRD) { //if within 1.5cm
 						if (i==0) { hnumSeenExtrap->Fill(1); hSeenPointsSingleXY->Fill(trd_extrapolations[0].position.x(), trd_extrapolations[0].position.y()); }
 						i++;
 						hSeenPointsXY->Fill(point->x, point->y);
 					}
-					if (abs(fcal_extrapolations[0].position.x() - point->x < 1.5) && abs(fcal_extrapolations[0].position.y() - point->y < 1.5)) { //if within 1.5cm
+				  if (abs(fcal_extrapolations[0].position.x() - point->x) < 1.5 && abs(fcal_extrapolations[0].position.y() - point->y) < 1.5) { //if within 1.5cm
                         if (i2==0) hnumSeenExtrapFCAL->Fill(1);
                         i2++;
                         hSeenPointsFCALXY->Fill(point->x, point->y);
@@ -285,11 +287,18 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
                 	hExtrapYDiff->Fill(trd_extrapolations[0].position.y() - (point->y));
 	                hExtrapXYDiff->Fill(trd_extrapolations[0].position.x() - (point->x), trd_extrapolations[0].position.y() - (point->y));
     	        }
-				
+		int seen_segments=0;
         	    for (const auto& segment : segments) {
             	    hSegmentExtrapXDiff->Fill(trd_extrapolations[0].position.x() - (segment->x));
                 	hSegmentExtrapYDiff->Fill(trd_extrapolations[0].position.y() - (segment->y));
 	                hSegmentExtrapXYDiff->Fill(trd_extrapolations[0].position.x() - (segment->x), trd_extrapolations[0].position.y() - (segment->y));
+			if (abs(trd_extrapolations[0].position.x() - segment->x+5) < 1.5 && abs(trd_extrapolations[0].position.y() - segment->y) < 1.5 && inTRD) {
+			  if (seen_segments==0) {
+			    hSeenSegmentsSingleXY->Fill(trd_extrapolations[0].position.x(), trd_extrapolations[0].position.y());
+			  }
+			seen_segments+=1;
+			}
+			
     	        }
 				
             	    hnumTrackMatches->Fill(1);
