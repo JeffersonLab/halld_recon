@@ -4782,8 +4782,15 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     // Variance of target point
     // Variance is for average beam spot size assuming triangular distribution
     // out to 2.2 mm from the beam line.
-    //   sigma_r = 2.2 mm/ sqrt(18)
-    Vc=0.002689;
+    // sigma_r = 2.2 mm/ sqrt(18)
+    // Vc=0.002689;
+    //Var from ccdb  
+    double var_xx = 0.0451139;
+    double var_yy = 0.0345209;
+    //Vc = 0.5*(var_xx+var_yy);
+    //Vc = std::max(var_xx,var_yy);
+    //Vc = sqrt(var_xx*var_yy);
+    Vc = std::min(var_xx,var_yy);
     
     // inverse variance including prediction
     double InvV1=1./(Vc+Hc*(C*Hc_T));
