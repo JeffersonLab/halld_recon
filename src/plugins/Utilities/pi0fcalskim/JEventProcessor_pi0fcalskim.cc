@@ -219,7 +219,7 @@ void JEventProcessor_pi0fcalskim::Process(const std::shared_ptr<const JEvent>& e
        			numFDCTracks++;
        }
        
-       if( (numCDCTracks==1) && (numFDCTracks==0) && (locFCALShowers.size()>0.) ) {
+       if( (numCDCTracks==1) && (numFDCTracks==0) && (locFCALShowers.size()>0 || locECALShowers.size()>0) ) {
        		// mark that the event should be written out
        		Candidate = true;
        
