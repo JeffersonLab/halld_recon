@@ -8,6 +8,7 @@
 #include "JEventProcessor_TRDTrack.h"
 #include <PID/DChargedTrack.h>
 #include <TDirectory.h>
+#include "DANA/DGeometryManager.h"
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -99,7 +100,9 @@ void JEventProcessor_TRDTrack::Init()
 	hSeenPointsXY=new TH2D("seenPointsXY","2D Point Display for Track Extrapolations Seen in TRD; x(Point_Hits) [cm]; y(Point_Hits) [cm]",75,-85.,-10.,40,-70.,-30.);
 	hSeenPointsSingleXY=new TH2D("seenPointsSingleXY","2D Single Point Display for Track Extrapolations Seen in TRD; x(Point_Hits) [cm]; y(Point_Hits) [cm]",75,-85.,-10.,40,-70.,-30.);
 	hSeenSegmentsSingleXY=new TH2D("seenSegmentssSingleXY","2D Single Segment Display for Track Extrapolations Seen in TRD; x(Segments) [cm]; y(Segments) [cm]",75,-85.,-10.,40,-70.,-30.);
+	hSeenClustersXY=new TH2D("seenClustersXY","2D Cluster Display for Track Extrapolations Seen in TRD; x(Cluster1) [cm]; y(Cluster2) [cm]",75,-85.,-10.,40,-70.,-30.);
 
+	
 	hnumExtrap=new TH1D("numExtrap","Num Track Extrapolations that Enter TRD; # Track Extrap.",3,-0.5,2.5);
 	hExtrapsXY=new TH2D("ExtrapsXY","2D Display for Track Extrapolations that Pass Through TRD; x(Track Extrap.) [cm]; y(Track Extrap.) [cm]",75,-85.,-10.,40,-70.,-30.);
 	hnumSeenExtrapFCAL=new TH1D("numSeenExtrapFCAL","Num Track Extrapolations Seen at FCAL; # Track Extrap.",3,-0.5,2.5);
@@ -186,6 +189,21 @@ void JEventProcessor_TRDTrack::Init()
 //------------------
 void JEventProcessor_TRDTrack::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
+  //need to know where the TRD is located
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto dgeom = geo_manager->GetDGeometry(runnumber);
+
+  // Get GEM geometry from xml (CCDB or private HDDS)
+  dgeom->GetGEMTRDz(dTRDz);
+
+  vector<double>xvec,yvec;
+  if(dgeom->GetGEMTRDxy_vec(xvec,yvec)){
+    dTRDx=xvec[0];
+    dTRDy=yvec[0];
+  }
+  dgeom->GetGEMTRDsize(dTRDwidth,dTRDheight,dTRDdepth);
 }
 
 //------------------
@@ -195,8 +213,8 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
 {
 	vector<const DTRDHit*>hits; 
     event->Get(hits);
-	//vector<const DTRDStripCluster*>clusters; 
-    //event->Get(clusters);
+        vector<const DTRDStripCluster*>clusters; 
+    event->Get(clusters);
 	vector<const DTRDPoint*>pointHits; 
     event->Get(pointHits,"Hit");
 	vector<const DTRDPoint*>points;
@@ -213,7 +231,7 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
 	hnumTracks->Fill(tracks.size());
 	
   	for (unsigned int j=0;j<tracks.size();j++){
-    	const DChargedTrackHypothesis *hyp_el=tracks[j]->Get_Hypothesis(Electron);
+	  const DChargedTrackHypothesis *hyp_el=tracks[j]->Get_BestTrackingFOM();
     	if (hyp_el!=nullptr){
 			double p=hyp_el->momentum().Mag();
 			hnumElTracks->Fill(tracks.size());
@@ -234,7 +252,8 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
             	hTRDExtrapPy->Fill(trd_extrapolations[0].momentum.y());
             	hTRDExtrapPz->Fill(trd_extrapolations[0].momentum.z());
             	hTRDExtrapXY->Fill(trd_extrapolations[0].position.x(), trd_extrapolations[0].position.y());
-            	if ((trd_extrapolations[0].position.x() > -83.47) && (trd_extrapolations[0].position.x() < -11.47) && (trd_extrapolations[0].position.y() > -68.6) && (trd_extrapolations[0].position.y() < -32.61)) {
+            	//if ((trd_extrapolations[0].position.x() > -83.47) && (trd_extrapolations[0].position.x() < -11.47) && (trd_extrapolations[0].position.y() > -68.6) && (trd_extrapolations[0].position.y() < -32.61)) {
+		if ((trd_extrapolations[0].position.x() > dTRDx) && (trd_extrapolations[0].position.x() < dTRDx+dTRDwidth) && (trd_extrapolations[0].position.y() > dTRDy) && (trd_extrapolations[0].position.y() < dTRDy+dTRDheight)) {
 					inTRD = true;
 					hnumTracksInTRD->Fill(tracks.size());
 				}
@@ -259,7 +278,7 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
 				}
 				
 				for (const auto& point : pointHits) {
-				  if (abs(trd_extrapolations[0].position.x() - point->x+5) < 1.5 && abs(trd_extrapolations[0].position.y() - point->y) < 1.5 && inTRD) { //if within 1.5cm
+				  if (abs(trd_extrapolations[0].position.x() - point->x) < 1.5 && abs(trd_extrapolations[0].position.y() - point->y) < 1.5 && inTRD) { //if within 1.5cm
 						if (i==0) { hnumSeenExtrap->Fill(1); hSeenPointsSingleXY->Fill(trd_extrapolations[0].position.x(), trd_extrapolations[0].position.y()); }
 						i++;
 						hSeenPointsXY->Fill(point->x, point->y);
@@ -292,14 +311,25 @@ void JEventProcessor_TRDTrack::Process(const std::shared_ptr<const JEvent> &even
             	    hSegmentExtrapXDiff->Fill(trd_extrapolations[0].position.x() - (segment->x));
                 	hSegmentExtrapYDiff->Fill(trd_extrapolations[0].position.y() - (segment->y));
 	                hSegmentExtrapXYDiff->Fill(trd_extrapolations[0].position.x() - (segment->x), trd_extrapolations[0].position.y() - (segment->y));
-			if (abs(trd_extrapolations[0].position.x() - segment->x+5) < 1.5 && abs(trd_extrapolations[0].position.y() - segment->y) < 1.5 && inTRD) {
+			if (abs(trd_extrapolations[0].position.x() - segment->x) < 1.5 && abs(trd_extrapolations[0].position.y() - segment->y) < 1.5 && inTRD) {
 			  if (seen_segments==0) {
 			    hSeenSegmentsSingleXY->Fill(trd_extrapolations[0].position.x(), trd_extrapolations[0].position.y());
 			  }
 			seen_segments+=1;
 			}
 			
-    	        }
+		    }
+		    bool seenClustX=false, seenClustY=false;
+		    if(inTRD)
+		    for (const auto& cluster : clusters) {
+		      if (cluster->plane==1 && abs(trd_extrapolations[0].position.x() - cluster->pos.x()-dTRDx)<1.5)
+			seenClustX=true;
+		      else if (cluster->plane==2 && abs(trd_extrapolations[0].position.y() - cluster->pos.y()-dTRDy)<1.5)
+			seenClustY=true;
+		    }
+		    if (seenClustX && seenClustY)
+		      hSeenClustersXY->Fill(trd_extrapolations[0].position.x(), trd_extrapolations[0].position.y());
+		    
 				
             	    hnumTrackMatches->Fill(1);
                 	hFCALExtrapPx->Fill(fcal_extrapolations[0].momentum.x());

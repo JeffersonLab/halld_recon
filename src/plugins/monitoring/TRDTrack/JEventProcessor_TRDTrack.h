@@ -49,11 +49,12 @@ private:
   TH1D *hnumElTracks, *hnumPiTracks, *hnumTrackMatches, *hnumTracks, *hnumTracksInTRD, *hnumTracksGoodExtrap;
   
   //--New
-  TH2D *hFCALExtrapXY_TRD, *hExtrapXYDiff_FCAL_TRD, *hFCALExtrapEPvsP_TRD, *hExtrapThetavsP_TRD, *hExtrapThetavsP_Selected_TRD, *hSeenPointsXY, *hExtrapsXY, *hSeenPointsFCALXY, *hExtrapsFCALXY, *hSeenPointsSingleXY, *hSeenSegmentsSingleXY;
+  TH2D *hFCALExtrapXY_TRD, *hExtrapXYDiff_FCAL_TRD, *hFCALExtrapEPvsP_TRD, *hExtrapThetavsP_TRD, *hExtrapThetavsP_Selected_TRD, *hSeenPointsXY, *hExtrapsXY, *hSeenPointsFCALXY, *hExtrapsFCALXY, *hSeenPointsSingleXY, *hSeenSegmentsSingleXY, *hSeenClustersXY;
   TH1D *hExtrapTheta_TRD, *hExtrapXDiff_FCAL_TRD, *hExtrapYDiff_FCAL_TRD, *hFCALExtrapE_TRD, *hFCALExtrapEP_TRD, *hnumSeenExtrap, *hnumPointsSeen, *hnumExtrap, *hnumSeenExtrapFCAL, *hnumPointsSeenFCAL;
     
   
   std::shared_ptr<JLockService> lockService; //Used to access all the services, its value should be set inside Init()
+  double dTRDx, dTRDy, dTRDz, dTRDwidth, dTRDheight, dTRDdepth;
 };
 
 #endif // _JEventProcessor_TRDTrack_
