@@ -1588,7 +1588,7 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
       
       dF(locFIndex, 0) = locDeltaXDotH*locPDotH - locDeltaX.Dot(locMomentum)
 	+ PsqMinusPDotHsq*sinRhoS/locA;
-      dF(locFIndex, 1) = -locPCrossDeltaX.Dot(locH)
+      dF(locFIndex + 1, 0) = -locPCrossDeltaX.Dot(locH)
 	+ PsqMinusPDotHsq*OneMinusCosRhoS/locA;
 
       TVector3 dF0_dEta_VxVec = locMomentum 
@@ -1698,7 +1698,7 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
      
       dF(locFIndex, 0) = locDeltaXDotH*locPDotH - locDeltaX.Dot(locMomentum)
 	+ PsqMinusPDotHsq*sinRhoS/locA;
-      dF(locFIndex, 1) = -locPCrossDeltaX.Dot(locH)
+      dF(locFIndex + 1, 0) = -locPCrossDeltaX.Dot(locH)
 	+ PsqMinusPDotHsq*OneMinusCosRhoS/locA;
 
       TVector3 dF0_dEta_VxVec = locMomentum 
