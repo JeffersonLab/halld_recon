@@ -321,10 +321,21 @@ void JEventProcessor_highlevel_online::Init()
 
 	// K+ Lambda
 	if (isExclusive)
-	  sprintf(str, "#pi^{-}p inv. mass w/ identified proton;#pi^{-}p inv. mass (GeV)");
+	  sprintf(str, "#pi^{-}p inv. mass w/ identified K^{+};#pi^{-}p inv. mass (GeV)");
 	else
 	  sprintf(str, "#pi^{-}p inv. mass w/o reconstructed recoil;#pi^{-}p inv. mass (GeV)");
-	dpim_proton = new TH1I("PiMinusProton", str, 50, 1.0, 1.4);
+	dpim_proton = new TH1I("PiMinusProton", str, 100, 1.0, 1.5);
+
+	// K0 Lambda (from neutron)
+	if (isExclusive)
+	  sprintf(str, "#pi^{-}p inv. mass w/ identified K^{0};#pi^{-}p inv. mass (GeV)");
+	else
+	  sprintf(str, "#pi^{-}p inv. mass w/o reconstructed recoil;#pi^{-}p inv. mass (GeV)");
+	dpim_proton_Kshort = new TH1I("PiMinusProton_Kshort", str, 100, 1.0, 1.5);
+	sprintf(str, "#pi^{+}#pi^{-} inv. mass;#pi^{+}#pi^{-} inv. mass (GeV)");
+	dKshort = new TH1I("Kshort", str, 100, 0.2, 1.2);
+	sprintf(str, "inv. mass;#pi^{-}p inv. mass (GeV);#pi^{+}#pi^{-} inv. mass (GeV)");
+	dpim_proton_pippim = new TH2I("PiMinusProton_PiPlusPiMinus", str, 100, 1.0, 1.5, 100, 0.2, 1.2);
 
 	// pi+ pi- pi0
 	if (isExclusive)
@@ -1277,6 +1288,93 @@ void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEven
 				  continue;
 				dpim_proton->Fill(LambdaP4.M());
 				break;
+			      }
+			    }
+			  }
+		}
+	}
+	/*************************************************************** Kshort Lambda from neutron *******************************************************/
+
+	for(auto t1 : locChargedTracks){
+		//look for proton
+		auto hypoth1 = t1->Get_Hypothesis(Proton);
+		if(!hypoth1) continue;
+
+		//timing cut
+		auto detector1 = hypoth1->t1_detector();
+		double locDeltaT = hypoth1->time() - hypoth1->t0();
+		if(fabs(locDeltaT) > dTimingCutMap[Proton][detector1])
+			continue;
+
+		const DLorentzVector &Protonmom = hypoth1->lorentzMomentum();
+
+		for(auto t2 : locChargedTracks){
+			if(t2 == t1) continue;
+
+			//look for pi-
+			auto hypoth2 = t2->Get_Hypothesis(PiMinus);
+			if(!hypoth2) continue;
+
+			//timing cut
+			auto detector2 = hypoth2->t1_detector();
+			locDeltaT = hypoth2->time() - hypoth2->t0();
+			if(fabs(locDeltaT) > dTimingCutMap[PiMinus][detector2])
+				continue;
+
+			const DLorentzVector &PiMinusmom = hypoth2->lorentzMomentum();
+			DLorentzVector LambdaP4(Protonmom + PiMinusmom);
+
+			for(auto locBeamPhoton : locBeamPhotons_InTime)
+			  {
+			    //for exclusive phi: require at least one beam photon in time with missing mass squared near 0
+			    if (isExclusive){
+			      for(auto t3 : locChargedTracks){
+				if(t3 == t1) continue;
+				if(t3 == t2) continue;
+
+				//look for Pi+ from kshort
+				auto hypoth3 = t3->Get_Hypothesis(PiPlus);
+				if(!hypoth3) continue;
+
+				//timing cut
+				auto detector3 = hypoth3->t1_detector();
+				locDeltaT = hypoth3->time() - hypoth3->t0();
+				if(fabs(locDeltaT) > dTimingCutMap[PiPlus][detector3])
+				  continue;
+
+				const DLorentzVector &KSPiPlusmom = hypoth3->lorentzMomentum();
+
+				for(auto t4 : locChargedTracks){
+				    if(t4 == t1) continue;
+				    if(t4 == t2) continue;
+				    if(t4 == t3) continue;
+
+				    //look for Pi- from kshort
+				    auto hypoth4 = t4->Get_Hypothesis(PiMinus);
+				    if(!hypoth4) continue;
+
+				    //timing cut
+				    auto detector4 = hypoth4->t1_detector();
+				    locDeltaT = hypoth4->time() - hypoth4->t0();
+				    if(fabs(locDeltaT) > dTimingCutMap[PiMinus][detector4])
+				      continue;
+
+				    const DLorentzVector &KSPiMinusmom = hypoth4->lorentzMomentum();
+
+				    DLorentzVector locKShortP4(KSPiPlusmom + KSPiMinusmom);
+				    DLorentzVector LambdaP4(Protonmom + PiMinusmom);
+				    DLorentzVector locTargetP4(0.0, 0.0, 0.0, ParticleMass(Proton));
+				    DLorentzVector locMissingP4 = locBeamPhoton->lorentzMomentum() + locTargetP4 - LambdaP4 - locKShortP4;
+				    if(fabs(locMissingP4.M2()) > 0.01)
+				      continue;
+				    dKshort->Fill(locKShortP4.M());
+				    dpim_proton_pippim->Fill(LambdaP4.M(),locKShortP4.M());
+				    // loose cut on Kshort mass
+				    if(locKShortP4.M()<0.4 || locKShortP4.M()>0.6)
+				      continue;
+				    dpim_proton_Kshort->Fill(LambdaP4.M());
+				    break;
+				}
 			      }
 			    }
 			  }
