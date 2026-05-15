@@ -2,6 +2,8 @@
 // hnamepath: /highlevel/TwoGammaMass
 // hnamepath: /highlevel/PiPlusPiMinus
 // hnamepath: /highlevel/KPlusKMinus
+// hnamepath: /highlevel/PiMinusProton
+// hnamepath: /highlevel/PiMinusProton_Kshort
 // hnamepath: /highlevel/PiPlusPiMinusPiZero
 // hnamepath: /highlevel/L1bits_gtp
 // hnamepath: /highlevel/PSPairEnergy
@@ -941,16 +943,16 @@ class FitWrapper{
 			}
 
 			// Only try adding to time series if we have more than 200 particles in peak
-			cout << "====== Lambda: I="<<I<<"  mean: " << pars_out[1] << " +/- " << errs_out[1] << "   sigma: "<< pars_out[2] << " +/- " << errs_out[2] << endl;
+			cout << "====== Lambda_ks: I="<<I<<"  mean: " << pars_out[1] << " +/- " << errs_out[1] << "   sigma: "<< pars_out[2] << " +/- " << errs_out[2] << endl;
 			if( (I>200.0) && (errs_out[1]<0.07*pars_out[1]) && (errs_out[2]<0.2*pars_out[2]) ){
 
 				// Add to time series
-				InsertSeriesMassFit("lambda", pars_out[1], pars_out[2], errs_out[1], errs_out[2], unix_time);
+				InsertSeriesMassFit("lambda_ks", pars_out[1], pars_out[2], errs_out[1], errs_out[2], unix_time);
 
 				// per 1k triggers
 				if(Ntrig_tot>0.0){
 					stringstream ss;
-					ss << "fit_stats,ptype=lambda ";
+					ss << "fit_stats,ptype=lambda_ks ";
 					ss << "rate_per_1ktrig="<<rate_per_1ktrig;
 					ss << ",rate_per_1kps="<<rate_per_ps;
 					ss << ",counts="<<I;
