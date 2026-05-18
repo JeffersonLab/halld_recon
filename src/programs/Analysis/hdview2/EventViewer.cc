@@ -63,6 +63,7 @@ using namespace std;
 #include "BCAL/DBCALHit.h"
 #include "BCAL/DBCALIncidentParticle.h"
 #include "TOF/DTOFPoint.h"
+#include "TRD/DTRDPoint.h"
 #include "START_COUNTER/DSCHit.h"
 #include "DVector2.h"
 #include "TRIGGER/DL1Trigger.h"
@@ -154,6 +155,7 @@ void EventViewer::BeginRun(const std::shared_ptr<const JEvent>& event)
 
 	geom = geo_manager->GetDGeometry(runnumber);
 	geom->GetFDCWires(fdcwires);
+	geom->GetGEMTRDz(GEMTRDz);
 
 	DEvent::GetCalib(event, "PID/photon_track_matching", photon_track_matching);
 	DELTA_R_FCAL = photon_track_matching["DELTA_R_FCAL"];
@@ -1078,6 +1080,19 @@ void EventViewer::FillGraphics(void)
 		graphics.push_back(gsetp);
 	}
 
+	// TRD points
+	if(hdvmf->GetCheckButton("trdpoint")){
+	  vector<const DTRDPoint *>trdpoints;
+	  event.Get(trdpoints);
+	  DGraphicSet gsetp(kOrange, kMarker, 0.8);
+	  
+	  for(unsigned int i=0; i<trdpoints.size(); i++){
+	    TVector3 pos(trdpoints[i]->x,trdpoints[i]->y,trdpoints[i]->z);
+	    gsetp.points.push_back(pos);
+	  }
+	  graphics.push_back(gsetp);
+	}
+	  
 	// DMCThrown
 	if(hdvmf->GetCheckButton("thrown")){
 		vector<const DMCThrown*> mcthrown;

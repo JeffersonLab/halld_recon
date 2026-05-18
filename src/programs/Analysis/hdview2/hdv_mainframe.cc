@@ -421,7 +421,8 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   checkbuttons["bcal"]		= new TGCheckButton(hitdrawopts,	"BCAL");
   checkbuttons["ccal"]		= new TGCheckButton(hitdrawopts,	"CCAL");
   checkbuttons["fmwpc"]		= new TGCheckButton(hitdrawopts,	"FMWPC");
-
+  checkbuttons["trdpoint"]	= new TGCheckButton(hitdrawopts,	"TRD point");
+ 
   hitdrawopts->AddFrame(checkbuttons["cdc"], lhints);
   hitdrawopts->AddFrame(checkbuttons["cdcdrift"], lhints);
   hitdrawopts->AddFrame(checkbuttons["cdctruth"], lhints);
@@ -434,6 +435,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   hitdrawopts->AddFrame(checkbuttons["bcal"], lhints);
   hitdrawopts->AddFrame(checkbuttons["ccal"], lhints);
   hitdrawopts->AddFrame(checkbuttons["fmwpc"], lhints);
+  hitdrawopts->AddFrame(checkbuttons["trdpoint"], lhints);
 
     TGTextButton *moreOptions	= new TGTextButton(hitdrawopts,	"More options");
   hitdrawopts->AddFrame(moreOptions, lhints);
@@ -624,6 +626,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   checkbuttons["fcaltruth"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
   checkbuttons["ccal"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
   checkbuttons["trajectories"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
+  checkbuttons["trdpoint"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
   
   for (Int_t n=1;n<debugermf->GetNTrCand();n++){
     char str1[128];
@@ -2825,4 +2828,3 @@ void hdv_mainframe::SetCalorimeterEnergyColor(TPolyLine *poly,double E) const{
 void hdv_mainframe::EnableControls(bool enabled) {
     next->SetEnabled(enabled);
 }
-
