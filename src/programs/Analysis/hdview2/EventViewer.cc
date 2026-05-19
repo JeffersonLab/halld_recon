@@ -1092,6 +1092,17 @@ void EventViewer::FillGraphics(void)
 	  }
 	  graphics.push_back(gsetp);
 	}
+	if(hdvmf->GetCheckButton("trdhitpoint")){
+	  vector<const DTRDPoint *>trdpoints;
+	  event.Get(trdpoints,"Hit");
+	  DGraphicSet gsetp(kGreen+2, kMarker, 0.8);
+	  
+	  for(unsigned int i=0; i<trdpoints.size(); i++){
+	    TVector3 pos(trdpoints[i]->x,trdpoints[i]->y,trdpoints[i]->z);
+	    gsetp.points.push_back(pos);
+	  }
+	  graphics.push_back(gsetp);
+	}
 	  
 	// DMCThrown
 	if(hdvmf->GetCheckButton("thrown")){

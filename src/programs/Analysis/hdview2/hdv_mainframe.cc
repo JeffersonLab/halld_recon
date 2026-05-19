@@ -422,6 +422,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   checkbuttons["ccal"]		= new TGCheckButton(hitdrawopts,	"CCAL");
   checkbuttons["fmwpc"]		= new TGCheckButton(hitdrawopts,	"FMWPC");
   checkbuttons["trdpoint"]	= new TGCheckButton(hitdrawopts,	"TRD point");
+  checkbuttons["trdhitpoint"]	= new TGCheckButton(hitdrawopts,	"TRD hit point");
  
   hitdrawopts->AddFrame(checkbuttons["cdc"], lhints);
   hitdrawopts->AddFrame(checkbuttons["cdcdrift"], lhints);
@@ -436,6 +437,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   hitdrawopts->AddFrame(checkbuttons["ccal"], lhints);
   hitdrawopts->AddFrame(checkbuttons["fmwpc"], lhints);
   hitdrawopts->AddFrame(checkbuttons["trdpoint"], lhints);
+  hitdrawopts->AddFrame(checkbuttons["trdhitpoint"], lhints);
 
     TGTextButton *moreOptions	= new TGTextButton(hitdrawopts,	"More options");
   hitdrawopts->AddFrame(moreOptions, lhints);
@@ -627,6 +629,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   checkbuttons["ccal"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
   checkbuttons["trajectories"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
   checkbuttons["trdpoint"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
+  checkbuttons["trdhitpoint"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
   
   for (Int_t n=1;n<debugermf->GetNTrCand();n++){
     char str1[128];
