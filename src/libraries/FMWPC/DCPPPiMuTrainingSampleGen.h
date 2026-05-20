@@ -1,3 +1,4 @@
+
 // $Id$
 //
 //    File: DCPPPiMuTrainingSampleGen.h
@@ -14,6 +15,9 @@
 class DCPPPiMuTrainingSampleGen : public JObject {
     public:
         JOBJECT_PUBLIC(DCPPPiMuTrainingSampleGen);
+
+        //Event Info
+        int tof_trig_found;
 
         //Beam Info
         double beam_energy;   //Beam Energy

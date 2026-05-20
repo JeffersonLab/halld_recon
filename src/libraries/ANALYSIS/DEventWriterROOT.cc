@@ -1952,6 +1952,7 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	int locNumFmwpc5=0;
 	int locNumFmwpc6=0;
 
+	/*
 	if(locFMWPCMatchParams!=nullptr){
 		for(size_t i =0;i<locFMWPCMatchParams.size();i++){
 			switch(locFMWPCMatchParams->dLayers[i]){
@@ -1976,6 +1977,7 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 			}
 		}
 	}
+	*/
 
 	//if(locECALSingleHitMatchParams!=nullptr){
 	//  locECALEnergy = locECALSingleHitMatchParams->dEHit;

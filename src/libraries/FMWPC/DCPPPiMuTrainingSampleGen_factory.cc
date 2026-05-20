@@ -93,6 +93,13 @@ void DCPPPiMuTrainingSampleGen_factory::Process(const std::shared_ptr<const JEve
 	double locRFTime = rf[0]->dTime;
     if(isnan(locRFTime)) return;
 
+    vector<const DL1Trigger*> trig;
+    event->Get(trig);
+    if(trig.size() == 0) return;
+    
+    int TOFTrig = 0;
+    if(trig[0]->trig_mask & 0x2) TOFTrig = 1;
+
 	const DAnalysisUtilities *dAnalysisUtilities;
     event->GetSingle(dAnalysisUtilities);
     if(dAnalysisUtilities==NULL) {
@@ -119,6 +126,12 @@ void DCPPPiMuTrainingSampleGen_factory::Process(const std::shared_ptr<const JEve
 
     int pi_n_dofp = piplus->Ndof;
     int pi_n_dofn = piminus->Ndof;
+
+    double track_doca = 0.; DVector3 posp,  posn;
+    dAnalysisUtilities->Calc_DOCA(piplus, piminus, posp, posn, track_doca);
+    
+    //Quasi-vertex constraint
+    if(track_doca>1.5) return;
 
     DReferenceTrajectory rt_piplus(bfield);
     rt_piplus.SetMass(ParticleMass(PiPlus));

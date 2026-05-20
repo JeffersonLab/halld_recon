@@ -16,3 +16,5 @@ src/SBMS/*.pyc
 *.swp
 *.mil
 halld_recon_prereqs_version.xml
+
+build_hddm*
