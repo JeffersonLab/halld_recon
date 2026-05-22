@@ -177,9 +177,13 @@ void DDetectorMatches_factory::MatchToBCAL(const DParticleID* locParticleID, con
 	}
 }
 
-//void DDetectorMatches_factory::MatchToFMWPC_CPP(const DTrackTimeBased* locTrackTimeBased, const vector<const DFMWPCHit*>& locFMWPCHits, DDetectorMatches* locDetectorMatches) const{
-	
-//}
+void DDetectorMatches_factory::MatchToFMWPCHit(const DTrackTimeBased* locTrackTimeBased, const vector<const DFMWPCHit*>& locFMWPCHits, DDetectorMatches* locDetectorMatches) const{
+	auto fmwpc_projections = locTrackTimeBased->extrapolations.at(SYS_FMWPC);
+	if(fmwpc_projections.size()==0){ 
+		std::cout << "no projections" << std::endl;
+		return;
+	}
+}
 
 void DDetectorMatches_factory::MatchToFMWPC(const DTrackTimeBased* locTrackTimeBased, const vector<const DFMWPCCluster*>& locFMWPCClusters, DDetectorMatches* locDetectorMatches) const{
   auto fmwpc_projections=locTrackTimeBased->extrapolations.at(SYS_FMWPC);

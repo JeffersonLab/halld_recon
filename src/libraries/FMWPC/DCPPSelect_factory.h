@@ -93,6 +93,21 @@ static const double fmwpc_spar[6][4] = {	\
       2.2558, .14294, -1., 0., \
       2.2548, .42019, 1.3483, 0.0022198 };
 
+enum class MWPCProjKey {
+    fmwpc1_proj_plus  = 0,
+    fmwpc1_proj_minus = 1,
+    fmwpc2_proj_plus  = 2,
+    fmwpc2_proj_minus = 3,
+    fmwpc3_proj_plus  = 4,
+    fmwpc3_proj_minus = 5,
+    fmwpc4_proj_plus  = 6,
+    fmwpc4_proj_minus = 7,
+    fmwpc5_proj_plus  = 8,
+    fmwpc5_proj_minus = 9,
+    fmwpc6_proj_plus  = 10,
+    fmwpc6_proj_minus = 11
+};
+
 
 
 class DCPPSelect_factory:public JFactoryT<DCPPSelect>{
@@ -113,7 +128,8 @@ class DCPPSelect_factory:public JFactoryT<DCPPSelect>{
 		double mwpc_sigma(int ic, double p);
 		bool CheckTrackinMWPCFiducial_CPP(DVector3 mwpc_proj_pos);
         void RemoveFartherDuplicateHits(std::map<int,double>& plus_map,std::map<int,double>& minus_map);
-		
+		void ComputeMWPCWireResiduals(const DTrackTimeBased* locTrackTimeBased,const vector<const DFMWPCHit*> locFMWPCHits,std::map<MWPCProjKey,DVector3> mwpc_projections);
+
 		const DMagneticFieldMap *bfield;
         double fcalfrontfaceZ;
         double m_FCALdX, m_FCALdY, m_FCALfront, m_TOFdX, m_TOFdY, m_TOFfront;

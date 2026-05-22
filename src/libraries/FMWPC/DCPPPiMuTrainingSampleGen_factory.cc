@@ -232,32 +232,26 @@ void DCPPPiMuTrainingSampleGen_factory::Process(const std::shared_ptr<const JEve
         DVector3 mwpc_plus_pos, mwpc_plus_mom, mwpc_minus_pos, mwpc_minus_mom;
         
         DVector3 fmwpc1_zpos(0.0,0.0,mwpcz[0]);
-        //std::cout << "mwpc1 origin:x,y,z= " << origin.X() << " " << origin.Y() << " " << origin.Z() << std::endl;
         DVector3 mwpc_pos_chamber1_piplus, mwpc_mom_chamber1_piplus, mwpc_pos_chamber1_piminus,mwpc_mom_chamber1_piminus;
         if(rt_piplus.GetIntersectionWithPlane(fmwpc1_zpos,norm,mwpc_pos_chamber1_piplus,mwpc_mom_chamber1_piplus) != NOERROR) return;
         if(rt_piminus.GetIntersectionWithPlane(fmwpc1_zpos,norm,mwpc_pos_chamber1_piminus,mwpc_mom_chamber1_piminus) != NOERROR) return;
         DVector3 fmwpc2_zpos(0.0,0.0,mwpcz[1]);
-        //std::cout << "mwpc2 origin:x,y,z= " << origin.X() << " " << origin.Y() << " " << origin.Z() << std::endl;
         DVector3 mwpc_pos_chamber2_piplus, mwpc_mom_chamber2_piplus, mwpc_pos_chamber2_piminus,mwpc_mom_chamber2_piminus;
         if(rt_piplus.GetIntersectionWithPlane(fmwpc2_zpos,norm,mwpc_pos_chamber2_piplus,mwpc_mom_chamber2_piplus) != NOERROR) return;
         if(rt_piminus.GetIntersectionWithPlane(fmwpc2_zpos,norm,mwpc_pos_chamber2_piminus,mwpc_mom_chamber2_piminus) != NOERROR) return;
         DVector3 fmwpc3_zpos(0.0,0.0,mwpcz[2]);
-        //std::cout << "mwpc3 origin:x,y,z= " << origin.X() << " " << origin.Y() << " " << origin.Z() << std::endl;
         DVector3 mwpc_pos_chamber3_piplus, mwpc_mom_chamber3_piplus, mwpc_pos_chamber3_piminus,mwpc_mom_chamber3_piminus;
         if(rt_piplus.GetIntersectionWithPlane(fmwpc3_zpos,norm,mwpc_pos_chamber3_piplus,mwpc_mom_chamber3_piplus) != NOERROR) return;
         if(rt_piminus.GetIntersectionWithPlane(fmwpc3_zpos,norm,mwpc_pos_chamber3_piminus,mwpc_mom_chamber3_piminus) != NOERROR) return;
         DVector3 fmwpc4_zpos(0.0,0.0,mwpcz[3]);
-        //std::cout << "mwpc4 origin:x,y,z= " << origin.X() << " " << origin.Y() << " " << origin.Z() << std::endl;
         DVector3 mwpc_pos_chamber4_piplus, mwpc_mom_chamber4_piplus, mwpc_pos_chamber4_piminus,mwpc_mom_chamber4_piminus;
         if(rt_piplus.GetIntersectionWithPlane(fmwpc4_zpos,norm,mwpc_pos_chamber4_piplus,mwpc_mom_chamber4_piplus) != NOERROR) return;
         if(rt_piminus.GetIntersectionWithPlane(fmwpc4_zpos,norm,mwpc_pos_chamber4_piminus,mwpc_mom_chamber4_piminus) != NOERROR) return;
         DVector3 fmwpc5_zpos(0.0,0.0,mwpcz[4]);
-        //std::cout << "mwpc5 origin:x,y,z= " << origin.X() << " " << origin.Y() << " " << origin.Z() << std::endl;
         DVector3 mwpc_pos_chamber5_piplus, mwpc_mom_chamber5_piplus, mwpc_pos_chamber5_piminus,mwpc_mom_chamber5_piminus;
         if(rt_piplus.GetIntersectionWithPlane(fmwpc5_zpos,norm,mwpc_pos_chamber5_piplus,mwpc_mom_chamber5_piplus) != NOERROR) return;
         if(rt_piminus.GetIntersectionWithPlane(fmwpc5_zpos,norm,mwpc_pos_chamber5_piminus,mwpc_mom_chamber5_piminus) != NOERROR) return;
         DVector3 fmwpc6_zpos(0.0,0.0,mwpcz[5]);
-        //std::cout << "mwpc6 origin:x,y,z= " << origin.X() << " " << origin.Y() << " " << origin.Z() << std::endl;
         DVector3 mwpc_pos_chamber6_piplus, mwpc_mom_chamber6_piplus, mwpc_pos_chamber6_piminus,mwpc_mom_chamber6_piminus;
         if(rt_piplus.GetIntersectionWithPlane(fmwpc6_zpos,norm,mwpc_pos_chamber6_piplus,mwpc_mom_chamber6_piplus) != NOERROR) return;
         if(rt_piminus.GetIntersectionWithPlane(fmwpc6_zpos,norm,mwpc_pos_chamber6_piminus,mwpc_mom_chamber6_piminus) != NOERROR) return;
@@ -360,8 +354,7 @@ void DCPPPiMuTrainingSampleGen_factory::Process(const std::shared_ptr<const JEve
         double track1_energy = calculateTrackEnergy(piplus_3mom,mpic);
         double track2_energy = calculateTrackEnergy(piminus_3mom,mpic);
 
-        std::map<int,double> fmwpc1_plus_wire_diff, fmwpc2_plus_wire_diff, fmwpc3_plus_wire_diff,fmwpc4_plus_wire_diff,
-            fmwpc5_plus_wire_diff,fmwpc6_plus_wire_diff;
+        std::map<int,double> fmwpc1_plus_wire_diff, fmwpc2_plus_wire_diff, fmwpc3_plus_wire_diff,fmwpc4_plus_wire_diff, fmwpc5_plus_wire_diff,fmwpc6_plus_wire_diff;
 
         int fmwpc1m8 = 0,fmwpc2m8 = 0,fmwpc3m8 = 0,fmwpc4m8 = 0,fmwpc5m8 = 0,fmwpc6m8 = 0;
         int pfinalChamber = -1;

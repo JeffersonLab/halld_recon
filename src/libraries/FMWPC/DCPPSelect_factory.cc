@@ -101,6 +101,67 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 	vector<const DFMWPCHit*> fmwpchits;
     event->Get(fmwpchits);
 
+	DReferenceTrajectory rt_piplus(bfield);
+    rt_piplus.SetMass(ParticleMass(PiPlus));
+    rt_piplus.q = ParticleCharge(PiPlus);
+
+    rt_piplus.SetZmaxTrackingBoundary(1000.);
+
+    rt_piplus.Swim(piplus->position(),piplus->momentum(),rt_piplus.q);
+    
+    DReferenceTrajectory rt_piminus(bfield);
+    rt_piminus.SetMass(ParticleMass(PiMinus));
+    rt_piminus.q = ParticleCharge(PiMinus);
+
+    rt_piminus.SetZmaxTrackingBoundary(1000.);
+    rt_piminus.Swim(piminus->position(),piminus->momentum(),rt_piminus.q);
+
+
+	std::map<MWPCProjKey,DVector3> mwpc_projection_map;
+
+	DVector3 norm(0.0,0.0,1.0);
+	DVector3 fmwpc1_zpos(0.0,0.0,mwpcz[0]);
+	DVector3 mwpc_pos_chamber1_piplus, mwpc_mom_chamber1_piplus, mwpc_pos_chamber1_piminus,mwpc_mom_chamber1_piminus;
+	if(rt_piplus.GetIntersectionWithPlane(fmwpc1_zpos,norm,mwpc_pos_chamber1_piplus,mwpc_mom_chamber1_piplus) != NOERROR) return;
+	if(rt_piminus.GetIntersectionWithPlane(fmwpc1_zpos,norm,mwpc_pos_chamber1_piminus,mwpc_mom_chamber1_piminus) != NOERROR) return;
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc1_proj_plus,mwpc_pos_chamber1_piplus);
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc1_proj_minus,mwpc_pos_chamber1_piminus);
+
+	DVector3 fmwpc2_zpos(0.0,0.0,mwpcz[1]);
+	DVector3 mwpc_pos_chamber2_piplus, mwpc_mom_chamber2_piplus, mwpc_pos_chamber2_piminus,mwpc_mom_chamber2_piminus;
+	if(rt_piplus.GetIntersectionWithPlane(fmwpc2_zpos,norm,mwpc_pos_chamber2_piplus,mwpc_mom_chamber2_piplus) != NOERROR) return;
+	if(rt_piminus.GetIntersectionWithPlane(fmwpc2_zpos,norm,mwpc_pos_chamber2_piminus,mwpc_mom_chamber2_piminus) != NOERROR) return;
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc2_proj_plus,mwpc_pos_chamber2_piplus);
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc2_proj_minus,mwpc_pos_chamber2_piminus);
+
+	DVector3 fmwpc3_zpos(0.0,0.0,mwpcz[2]);
+	DVector3 mwpc_pos_chamber3_piplus, mwpc_mom_chamber3_piplus, mwpc_pos_chamber3_piminus,mwpc_mom_chamber3_piminus;
+	if(rt_piplus.GetIntersectionWithPlane(fmwpc3_zpos,norm,mwpc_pos_chamber3_piplus,mwpc_mom_chamber3_piplus) != NOERROR) return;
+	if(rt_piminus.GetIntersectionWithPlane(fmwpc3_zpos,norm,mwpc_pos_chamber3_piminus,mwpc_mom_chamber3_piminus) != NOERROR) return;
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc3_proj_plus,mwpc_pos_chamber3_piplus);
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc3_proj_minus,mwpc_pos_chamber3_piminus);
+
+	DVector3 fmwpc4_zpos(0.0,0.0,mwpcz[3]);
+	DVector3 mwpc_pos_chamber4_piplus, mwpc_mom_chamber4_piplus, mwpc_pos_chamber4_piminus,mwpc_mom_chamber4_piminus;
+	if(rt_piplus.GetIntersectionWithPlane(fmwpc4_zpos,norm,mwpc_pos_chamber4_piplus,mwpc_mom_chamber4_piplus) != NOERROR) return;
+	if(rt_piminus.GetIntersectionWithPlane(fmwpc4_zpos,norm,mwpc_pos_chamber4_piminus,mwpc_mom_chamber4_piminus) != NOERROR) return;
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc4_proj_plus,mwpc_pos_chamber4_piplus);
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc4_proj_minus,mwpc_pos_chamber4_piminus);
+
+	DVector3 fmwpc5_zpos(0.0,0.0,mwpcz[4]);
+	DVector3 mwpc_pos_chamber5_piplus, mwpc_mom_chamber5_piplus, mwpc_pos_chamber5_piminus,mwpc_mom_chamber5_piminus;
+	if(rt_piplus.GetIntersectionWithPlane(fmwpc5_zpos,norm,mwpc_pos_chamber5_piplus,mwpc_mom_chamber5_piplus) != NOERROR) return;
+	if(rt_piminus.GetIntersectionWithPlane(fmwpc5_zpos,norm,mwpc_pos_chamber5_piminus,mwpc_mom_chamber5_piminus) != NOERROR) return;
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc5_proj_plus,mwpc_pos_chamber5_piplus);
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc5_proj_minus,mwpc_pos_chamber5_piminus);
+
+	DVector3 fmwpc6_zpos(0.0,0.0,mwpcz[5]);
+	DVector3 mwpc_pos_chamber6_piplus, mwpc_mom_chamber6_piplus, mwpc_pos_chamber6_piminus,mwpc_mom_chamber6_piminus;
+	if(rt_piplus.GetIntersectionWithPlane(fmwpc6_zpos,norm,mwpc_pos_chamber6_piplus,mwpc_mom_chamber6_piplus) != NOERROR) return;
+	if(rt_piminus.GetIntersectionWithPlane(fmwpc6_zpos,norm,mwpc_pos_chamber6_piminus,mwpc_mom_chamber6_piminus) != NOERROR) return;
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc6_proj_plus,mwpc_pos_chamber6_piplus);
+	mwpc_projection_map.emplace(MWPCProjKey::fmwpc6_proj_minus,mwpc_pos_chamber6_piminus);
+
 }
 
 //------------------
@@ -158,5 +219,60 @@ void DCPPSelect_factory::RemoveFartherDuplicateHits(std::map<int,double>& plus_m
             ++it_plus;
         }
     }
+}
+
+void DCPPSelect_factory::ComputeMWPCWireResiduals(const DTrackTimeBased* locTrackTimeBased,const vector<const DFMWPCHit*> locFMWPCHits, std::map<MWPCProjKey,DVector3> mwpc_projections){
+	std::map<int,double> fmwpc1_plus_wire_diff, fmwpc2_plus_wire_diff, fmwpc3_plus_wire_diff,fmwpc4_plus_wire_diff, fmwpc5_plus_wire_diff,fmwpc6_plus_wire_diff;
+
+	int fmwpc1m8 = 0,fmwpc2m8 = 0,fmwpc3m8 = 0,fmwpc4m8 = 0,fmwpc5m8 = 0,fmwpc6m8 = 0;
+	int pfinalChamber = -1;
+	for(int jlayer = 0;jlayer<6;jlayer++){
+		double s=-1;
+		for(unsigned j = 0; j < locFMWPCHits.size();j++){
+			const DFMWPCHit *hit1 = locFMWPCHits[j];
+			int ilayer = hit1->layer-1;
+			if(ilayer!=jlayer) continue;
+			int iwire = hit1->wire;
+			double coord = (iwire -72.5)*2.54*0.4;
+			double track_coord = NAN;
+			if(ilayer == 0) track_coord = mwpc_pos_chamber1_piplus.X();
+			if(ilayer == 1) track_coord = mwpc_pos_chamber2_piplus.Y();
+			if(ilayer == 2) track_coord = mwpc_pos_chamber3_piplus.X();
+			if(ilayer == 3) track_coord = mwpc_pos_chamber4_piplus.Y();
+			if(ilayer == 4) track_coord = mwpc_pos_chamber5_piplus.X();
+			if(ilayer == 5) track_coord = mwpc_pos_chamber6_piplus.Y();
+			if(std::isnan(track_coord)){
+				continue;
+			}
+			s = mwpc_sigma(jlayer,track1_energy);
+			double diff = coord - track_coord - fmwpc_al[ilayer];
+			if(fabs(diff)>s*5.)continue;
+			if(pfinalChamber < ilayer) pfinalChamber = ilayer;
+			if(ilayer == 0){
+				fmwpc1m8 += 1;
+				fmwpc1_plus_wire_diff.emplace(iwire,diff);
+			}
+			if(ilayer == 1){
+				fmwpc2m8 += 1;
+				fmwpc2_plus_wire_diff.emplace(iwire,diff);
+			}
+			if(ilayer == 2){
+				fmwpc3m8 += 1;
+				fmwpc3_plus_wire_diff.emplace(iwire,diff);
+			}
+			if(ilayer == 3){
+				fmwpc4m8 += 1;
+				fmwpc4_plus_wire_diff.emplace(iwire,diff);
+			}
+			if(ilayer == 4){
+				fmwpc5m8 += 1;
+				fmwpc5_plus_wire_diff.emplace(iwire,diff);
+			}
+			if(ilayer == 5){
+				fmwpc6m8 += 1;
+				fmwpc6_plus_wire_diff.emplace(iwire,diff);
+			}
+		}
+	}
 }
 
