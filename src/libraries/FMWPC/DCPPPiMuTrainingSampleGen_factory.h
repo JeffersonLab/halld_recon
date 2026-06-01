@@ -58,34 +58,34 @@
 #include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALShower.h>
 
-static const int cwire_min[4] = {20, 39, 84, 103};
-static const int cwire_max[4] = {43, 64, 106, 126};
+inline const int cwire_min[4] = {20, 39, 84, 103};
+inline const int cwire_max[4] = {43, 64, 106, 126};
 
-static const double cwire_min_X[4] = {-52.324,-33.02,12.7,32.004};
-static const double cwire_max_X[4] = {-28.956,-7.62,35.052,55.372};
+inline const double cwire_min_X[4] = {-52.324,-33.02,12.7,32.004};
+inline const double cwire_max_X[4] = {-28.956,-7.62,35.052,55.372};
 
-static const double mwpcz[6] = {811.62, 827.79, 849.04,890.65,921.84,941.12};
+inline const double mwpcz[6] = {811.62, 827.79, 849.04,890.65,921.84,941.12};
 
 const double FMWPC_WIRE_SPACING=1.016;
 
-static const double mu_mass = 0.10565;
+inline const double mu_mass = 0.10565;
 
 
-static const double fmwpc_z[6]  = {811.62, 827.79, 849.04, 890.65, 931.84, 941.12};
-static const double fmwpc_sz[6] = {  2.26,   2.60,   2.94,   3.64,   4.93,   5.15};
-static const double fmwpc_al[6] = {  0.25,  -0.22,   0.23,  -0.27,   0.17,  -0.06};
+inline const double fmwpc_z[6]  = {811.62, 827.79, 849.04, 890.65, 931.84, 941.12};
+inline const double fmwpc_sz[6] = {  2.26,   2.60,   2.94,   3.64,   4.93,   5.15};
+inline const double fmwpc_al[6] = {  0.25,  -0.22,   0.23,  -0.27,   0.17,  -0.06};
 
-static const double mpi0    = 0.1349766;
-static const double mpic    = 0.13957;
-static const double meta    = 0.547862;
-static const double metap   = 0.95778;
-static const double clight  = 29.9792458;
+inline const double mpi0    = 0.1349766;
+inline const double mpic    = 0.13957;
+inline const double meta    = 0.547862;
+inline const double metap   = 0.95778;
+inline const double clight  = 29.9792458;
 
 
-static const double my_TOF_dx  = -0.28;
-static const double my_TOF_dy  =  0.21;
+inline const double my_TOF_dx  = -0.28;
+inline const double my_TOF_dy  =  0.21;
 
-static const double fmwpc_spar[6][4] = {	\
+inline const double fmwpc_spar[6][4] = {	\
       3.8515, 1.6761, 0.98888, 0.041894, \
       3.9221, 1.7107, 1.18600, 0.057278, \
       4.0039, 1.6271, 1.53250, 0.088580, \

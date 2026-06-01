@@ -58,42 +58,9 @@
 #include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALShower.h>
 
-static const int cwire_min[4] = {20, 39, 84, 103};
-static const int cwire_max[4] = {43, 64, 106, 126};
-
-static const double cwire_min_X[4] = {-52.324,-33.02,12.7,32.004};
-static const double cwire_max_X[4] = {-28.956,-7.62,35.052,55.372};
-
-static const double mwpcz[6] = {811.62, 827.79, 849.04,890.65,921.84,941.12};
-
-const double FMWPC_WIRE_SPACING=1.016;
-
-static const double mu_mass = 0.10565;
 
 
-static const double fmwpc_z[6]  = {811.62, 827.79, 849.04, 890.65, 931.84, 941.12};
-static const double fmwpc_sz[6] = {  2.26,   2.60,   2.94,   3.64,   4.93,   5.15};
-static const double fmwpc_al[6] = {  0.25,  -0.22,   0.23,  -0.27,   0.17,  -0.06};
-
-static const double mpi0    = 0.1349766;
-static const double mpic    = 0.13957;
-static const double meta    = 0.547862;
-static const double metap   = 0.95778;
-static const double clight  = 29.9792458;
-
-
-static const double my_TOF_dx  = -0.28;
-static const double my_TOF_dy  =  0.21;
-
-static const double fmwpc_spar[6][4] = {	\
-      3.8515, 1.6761, 0.98888, 0.041894, \
-      3.9221, 1.7107, 1.18600, 0.057278, \
-      4.0039, 1.6271, 1.53250, 0.088580, \
-      13.070, 6.6978, 2.04570, 0.140260, \
-      2.2558, .14294, -1., 0., \
-      2.2548, .42019, 1.3483, 0.0022198 };
-
-enum class MWPCProjKey {
+enum class MWPCKey {
     fmwpc1_proj_plus  = 0,
     fmwpc1_proj_minus = 1,
     fmwpc2_proj_plus  = 2,
@@ -125,10 +92,14 @@ class DCPPSelect_factory:public JFactoryT<DCPPSelect>{
 		void EndRun() override;                     ///< Called everytime run number changes, provided BeginRun has been called.
 		void Finish() override;                     ///< Called after last event of last event source has been processed.
 
+        double calculateTrackEnergy(DVector3 ptrack_mom, double pmass);
+        bool MatchToTOF_CPP_GEOM(const vector<const DTOFPoint*>& tof_points, DVector3 tof_proj_pos);
+        bool MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_showers, vector<const DFCALShower*>& fcal_matched_showers, DVector3 fcal_proj_pos, DVector3 fcal_proj_mom);
+        bool MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, vector<const DFCALHit*>& fcal_matched_hits, double& e9e25, double& doca, double& e1e9,DVector3 fcal_proj_pos, DVector3 fcal_proj_mom,double& sumUSh, double& sumVSh);
 		double mwpc_sigma(int ic, double p);
 		bool CheckTrackinMWPCFiducial_CPP(DVector3 mwpc_proj_pos);
         void RemoveFartherDuplicateHits(std::map<int,double>& plus_map,std::map<int,double>& minus_map);
-		void ComputeMWPCWireResiduals(const DTrackTimeBased* locTrackTimeBased,const vector<const DFMWPCHit*> locFMWPCHits,std::map<MWPCProjKey,DVector3> mwpc_projections);
+		bool ComputeMWPCWireResiduals(const vector<const DFMWPCHit*> locFMWPCHits,std::map<MWPCKey,DVector3> mwpc_projections,double track1_energy,double track2_energy, map<MWPCKey,int>& mwpc_multis, bool& piplus_track_chamber6, bool& piminus_track_chamber6);
 
 		const DMagneticFieldMap *bfield;
         double fcalfrontfaceZ;
