@@ -111,6 +111,21 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
     if (PiMhyp==NULL) return;
     const DTrackTimeBased *piminus=PiMhyp->Get_TrackTimeBased();
 
+	bool track_doca_check = true;
+	const DAnalysisUtilities *dAnalysisUtilities;
+    event->GetSingle(dAnalysisUtilities);
+    if(dAnalysisUtilities==NULL) {
+        cerr << "unable to get DAnalysisUtilities pointer" << endl;
+        track_doca_check = false;
+    }
+
+	if(track_doca_check){
+		double track_doca = 0.; DVector3 posp,  posn;
+    	dAnalysisUtilities->Calc_DOCA(piplus, piminus, posp, posn, track_doca);
+    	//Quasi-vertex constraint
+    	if(track_doca>1.5) track_doca_check = false;
+	}
+
 	vector<const DFMWPCHit*> fmwpchits;
     event->Get(fmwpchits);
 
@@ -128,6 +143,8 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 
     rt_piminus.SetZmaxTrackingBoundary(1000.);
     rt_piminus.Swim(piminus->position(),piminus->momentum(),rt_piminus.q);
+
+
 
 	const double mpic = 0.13957;
 
@@ -234,8 +251,8 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 		fcale9e259 = e9e25_hit_piminus;
 		fcale1e99 = e1e9_hit_piminus;
 		fcalblocksn9 = fcal_matched_hits_piminus.size();
-		sumu9 = sumu_hit_piplus;
-		sumv9 = sumv_hit_piplus;
+		sumu9 = sumu_hit_piminus;
+		sumv9 = sumv_hit_piminus;
 		fcaltime9 = fcal_matched_hits_piminus[0]->t;
 		nFH_n += 1;
 	}
@@ -285,15 +302,20 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 	mwpc_projection_map.emplace(MWPCKey::fmwpc6_proj_minus,mwpc_pos_chamber6_piminus);
 
 	map<MWPCKey,int> mwpc_multiplicity_map;
-	bool piplus_track_chamber6, piminus_track_chamber6;
+	bool piplus_track_chamber6 = false, piminus_track_chamber6 =false;
 	if(!ComputeMWPCWireResiduals(fmwpchits,mwpc_projection_map,track_plus_energy,track_minus_energy,mwpc_multiplicity_map,piplus_track_chamber6,piminus_track_chamber6)) return;
 
 	DCPPSelect *myCPPSelect = new DCPPSelect;
 	myCPPSelect->piplus3mom = piplus->momentum();
 	myCPPSelect->piminus3mom = piminus->momentum();
+
+	myCPPSelect->IS_TrackDOCAGood = track_doca_check;
 	
 	myCPPSelect->IS_PlusTrackInTOF = tof_match_plus;
 	myCPPSelect->IS_MinusTrackInTOF = tof_match_minus;
+
+	myCPPSelect->IS_PlusTrackINChamber6 = piplus_track_chamber6;
+	myCPPSelect->IS_MinusTrackINChamber6 = piminus_track_chamber6;
 
 	myCPPSelect->fmwpc1n_piplus = mwpc_multiplicity_map.at(MWPCKey::fmwpc1_proj_plus);
 	myCPPSelect->fmwpc2n_piplus = mwpc_multiplicity_map.at(MWPCKey::fmwpc2_proj_plus);
@@ -309,7 +331,7 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 	myCPPSelect->fmwpc6n_piminus = mwpc_multiplicity_map.at(MWPCKey::fmwpc6_proj_minus);
 
 	myCPPSelect->fcal_energy_piplus   = fcale8;
-	myCPPSelect->fcal_energy_piplus   = fcale9;
+	myCPPSelect->fcal_energy_piminus   = fcale9;
 	myCPPSelect->fcal_eoverp_piplus   = fcalep8;
 	myCPPSelect->fcal_eoverp_piminus  = fcalep9;
 	myCPPSelect->fcal_doca_piplus     = fcaldoca8;

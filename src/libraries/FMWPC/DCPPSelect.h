@@ -23,6 +23,8 @@ class DCPPSelect : public JObject {
         DVector3 piplus3mom;
         DVector3 piminus3mom;
 
+        bool IS_TrackDOCAGood;
+
         //TOF 
         bool IS_PlusTrackInTOF;
         bool IS_MinusTrackInTOF;
