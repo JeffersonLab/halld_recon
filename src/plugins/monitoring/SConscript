@@ -18,7 +18,6 @@ subdirs = [
 'FCAL_online',
 'FCAL_invmass',
 'FCAL_cpp',
-'FDC_online',
 'FDC_Efficiency',
 'FMWPC_online',
 'FMWPC_Performance',

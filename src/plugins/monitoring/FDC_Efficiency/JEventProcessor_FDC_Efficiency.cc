@@ -105,8 +105,6 @@ void JEventProcessor_FDC_Efficiency::Init()
   gDirectory->mkdir("FDC_Efficiency")->cd();
   gDirectory->mkdir("FDC_View")->cd();
 
-  test = 1;
-
   for(int icell=0; icell<24; icell++){
       
     char hname_measured[256];
