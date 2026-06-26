@@ -26,6 +26,7 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <array>
 
 #include <TFile.h>
 #include <TH1D.h>
@@ -60,20 +61,9 @@
 
 
 
-enum class MWPCKey {
-    fmwpc1_proj_plus  = 0,
-    fmwpc1_proj_minus = 1,
-    fmwpc2_proj_plus  = 2,
-    fmwpc2_proj_minus = 3,
-    fmwpc3_proj_plus  = 4,
-    fmwpc3_proj_minus = 5,
-    fmwpc4_proj_plus  = 6,
-    fmwpc4_proj_minus = 7,
-    fmwpc5_proj_plus  = 8,
-    fmwpc5_proj_minus = 9,
-    fmwpc6_proj_plus  = 10,
-    fmwpc6_proj_minus = 11
-};
+
+
+
 
 
 
@@ -83,6 +73,16 @@ class DCPPSelect_factory:public JFactoryT<DCPPSelect>{
 			SetTag("");
 		}
 		~DCPPSelect_factory(){}
+        //void SwimTracksToAllDetectors(DTrackTimeBased* locTimeTrack,DVector3& tofProjection,DVector3& fcalProjection,vector<DVector3>& mwpcProjection,Particle_t particle_id);
+
+        //bool MatchToTOF_CPP_GEOM(const vector<const DTOFPoint*>& tof_points, DVector3 tof_proj_pos);
+
+        //bool MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_showers, vector<const DFCALShower*>& fcal_matched_showers, DVector3 fcal_proj_pos, DVector3 fcal_proj_mom);
+        //bool MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, vector<const DFCALHit*>& fcal_matched_hits, double& e9e25, double& doca, double& e1e9,DVector3 fcal_proj_pos, DVector3 fcal_proj_mom,double& sumUSh, double& sumVSh);
+        
+        //bool CheckTrackinMWPCFiducial_CPP(DVector3 mwpc_proj_pos);
+        //bool ComputeMWPCWireResiduals(const vector<const DFMWPCHit*> locFMWPCHits,std::map<MWPCKey,DVector3> mwpc_projections,double track1_energy,double track2_energy, map<MWPCKey,int>& mwpc_multis, bool& piplus_track_chamber6, bool& piminus_track_chamber6);
+
 
 
 	private:
@@ -93,13 +93,12 @@ class DCPPSelect_factory:public JFactoryT<DCPPSelect>{
 		void Finish() override;                     ///< Called after last event of last event source has been processed.
 
         double calculateTrackEnergy(DVector3 ptrack_mom, double pmass);
-        bool MatchToTOF_CPP_GEOM(const vector<const DTOFPoint*>& tof_points, DVector3 tof_proj_pos);
-        bool MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_showers, vector<const DFCALShower*>& fcal_matched_showers, DVector3 fcal_proj_pos, DVector3 fcal_proj_mom);
-        bool MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, vector<const DFCALHit*>& fcal_matched_hits, double& e9e25, double& doca, double& e1e9,DVector3 fcal_proj_pos, DVector3 fcal_proj_mom,double& sumUSh, double& sumVSh);
-		double mwpc_sigma(int ic, double p);
-		bool CheckTrackinMWPCFiducial_CPP(DVector3 mwpc_proj_pos);
-        void RemoveFartherDuplicateHits(std::map<int,double>& plus_map,std::map<int,double>& minus_map);
-		bool ComputeMWPCWireResiduals(const vector<const DFMWPCHit*> locFMWPCHits,std::map<MWPCKey,DVector3> mwpc_projections,double track1_energy,double track2_energy, map<MWPCKey,int>& mwpc_multis, bool& piplus_track_chamber6, bool& piminus_track_chamber6);
+		//double mwpc_sigma(int ic, double p);
+        //void RemoveFartherDuplicateHits(std::map<int,double>& plus_map,std::map<int,double>& minus_map);
+        //ProjectionResults SwimTracksToAllDetectors(const DTrackTimeBased* locTimeTrack, Particle_t particle_id,const DMagneticFieldMap *bfield,double fcalfrontfaceZ,double m_TOFfront);
+
+		void DoKinematicFit(const DBeamPhoton *beamphoton, const DTrackTimeBased *negative, const DTrackTimeBased *positive, DKinFitUtils_GlueX *dKinFitUtils,DKinFitter *dKinFitter,const DAnalysisUtilities *dAnalysisUtilities) const;
+		
 
 		const DMagneticFieldMap *bfield;
         double fcalfrontfaceZ;

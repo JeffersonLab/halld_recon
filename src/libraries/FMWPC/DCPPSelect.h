@@ -14,14 +14,82 @@
 #include <JANA/JObject.h>
 #include <DVector3.h>
 
+#include <particleType.h>
+#include <TRACKING/DTrackTimeBased.h>
+
+#include <TOF/DTOFPoint.h>
+#include <FCAL/DFCALShower.h>
+#include <FCAL/DFCALHit.h>
+#include <FMWPC/DFMWPCHit.h>
+#include <FMWPC/DCTOFPoint.h>
+
+#include <DVector3.h>
+
+struct ProjectionResults {
+    bool projection_success = false;
+    DVector3 tof_projection;
+    DVector3 fcal_projection;
+    std::array<bool,6> mwpc_flags;
+    std::array<DVector3,6> mwpc_projections;
+    DVector3 ctof_projection;
+};
+
+enum class MWPCKey {
+    fmwpc1_proj_plus  = 0,
+    fmwpc1_proj_minus = 1,
+    fmwpc2_proj_plus  = 2,
+    fmwpc2_proj_minus = 3,
+    fmwpc3_proj_plus  = 4,
+    fmwpc3_proj_minus = 5,
+    fmwpc4_proj_plus  = 6,
+    fmwpc4_proj_minus = 7,
+    fmwpc5_proj_plus  = 8,
+    fmwpc5_proj_minus = 9,
+    fmwpc6_proj_plus  = 10,
+    fmwpc6_proj_minus = 11
+};
+
 
 class DCPPSelect : public JObject {
     public:
         JOBJECT_PUBLIC(DCPPSelect)
+    
+        //HELPER Functions
+        static ProjectionResults SwimTracksToAllDetectors(const DTrackTimeBased* locTimeTrack, Particle_t particle_id,const DMagneticFieldMap *bfield,double fcalfrontfaceZ,double m_TOFfront);
 
+        static bool MatchToTOF_CPP_GEOM(const vector<const DTOFPoint*>& tof_points, DVector3 tof_proj_pos);
+
+        static bool MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_showers, vector<const DFCALShower*>& fcal_matched_showers, DVector3 fcal_proj_pos, DVector3 fcal_proj_mom);
+
+        static bool MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, vector<const DFCALHit*>& fcal_matched_hits, double& e9e25, double& doca, double& e1e9,DVector3 fcal_proj_pos, DVector3 fcal_proj_mom,double& sumUSh, double& sumVSh);
+
+        static bool ComputeMWPCWireResiduals(const vector<const DFMWPCHit*> locFMWPCHits,std::map<MWPCKey,DVector3> mwpc_projections,double track1_energy,double track2_energy, map<MWPCKey,int>& mwpc_multis, bool& piplus_track_chamber6, bool& piminus_track_chamber6);
+
+        static bool ComputeSingleTrackMWPCWireResiduals(const vector<const DFMWPCHit*> locFMWPCHits, std::map<MWPCKey,DVector3> mwpc_projections,double track_energy,bool& track_in_chamber6, double track_charge,std::map<int,double>& fmwpc1_wire_diff, std::map<int,double>& fmwpc2_wire_diff, std::map<int,double>& fmwpc3_wire_diff, std::map<int,double>& fmwpc4_wire_diff,std::map<int,double>& fmwpc5_wire_diff, std::map<int,double>& fmwpc6_wire_diff);
+
+        static double mwpc_sigma(int ic, double p);
+        static bool CheckTrackinMWPCFiducial_CPP(DVector3 mwpc_proj_pos);
+
+        static void RemoveFartherDuplicateHits(std::map<int,double>& plus_map,std::map<int,double>& minus_map);
+
+        static bool CheckTrackToCTOF_CPP(const vector<const DCTOFPoint*>& ctof_hit, DVector3 ctof_proj_pos, vector<int>& bCTGH);
+
+        static bool MatchToPaddle(double x_track_pos, const vector<int>& allowedPaddles,int hitPaddleID);
+
+        static bool MatchToCTOFHit_CPP(const vector<const DCTOFPoint*>& ctof_Hits, vector<const DCTOFPoint*>& ctof_matched_hits, DVector3 ctof_proj_pos,const vector<int>& allowedPaddles);
+        //Beam Info
+        double beam_weight;
+        double beam_energy;
+        
         //Track Info
         DVector3 piplus3mom;
         DVector3 piminus3mom;
+
+        //KinFit 
+        DVector3 piplus3mom_kf;
+        DVector3 piminus3mom_kf;
+        double kinfit_chisq;
+        double kinfit_ndf;
 
         bool IS_TrackDOCAGood;
 
@@ -48,6 +116,20 @@ class DCPPSelect : public JObject {
         int fcal_hit_count_piminus;     //Number of FCAL Showers pi- track
 
         //FMWPC Features
+        bool IS_Chamber1ExtrapReal_plus;
+        bool IS_Chamber2ExtrapReal_plus;
+        bool IS_Chamber3ExtrapReal_plus;
+        bool IS_Chamber4ExtrapReal_plus;
+        bool IS_Chamber5ExtrapReal_plus;
+        bool IS_Chamber6ExtrapReal_plus;
+
+        bool IS_Chamber1ExtrapReal_minus;
+        bool IS_Chamber2ExtrapReal_minus;
+        bool IS_Chamber3ExtrapReal_minus;
+        bool IS_Chamber4ExtrapReal_minus;
+        bool IS_Chamber5ExtrapReal_minus;
+        bool IS_Chamber6ExtrapReal_minus;
+
         bool IS_PlusTrackINChamber6; //Is plus track in fiducial region of chamber 6
         bool IS_MinusTrackINChamber6; //Is minus track in fiducial region of chamber 6
         //FMWPC Multiplicities
@@ -65,10 +147,10 @@ class DCPPSelect : public JObject {
         int fmwpc6n_piminus;    //MWPC 6 Multiplicity 
 
 
-
-
-
     void Summarize(JObjectSummary& summary) const override {
+        summary.add(beam_weight, "Acc. Weight","%f");
+        summary.add(beam_energy, "Beam E","%f");
+
         summary.add(IS_MinusTrackInTOF,"TOF+","%d");
         summary.add(IS_MinusTrackInTOF,"TOF-","%d");
 

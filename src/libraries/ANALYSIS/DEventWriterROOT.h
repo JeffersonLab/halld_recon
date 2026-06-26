@@ -26,7 +26,7 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "DAQ/DBeamHelicity.h"
 
-#include <FMWPC/DCPPPiMuTrainingSampleGen.h>
+#include <FMWPC/DCPPSelect.h>
 
 #include "PID/DVertex.h"
 #include "PID/DChargedTrack.h"
@@ -75,6 +75,8 @@ class DEventWriterROOT : public JObject
 				const vector<const DBeamPhoton*>& locBeamPhotons, const vector<const DChargedTrackHypothesis*>& locChargedHypos,
 				const vector<const DNeutralParticleHypothesis*>& locNeutralHypos, const deque<const DParticleCombo*>& locParticleCombos) const{};
 
+		void Fill_PIMUFeatures(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrack) const;
+
 		//UTILITY FUNCTIONS
 		string Convert_ToBranchName(string locInputName) const;
 		string Build_BranchName(string locParticleBranchName, string locVariableName) const;
@@ -92,9 +94,9 @@ class DEventWriterROOT : public JObject
 		unsigned int dInitNumComboArraySize;
 
 		double dTargetCenterZ;
-  double dFdcPackages[4];
-  vector<string>dFDCxLeaves={"FDC1_X","FDC2_X","FDC3_X","FDC4_X"};
-  vector<string>dFDCyLeaves={"FDC1_Y","FDC2_Y","FDC3_Y","FDC4_Y"};
+		double dFdcPackages[4];
+		vector<string>dFDCxLeaves={"FDC1_X","FDC2_X","FDC3_X","FDC4_X"};
+		vector<string>dFDCyLeaves={"FDC1_Y","FDC2_Y","FDC3_Y","FDC4_Y"};
 
 		//DEFAULT ACTIONS LISTED SEPARATELY FROM CUSTOM (in case in derived class user does something bizarre)
 		map<const DReaction*, DCutAction_ThrownTopology*> dCutActionMap_ThrownTopology;
@@ -269,6 +271,11 @@ class DEventWriterROOT : public JObject
 
 		//Fill the tracking pulls into the tree:
 		void fillTreeTrackPullBranches(DTreeFillData* locTreeFillData,string yourBranchName,DKinFitType yourFitType,map<DKinFitPullType, double> yourPullsMap, int yourIndex, bool isNeutral, const DKinematicData* particle, const DKinematicData* particleFit) const;
+
+		const DMagneticFieldMap *bfield;
+		double fcalfrontfaceZ;
+        double m_TOFdX, m_TOFdY, m_TOFfront;
+
 
 };
 

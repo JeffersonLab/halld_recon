@@ -77,6 +77,20 @@ void DEventWriterROOT::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 				Create_DataTree(locReaction, locEvent, !locMCThrowns.empty());
 		}
 	}
+
+	/*
+	//initialize bfield map
+	auto app = locEvent->GetJApplication();
+	auto geo_manager = app->GetService<DGeometryManager>();
+    bfield = geo_manager->GetBfield(runnumber);
+
+	auto geom = geo_manager->GetDGeometry(runnumber);
+    geom->GetFCALZ(fcalfrontfaceZ);
+
+    vector<double>  tof_face;
+    geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",tof_face);
+    m_TOFdX = tof_face[0]; m_TOFdY = tof_face[1]; m_TOFfront = tof_face[2];
+	*/
 }
 
 void DEventWriterROOT::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
@@ -1945,39 +1959,6 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	double locECALEnergy = (locECALShower != NULL) ? locECALShower->E : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_ECAL"), locECALEnergy, locArrayIndex);
 
-	int locNumFmwpc1=0;
-	int locNumFmwpc2=0;
-	int locNumFmwpc3=0;
-	int locNumFmwpc4=0;
-	int locNumFmwpc5=0;
-	int locNumFmwpc6=0;
-
-	/*
-	if(locFMWPCMatchParams!=nullptr){
-		for(size_t i =0;i<locFMWPCMatchParams.size();i++){
-			switch(locFMWPCMatchParams->dLayers[i]){
-				case 1:
-					locNumFmwpc1 = locFMWPCMatchParams->dNHits();
-					break;
-				case 2:
-					locNumFmwpc2 = locFMWPCMatchParams->dNHits();
-					break;
-				case 3:
-					locNumFmwpc3 = locFMWPCMatchParams->dNHits();
-					break;
-				case 4:
-					locNumFmwpc4 = locFMWPCMatchParams->dNHits();
-					break;
-				case 5:
-					locNumFmwpc5 = locFMWPCMatchParams->dNHits();
-					break;
-				case 6:
-					locNumFmwpc6 = locFMWPCMatchParams->dNhits();
-					break;
-			}
-		}
-	}
-	*/
 
 	//if(locECALSingleHitMatchParams!=nullptr){
 	//  locECALEnergy = locECALSingleHitMatchParams->dEHit;
@@ -2088,6 +2069,25 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lp_DIRC"), locDIRCLp, locArrayIndex);
 	}
 }
+/*
+void DEventWriterROOT::Fill_PIMUFeatures(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrackHypotheis) const {
+	
+	const DTrackTimeBased* locChargedTrack = locChargedTrackHypothesis->Get_TrackTimeBased();
+
+	double trackq = locChargedTrack->charge();
+	Particle_t ptype = (trackq > 0) ? PiPlus : PiMinus; 
+	auto track_proj = DCPPSelect::SwimTracksToAllDetectors(locChargedTrack,ptype,bfield,fcalfrontfaceZ,m_TOFfront);
+
+	//if(!track_proj.projection_success) return;
+
+	DVector3 track_proj_to_tof = track_proj.tof_projection;
+	DVector3 track_proj_to_fcal = track_proj.fcal_projection;
+	std::array<DVector3,6> track_proj_to_mwpc = track_proj.mwpc_projections;
+	
+
+	
+}
+	*/
 
 void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DNeutralParticleHypothesis* locNeutralParticleHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const
 {
