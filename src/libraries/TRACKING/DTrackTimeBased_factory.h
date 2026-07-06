@@ -63,23 +63,22 @@ class DTrackTimeBased_factory:public JFactoryT<DTrackTimeBased>{
   TH1F *fom;
   TH1F *hitMatchFOM;
   TH2F *chi2_trk_mom;
-  TH2F *Hstart_time;
  
   void FilterDuplicates(void);  
   double GetTruthMatchingFOM(int trackIndex,DTrackTimeBased *dtrack,vector<const DMCThrown*>mcthrowns);
   int GetThrownIndex(vector<const DMCThrown*>& locMCThrowns, const DKinematicData *kd, double &f);
 
-  void CreateStartTimeList(const DTrackWireBased *track,
-			   vector<const DSCHit*>&sc_hits,
-			   vector<const DTOFPoint*>&tof_points,
-			   vector<const DBCALShower*>&bcal_showers,	  
-			   vector<const DFCALShower*>&fcal_showers,
-			   vector<const DFCALHit*>&fcal_hits,
-			   vector<const DECALShower*>&ecal_showers,
-			   vector<const DECALHit*>&ecal_hits,
-			   vector<DTrackTimeBased::DStartTime_t>&start_times);
+  void GetStartTime(const DTrackWireBased *track,
+		    vector<const DSCHit*>&sc_hits,
+		    vector<const DTOFPoint*>&tof_points,
+		    vector<const DBCALShower*>&bcal_showers,	  
+		    vector<const DFCALShower*>&fcal_showers,
+		    vector<const DFCALHit*>&fcal_hits,
+		    vector<const DECALShower*>&ecal_showers,
+		    vector<const DECALHit*>&ecal_hits,
+		    DTrackTimeBased::DStartTime_t &start_time) const;
   bool DoFit(const DTrackWireBased *track,
-	     vector<DTrackTimeBased::DStartTime_t>&start_times,
+	     DTrackTimeBased::DStartTime_t &start_time,
 	     const std::shared_ptr<const JEvent>&event,double mass);  
 
   void AddMissingTrackHypothesis(vector<DTrackTimeBased*>&tracks_to_add,
@@ -94,9 +93,12 @@ class DTrackTimeBased_factory:public JFactoryT<DTrackTimeBased>{
 				 double q,bool flipped_charge,const std::shared_ptr<const JEvent>&event);
   void MakeTimeBasedFromWireBased(vector<const DFDCPseudo*>&fdchits,
 				  vector<const DCDCTrackHit*>&cdchits,
-				  vector<DTrackTimeBased::DStartTime_t>&start_times,
 				  const DTrackWireBased*track
 				  );
+  DTrackFitter::fit_status_t FitWithWireBasedHits(const DTrackWireBased *track,
+						  double mass,
+						  DTrackTimeBased::DStartTime_t &start_time);
+  void GetdEdxInfo(DTrackTimeBased *timebased_track) const;
 
   // Geometry
   const DGeometry *geom;
@@ -108,10 +110,6 @@ class DTrackTimeBased_factory:public JFactoryT<DTrackTimeBased>{
   vector<double> fdc_rmin_packages;
   double TARGET_Z=65.;
 
-  //  double mPathLength,mEndTime,mStartTime,mFlightTime;
-  double mStartTime;
-  //  DetectorSystem_t mDetector, mStartDetector;
-  DetectorSystem_t mStartDetector;
   int mNumHypPlus,mNumHypMinus;
   bool dIsNoFieldFlag,INSERT_MISSING_HYPOTHESES;
   bool FAST_TRACKING_MODE;

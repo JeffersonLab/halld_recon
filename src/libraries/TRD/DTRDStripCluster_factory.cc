@@ -54,19 +54,19 @@ void DTRDStripCluster_factory::Init()
 {
 	auto app = GetApplication();
 
-	MINIMUM_HITS_FOR_CLUSTERING = 10;
-    app->SetDefaultParameter("TRDCLUSTER:MINIMUM_HITS_FOR_CLUSTERING",MINIMUM_HITS_FOR_CLUSTERING);
+	MINIMUM_HITS_FOR_CLUSTERING = 6;
+    app->SetDefaultParameter("TRDCLUSTER:MINIMUM_HITS_FOR_CLUSTERING",MINIMUM_HITS_FOR_CLUSTERING,"Minimum total Hits for a cluster (default: 6.0)");
 
 	CLUSTERING_THRESHOLD = 1.2;
     app->SetDefaultParameter("TRDCLUSTER:CLUSTERING_THRESHOLD",CLUSTERING_THRESHOLD);
 
 	eps = 3.0;
-	minPts = 1;
+	minPts = 2;
 	min_total_q = 0.0;
 	max_pos_width = 8.0;
 
-	app->SetDefaultParameter("TRDCLUSTER:DBSCAN_EPS",eps,"DBSCAN epsilon value (default: 20.0)");
-	app->SetDefaultParameter("TRDCLUSTER:DBSCAN_MINPTS",minPts,"DBSCAN minimum number of points (default: 6)");
+	app->SetDefaultParameter("TRDCLUSTER:DBSCAN_EPS",eps,"DBSCAN epsilon value (default: 3.0)");
+	app->SetDefaultParameter("TRDCLUSTER:DBSCAN_MINPTS",minPts,"DBSCAN minimum number of points (default: 2)");
 	app->SetDefaultParameter("TRDCLUSTER:MIN_TOTAL_Q",min_total_q,"Minimum total energy for a cluster (default: 0.0)");
 	app->SetDefaultParameter("TRDCLUSTER:MAX_POS_WIDTH",max_pos_width,"Maximum position width for a cluster (default: 8.0)");
 
@@ -172,10 +172,13 @@ void DTRDStripCluster_factory::Process(const std::shared_ptr<const JEvent>& even
 				new_cluster->t_max = p_max_q.x;
 
 				double pos_width = GetClusterPosWidth(points, iClusterId);
-				if (pos_width > max_pos_width) {
+				if (pos_width > max_pos_width || pos_width==0) {
 					continue;
 				}
 				double time_width = GetClusterTimeWidth(points, iClusterId);
+				if (time_width==0) {
+                    continue;
+                }
 				new_cluster->pos_width = pos_width;
 				new_cluster->time_width = time_width;
 

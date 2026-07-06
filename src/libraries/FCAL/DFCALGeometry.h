@@ -26,11 +26,12 @@ public:
   // from a database as they aren't going to change unless
   // the detector is reconstructed
   
-  enum { kBlocksWide = 59 };
-  enum { kBlocksTall = 59 };
-  enum { kMaxChannels = kBlocksWide * kBlocksTall };
-  enum { kMidBlock = ( kBlocksWide - 1 ) / 2 };
-  enum { kBeamHoleSize = 3 }; // Before adding insert for FCAL-2
+  enum { kBlocksWide = 59,
+         kBlocksTall = 59,
+	 kMaxChannels = kBlocksWide * kBlocksTall,
+	 kMidBlock = ( kBlocksWide - 1 ) / 2,
+	 kBeamHoleSize = 3 // Before adding insert for FCAL-2
+  };
 
   static double blockSize()  { return 4.0157*k_cm; }
   static double radius()  { return 1.20471*k_m; }

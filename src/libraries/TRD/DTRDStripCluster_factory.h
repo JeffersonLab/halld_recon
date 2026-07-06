@@ -50,6 +50,7 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 		int GetClusterNHits(vector<Point> &points, int clusterId);
 		float GetTotalClusterEnergy(vector<Point> &points, int clusterId);
 		pair<double,double> GetClusterCentroid(vector<Point> &points, int clusterId);
+		
 		Point GetMaxQPoint(vector<Point> &points, int clusterId){
 			Point p_max = points[0];
 			for (auto &point : points) {
@@ -59,6 +60,7 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 			}
 			return p_max;
 		}
+		
 		double GetClusterPosWidth(vector<Point> &points, int clusterId) {
 			double min_y = 1e9;
 			double max_y = -1e9;
@@ -70,6 +72,7 @@ class DTRDStripCluster_factory:public JFactoryT<DTRDStripCluster> {
 			}
 			return max_y - min_y;
 		}
+		
 		double GetClusterTimeWidth(vector<Point> &points, int clusterId) {
 			double min_x = 1e9;
 			double max_x = -1e9;

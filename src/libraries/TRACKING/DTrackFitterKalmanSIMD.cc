@@ -827,23 +827,8 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 
    // start time and variance
    mT0=input_params.t0();
-   switch(input_params.t0_detector()){
-   case SYS_TOF:
-     mVarT0=0.01;
-     break;
-   case SYS_CDC:
-     mVarT0=7.5;
-     break;
-   case SYS_FDC:
-     mVarT0=7.5;
-     break;
-   case SYS_BCAL:
-     mVarT0=0.25;
-     break;
-   default:
-     mVarT0=0.09;
-     break;
-   }
+   double t0_sigma=input_params.t0_err();
+   mVarT0=t0_sigma*t0_sigma;
 
    // Copy hits from base class into structures specific to DTrackFitterKalmanSIMD
    if (USE_CDC_HITS) 
@@ -860,10 +845,6 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 
    unsigned int num_good_cdchits=my_cdchits.size();
    unsigned int num_good_fdchits=my_fdchits.size(); 
-
-   // keep track of the range of detector elements that could be hit
-   // for calculating the number of expected hits later on
-   //int min_cdc_ring=-1, max_cdc_ring=-1;
 
    // Order the cdc hits by ring number
    if (num_good_cdchits>0){
@@ -933,7 +914,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
       fdc_used_in_fit=vector<bool>(my_fdchits.size());
    }
  
-   //_DBG_ << SystemName(input_params.t0_detector()) << " " << mT0 <<endl;
+  //_DBG_ << SystemName(input_params.t0_detector()) << " " << mT0 << endl;
 
    //Set the mass
    MASS=input_params.mass();
@@ -10096,7 +10077,7 @@ void DTrackFitterKalmanSIMD::AddExtrapolation(DetectorSystem_t detector,
 						     t*TIME_UNIT_CONVERSION,s,
 						     s_theta_ms_sum,
 						     theta2ms_sum));
-  if (DEBUG_LEVEL>0){
+  if (DEBUG_LEVEL>3){
     cout << SystemName(detector) << ": s=" << s 
 	 << " t=" << t*TIME_UNIT_CONVERSION << " (x,y,z)=("
 	 << position.x() <<","<<position.y()<<","<<position.z()<<") (px,py,pz)="
@@ -10121,7 +10102,7 @@ void DTrackFitterKalmanSIMD::AddExtrapolation(DetectorSystem_t detector,
 						     t*TIME_UNIT_CONVERSION,s,
 						     s_theta_ms_sum,
 						     theta2ms_sum));
-  if (DEBUG_LEVEL>0){
+  if (DEBUG_LEVEL>3){
     cout << SystemName(detector) << ": s=" << s 
 	 << " t=" << t*TIME_UNIT_CONVERSION << " (x,y,z)=("<< position.x() 
 	 <<","<<position.y()<<","<<position.z()<<") (px,py,pz)="

@@ -72,7 +72,8 @@ class DTrackWireBased_factory:public JFactoryT<DTrackWireBased>{
 		void FilterDuplicates(void);
 		void DoFit(unsigned int c_id,const DTrackCandidate *candidate,
 			   DReferenceTrajectory *rt, const std::shared_ptr<const JEvent>& event,
-			   double mass,double t0,DetectorSystem_t t0_detector);
+			   double mass,double t0,double t0_sigma,
+			   DetectorSystem_t t0_detector);
 		void AddMissingTrackHypothesis(vector<DTrackWireBased*>&tracks_to_add,
 					       const DTrackWireBased *src_track,
 					       double my_mass,double q);

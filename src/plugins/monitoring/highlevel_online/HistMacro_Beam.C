@@ -172,7 +172,7 @@ string amorphous_label = "Normalized to Amorphous run 133141";
 			}
 			
 			// for CPP
-			//max = 1.50;
+			// max = 1.50;
 			min = 0.0;
 			
 			locHist_BeamEnergy_norm->GetXaxis()->SetTitleSize(0.05);

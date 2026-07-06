@@ -2206,14 +2206,15 @@ bool DGeometry::GetGEMTRDz(double &z_gemtrd) const
     _DBG_<<"Unable to retrieve GEMTRD position."<<endl;
     return false;
   }
-  vector<double>dimensions;
-  Get("//box[@name='GTMV']/@X_Y_Z",dimensions);
-  vector<double>frame;
-  Get("//box[@name='GTRD']/@X_Y_Z",frame);
-  vector<double>gasvolume;
-  Get("//box[@name='GTSV']/@X_Y_Z",gasvolume);
+
+  vector<double>readout;
+  Get("//posXYZ[@volume='GTRO']/@X_Y_Z",readout);
  
-  z_gemtrd=origin[2]+0.5*dimensions[2]-frame[2]+gasvolume[2];
+  z_gemtrd=origin[2]+readout[2];
+  
+  if (PRINT_POSITIONS){
+    cout << "GEMTRD readout position: z=" << z_gemtrd << " cm" << endl;
+  }
   
   return true;
 }
@@ -2234,8 +2235,15 @@ bool DGeometry::GetGEMTRDxy_vec(vector<double>&xvec, vector<double>&yvec) const
   }
   vector<double>TRDModulePos;
   Get("//posXYZ[@volume='gemTRDmodule']/@X_Y_Z/layer[@value='1']", TRDModulePos);
-  xvec.push_back(TRDorigin[0]+TRDModulePos[0]);
-  yvec.push_back(TRDorigin[1]+TRDModulePos[1]);
+  vector<double>TRDModuleCenter;
+  Get("//posXYZ[@volume='gemSensitiveVolume']/@X_Y_Z", TRDModuleCenter);
+  
+  xvec.push_back(TRDorigin[0]+TRDModulePos[0]+TRDModuleCenter[0]);
+  yvec.push_back(TRDorigin[1]+TRDModulePos[1]+TRDModuleCenter[1]);
+  if (PRINT_POSITIONS){
+    cout << "GEMTRD position: x=" << xvec[xvec.size()-1] << " cm" << endl;
+    cout << "GEMTRD position: y=" << yvec[xvec.size()-1] << " cm" << endl;
+  }
   
   return true;
 }

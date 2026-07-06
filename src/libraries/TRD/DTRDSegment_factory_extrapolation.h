@@ -43,7 +43,7 @@ private:
 	       double &x0,double &y0,double &tx,double &ty,
 	       double &var_x,double &var_y,double &var_tx,double &var_ty) const;
   void FindSegmentPoints(vector<TrackPoint> &trackPoints, vector<DTrackFitter::Extrapolation_t> &trackExtrapolations, double distToExtrp);
-  double dTRDz;
+  double dTRDx=0.,dTRDy=0., dTRDz=0.;
   double distToExtrp;
   int DEBUG_LEVEL;
 };

@@ -1,0 +1,21 @@
+name: Trigger GitLab CI on PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  trigger-gitlab:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger GitLab Pipeline
+        run: |
+          curl -X POST \
+            -F token=${{ secrets.GITLAB_TRIGGER_TOKEN }} \
+            -F ref=main \
+            -F "variables[PR_NUMBER]=${{ github.event.pull_request.number }}" \
+            -F "variables[PR_BRANCH]=${{ github.head_ref }}" \
+            -F "variables[PR_REPO]=${{ github.repository }}" \
+            -F "variables[PR_SHA]=${{ github.event.pull_request.head.sha }}" \
+            https://code.jlab.org/api/v4/projects/868/trigger/pipeline

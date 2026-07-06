@@ -35,6 +35,7 @@ class DTrackWireBased:public DTrackingData{
 		// use the DParticleID Get_CDCRings & Get_FDCPlanes functions to extract the information from these
 		unsigned int dCDCRings; //CDC rings where the track has an associated DCDCTrackHit //rings correspond to bits (1 -> 28)
 		unsigned int dFDCPlanes; //FDC planes where the track has an associated DFDCPseudoHit //planes correspond to bits (1 -> 24)
+  unsigned int NumFDC,NumCDC;
 
 		void Summarize(JObjectSummary& summary) const override {
 			DKinematicData::Summarize(summary);

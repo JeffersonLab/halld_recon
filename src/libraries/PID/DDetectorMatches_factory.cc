@@ -23,6 +23,10 @@ void DDetectorMatches_factory::Init()
   MATCH_TO_DIRC = true;
   app->SetDefaultParameter("PID:MATCH_TO_DIRC",MATCH_TO_DIRC);
 
+  FAST_TRACKING_MODE=false;
+  app->SetDefaultParameter("TRKFIT:FAST_TRACKING_MODE",FAST_TRACKING_MODE);
+  if (FAST_TRACKING_MODE) MATCH_TO_DIRC=false;
+
   MATCH_TO_TRD = false;
   app->SetDefaultParameter("PID:MATCH_TO_TRD",MATCH_TO_TRD);
 }

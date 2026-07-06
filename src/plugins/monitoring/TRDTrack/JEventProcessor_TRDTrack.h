@@ -14,13 +14,19 @@
 #include <JANA/Services/JLockService.h> // Required for accessing services
 #include <TH1D.h>
 #include <TH2D.h>
+#include <TGraphErrors.h>
+#include <TGraphAsymmErrors.h>
+#include <TF1.h>
 
 class JEventProcessor_TRDTrack:public JEventProcessor{
 public:
   JEventProcessor_TRDTrack();
   ~JEventProcessor_TRDTrack();
   const char* className(void){return "JEventProcessor_TRDTrack";}
-  
+  void Count(const char *tit);
+  void Count_el(const char *tit);
+  void Count_pi(const char *tit);
+   
 private:
   void Init() override;                       ///< Called once at program start.
   void BeginRun(const std::shared_ptr<const JEvent>& event) override; ///< Called everytime a new run number is detected.
@@ -28,31 +34,35 @@ private:
   void EndRun() override;                     ///< Called everytime run number changes, provided BeginRun has been called.
   void Finish() override;                     ///< Called after last event of last event source has been processed.
   
-  //-Segment
-  TH2D *hTRDSegmentMatchXY_el, *hTRDSegmentMatchTxTy_el, *hTRDSegmentXY_el, *hTRDSegmentMatchXY_pi, *hTRDSegmentMatchTxTy_pi, *hTRDSegmentXY_pi;
-  TH1D *hTRDSegmentMatchX_el, *hTRDSegmentMatchY_el, *hTRDSegmentMatchTx_el, *hTRDSegmentMatchTy_el, *hTRDSegmentMatchX_pi, *hTRDSegmentMatchY_pi, *hTRDSegmentMatchTx_pi, *hTRDSegmentMatchTy_pi;
   //-Sim
-  TH2D *hTRDExtrapXY, *hExtrapXYDiff, *hExtrapXYHitDiff, *hSegmentExtrapXYDiff, *hTRDXCorr, *hTRDYCorr, *hExtrapThetavsP, *hExtrapThetavsP_Selected, *hExtrapXHitDiffvsTime, *hExtrapYHitDiffvsTime;
-  TH1D *hTRDExtrapPx, *hTRDExtrapPy, *hTRDExtrapPz, *hExtrapXDiff, *hExtrapYDiff, *hExtrapXHitDiff, *hExtrapYHitDiff, *hSegmentExtrapXDiff, *hSegmentExtrapYDiff, *hExtrapTheta;
+  TH2D *hExtrapXYPointDiff, *hTRDXCorr, *hTRDYCorr, *hTRDXCorr_matched, *hTRDYCorr_matched, *hExtrapXHitDiffvsTime, *hExtrapYHitDiffvsTime, *hExtrapXPointDiffvsTime, *hExtrapYPointDiffvsTime, *hExtrapXPointDiffvsX, *hExtrapYPointDiffvsY, *hResXHitDiffvsTime, *hResYHitDiffvsTime;
+  TH1D *hExtrapPx, *hExtrapPy, *hExtrapPz, *hExtrapXPointDiff, *hExtrapYPointDiff, *hResXHitDiff_Corrected, *hResYHitDiff_Corrected;
   //-Projection
-  TH2D *hProjectionXYDiff_el, *hProjectionXYHitDiff_el, *hProjectionXYDiff_pi, *hProjectionXYHitDiff_pi;
-  TH1D *hProjectionXDiff_el, *hProjectionYDiff_el, *hProjectionXHitDiff_el, *hProjectionYHitDiff_el, *hProjectionXDiff_pi, *hProjectionYDiff_pi, *hProjectionXHitDiff_pi, *hProjectionYHitDiff_pi;
+  TH2D *hExtrapXYMaxPointDiff_el, *hExtrapXYMaxPointDiff_pi;
+  TH1D *hExtrapXMaxPointDiff_el, *hExtrapYMaxPointDiff_el, *hExtrapXMaxPointDiff_pi, *hExtrapYMaxPointDiff_pi;
   //-Cal
-  TH2D *hfCALXY_el, *hfCALMatchXY_el, *hfCALMatchXYDisplay_el, *hfCALXY_pi, *hfCALMatchXY_pi, *hfCALMatchXYDisplay_pi;
-  TH1D *hfCALShower_el, *hfCALEP_TRD_el, *hfCALMatchX_el, *hfCALMatchY_el, *hfCALShower_pi, *hfCALEP_TRD_pi, *hfCALMatchX_pi, *hfCALMatchY_pi, *hfCALEP_cut_el, *hfCALEP_cut_pi, *hfCALEP_el, *hfCALEP_pi;
+  TH2D *hFCALMatchXYDisplay_el, *hFCALMatchXYDisplay_pi, *hFCALExtrapEPvsP_TRD;
+  TH1D *hFCALExtrapE_TRD, *hFCALEP_TRD_el, *hFCALEP_TRD_pi, *hFCALEP_cut_el, *hFCALEP_cut_pi, *hFCALExtrapEP_TRD;
  
-  TH2D *hFCALExtrapXY, *hExtrapXYDiff_FCAL, *hFCALShowerDisplay, *hFCALExtrapEPvsP;
-  TH1D *hFCALExtrapPx, *hFCALExtrapPy, *hFCALExtrapPz, *hExtrapXDiff_FCAL, *hExtrapYDiff_FCAL, *hFCALExtrapE, *hFCALExtrapEP;
-   
-  TH1D *hTRDFlightTime_el, *hTRDEnergy_el, *hTRDMomentum_el, *hTRDTheta_el, *hTRDEnergyDiff_el, *hTRDFlightTime_pi, *hTRDEnergy_pi, *hTRDMomentum_pi, *hTRDTheta_pi, *hTRDEnergyDiff_pi;
+  TH2D *hFCALExtrapXY, *hFCALExtrapEPvsP, *hFCALShowerXY, *hFCALXCorr, *hFCALYCorr, *hFCALTimeCorr;
+  TH1D *hFCALExtrapE, *hFCALExtrapEP, *hFCALXDiff, *hFCALYDiff, *hFCALShowerTime, *hFCALExtrapTime, *hFCALFlightTime;
   
-  TH1D *hnumElTracks, *hnumPiTracks, *hnumTrackMatches, *hnumTracks, *hnumTracksInTRD, *hnumTracksGoodExtrap;
+  TH1D *hHypEnergy_el, *hHypMomentum_el, *hHypTheta_el, *hHypEnergyDiff_el, *hHypEnergy_pi, *hHypMomentum_pi, *hHypTheta_pi, *hHypEnergyDiff_pi, *hTrackMult, *hTrackingFOMChisq, *hTrackingFOMNdof;
+  TH1D *hCount, *hCount_el, *hCount_pi;
+  TH2D *hFCALExtrapXY_TRD, *hFCALShowerXY_TRD, *hFCALExtrapThetavsP_TRD, *hSeenPointsXY, *hExtrapsXY, *hFCALExtrapXY_p1_TRD, *hSeenPointsSingleXY, *hSeenHitsSingleXY;
+  TH1D *hFCALExtrapTheta_TRD, *hnumPointsSeen, *hnumExtrap, *hExtrapsX, *hExtrapsY, *hSeenPointsSingleX, *hSeenPointsSingleY, *hSeenHitsSingleX, *hSeenHitsSingleY;
   
-  //--New
-  TH2D *hFCALExtrapXY_TRD, *hExtrapXYDiff_FCAL_TRD, *hFCALExtrapEPvsP_TRD, *hExtrapThetavsP_TRD, *hExtrapThetavsP_Selected_TRD, *hSeenPointsXY, *hExtrapsXY, *hSeenPointsFCALXY, *hExtrapsFCALXY, *hSeenPointsSingleXY;
-  TH1D *hExtrapTheta_TRD, *hExtrapXDiff_FCAL_TRD, *hExtrapYDiff_FCAL_TRD, *hFCALExtrapE_TRD, *hFCALExtrapEP_TRD, *hnumSeenExtrap, *hnumPointsSeen, *hnumExtrap, *hnumSeenExtrapFCAL, *hnumPointsSeenFCAL;
+  TH1D *hnumSeenExtrapFCAL_el, *hnumSeenExtrap_el, *hExtrapsX_el, *hExtrapsY_el, *hSeenPointsX_el, *hSeenPointsY_el, *hSeenPointsSingleX_el, *hSeenPointsSingleY_el, *hnumSeenExtrapFCAL_pi, *hnumSeenExtrap_pi, *hExtrapsX_pi, *hExtrapsY_pi, *hSeenPointsX_pi, *hSeenPointsY_pi, *hSeenPointsSingleX_pi, *hSeenPointsSingleY_pi, *hnumPointsSeen_el, *hnumPointsSeenFCAL_el, *hnumPointsSeen_pi, *hnumPointsSeenFCAL_pi;
+  
+  TH2D *hnumExtrapsXY_el, *hSeenPointsSingleXY_el, *hSeenPointsXY_el, *hXPointvsTime_el, *hYPointvsTime_el, *hXPointvsTime_QW_el, *hYPointvsTime_QW_el, *hXPointvsTime_Qmax_el, *hYPointvsTime_Qmax_el, *hXPointvsTime_Qmax_QW_el, *hYPointvsTime_Qmax_QW_el, *hnumExtrapsXY_pi, *hSeenPointsSingleXY_pi, *hSeenPointsXY_pi, *hXPointvsTime_pi, *hYPointvsTime_pi, *hXPointvsTime_QW_pi, *hYPointvsTime_QW_pi,  *hXPointvsTime_Qmax_pi, *hYPointvsTime_Qmax_pi, *hXPointvsTime_Qmax_QW_pi, *hYPointvsTime_Qmax_QW_pi, *hExtrapsXY_el, *hExtrapsXY_pi, *hXPointvsTime_Qmax_Converted_el, *hYPointvsTime_Qmax_Converted_el, *hXPointvsTime_Qmax_Converted_pi, *hYPointvsTime_Qmax_Converted_pi, *hXPointvsTime_Converted_el, *hYPointvsTime_Converted_el, *hXPointvsTime_Converted_pi, *hYPointvsTime_Converted_pi;
+
+  TH1D *hDL1Time, *hPSPairTime;
+  
+  //--Max Histos
+  TH2D *hPoint_TimeVsdE_Max_el, *hPoint_TimeVsdE_Max_pi, *hPointH_TimeVsdE_Max_el, *hPointH_TimeVsdE_Max_pi;
+  
+  TGraphErrors *hEfficiencyFitsX, *hEfficiencyFitsY, *hFluxFits, *hPulseConstFitsX, *hPulseConstFitsY, *hPulseMPVFitsX, *hPulseMPVFitsY, *hPulseSigmaFitsX, *hPulseSigmaFitsY;
     
-  
   std::shared_ptr<JLockService> lockService; //Used to access all the services, its value should be set inside Init()
 };
 
