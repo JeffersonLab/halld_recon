@@ -33,8 +33,8 @@ private:
   void FitLine(const vector<const DTRDPoint *>&points,
 	       double &x0,double &y0,double &tx,double &ty,
 	       double &var_x,double &var_y,double &var_tx,double &var_ty) const;
-  
-  double dTRDz;
+         
+  double dTRDx=0.,dTRDy=0., dTRDz=0.;
   int DEBUG_LEVEL;
   bool INSTALLED;
 };

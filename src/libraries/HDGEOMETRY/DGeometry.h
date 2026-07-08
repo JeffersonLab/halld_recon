@@ -232,6 +232,7 @@ class DGeometry{
       mutable pthread_mutex_t materialmap_mutex;
       mutable pthread_mutex_t materials_mutex;
 
+  bool PRINT_POSITIONS;
 
 };
 

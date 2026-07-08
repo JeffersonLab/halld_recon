@@ -90,8 +90,8 @@ void JEventProcessor_MilleFieldOn::Process(const std::shared_ptr<const JEvent> &
     int pullsNDF = -5;
     for (size_t iPull = 0; iPull < pulls.size(); ++iPull) {
       const DCDCTrackHit *cdc_hit = pulls[iPull].cdc_hit;
-      float err = pulls[iPull].err;
-      float errc = pulls[iPull].errc;
+      float err = sqrt(pulls[iPull].var);
+      float errc = sqrt(pulls[iPull].varc);
       if (cdc_hit == nullptr) {
         pullsNDF += 2;
         isCDCOnly = false;
@@ -110,11 +110,11 @@ void JEventProcessor_MilleFieldOn::Process(const std::shared_ptr<const JEvent> &
     GetLockService(event)->RootWriteLock();  // Just use the root lock as a temporary
     for (size_t iPull = 0; iPull < pulls.size(); ++iPull) {
       float resi = pulls[iPull].resi;  // residual of measurement
-      float err = pulls[iPull].err;    // estimated error of measurement
+      float err = sqrt(pulls[iPull].var);    // estimated error of measurement
       const DCDCTrackHit *cdc_hit = pulls[iPull].cdc_hit;
       const DFDCPseudo *fdc_hit = pulls[iPull].fdc_hit;
       float resic = pulls[iPull].resic;  // residual for FDC cathode measurement
-      float errc = pulls[iPull].errc;
+      float errc = sqrt(pulls[iPull].varc);
 
       vector<double> der = pulls[iPull].trackDerivatives;
 

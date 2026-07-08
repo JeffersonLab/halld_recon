@@ -68,6 +68,8 @@
 		locHist_PSPairEnergy->GetXaxis()->SetRangeUser(6.,12.);
 		// CPP
 		// locHist_PSPairEnergy->GetXaxis()->SetRangeUser(3.5,8.5);
+		// Low Energy
+                // locHist_PSPairEnergy->GetXaxis()->SetRangeUser(0.7,1.5);
 		locHist_PSPairEnergy->SetStats(0);
 		locHist_PSPairEnergy->Draw();
 		

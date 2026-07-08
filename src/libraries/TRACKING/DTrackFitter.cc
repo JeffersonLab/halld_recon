@@ -44,13 +44,8 @@ DTrackFitter::DTrackFitter(const std::shared_ptr<const JEvent>& event)
 
 	bfield = geo_manager->GetBfield(run_number);
 	geom = geo_manager->GetDGeometry(run_number);
+	RootGeom = geo_manager->GetRootGeom(run_number);
 
-	RootGeom=NULL;
-	MATERIAL_MAP_MODEL = "DGeometry";
-	app->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL",MATERIAL_MAP_MODEL);
-	if(MATERIAL_MAP_MODEL=="DRootGeom"){
-	  RootGeom = geo_manager->GetRootGeom(run_number);
-	}
 	// Create the extrapolation vectors
 	vector<Extrapolation_t>myvector;
 	extrapolations.emplace(SYS_BCAL,myvector);
@@ -179,7 +174,7 @@ void DTrackFitter::AddHits(vector<const DTRDPoint*> trdhits)
 //-------------------
 // FitTrack
 //-------------------
-DTrackFitter::fit_status_t DTrackFitter::FitTrack(const DVector3 &pos, const DVector3 &mom, double q, double mass,double t0,DetectorSystem_t t0_det)
+DTrackFitter::fit_status_t DTrackFitter::FitTrack(const DVector3 &pos, const DVector3 &mom, double q, double mass,double t0,double t0_sigma,DetectorSystem_t t0_det)
 {
 #ifdef PROFILE_TRK_TIMES
     prof_time start_time;
@@ -188,7 +183,7 @@ DTrackFitter::fit_status_t DTrackFitter::FitTrack(const DVector3 &pos, const DVe
 	input_params.setMomentum(mom);
 	input_params.setPID(IDTrack(q, mass));
 	input_params.setTime(t0);
-	input_params.setT0(t0,0.,t0_det);
+	input_params.setT0(t0,t0_sigma,t0_det);
 
 	DTrackFitter::fit_status_t status = FitTrack();
 
@@ -224,7 +219,7 @@ DTrackFitter::fit_status_t
 DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params, 
 				  const map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >&extrapolations,
 				  const std::shared_ptr<const JEvent>& loop,
-				  double mass,int N,double t0,
+				  double mass,int N,double t0,double t0_sigma,
 				  DetectorSystem_t t0_det){
   // Reset fitter saving the type of fit we're doing
   fit_type_t save_type = fit_type;
@@ -290,7 +285,7 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
   // Do the fit 
   DVector3 pos = starting_params.position();
   DVector3 mom = starting_params.momentum();
-  fit_status = FitTrack(pos, mom,q, mass,t0,t0_det);
+  fit_status = FitTrack(pos, mom,q, mass,t0,t0_sigma,t0_det);
   
 #ifdef PROFILE_TRK_TIMES
   start_time.TimeDiffNow(prof_times, "Find Hits and Fit Track");
@@ -304,7 +299,7 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
 DTrackFitter::fit_status_t 
 DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
 				  const DReferenceTrajectory *rt, const std::shared_ptr<const JEvent>& loop,
-				  double mass,int N,double t0,
+				  double mass,int N,double t0,double t0_sigma,
 				  DetectorSystem_t t0_det)
 {
 	/// Fit a DTrackCandidate using a given mass hypothesis.
@@ -381,7 +376,7 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
 #endif
 
 	// Do the fit
-	fit_status = FitTrack(pos, mom,q, mass,t0,t0_det);
+	fit_status = FitTrack(pos, mom,q, mass,t0,t0_sigma,t0_det);
 
 #ifdef PROFILE_TRK_TIMES
 	start_time.TimeDiffNow(prof_times, "Find Hits and Fit Track");

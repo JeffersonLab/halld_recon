@@ -41,6 +41,11 @@ class DKinFitChainStep : public DResettable
 
 		//PRINT INFO
 		void Print_InfoToScreen(void) const;
+		
+		// ACQUIRE DEREFENCED OUTPUT STREAM
+		ostream& Get_DebugStream(void) const { return *dDebugStream; }
+		// SET OUTPUT STREAM
+		void Set_DebugStream(ostream* out_stream) { dDebugStream = out_stream; }
 
 	private:
 
@@ -50,6 +55,9 @@ class DKinFitChainStep : public DResettable
 
 		vector<shared_ptr<DKinFitParticle>> dInitialParticles;
 		vector<shared_ptr<DKinFitParticle>> dFinalParticles;
+		
+		// output stream
+		ostream* dDebugStream = &cout;
 };
 
 inline void DKinFitChainStep::Reset(void)
@@ -76,24 +84,24 @@ inline vector<shared_ptr<DKinFitParticle>> DKinFitChainStep::Get_AllParticles(vo
 
 inline void DKinFitChainStep::Print_InfoToScreen(void) const
 {
-	cout << "DKinFitChainStep decay from, constrain mass flags = " << int(dInitialParticleDecayFromStepIndex) << ", " << dConstrainDecayingMassFlag << endl;
+	Get_DebugStream() << "DKinFitChainStep decay from, constrain mass flags = " << int(dInitialParticleDecayFromStepIndex) << ", " << dConstrainDecayingMassFlag << endl;
 
-	cout << "DKinFitChainStep init particles: PIDs, pointers:" << endl;
+	Get_DebugStream() << "DKinFitChainStep init particles: PIDs, pointers:" << endl;
 	for(auto& locParticle : dInitialParticles)
 	{
 		if(locParticle == nullptr)
-			cout << "X, nullptr" << endl;
+			Get_DebugStream() << "X, nullptr" << endl;
 		else
-			cout << locParticle->Get_PID() << ", " << locParticle << endl;
+			Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
 	}
 
-	cout << "DKinFitChainStep final particles: PIDs, pointers:" << endl;
+	Get_DebugStream() << "DKinFitChainStep final particles: PIDs, pointers:" << endl;
 	for(auto& locParticle : dFinalParticles)
 	{
 		if(locParticle == nullptr)
-			cout << "X, nullptr" << endl;
+			Get_DebugStream() << "X, nullptr" << endl;
 		else
-			cout << locParticle->Get_PID() << ", " << locParticle << endl;
+			Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
 	}
 }
 

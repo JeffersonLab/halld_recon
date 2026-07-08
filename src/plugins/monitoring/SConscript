@@ -6,12 +6,10 @@ subdirs = [
 'lowlevel_online',
 'bad_hits',
 'BCAL_online',
-'BCAL_LEDonline',
-'BCAL_LED',
-'BCAL_LED_time',
 'CCAL_online',
 'CDC_dedx',
 'CDC_online',
+'CDC_roc_hits',
 'DAQ_online',
 'fa125_itrig',
 'fa125_temp',
@@ -24,15 +22,10 @@ subdirs = [
 'FMWPC_Performance',
 'PSC_online',
 'RF_online',
-'pedestal_online',
 'PS_online',
 'PSPair_online',
 'PS_flux',
 'ST_online_lowlevel',
-'ST_online_tracking',
-'ST_online_Tresolution',
-'ST_online_efficiency',
-'ST_online_multi',
 'TAGGER_online',
 'TAGH_online',
 'TAGM_online',
@@ -40,43 +33,29 @@ subdirs = [
 'TOF_online',
 'TRIG_online',
 'TPOL_online',
-'CDC_expert',
 'CDC_expert_2',
 'TOF_TDC_shift',
 'BCAL_Eff',
 'BCAL_inv_mass',
 'CDC_drift',
-'CDC_PerStrawReco',
-'CDC_roc_hits',
-'EPICS_dump',
 'CDC_Efficiency',
 'L1_online',
 'highlevel_online',
 'BCAL_Hadronic_Eff',
 'FCAL_Hadronic_Eff',
-'ECAL_Hadronic_Eff',
-'SC_Eff','TOF_Eff',
-'TS_scaler',
 'TrackingPulls',
-'TrackingPulls_straight',
 'DIRC_online',
 'TRD_online',
-'TRDTrack',
-'RSAI_KO',
 'BEAM_online',
 'lumi_mon',
-'scaler_primex'
-,'cppFMWPC'
-,'cppFMWPC_ana'
-,'cpp_itrig'
-,'primex-online'
-,'HELI_online'
+'HELI_online' 
 ]
 
-#'L3_online',
-#'CODA_online',
-#'EVNT_online',
 
+optdirs = ['TAGH_doubles','ST_ZEff', 'CODA_online', 'EVNT_online']
+optdirs.extend(['BCAL_LED_time', 'BCAL_LED', 'pedestal_online', 'CDC_PerStrawReco' ])
+optdirs.extend(['EPICS_dump', 'SC_Eff','TOF_Eff', 'TS_scaler', 'TrackingPulls_straight', 'timing_online' ])
+optdirs.extend(['RSAI_KO', 'scaler_primex', 'cppFMWPC', 'cppFMWPC_ana', 'cpp_itrig', 'primex-online' ])
+sbms.OptionallyBuild(env, optdirs)
 
-sbms.OptionallyBuild(env, ['TAGH_doubles','ST_ZEff'])
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)

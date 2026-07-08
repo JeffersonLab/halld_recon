@@ -26,7 +26,7 @@ void JEventProcessor_RF_online::Init()
 	//This constant should be fixed for the lifetime of GlueX.  If it ever changes, move it into the CCDB.
 	dRFSignalPeriod = 1000.0/499.0; //2.004008016
 	double locDeltaTRangeMax = 2.2;
-	unsigned int locNumDeltaTBins = 1100;
+	unsigned int locNumDeltaTBins = 79;
 
 	dRFSignalSystems.push_back(SYS_FDC);  dRFSignalSystems.push_back(SYS_PSC);
 	dRFSignalSystems.push_back(SYS_TAGH);  dRFSignalSystems.push_back(SYS_TOF);

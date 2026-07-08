@@ -124,7 +124,7 @@ bool DCustomAction_p2pi_hists::Perform_Action(const std::shared_ptr<const JEvent
 
 	//beam helicity for event
 	std::vector<const DBeamHelicity*> locBeamHelicities;
-	locEvent->Get(locBeamHelicities);
+	locEvent->Get(locBeamHelicities, "CORRECTED");
 
 	// calculate 2pi P4
 	DLorentzVector locP4_2pi;

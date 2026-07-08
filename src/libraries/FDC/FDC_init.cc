@@ -11,7 +11,6 @@
 #include "DFDCCathodeCluster_factory.h"
 #include "DFDCSegment_factory.h"
 #include "DFDCIntersection_factory.h"
-#include "DFDCPseudo_factory_WIRESONLY.h"
 
 #include <FDC/DFDCCathodeDigiHit.h>
 #include <FDC/DFDCWireDigiHit.h>
@@ -31,5 +30,4 @@ void FDC_init(JFactorySet* factorySet)
 	factorySet->Add(new DFDCCathodeCluster_factory());
 	factorySet->Add(new DFDCSegment_factory());
 	factorySet->Add(new DFDCIntersection_factory());
-	factorySet->Add(new DFDCPseudo_factory_WIRESONLY());
 }

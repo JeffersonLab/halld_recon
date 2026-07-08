@@ -25,6 +25,10 @@ public :
 
   double x,y,tx,ty;
   double var_x,var_y,var_tx,var_ty;
+
+  int NumHitsX, NumHitsY;
+  int NumStripClustersX, NumStripClustersY;
+  int NumPoints;
   
   void Summarize(JObjectSummary& summary) const override {
     summary.add(x, "x", "%3.2f");
@@ -35,7 +39,11 @@ public :
     summary.add(var_y, "var_y", "%3.2f");
     summary.add(var_tx, "var_tx", "%3.2f");
     summary.add(var_ty, "var_ty", "%3.2f");
-		
+    summary.add(NumHitsX, "NumHitsX", "%d");
+    summary.add(NumHitsY, "NumHitsY", "%d");
+    summary.add(NumStripClustersX, "NumStripClustersX", "%d");
+    summary.add(NumStripClustersY, "NumStripClustersY", "%d");
+    summary.add(NumPoints, "NumPoints", "%d");
   }
 };
 

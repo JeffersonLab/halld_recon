@@ -117,6 +117,8 @@ void DTrackWireBased_factory_StraightLine::Process(const std::shared_ptr<const J
        // Add hits used as associated objects
        vector<const DCDCTrackHit*> cdchits_on_track = fitter->GetCDCFitHits();
        vector<const DFDCPseudo*> fdchits_on_track = fitter->GetFDCFitHits();
+       track->NumFDC=fdchits_on_track.size();
+       track->NumCDC=cdchits_on_track.size();
 
        // ...also find minimum drift time...
        double tmin=1e6;

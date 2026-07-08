@@ -1,0 +1,1348 @@
+//
+//    File: JEventProcessor_PStagstudy.cc
+//
+
+//#define VERBOSE 1
+
+#include <iostream>
+#include <stdint.h>
+#include <vector>
+#include <map>
+#include <utility>
+#include <TMath.h>
+#include <TInterpreter.h>
+#include <TTree.h>
+#include <TFile.h>
+
+#include "JEventProcessor_PStagstudy.h"
+#include <JANA/JApplication.h>
+
+using namespace std;
+using namespace jana;
+
+#include <TAGGER/DTAGMHit.h>
+#include <TAGGER/DTAGMDigiHit.h>
+#include <TAGGER/DTAGMTDCDigiHit.h>
+#include <TAGGER/DTAGHHit.h>
+#include <TAGGER/DTAGHDigiHit.h>
+#include <TAGGER/DTAGHTDCDigiHit.h>
+#include <DAQ/Df250WindowRawData.h>
+#include <TTAB/DTranslationTable.h>
+#include <RF/DRFTime.h>
+#include <PAIR_SPECTROMETER/DPSCPair.h>
+#include <PAIR_SPECTROMETER/DPSPair.h>
+#include <PAIR_SPECTROMETER/DPSCDigiHit.h>
+#include <TRIGGER/DL1Trigger.h>
+#include <PID/DBeamPhoton.h>
+#include <DAQ/DCODAEventInfo.h>
+#include <DAQ/DCODAControlEvent.h>
+#include <DAQ/DCODAROCInfo.h>
+#include <DAQ/Df250PulseData.h>
+#include <DAQ/DBeamCurrent.h>
+#include <DAQ/DTSscalers.h>
+#include <GlueX.h>
+#include <TDirectory.h>
+#include <TH1.h>
+#include <TH2.h>
+
+#include "rxConnection.h"
+
+std::vector<std::pair<uint32_t, uint32_t> > epoch_time_limits;
+std::map<uint32_t, uint32_t> beam_current_from_epics;
+std::string beam_current_record_url("$JANA_RESOURCE_DIR/beam_current/HallD_beam_current_record-4-4-2026.root");
+std::string beam_current_record_tree("beamcur");
+unsigned long int max_run_duration(100000);
+
+// The individual fadc250 readout thresholds are stored separately and
+// loaded into the frontend modules by the CODA daq at run start time.
+// Since they are not saved in any database for automatic access, I 
+// simply hard-code them here for specific run periods.
+
+#define ROCTAGM1_WINTER_2023_V1_CNF 1
+
+const int tagm_fadc250_channels(128);
+const int tagh_fadc250_channels(300);
+
+const int tagm_fadc250_rocid(71);
+const int tagm_fadc250_slot0(3);
+
+int tagh_fadc250_readout_threshold[300] = {
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300,
+  300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300, 300
+};
+
+#if defined ROCTAGM1_SPRING_2017_V2_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+  350, 310, 354, 397, 411, 419, 301, 343, 384, 348, 342, 335, 345, 333, 301, 280,
+  293, 339, 367, 286, 291, 329, 359, 228, 262, 254, 284, 451, 347, 211, 195, 167,
+  148, 144, 152, 143, 154, 222, 187, 160, 175, 185, 203, 157, 179, 175, 201, 233,
+  232, 164, 170, 183, 406, 598, 582, 555, 663, 453, 447, 550, 598, 618, 706, 536,
+  536, 663, 686, 526, 518, 647, 524, 730, 500, 543, 791, 528, 607, 696, 615, 526,
+  198, 659, 390, 711, 581, 618, 718, 699, 454, 656, 597, 597, 554, 480, 577, 601,
+  492, 581, 773, 666, 706, 559, 731, 749, 728, 600, 668, 654, 652, 619, 566, 423,
+  673, 648, 608, 581, 522, 567, 596, 669, 405, 214, 1000, 1000, 1000, 1000, 1000, 1000
+};
+
+#elif defined ROCTAGM1_SPRING_2017_V3_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+  354, 310, 350, 419, 411, 397, 348, 342, 335, 345, 333, 384, 343, 301, 293, 280,
+  301, 286, 267, 339, 359, 329, 291, 254, 262, 228, 347, 451, 284, 148, 144, 152,
+  143, 154, 167, 195, 211, 160, 187, 222, 203, 185, 175, 175, 179, 157, 232, 233,
+  201, 183, 170, 164, 582, 598, 406, 453, 663, 555, 598, 550, 447, 536, 706, 618,
+  686, 663, 536, 647, 518, 526, 500, 730, 524, 528, 791, 543, 615, 696, 607, 659,
+  198, 526, 581, 711, 390, 699, 718, 618, 597, 554, 480, 577, 601, 597, 656, 454,
+  773, 581, 492, 559, 706, 666, 728, 749, 731, 654, 668, 600, 566, 619, 652, 608,
+  581, 522, 567, 596, 648, 673, 423, 669, 405, 214, 1000, 1000, 1000, 1000, 1000, 1000
+};
+
+#elif defined ROCTAGM1_SPRING_2018_V1_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+  250, 250, 228, 251, 250, 250, 251, 250, 252, 250, 251, 250, 250, 251, 224, 251, 
+  250, 245, 250, 250, 251, 251, 250, 150, 234, 192, 251, 250, 204, 154, 154, 154, 
+  154, 154, 154, 183, 196, 220, 157, 188, 162, 168, 164, 153, 145, 143, 209, 190, 
+  172, 148, 164, 170, 251, 250, 250, 250, 250, 251, 250, 251, 250, 250, 249, 250, 
+  250, 250, 251, 250, 250, 250, 251, 250, 250, 250, 250, 250, 250, 249, 250, 250, 
+  251, 250, 250, 250, 250, 250, 250, 250, 252, 250, 252, 251, 251, 250, 250, 250, 
+  250, 250, 251, 250, 250, 250, 250, 251, 250, 250, 250, 250, 250, 250, 251, 251, 
+  252, 250, 251, 252, 250, 250, 250, 250, 250, 208, 1000, 1000, 1000, 1000, 1000, 1000
+};
+
+#elif defined ROCTAGM1_FALL_2018_V1_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+  250, 250, 228, 251, 250, 250, 251, 250, 252, 250, 251, 250, 250, 251, 224, 251, 
+  250, 245, 250, 250, 251, 251, 250, 150, 234, 192, 251, 250, 204, 154, 154, 154, 
+  154, 154, 154, 183, 196, 220, 157, 188, 162, 168, 164, 153, 145, 143, 209, 190, 
+  172, 148, 164, 170, 251, 250, 250, 250, 250, 251, 250, 251, 250, 250, 249, 250, 
+  250, 250, 251, 250, 250, 250, 251, 250, 250, 250, 250, 250, 250, 249, 250, 250, 
+  251, 250, 250, 250, 250, 250, 250, 250, 252, 250, 252, 251, 251, 250, 250, 250, 
+  250, 250, 251, 250, 250, 250, 250, 251, 250, 250, 250, 250, 250, 250, 251, 251, 
+  252, 250, 251, 252, 250, 250, 250, 250, 250, 208, 1000, 1000, 1000, 1000, 1000, 1000
+};
+
+#elif defined ROCTAGM1_SPRING_2019_V1_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+  420, 424, 396, 321, 381, 373, 456, 456, 456, 456, 456, 456, 415, 421, 416, 428,
+  451, 451, 438, 424, 414, 423, 387, 426, 396, 416, 416, 437, 420, 394, 394, 394,
+  394, 394, 394, 378, 348, 391, 415, 388, 381, 410, 372, 368, 361, 388, 429, 450,
+  436, 420, 443, 437, 285, 297, 286, 246, 305, 305, 277, 304, 286, 316, 330, 319,
+  311, 329, 290, 290, 302, 319, 145, 316, 304, 305, 347, 359, 315, 344, 325, 323,
+  340, 328, 302, 313, 255, 338, 360, 247, 318, 318, 318, 318, 318, 318, 321, 261,
+  328, 332, 325, 296, 329, 323, 331, 347, 360, 327, 307, 322, 305, 324, 360, 300,
+  300, 300, 300, 300, 300, 353, 291, 331, 225, 203, 1000, 1000, 1000, 1000, 1000, 1000
+};
+
+#elif defined ROCTAGM1_FALL_2019_V1_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+  480, 482, 460, 318, 446, 398, 676, 616, 564, 518, 578, 518, 422, 400, 484, 502,
+  528, 514, 454, 482, 468, 492, 466, 494, 464, 512, 482, 506, 498, 524, 476, 480,
+  502, 492, 476, 446, 398, 420, 496, 426, 456, 504, 436, 432, 444, 424, 486, 534,
+  478, 450, 486, 518, 272, 222, 244, 222, 258, 276, 222, 254, 252, 242, 280, 290,
+  268, 260, 256, 262, 272, 278, 300, 276, 250, 266, 280, 332, 266, 326, 288, 286,
+  290, 302, 236, 276, 226, 276, 284, 282, 404, 392, 264, 388, 474, 264, 300, 274,
+  294, 296, 284, 226, 264, 294, 284, 302, 314, 264, 292, 298, 262, 276, 310, 340,
+  316, 268, 422, 436, 268, 326, 248, 304, 162, 166, 999, 999, 999, 999, 999, 999
+};
+
+#elif defined ROCTAGM1_SPRING_2020_V1_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+  252, 252, 244, 188, 238, 220, 330, 306, 286, 268, 292, 268, 230, 220, 254, 260,
+  270, 266, 242, 254, 246, 256, 246, 258, 246, 264, 254, 262, 260, 270, 250, 252,
+  262, 256, 250, 238, 220, 228, 258, 230, 242, 262, 234, 232, 238, 230, 254, 274,
+  252, 240, 254, 268, 168, 148, 158, 148, 162, 170, 150, 162, 160, 158, 172, 176,
+  166, 164, 162, 164, 170, 172, 180, 170, 160, 166, 172, 192, 166, 190, 176, 174,
+  176, 182, 154, 170, 150, 170, 174, 174, 222, 216, 166, 216, 250, 166, 180, 170,
+  178, 178, 174, 150, 166, 178, 174, 182, 186, 166, 176, 180, 164, 170, 184, 196,
+  186, 166, 228, 234, 166, 190, 158, 182, 124, 126, 999, 999, 999, 999, 999, 999
+};
+
+#elif defined ROCTAGM1_FALL_2021_V1_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+  252, 252, 244, 188, 238, 220, 330, 306, 286, 268, 292, 268, 230, 220, 254, 260,
+  270, 266, 242, 254, 246, 256, 246, 258, 246, 264, 254, 262, 260, 270, 250, 252,
+  262, 256, 250, 238, 220, 228, 258, 230, 242, 262, 234, 232, 238, 230, 254, 274,
+  252, 240, 254, 268, 168, 148, 158, 148, 162, 170, 150, 162, 160, 158, 172, 176,
+  166, 164, 162, 164, 170, 172, 180, 170, 160, 166, 172, 192, 166, 190, 176, 174,
+  176, 182, 154, 170, 150, 170, 174, 174, 222, 216, 166, 216, 250, 166, 180, 170,
+  178, 178, 174, 150, 166, 178, 174, 182, 186, 166, 176, 180, 164, 170, 184, 196,
+  186, 166, 228, 234, 166, 190, 158, 182, 124, 126, 999, 999, 999, 999, 999, 999
+};
+
+#elif defined ROCTAGM1_SUMMER_2022_V1_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+  215, 212, 212, 178, 198, 211, 199, 199, 199, 199, 199, 223, 206, 172, 205, 210,
+  213, 189, 203, 195, 179, 180, 174, 162, 162, 173, 150, 167, 166, 199, 199, 199,
+  199, 199, 155, 151, 141, 140, 156, 144, 159, 159, 158, 152, 159, 157, 169, 166,
+  162, 169, 163, 166, 133, 127, 130, 127, 132, 135, 125, 129, 128, 128, 135, 136,
+  134, 131, 130, 131, 137, 137, 130, 199, 129, 132, 134, 146, 135, 138, 135, 135,
+  140, 141, 136, 136, 127, 120, 133, 144, 199, 199, 199, 199, 199, 133, 137, 137,
+  138, 146, 145, 142, 143, 134, 137, 133, 126, 132, 139, 136, 135, 135, 141, 199,
+  199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199
+};
+
+#elif defined ROCTAGM1_FALL_2022_V1_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+  209, 208, 206, 176, 199, 207, 199, 199, 199, 199, 199, 218, 201, 170, 211, 206,
+  213, 192, 191, 199, 183, 187, 180, 166, 169, 187, 167, 179, 172, 199, 199, 199,
+  199, 199, 162, 168, 152, 146, 166, 151, 163, 174, 167, 156, 165, 164, 174, 177,
+  172, 174, 172, 175, 133, 128, 135, 129, 132, 134, 126, 129, 128, 130, 132, 135,
+  135, 132, 128, 133, 133, 137, 133, 136, 128, 128, 129, 134, 136, 147, 134, 134,
+  143, 141, 139, 138, 128, 120, 128, 145, 199, 199, 199, 199, 199, 135, 137, 128,
+  138, 138, 138, 141, 135, 133, 138, 132, 130, 132, 141, 138, 135, 133, 136, 199,
+  199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199, 199
+};
+
+#elif defined ROCTAGM1_WINTER_2023_V1_CNF
+
+int tagm_fadc250_readout_threshold[128] = {
+ 267, 277, 275, 217, 258, 268, 287, 287, 287, 287, 287, 287, 254, 214, 276, 272,
+ 282, 249, 240, 258, 231, 235, 226, 207, 210, 233, 187, 207, 191, 193, 193, 193,
+ 193, 193, 193, 199, 172, 171, 201, 187, 197, 218, 209, 187, 202, 207, 218, 229,
+ 216, 220, 218, 229, 163, 152, 158, 151, 162, 164, 147, 155, 151, 154, 164, 172,
+ 160, 155, 149, 157, 159, 170, 155, 162, 152, 157, 157, 179, 159, 174, 164, 158,
+ 165, 167, 120, 160, 150, 131, 151, 166, 158, 158, 158, 158, 158, 158, 166, 163,
+ 163, 172, 171, 162, 163, 158, 168, 145, 145, 154, 168, 164, 155, 155, 159, 157,
+ 157, 157, 157, 157, 157, 160, 154, 231, 167, 171, 199, 199, 199, 199, 199, 199
+};
+
+#endif
+
+int fadc250_rowcolumn[128] = {3,2,1,6,5,4,1009,2009,3009,4009,5009,9,8,7,12,11,
+                              10,15,14,13,18,17,16,21,20,19,24,23,22,1027,2027,3027,
+                              4027,5027,27,26,25,30,29,28,33,32,31,36,35,34,39,38,
+                              37,42,41,40,45,44,43,48,47,46,51,50,49,54,53,52,
+                              57,56,55,60,59,58,63,62,61,66,65,64,69,68,67,72,
+                              71,70,75,74,73,78,77,76,1081,2081,3081,4081,5081,81,80,79,
+                              84,83,82,87,86,85,90,89,88,93,92,91,96,95,94,1099,
+                              2099,3099,4099,5099,99,98,97,100,101,102,
+                              123,124,125,126,127,128};
+std::map<int, int> fadc250_channel_from_rowcolumn;
+
+// main trigger is bit 0, ps triggers are bit 3
+//#define SELECT_TRIGGER_TYPE 3
+
+void report_bad_pmax(const DTAGMHit *itagm) {
+   jout << "  DTAGMHit: column=" << itagm->column
+        << " row=" << itagm->row << std::endl;
+   std::vector<const DTAGMDigiHit*> digi_hits;
+   itagm->Get(digi_hits);
+   std::vector<const DTAGMDigiHit*>::iterator atagm;
+   for (atagm = digi_hits.begin(); atagm != digi_hits.end(); ++atagm) {
+      jout << "    DTAGMDigiHit: column=" << (*atagm)->column
+           << " row=" << (*atagm)->row << std::endl;
+   }
+   std::vector<const DTAGMTDCDigiHit*> tdc_digi_hits;
+   itagm->Get(tdc_digi_hits);
+   std::vector<const DTAGMTDCDigiHit*>::iterator ttagm;
+   for (ttagm = tdc_digi_hits.begin(); ttagm != tdc_digi_hits.end(); ++ttagm) {
+      jout << "    DTAGMTDCDigiHit: column=" << (*ttagm)->column
+           << " row=" << (*ttagm)->row << std::endl;
+   }
+}
+
+extern "C"{
+   void InitPlugin(JApplication *app) {
+     InitJANAPlugin(app);
+     app->Add(new JEventProcessor_PStagstudy());
+   }
+}
+
+JEventProcessor_PStagstudy::JEventProcessor_PStagstudy() {
+  SetTypeName("JEventProcessor_PStagstudy");
+}
+
+
+JEventProcessor_PStagstudy::~JEventProcessor_PStagstudy() {
+}
+
+
+const DTranslationTable::DChannelInfo
+JEventProcessor_PStagstudy::GetDetectorIndex(const DTranslationTable *ttab,
+                                             DTranslationTable::csc_t csc)
+{
+   DTranslationTable::DChannelInfo index;
+   try {
+      index = ttab->GetDetectorIndex(csc);
+   }
+   catch(...) {
+      index.det_sys = DTranslationTable::UNKNOWN_DETECTOR;
+   }
+   return index;
+}
+
+//define static local variable //declared in header file
+thread_local DTreeFillData JEventProcessor_PStagstudy::dTreeFillData;
+
+void JEventProcessor_PStagstudy::Init() {
+
+   // lock all root operations
+   auto app = GetApplication();
+   lock_svc = app->GetService<JLockService>();
+
+   bc_factory = new DBeamCurrent_factory();
+   bc_factory->SetApplication(app);
+   bc_factory->Init();
+
+   std::ifstream tlimits("epoch_time_limits");
+   int t0, t1;
+   if (tlimits.is_open()) {
+      std::string line;
+      while (tlimits >> t0 >> t1) {
+         epoch_time_limits.emplace_back(t0, t1);
+      }
+      tlimits.close();
+   }
+   else {
+      epoch_time_limits.emplace_back(0, 1999999999);
+   }
+
+   gInterpreter->GenerateDictionary("std::vector<std::vector<unsigned short> >", "vector"); 
+
+   app->SetDefaultParameter("PSTAGSTUDY_BEAM_CURRENT_RECORD",
+                            beam_current_record_url,
+                            "Path/URL to the ROOT file containing the beam current tree");
+   jout << "PStagstudy: using beam current record URL: " << beam_current_record_url << std::endl;
+
+   string treeName = "tree_pstags";
+   string treeFile = "tree_PStags.root";
+   dTreeInterface = DTreeInterface::Create_DTreeInterface(treeName, treeFile);
+
+   //TTREE BRANCHES
+   DTreeBranchRegister locTreeBranchRegister;
+
+   locTreeBranchRegister.Register_Single<Int_t>("runno");
+   locTreeBranchRegister.Register_Single<Int_t>("eventno");
+   locTreeBranchRegister.Register_Single<Int_t>("trgigger");
+   locTreeBranchRegister.Register_Single<ULong64_t>("timestamp");
+   locTreeBranchRegister.Register_Single<ULong64_t>("epochtime");
+   locTreeBranchRegister.Register_Single<UInt_t>("beamcurrent");
+
+   locTreeBranchRegister.Register_Single<Int_t>("nrf");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("rf_sys", "nrf");
+   locTreeBranchRegister.Register_FundamentalArray<Double_t>("rf_time", "nrf");
+
+   locTreeBranchRegister.Register_Single<Int_t>("ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_seqno", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_channel", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_peak", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_pint", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_tadc", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_toth", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_ttdc", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_time", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_Etag", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_pmax", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_tlast", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_plast", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_base", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_rothr", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagm_ped", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_multi", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_qf", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_bg", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_has_adc", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_has_tdc", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_nped", "ntagm");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagm_nint", "ntagm");
+
+   // pstags->Branch("tagm_raw_waveform", &tagm_raw_waveform, 30000, 1);
+   locTreeBranchRegister.Register_Single<Int_t>("tagm_nraw");
+   locTreeBranchRegister.Register_FundamentalArray<UShort_t>("tagm_raw_waveform", "tagm_nraw");
+
+   locTreeBranchRegister.Register_Single<Int_t>("ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_seqno", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_counter", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_peak", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_pint", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_tadc", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_toth", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_ttdc", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_time", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_Etag", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_pmax", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_ped", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_tlast", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_plast", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_base", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tagh_rothr", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_multi", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_qf", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_bg", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_has_adc", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_has_tdc", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_nped", "ntagh");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("tagh_nint", "ntagh");
+
+   // pstags->Branch("tagh_raw_waveform", &tagh_raw_waveform, 30000, 1);
+   locTreeBranchRegister.Register_Single<Int_t>("tagh_nraw");
+   locTreeBranchRegister.Register_FundamentalArray<UShort_t>("tagh_raw_waveform", "tagh_nraw");
+
+   locTreeBranchRegister.Register_Single<Int_t>("nbeam");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("beam_sys", "nbeam");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("beam_E", "nbeam");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("beam_t", "nbeam");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("beam_z", "nbeam");
+
+   locTreeBranchRegister.Register_Single<Int_t>("nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_seqno", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_arm", "nps"); // North(left): 0, South(right): 1
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_column", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_peak", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_pint", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_npix", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_t", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_E", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_tadc", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_toth", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_pmax", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("ps_ped", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_multi", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_qf", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_nped", "nps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("ps_nint", "nps");
+
+   // pstags->Branch("ps_raw_waveform", &ps_raw_waveform, 30000, 1);
+   locTreeBranchRegister.Register_Single<Int_t>("ps_nraw");
+   locTreeBranchRegister.Register_FundamentalArray<UShort_t>("ps_raw_waveform", "ps_nraw");
+
+   locTreeBranchRegister.Register_Single<Int_t>("npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_seqno", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_arm", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_module", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_counter", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_peak", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_pint", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_npe", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_t", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_tadc", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_ttdc", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_toth", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_pmax", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psc_ped", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_multi", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_qf", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_bg", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_has_adc", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_has_tdc", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_nped", "npsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("psc_nint", "npsc");
+
+   // pstags->Branch("psc_raw_waveform", &psc_raw_waveform, 30000, 1);
+   locTreeBranchRegister.Register_Single<Int_t>("psc_nraw");
+   locTreeBranchRegister.Register_FundamentalArray<UShort_t>("psc_raw_waveform", "psc_nraw");
+
+   locTreeBranchRegister.Register_Single<Int_t>("npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("Epair", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("tpair", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psleft_peak", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psright_peak", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psleft_pint", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psright_pint", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psleft_time", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psright_time", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psEleft", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("psEright", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pstleft", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pstright", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("nleft_ps", "npairps");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("nright_ps", "npairps");
+
+   locTreeBranchRegister.Register_Single<Int_t>("npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscleft_seqno", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscright_seqno", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscleft_module", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscright_module", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_peak", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_peak", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_pint", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_pint", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_ttdc", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_ttdc", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_tadc", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_tadc", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_t", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_t", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscleft_ped", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Float_t>("pscright_ped", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscleft_qf", "npairpsc");
+   locTreeBranchRegister.Register_FundamentalArray<Int_t>("pscright_qf", "npairpsc");
+
+   //REGISTER BRANCHES
+   dTreeInterface->Create_Branches(locTreeBranchRegister);
+
+   // create root folder and cd to it, store main dir
+   TDirectory *main = gDirectory;
+   gDirectory->mkdir("PStagstudy")->cd();
+
+   for (int i=0; i < tagm_fadc250_channels; ++i) {
+      char name[99], title[99];
+      tagm_hpedestal[i] = new TH1D((sprintf(name, "tagm_hpedestal_%d", i), name),
+                              (sprintf(title, "tagm pulse pedestal channel %d", i), title),
+                              200, 0, 200);
+      for (int j=0; j<25; ++j) {
+         tagm_hpedestal[i]->Fill(100);
+      }
+   }
+   for (int i=0; i < tagh_fadc250_channels; ++i) {
+      char name[99], title[99];
+      tagh_hpedestal[i] = new TH1D((sprintf(name, "tagh_hpedestal_%d", i), name),
+                              (sprintf(title, "tagh pulse pedestal channel %d", i), title),
+                              200, 0, 200);
+      for (int j=0; j<25; ++j) {
+         tagh_hpedestal[i]->Fill(100);
+      }
+   }
+
+   main->cd();
+
+}
+
+
+void JEventProcessor_PStagstudy::BeginRun(const std::shared_ptr<const JEvent>& event) {
+
+   bc_factory->BeginRun(event);
+   int runno = event->GetRunNumber();
+
+   string RCDB_CONNECTION;
+   if (getenv("RCDB_CONNECTION")!= NULL)
+      RCDB_CONNECTION = getenv("RCDB_CONNECTION");
+   else
+      RCDB_CONNECTION = "mysql://rcdb@hallddb.jlab.org/rcdb";   // default to outward-facing MySQL DB
+
+   rcdb::rxConnection rcdbconn(RCDB_CONNECTION);
+   epoch_reference = rcdbconn.GetRunStartTime(runno);
+
+   beam_current_from_epics.clear();
+   TFile *bcfile = TFile::Open(beam_current_record_url.c_str());
+   if (!bcfile || bcfile->IsZombie()) {
+      jerr << "JEventProcessor_PStagstudy::brun error - "
+           << "failed to open EPICS beam current record at url "
+           << beam_current_record_url << std::endl
+           << "...continuing on without beam current information from EPICS"
+           << std::endl;
+      return;
+   }
+   TTree *bctree = dynamic_cast<TTree*>(bcfile->Get(beam_current_record_tree.c_str()));
+   if (!bctree) {
+      jerr << "JEventProcessor_PStagstudy::brun error - "
+           << "failed to read tree " << beam_current_record_tree
+           << " from " << beam_current_record_url << std::endl
+           << "...continuing on without beam current information from EPICS"
+           << std::endl;
+      bcfile->Close();
+      return;
+   }
+   uint32_t tepoch_s;
+   uint32_t ibeam_nA;
+   bctree->SetBranchAddress("tepoch", &tepoch_s);
+   bctree->SetBranchAddress("ibeam", &ibeam_nA);
+   uint64_t nentries = bctree->GetEntries();
+   for (uint64_t i=0; i < nentries; ++i) {
+      bctree->GetEntry(i);
+      if (tepoch_s >= epoch_reference)
+         beam_current_from_epics[tepoch_s] = ibeam_nA;
+      if (tepoch_s > epoch_reference + max_run_duration)
+         break;
+   }
+   bcfile->Close();
+   jout << "JEventProcessor_PStagstudy::brun read "
+        << beam_current_from_epics.size() << " records"
+        << " from EPICS for run " << runno << std::endl;
+
+}
+
+
+void JEventProcessor_PStagstudy::Process(const std::shared_ptr<const JEvent>& event) {
+   // This is called for every event. Use of common resources like writing
+   // to a file or filling a histogram should be mutex protected. Using
+   // event->Get(...) to get reconstructed objects (and thereby activating the
+   // reconstruction algorithm) should be done outside of any mutex lock
+   // since multiple threads may call this method at the same time.
+
+   double ticks_per_sec = bc_factory->ticks_per_sec;
+
+   std::vector<const DCODAEventInfo*> event_info;
+   event->Get(event_info);
+   if (event_info.size() == 0) {
+      return;
+   }
+
+   std::vector<const DTSscalers*> scalers;
+   event->Get(scalers);
+   std::vector<const DTSscalers*>::iterator isc;
+   for (isc = scalers.begin(); isc != scalers.end(); ++isc) {
+      jout << "scalers found with time " << (*isc)->time << std::endl;
+   }
+
+   // only examine PS triggers
+   const DL1Trigger *trig_words = 0;
+   uint32_t trig_mask, fp_trig_mask;
+   try {
+      event->GetSingle(trig_words);
+   } catch(...) {};
+   if (trig_words) {
+      trig_mask = trig_words->trig_mask;
+      fp_trig_mask = trig_words->fp_trig_mask;
+   }
+   else {
+      trig_mask = 0;
+      fp_trig_mask = 0;
+   }
+   int trig_bits = fp_trig_mask > 0 ? 10 + fp_trig_mask : trig_mask;
+#ifdef SELECT_TRIGGER_TYPE
+   if ((trig_bits & (1 << SELECT_TRIGGER_TYPE)) == 0) {
+      return;
+   }
+#endif
+ 
+   int runno = event_info[0]->run_number;
+   int eventno = event_info[0]->event_number;
+   unsigned long int timestamp = event_info[0]->avg_timestamp;
+   int trigger = trig_bits;
+   dTreeFillData.Fill_Single<Int_t>("runno",runno);
+   dTreeFillData.Fill_Single<Int_t>("eventno",eventno);
+   dTreeFillData.Fill_Single<Int_t>("trgigger",trigger);
+   dTreeFillData.Fill_Single<Long64_t>("timestamp",timestamp);
+
+   std::vector<const DCODAControlEvent*> controls;
+   event->Get(controls);
+   std::vector<const DCODAControlEvent*>::iterator ictrl;
+   for (ictrl = controls.begin(); ictrl != controls.end(); ++ictrl) {
+      jout << "found control event with unix_time "
+           << (*ictrl)->unix_time << std::endl;
+      lock_svc->RootWriteLock();
+      epoch_reference = (*ictrl)->unix_time;
+      lock_svc->RootUnLock();
+   } 
+
+   std::vector<const DBeamCurrent*> currents;
+   event->Get(currents);
+   std::vector<const DBeamCurrent*>::iterator icur;
+   unsigned long int beamcurrent = 0;
+   for (icur = currents.begin(); icur != currents.end(); ++icur) {
+      // jout << "found DBeamCurrent with t "
+      //      << (*icur)->t << std::endl;
+      beamcurrent = (*icur)->Ibeam;
+   } 
+
+   unsigned long int epochtime = epoch_reference + timestamp/ticks_per_sec;
+   int within_time_limits = 0;
+   for (auto titer : epoch_time_limits) {
+      if (epochtime > titer.first and epochtime < titer.second) {
+         ++within_time_limits;
+      }
+   }
+   if (! within_time_limits) {
+      if ((eventno % 100000) < 2)
+         std::cerr << "event " << eventno << " is outside time limits, discarding" << std::endl;
+      return;
+   }
+
+   if (beam_current_from_epics.size() > 0) {
+      auto it = beam_current_from_epics.lower_bound(epochtime);
+      beamcurrent = it->second;
+   }
+
+   dTreeFillData.Fill_Single<Long64_t>("epochtime",epochtime);
+   dTreeFillData.Fill_Single<Int_t>("beamcurrent",beamcurrent);
+
+   std::vector<const DRFTime*> rf_times;
+   event->Get(rf_times, "PSC");
+   std::vector<const DRFTime*>::iterator irf;
+   int nrf = 0;
+   for (irf = rf_times.begin(); irf != rf_times.end(); ++irf) {
+      dTreeFillData.Fill_Array<Int_t>("rf_sys",0x4000,nrf);
+      dTreeFillData.Fill_Array<Double_t>("rf_time",(*irf)->dTime,nrf);
+      nrf++;
+   }
+   event->Get(rf_times, "TAGH");
+   for (irf = rf_times.begin(); irf != rf_times.end(); ++irf) {
+      dTreeFillData.Fill_Array<Int_t>("rf_sys",0x800,nrf);
+      dTreeFillData.Fill_Array<Double_t>("rf_time",(*irf)->dTime,nrf);
+      nrf++;
+   }
+   dTreeFillData.Fill_Single<Int_t>("nrf",nrf);
+
+   // get the raw window data, if any
+   std::vector<const Df250WindowRawData*> traces;
+   event->Get(traces);
+
+   std::vector<const DTranslationTable*> ttables;
+   event->Get(ttables);
+   if (ttables.size() != 1) {
+      jerr << "Serious error in PStagstudy plugin - "
+           << "unable to acquire the DAQ translation table!"
+           << std::endl;
+      return;
+   }
+   const DTranslationTable *ttab = ttables[0];
+
+   std::vector<const DTAGMHit*> tagm_hits;
+   event->Get(tagm_hits, "Calib");
+   std::vector<std::vector<float> > timelist;
+   std::vector<std::vector<float> > peaklist;
+   for (int i=0; i < tagm_fadc250_channels; ++i) {
+      std::vector<float> evec;
+      timelist.push_back(evec);
+      peaklist.push_back(evec);
+   }
+   std::vector<const DTAGMHit*>::iterator itagm;
+   int ntagm_per_channel[6][128] = {0};
+   int ntagm = 0;
+   std::vector<std::vector<unsigned short> > tagm_raw_waveform;
+   for (itagm = tagm_hits.begin(); itagm != tagm_hits.end(); ++itagm) {
+      int row = (*itagm)->row;
+      int column = (*itagm)->column;
+      int channel = fadc250_channel_from_rowcolumn[row * 1000 + column];
+      float tagm_tlast_loc = 0;
+      float tagm_plast_loc = 0;
+      for (int i=0; i < (int)timelist[channel].size(); ++i) {
+         if (timelist[channel][i] > tagm_tlast_loc) {
+            tagm_tlast_loc = timelist[channel][i];
+            tagm_plast_loc = peaklist[channel][i];
+         }
+      }
+      dTreeFillData.Fill_Array<Float_t>("tagm_tlast",tagm_tlast_loc,ntagm);
+      dTreeFillData.Fill_Array<Float_t>("tagm_plast",tagm_plast_loc,ntagm);
+      timelist[channel].push_back((*itagm)->time_fadc);
+      peaklist[channel].push_back((*itagm)->pulse_peak);
+      dTreeFillData.Fill_Array<Float_t>("tagm_rothr",tagm_fadc250_readout_threshold[channel],ntagm);
+      dTreeFillData.Fill_Array<Int_t>("tagm_seqno",ntagm_per_channel[row][column]++,ntagm);
+      dTreeFillData.Fill_Array<Int_t>("tagm_channel",column+row*1000,ntagm);
+      dTreeFillData.Fill_Array<Float_t>("tagm_peak",(*itagm)->pulse_peak,ntagm);
+      dTreeFillData.Fill_Array<Float_t>("tagm_pint",(*itagm)->integral,ntagm);
+      dTreeFillData.Fill_Array<Float_t>("tagm_tadc",(*itagm)->time_fadc,ntagm);
+      dTreeFillData.Fill_Array<Float_t>("tagm_toth",999,ntagm);
+      dTreeFillData.Fill_Array<Float_t>("tagm_ttdc",(*itagm)->time_tdc,ntagm);
+      dTreeFillData.Fill_Array<Float_t>("tagm_Etag",(*itagm)->E,ntagm);
+      dTreeFillData.Fill_Array<Float_t>("tagm_time",(*itagm)->t,ntagm);
+      dTreeFillData.Fill_Array<Int_t>("tagm_multi",0,ntagm);
+      dTreeFillData.Fill_Array<Float_t>("tagm_pmax",999,ntagm);
+      dTreeFillData.Fill_Array<Float_t>("tagm_ped",999,ntagm);
+      dTreeFillData.Fill_Array<Int_t>("tagm_qf",999,ntagm);
+      dTreeFillData.Fill_Array<Int_t>("tagm_bg",(*itagm)->bg,ntagm);
+      dTreeFillData.Fill_Array<Int_t>("tagm_has_adc",(*itagm)->has_fADC,ntagm);
+      dTreeFillData.Fill_Array<Int_t>("tagm_has_tdc",(*itagm)->has_TDC,ntagm);
+      dTreeFillData.Fill_Array<Int_t>("tagm_nped",999,ntagm);
+      dTreeFillData.Fill_Array<Int_t>("tagm_nint",999,ntagm);
+      std::vector<const DTAGMDigiHit*> digi_hits;
+      (*itagm)->Get(digi_hits);
+      std::vector<const DTAGMDigiHit*>::iterator atagm;
+      for (atagm = digi_hits.begin(); atagm != digi_hits.end(); ++atagm) {
+         if ((*atagm)->row == row &&
+             (*atagm)->column == column)
+         {
+	    dTreeFillData.Fill_Array<Float_t>("tagm_pmax",(*atagm)->pulse_peak,ntagm);
+	    float tagm_ped_loc = (*atagm)->pedestal/(*atagm)->nsamples_pedestal;
+	    dTreeFillData.Fill_Array<Float_t>("tagm_ped",tagm_ped_loc,ntagm);
+	    dTreeFillData.Fill_Array<Int_t>("tagm_qf",(*atagm)->QF,ntagm);
+	    dTreeFillData.Fill_Array<Int_t>("tagm_nped",(*atagm)->nsamples_pedestal,ntagm);
+	    dTreeFillData.Fill_Array<Int_t>("tagm_nint",(*atagm)->nsamples_integral,ntagm);
+            std::vector<const Df250PulseData*> pulse_data;
+            (*atagm)->Get(pulse_data);
+            std::vector<const Df250PulseData*>::iterator ptagm;
+            for (ptagm = pulse_data.begin(); ptagm != pulse_data.end(); ++ptagm) {
+	       dTreeFillData.Fill_Array<Float_t>("tagm_toth",(*ptagm)->nsamples_over_threshold*4,ntagm);
+               // f_qpedestal = ((*ptagm)->QF_pedestal)? 1 : 0;
+               // f_latepulse = ((*ptagm)->QF_NSA_beyond_PTW)? 1 : 0;
+               // f_underflow = ((*ptagm)->QF_underflow)? 1 : 0;
+               // f_overflow = ((*ptagm)->QF_overflow)? 1 : 0;
+               // f_notpeak = ((*ptagm)->QF_vpeak_beyond_NSA)? 1 : 0;
+               // f_nopeak = ((*ptagm)->QF_vpeak_not_found)? 1 : 0;
+               // f_badped = ((*ptagm)->QF_bad_pedestal)? 1 : 0;
+            }
+	    lock_svc->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+            tagm_hpedestal[channel]->Fill(tagm_ped_loc);
+	    lock_svc->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+         }
+      }
+      int maxbin(tagm_hpedestal[channel]->GetMaximumBin());
+      double bsum[2] = {0,0};
+      for (int i=-1; i<2; ++i) {
+         bsum[0] += tagm_hpedestal[channel]->GetBinContent(maxbin + i);
+         bsum[1] += tagm_hpedestal[channel]->GetBinContent(maxbin + i) *
+                    tagm_hpedestal[channel]->GetXaxis()->GetBinCenter(maxbin + i);
+      }
+      dTreeFillData.Fill_Array<Float_t>("tagm_base",bsum[1]/bsum[0],ntagm);
+
+      std::vector<const DTAGMHit*> assoc_hits;
+      (*itagm)->Get(assoc_hits);
+      std::vector<const DTAGMHit*>::iterator jtagm;
+      int mtagm = 0;
+      for (jtagm = assoc_hits.begin(); jtagm != assoc_hits.end(); ++jtagm) {
+         ntagm++;
+         int row = (*jtagm)->row;
+         int column = (*jtagm)->column;
+         int channel = fadc250_channel_from_rowcolumn[row * 1000 + column];
+	 dTreeFillData.Fill_Array<Int_t>("tagm_seqno",ntagm_per_channel[row][column]++,ntagm);
+	 dTreeFillData.Fill_Array<Int_t>("tagm_channel",column+row*1000,ntagm);
+         tagm_tlast_loc = 0;
+         tagm_plast_loc = 0;
+         for (int i=0; i < (int)timelist[channel].size(); ++i) {
+            if (timelist[channel][i] > tagm_tlast_loc) {
+               tagm_tlast_loc = timelist[channel][i];
+               tagm_plast_loc = peaklist[channel][i];
+            }
+         }
+	 dTreeFillData.Fill_Array<Float_t>("tagm_tlast",tagm_tlast_loc,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_plast",tagm_plast_loc,ntagm);
+         timelist[channel].push_back((*jtagm)->time_fadc);
+         peaklist[channel].push_back((*jtagm)->pulse_peak);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_rothr",tagm_fadc250_readout_threshold[channel],ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_peak",(*jtagm)->pulse_peak,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_pint",(*jtagm)->integral,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_tadc",(*jtagm)->time_fadc,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_toth",999,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_ttdc",(*jtagm)->time_tdc,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_Etag",(*jtagm)->E,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_time",(*jtagm)->t,ntagm);
+	 dTreeFillData.Fill_Array<Int_t>("tagm_multi",++mtagm,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_pmax",999,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagm_ped",999,ntagm);
+	 dTreeFillData.Fill_Array<Int_t>("tagm_qf",999,ntagm);
+	 dTreeFillData.Fill_Array<Int_t>("tagm_bg",(*jtagm)->bg,ntagm);
+	 dTreeFillData.Fill_Array<Int_t>("tagm_has_adc",(*jtagm)->has_fADC,ntagm);
+	 dTreeFillData.Fill_Array<Int_t>("tagm_has_tdc",(*jtagm)->has_TDC,ntagm);
+	 dTreeFillData.Fill_Array<Int_t>("tagm_nped",999,ntagm);
+	 dTreeFillData.Fill_Array<Int_t>("tagm_nint",999,ntagm);
+         (*jtagm)->Get(digi_hits);
+         for (atagm = digi_hits.begin(); atagm != digi_hits.end(); ++atagm) {
+            if ((*atagm)->row == (*jtagm)->row &&
+                (*atagm)->column == (*jtagm)->column)
+            {
+	       dTreeFillData.Fill_Array<Float_t>("tagm_pmax",(*atagm)->pulse_peak,ntagm);
+	       float tagm_ped_loc = (*atagm)->pedestal/(*atagm)->nsamples_pedestal;
+	       dTreeFillData.Fill_Array<Float_t>("tagm_ped",tagm_ped_loc,ntagm);
+	       dTreeFillData.Fill_Array<Int_t>("tagm_qf",(*atagm)->QF,ntagm);
+	       dTreeFillData.Fill_Array<Int_t>("tagm_nped",(*atagm)->nsamples_pedestal,ntagm);
+	       dTreeFillData.Fill_Array<Int_t>("tagm_nint",(*atagm)->nsamples_integral,ntagm);
+               std::vector<const Df250PulseData*> pulse_data;
+               (*atagm)->Get(pulse_data);
+               std::vector<const Df250PulseData*>::iterator ptagm;
+               for (ptagm = pulse_data.begin(); ptagm != pulse_data.end(); ++ptagm) {
+		  dTreeFillData.Fill_Array<Float_t>("tagm_toth",(*ptagm)->nsamples_over_threshold*4,ntagm);
+                  // f_qpedestal = ((*ptagm)->QF_pedestal)? 1 : 0;
+                  // f_latepulse = ((*ptagm)->QF_NSA_beyond_PTW)? 1 : 0;
+                  // f_underflow = ((*ptagm)->QF_underflow)? 1 : 0;
+                  // f_overflow = ((*ptagm)->QF_overflow)? 1 : 0;
+                  // f_notpeak = ((*ptagm)->QF_vpeak_beyond_NSA)? 1 : 0;
+                  // f_nopeak = ((*ptagm)->QF_vpeak_not_found)? 1 : 0;
+                  // f_badped = ((*ptagm)->QF_bad_pedestal)? 1 : 0;
+               }
+	       lock_svc->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+               tagm_hpedestal[channel]->Fill(tagm_ped_loc);
+	       lock_svc->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+            }
+         }
+         int maxbin(tagm_hpedestal[channel]->GetMaximumBin());
+         double bsum[2] = {0,0};
+         for (int i=-1; i<2; ++i) {
+            bsum[0] += tagm_hpedestal[channel]->GetBinContent(maxbin + i);
+            bsum[1] += tagm_hpedestal[channel]->GetBinContent(maxbin + i) *
+                       tagm_hpedestal[channel]->GetXaxis()->GetBinCenter(maxbin + i);
+         }
+         dTreeFillData.Fill_Array<Float_t>("tagm_base",bsum[1]/bsum[0],ntagm);
+      }
+      std::vector<unsigned short> trace;
+      std::vector<const Df250WindowRawData*>::iterator itrace;
+      for (itrace = traces.begin(); itrace != traces.end(); ++itrace) {
+         DTranslationTable::csc_t csc = {(*itrace)->rocid, (*itrace)->slot, (*itrace)->channel};
+         const DTranslationTable::DChannelInfo chaninfo = GetDetectorIndex(ttab, csc);
+         if (chaninfo.det_sys == DTranslationTable::TAGM) {
+            if ((int)chaninfo.tagm.row == row && (int)chaninfo.tagm.col == column) {
+               trace = (*itrace)->samples;
+            }
+         }
+      }
+      tagm_raw_waveform.push_back(trace);
+      ntagm++;
+   }
+   dTreeFillData.Fill_Single<Int_t>("ntagm",ntagm);
+   int tagm_nraw = 0;
+   for (unsigned int col=0; col < tagm_raw_waveform.size(); ++col) {
+      for (unsigned int i=0; i < tagm_raw_waveform[i].size(); ++i) {
+         dTreeFillData.Fill_Array<UShort_t>("tagm_raw_waveform",
+                                            tagm_raw_waveform[col][i],
+                                            tagm_nraw);
+         tagm_nraw++;
+      }
+   }
+   dTreeFillData.Fill_Single<Int_t>("tagm_nraw",tagm_nraw);
+
+   std::vector<const DTAGHHit*> tagh_hits;
+   event->Get(tagh_hits, "Calib");
+   timelist.clear();
+   peaklist.clear();
+   for (int i=0; i < tagh_fadc250_channels; ++i) {
+      std::vector<float> evec;
+      timelist.push_back(evec);
+      peaklist.push_back(evec);
+   }
+   std::vector<const DTAGHHit*>::iterator itagh;
+   int ntagh_per_counter[512] = {0};
+   int ntagh = 0;
+   std::vector<std::vector<unsigned short> > tagh_raw_waveform;
+   for (itagh = tagh_hits.begin(); itagh != tagh_hits.end(); ++itagh) {
+      dTreeFillData.Fill_Array<Int_t>("tagh_seqno",ntagh_per_counter[(*itagh)->counter_id]++,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_counter",(*itagh)->counter_id,ntagh);
+      int channel = (*itagh)->counter_id;
+      float tagh_tlast_loc = 0;
+      float tagh_plast_loc = 0;
+      for (int i=0; i < (int)timelist[channel].size(); ++i) {
+         if (timelist[channel][i] > tagh_tlast_loc) {
+            tagh_tlast_loc = timelist[channel][i];
+            tagh_plast_loc = peaklist[channel][i];
+         }
+      }
+      dTreeFillData.Fill_Array<Float_t>("tagh_tlast",tagh_tlast_loc,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_plast",tagh_plast_loc,ntagh);
+      timelist[channel].push_back((*itagh)->time_fadc);
+      peaklist[channel].push_back((*itagh)->pulse_peak);
+      dTreeFillData.Fill_Array<Float_t>("tagh_rothr",tagh_fadc250_readout_threshold[channel],ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_peak",(*itagh)->pulse_peak,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_pint",(*itagh)->integral,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_tadc",(*itagh)->time_fadc,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_toth",999,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_ttdc",(*itagh)->time_tdc,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_Etag",(*itagh)->E,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_time",(*itagh)->t,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_multi",0,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_pmax",999,ntagh);
+      dTreeFillData.Fill_Array<Float_t>("tagh_ped",999,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_qf",999,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_bg",(*itagh)->bg,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_has_adc",(*itagh)->has_fADC,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_has_tdc",(*itagh)->has_TDC,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_nped",999,ntagh);
+      dTreeFillData.Fill_Array<Int_t>("tagh_nint",999,ntagh);
+      std::vector<const DTAGHDigiHit*> digi_hits;
+      (*itagh)->Get(digi_hits);
+      std::vector<const DTAGHDigiHit*>::iterator atagh;
+      for (atagh = digi_hits.begin(); atagh != digi_hits.end(); ++atagh) {
+         if ((*atagh)->counter_id == (*itagh)->counter_id) {
+	    dTreeFillData.Fill_Array<Float_t>("tagh_pmax",(*atagh)->pulse_peak,ntagh);
+            float tagh_ped_loc = (*atagh)->pedestal / (*atagh)->nsamples_pedestal;
+	    dTreeFillData.Fill_Array<Float_t>("tagh_ped",tagh_ped_loc,ntagh);
+	    dTreeFillData.Fill_Array<Int_t>("tagh_qf",(*atagh)->QF,ntagh);
+	    dTreeFillData.Fill_Array<Int_t>("tagh_nped",(*atagh)->nsamples_pedestal,ntagh);
+	    dTreeFillData.Fill_Array<Int_t>("tagh_nint",(*atagh)->nsamples_integral,ntagh);
+            std::vector<const Df250PulseData*> pulse_data;
+            (*atagh)->Get(pulse_data);
+            std::vector<const Df250PulseData*>::iterator ptagh;
+            for (ptagh = pulse_data.begin(); ptagh != pulse_data.end(); ++ptagh) {
+	       dTreeFillData.Fill_Array<Float_t>("tagh_toth",(*ptagh)->nsamples_over_threshold*4,ntagh);
+               // f_qpedestal = ((*ptagh)->QF_pedestal)? 1 : 0;
+               // f_latepulse = ((*ptagh)->QF_NSA_beyond_PTW)? 1 : 0;
+               // f_underflow = ((*ptagh)->QF_underflow)? 1 : 0;
+               // f_overflow = ((*ptagh)->QF_overflow)? 1 : 0;
+               // f_notpeak = ((*ptagh)->QF_vpeak_beyond_NSA)? 1 : 0;
+               // f_nopeak = ((*ptagh)->QF_vpeak_not_found)? 1 : 0;
+               // f_badped = ((*ptagh)->QF_bad_pedestal)? 1 : 0;
+            }
+	    lock_svc->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	    tagh_hpedestal[channel]->Fill(tagh_ped_loc);
+	    lock_svc->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+         }
+      }
+      int maxbin(tagh_hpedestal[channel]->GetMaximumBin());
+      double bsum[2] = {0,0};
+      for (int i=-1; i<2; ++i) {
+         bsum[0] += tagh_hpedestal[channel]->GetBinContent(maxbin + i);
+         bsum[1] += tagh_hpedestal[channel]->GetBinContent(maxbin + i) *
+                    tagh_hpedestal[channel]->GetXaxis()->GetBinCenter(maxbin + i);
+      }
+      dTreeFillData.Fill_Array<Float_t>("tagh_base",bsum[1]/bsum[0],ntagh);
+
+      std::vector<const DTAGHHit*> assoc_hits;
+      (*itagh)->Get(assoc_hits);
+      std::vector<const DTAGHHit*>::iterator jtagh;
+      int mtagh = 0;
+      for (jtagh = assoc_hits.begin(); jtagh != assoc_hits.end(); ++jtagh) {
+         ntagh++;
+         int channel = (*jtagh)->counter_id;
+         tagh_tlast_loc = 0;
+         tagh_plast_loc = 0;
+         for (int i=0; i < (int)timelist[channel].size(); ++i) {
+            if (timelist[channel][i] > tagh_tlast_loc) {
+               tagh_tlast_loc = timelist[channel][i];
+               tagh_plast_loc = peaklist[channel][i];
+            }
+         }
+	 dTreeFillData.Fill_Array<Float_t>("tagh_tlast",tagh_tlast_loc,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_plast",tagh_plast_loc,ntagh);
+         timelist[channel].push_back((*jtagh)->time_fadc);
+         peaklist[channel].push_back((*jtagh)->pulse_peak);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_rothr",tagh_fadc250_readout_threshold[channel],ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_seqno",ntagh_per_counter[(*jtagh)->counter_id]++,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_counter",(*jtagh)->counter_id,ntagm);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_peak",(*jtagh)->pulse_peak,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_pint",(*jtagh)->integral,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_tadc",(*jtagh)->time_fadc,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_toth",999,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_ttdc",(*jtagh)->time_tdc,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_Etag",(*jtagh)->E,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_time",(*jtagh)->t,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_multi",++mtagh,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_pmax",999,ntagh);
+	 dTreeFillData.Fill_Array<Float_t>("tagh_ped",999,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_qf",999,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_bg",(*jtagh)->bg,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_has_adc",(*jtagh)->has_fADC,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_has_tdc",(*jtagh)->has_TDC,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_nped",999,ntagh);
+	 dTreeFillData.Fill_Array<Int_t>("tagh_nint",999,ntagh);
+         (*jtagh)->Get(digi_hits);
+         for (atagh = digi_hits.begin(); atagh != digi_hits.end(); ++atagh) {
+            if ((*atagh)->counter_id == (*itagh)->counter_id) {
+	       dTreeFillData.Fill_Array<Float_t>("tagh_pmax",(*atagh)->pulse_peak,ntagh);
+	       float tagh_ped_loc = (*atagh)->pedestal / (*atagh)->nsamples_pedestal;
+	       dTreeFillData.Fill_Array<Float_t>("tagh_ped",tagh_ped_loc,ntagh);
+	       dTreeFillData.Fill_Array<Int_t>("tagh_qf",(*atagh)->QF,ntagh);
+	       dTreeFillData.Fill_Array<Int_t>("tagh_nped",(*atagh)->nsamples_pedestal,ntagh);
+	       dTreeFillData.Fill_Array<Int_t>("tagh_nint",(*atagh)->nsamples_integral,ntagh);
+               std::vector<const Df250PulseData*> pulse_data;
+               (*atagh)->Get(pulse_data);
+               std::vector<const Df250PulseData*>::iterator ptagh;
+               for (ptagh = pulse_data.begin(); ptagh != pulse_data.end(); ++ptagh) {
+		  dTreeFillData.Fill_Array<Float_t>("tagh_toth",(*ptagh)->nsamples_over_threshold*4,ntagh);
+                  // f_qpedestal = ((*ptagh)->QF_pedestal)? 1 : 0;
+                  // f_latepulse = ((*ptagh)->QF_NSA_beyond_PTW)? 1 : 0;
+                  // f_underflow = ((*ptagh)->QF_underflow)? 1 : 0;
+                  // f_overflow = ((*ptagh)->QF_overflow)? 1 : 0;
+                  // f_notpeak = ((*ptagh)->QF_vpeak_beyond_NSA)? 1 : 0;
+                  // f_nopeak = ((*ptagh)->QF_vpeak_not_found)? 1 : 0;
+                  // f_badped = ((*ptagh)->QF_bad_pedestal)? 1 : 0;
+               }
+	       lock_svc->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+               tagh_hpedestal[channel]->Fill(tagh_ped_loc);
+	       lock_svc->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+            }
+         }
+         int maxbin(tagh_hpedestal[channel]->GetMaximumBin());
+         double bsum[2] = {0,0};
+         for (int i=-1; i<2; ++i) {
+            bsum[0] += tagh_hpedestal[channel]->GetBinContent(maxbin + i);
+            bsum[1] += tagh_hpedestal[channel]->GetBinContent(maxbin + i) *
+                       tagh_hpedestal[channel]->GetXaxis()->GetBinCenter(maxbin + i);
+         }
+	 dTreeFillData.Fill_Array<Float_t>("tagh_base",bsum[1]/bsum[0],ntagh);
+      }
+      std::vector<unsigned short> trace;
+      std::vector<const Df250WindowRawData*>::iterator itrace;
+      for (itrace = traces.begin(); itrace != traces.end(); ++itrace) {
+         DTranslationTable::csc_t csc = {(*itrace)->rocid, (*itrace)->slot, (*itrace)->channel};
+         const DTranslationTable::DChannelInfo chaninfo = GetDetectorIndex(ttab, csc);
+         if (chaninfo.det_sys == DTranslationTable::TAGH) {
+            if ((int)chaninfo.tagh.id == (*itagh)->counter_id) {
+               trace = (*itrace)->samples;
+            }
+         }
+      }
+      tagh_raw_waveform.push_back(trace);
+      ntagh++;
+   }
+   dTreeFillData.Fill_Single<Int_t>("ntagh",ntagh);
+   int tagh_nraw = 0;
+   for (unsigned int col=0; col < tagh_raw_waveform.size(); ++col) {
+      for (unsigned int i=0; i < tagh_raw_waveform[i].size(); ++i) {
+         dTreeFillData.Fill_Array<UShort_t>("tagh_raw_waveform",
+                                            tagh_raw_waveform[col][i],
+                                            tagh_nraw);
+         tagh_nraw++;
+      }
+   }
+   dTreeFillData.Fill_Single<Int_t>("tagh_nraw",tagh_nraw);
+
+   std::vector<const DPSHit*> ps_hits;
+   event->Get(ps_hits);
+   std::vector<const DPSHit*>::iterator ips;
+   int nps_per_counter[512] = {0};
+   int nps = 0;
+   std::vector<std::vector<unsigned short> > ps_raw_waveform;
+   for (ips = ps_hits.begin(); ips != ps_hits.end(); ++ips) {
+      dTreeFillData.Fill_Array<Int_t>("ps_arm",(*ips)->arm,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_column",(*ips)->column,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_seqno",nps_per_counter[(*ips)->arm*256+(*ips)->column]++,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_E",(*ips)->E,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_t",(*ips)->t,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_pint",(*ips)->integral,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_peak",(*ips)->pulse_peak,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_npix",(*ips)->npix_fadc,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_toth",999,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_tadc",999,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_multi",0,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_pmax",999,nps);
+      dTreeFillData.Fill_Array<Float_t>("ps_ped",999,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_qf",999,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_nped",999,nps);
+      dTreeFillData.Fill_Array<Int_t>("ps_nint",999,nps);
+      std::vector<const DPSDigiHit*> digi_hits;
+      (*ips)->Get(digi_hits);
+      std::vector<const DPSDigiHit*>::iterator aps;
+      for (aps = digi_hits.begin(); aps != digi_hits.end(); ++aps) {
+         if ((*aps)->column == (*ips)->column && (*aps)->arm == (*ips)->arm) {
+	    dTreeFillData.Fill_Array<Float_t>("ps_tadc",(*aps)->pulse_time,nps);
+	    dTreeFillData.Fill_Array<Float_t>("ps_pmax",(*aps)->pulse_peak,nps);
+	    dTreeFillData.Fill_Array<Float_t>("ps_ped",(*aps)->pedestal,nps);
+	    dTreeFillData.Fill_Array<Int_t>("ps_qf",(*aps)->QF,nps);
+	    dTreeFillData.Fill_Array<Int_t>("ps_nped",(*aps)->nsamples_pedestal,nps);
+	    dTreeFillData.Fill_Array<Int_t>("ps_nint",(*aps)->nsamples_integral,nps);
+            std::vector<const Df250PulseData*> pulse_data;
+            (*aps)->Get(pulse_data);
+            std::vector<const Df250PulseData*>::iterator pps;
+            for (pps = pulse_data.begin(); pps != pulse_data.end(); ++pps) {
+	       dTreeFillData.Fill_Array<Float_t>("ps_toth",(*pps)->nsamples_over_threshold*4,nps);
+               // f_qpedestal = ((*pps)->QF_pedestal)? 1 : 0;
+               // f_latepulse = ((*pps)->QF_NSA_beyond_PTW)? 1 : 0;
+               // f_underflow = ((*pps)->QF_underflow)? 1 : 0;
+               // f_overflow = ((*pps)->QF_overflow)? 1 : 0;
+               // f_notpeak = ((*pps)->QF_vpeak_beyond_NSA)? 1 : 0;
+               // f_nopeak = ((*pps)->QF_vpeak_not_found)? 1 : 0;
+               // f_badped = ((*pps)->QF_bad_pedestal)? 1 : 0;
+            }
+         }
+      }
+      std::vector<unsigned short> trace;
+      std::vector<const Df250WindowRawData*>::iterator itrace;
+      for (itrace = traces.begin(); itrace != traces.end(); ++itrace) {
+         DTranslationTable::csc_t csc = {(*itrace)->rocid, (*itrace)->slot, (*itrace)->channel};
+         const DTranslationTable::DChannelInfo chaninfo = GetDetectorIndex(ttab, csc);
+         if (chaninfo.det_sys == DTranslationTable::PS) {
+            if ((int)chaninfo.ps.side == (*ips)->arm && (int)chaninfo.ps.id == (*ips)->column) {
+               trace = (*itrace)->samples;
+            }
+         }
+      }
+      ps_raw_waveform.push_back(trace);
+      nps++;
+   }
+   dTreeFillData.Fill_Single<Int_t>("nps",nps);
+   int ps_nraw = 0;
+   for (unsigned int col=0; col < ps_raw_waveform.size(); ++col) {
+      for (unsigned int i=0; i < ps_raw_waveform[i].size(); ++i) {
+         dTreeFillData.Fill_Array<UShort_t>("ps_raw_waveform",
+                                            ps_raw_waveform[col][i],
+                                            ps_nraw);
+         ps_nraw++;
+      }
+   }
+   dTreeFillData.Fill_Single<Int_t>("ps_nraw",ps_nraw);
+
+   std::vector<const DPSCHit*> psc_hits;
+   event->Get(psc_hits);
+   std::vector<const DPSCHit*>::iterator ipsc;
+   int npsc_per_counter[512] = {0};
+   int npsc = 0;
+   std::vector<std::vector<unsigned short> > psc_raw_waveform;
+   for (ipsc = psc_hits.begin(); ipsc != psc_hits.end(); ++ipsc) {
+      dTreeFillData.Fill_Array<Int_t>("psc_arm",(*ipsc)->arm,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_module",(*ipsc)->module,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_counter",(*ipsc)->arm*8+(*ipsc)->module,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_seqno",npsc_per_counter[(*ipsc)->arm*8+(*ipsc)->module]++,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_t",(*ipsc)->t,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_pint",(*ipsc)->integral,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_peak",(*ipsc)->pulse_peak,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_npe",(*ipsc)->npe_fadc,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_tadc",(*ipsc)->time_fadc,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_ttdc",(*ipsc)->time_tdc,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_has_adc",0,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_has_tdc",0,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_toth",999,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_multi",0,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_pmax",999,npsc);
+      dTreeFillData.Fill_Array<Float_t>("psc_ped",999,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_qf",999,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_nped",999,npsc);
+      dTreeFillData.Fill_Array<Int_t>("psc_nint",999,npsc);
+      std::vector<const DPSCDigiHit*> digi_hits;
+      (*ipsc)->Get(digi_hits);
+      std::vector<const DPSCDigiHit*>::iterator apsc;
+      for (apsc = digi_hits.begin(); apsc != digi_hits.end(); ++apsc) {
+         if ((*apsc)->counter_id == (*ipsc)->arm * 8 + (*ipsc)->module) {
+	    dTreeFillData.Fill_Array<Int_t>("psc_has_adc",1,npsc);
+	    dTreeFillData.Fill_Array<Float_t>("psc_tadc",(*apsc)->pulse_time,npsc);
+	    dTreeFillData.Fill_Array<Float_t>("psc_pmax",(*apsc)->pulse_peak,npsc);
+	    dTreeFillData.Fill_Array<Float_t>("psc_ped",(*apsc)->pedestal,npsc);
+	    dTreeFillData.Fill_Array<Int_t>("psc_qf",(*apsc)->QF,npsc);
+	    dTreeFillData.Fill_Array<Int_t>("psc_nped",(*apsc)->nsamples_pedestal,npsc);
+	    dTreeFillData.Fill_Array<Int_t>("psc_nint",(*apsc)->nsamples_integral,npsc);
+            std::vector<const Df250PulseData*> pulse_data;
+            (*apsc)->Get(pulse_data);
+            std::vector<const Df250PulseData*>::iterator ppsc;
+            for (ppsc = pulse_data.begin(); ppsc != pulse_data.end(); ++ppsc) {
+	       dTreeFillData.Fill_Array<Float_t>("psc_toth",(*ppsc)->nsamples_over_threshold*4,npsc);
+               // f_qpedestal = ((*pps)->QF_pedestal)? 1 : 0;
+               // f_latepulse = ((*pps)->QF_NSA_beyond_PTW)? 1 : 0;
+               // f_underflow = ((*pps)->QF_underflow)? 1 : 0;
+               // f_overflow = ((*pps)->QF_overflow)? 1 : 0;
+               // f_notpeak = ((*pps)->QF_vpeak_beyond_NSA)? 1 : 0;
+               // f_nopeak = ((*pps)->QF_vpeak_not_found)? 1 : 0;
+               // f_badped = ((*pps)->QF_bad_pedestal)? 1 : 0;
+            }
+         }
+      }
+      std::vector<const DPSCTDCDigiHit*> tdc_hits;
+      (*ipsc)->Get(tdc_hits);
+      std::vector<const DPSCTDCDigiHit*>::iterator tpsc;
+      for (tpsc = tdc_hits.begin(); tpsc != tdc_hits.end(); ++tpsc) {
+         if ((*tpsc)->counter_id == (*ipsc)->arm * 8 + (*ipsc)->module) {
+	    dTreeFillData.Fill_Array<Int_t>("psc_has_tdc",1,npsc);
+	    dTreeFillData.Fill_Array<Float_t>("psc_ttdc",(*tpsc)->time,npsc);
+         }
+      }
+      std::vector<unsigned short> trace;
+      std::vector<const Df250WindowRawData*>::iterator itrace;
+      for (itrace = traces.begin(); itrace != traces.end(); ++itrace) {
+         DTranslationTable::csc_t csc = {(*itrace)->rocid, (*itrace)->slot, (*itrace)->channel};
+         const DTranslationTable::DChannelInfo chaninfo = GetDetectorIndex(ttab, csc);
+         if (chaninfo.det_sys == DTranslationTable::PSC) {
+            if ((int)chaninfo.psc.id == (*ipsc)->arm * 8 + (*ipsc)->module) {
+               trace = (*itrace)->samples;
+            }
+         }
+      }
+      psc_raw_waveform.push_back(trace);
+      npsc++;
+   }
+   dTreeFillData.Fill_Single<Int_t>("npsc",npsc);
+   int psc_nraw = 0;
+   for (unsigned int col=0; col < psc_raw_waveform.size(); ++col) {
+      for (unsigned int i=0; i < psc_raw_waveform[i].size(); ++i) {
+         dTreeFillData.Fill_Array<UShort_t>("psc_raw_waveform",
+                                            psc_raw_waveform[col][i],
+                                            psc_nraw++);
+         psc_nraw++;
+      }
+   }
+   dTreeFillData.Fill_Single<Int_t>("psc_nraw",psc_nraw);
+
+   std::vector<const DBeamPhoton*> beams;
+   event->Get(beams);
+   std::vector<const DBeamPhoton*>::iterator ibeam;
+   int nbeam = 0;
+   for (ibeam = beams.begin(); ibeam != beams.end(); ++ibeam) {
+      dTreeFillData.Fill_Array<Int_t>("beam_sys",(*ibeam)->dSystem,nbeam);
+      dTreeFillData.Fill_Array<Float_t>("beam_E",(*ibeam)->energy(),nbeam);
+      dTreeFillData.Fill_Array<Float_t>("beam_t",(*ibeam)->time(),nbeam);
+      dTreeFillData.Fill_Array<Float_t>("beam_z",(*ibeam)->z(),nbeam);
+      nbeam++;
+   }
+   dTreeFillData.Fill_Single<Int_t>("nbeam",nbeam);
+
+   std::vector<const DPSPair*> ps_pairs;
+   event->Get(ps_pairs);
+   std::vector<const DPSPair*>::iterator ipair;
+   int npairps = 0;
+   for (ipair = ps_pairs.begin(); ipair != ps_pairs.end(); ++ipair) {
+      dTreeFillData.Fill_Array<Float_t>("Epair",(*ipair)->left->E+(*ipair)->right->E,npairps);
+      dTreeFillData.Fill_Array<Float_t>("tpair",((*ipair)->left->t+(*ipair)->right->t)/2,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psleft_peak",(*ipair)->left->pulse_peak,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psright_peak",(*ipair)->right->pulse_peak,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psleft_pint",(*ipair)->left->integral,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psright_pint",(*ipair)->right->integral,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psleft_time",(*ipair)->left->t_tile,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psright_time",(*ipair)->right->t_tile,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psEleft",(*ipair)->left->E,npairps);
+      dTreeFillData.Fill_Array<Float_t>("psEright",(*ipair)->right->E,npairps);
+      dTreeFillData.Fill_Array<Float_t>("pstleft",(*ipair)->left->t,npairps);
+      dTreeFillData.Fill_Array<Float_t>("pstright",(*ipair)->right->t,npairps);
+      dTreeFillData.Fill_Array<Int_t>("nleft_ps",(*ipair)->right->ntiles,npairps);
+      dTreeFillData.Fill_Array<Int_t>("nright_ps",(*ipair)->right->ntiles,npairps);
+      ++npairps;
+   }
+   dTreeFillData.Fill_Single<Int_t>("npairps",npairps);
+
+   std::vector<const DPSCPair*> psc_pairs;
+   event->Get(psc_pairs);
+   std::vector<const DPSCPair*>::iterator icpair;
+   int npsc_per_module[2][9] = {0};
+   double tpsc_per_module[2][9] = {0};
+   int npairpsc = 0;
+   for (icpair = psc_pairs.begin(); icpair != psc_pairs.end(); ++icpair) {
+      int mod0 = (*icpair)->ee.first->module;
+      int mod1 = (*icpair)->ee.second->module;
+      if (tpsc_per_module[0][mod0] != (*icpair)->ee.first->time_tdc) {
+         tpsc_per_module[0][mod0] = (*icpair)->ee.first->time_tdc;
+         ++npsc_per_module[0][mod0];
+      }
+      if (tpsc_per_module[1][mod1] != (*icpair)->ee.second->time_tdc) {
+         tpsc_per_module[1][mod1] = (*icpair)->ee.second->time_tdc;
+         ++npsc_per_module[1][mod1];
+      }
+      dTreeFillData.Fill_Array<Int_t>("pscleft_seqno",npsc_per_module[0][mod0]-1,npairpsc);
+      dTreeFillData.Fill_Array<Int_t>("pscright_seqno",npsc_per_module[1][mod1]-1,npairpsc);
+      dTreeFillData.Fill_Array<Int_t>("pscleft_module",(*icpair)->ee.first->module,npairpsc);
+      dTreeFillData.Fill_Array<Int_t>("pscright_module",(*icpair)->ee.second->module,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_peak",(*icpair)->ee.first->pulse_peak,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_peak",(*icpair)->ee.second->pulse_peak,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_pint",(*icpair)->ee.first->integral,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_pint",(*icpair)->ee.second->integral,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_ttdc",(*icpair)->ee.first->time_tdc,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_ttdc",(*icpair)->ee.second->time_tdc,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_tadc",(*icpair)->ee.first->time_fadc,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_tadc",(*icpair)->ee.second->time_fadc,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_t",(*icpair)->ee.first->t,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_t",(*icpair)->ee.second->t,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscleft_ped",999,npairpsc);
+      dTreeFillData.Fill_Array<Float_t>("pscright_ped",999,npairpsc);
+      dTreeFillData.Fill_Array<Int_t>("pscleft_qf",999,npairpsc);
+      dTreeFillData.Fill_Array<Int_t>("pscright_qf",999,npairpsc);
+      std::vector<const DPSCDigiHit*> digi_hits;
+      (*icpair)->ee.first->Get(digi_hits);
+      std::vector<const DPSCDigiHit*>::iterator apsc;
+      for (apsc = digi_hits.begin(); apsc != digi_hits.end(); ++apsc) {
+	 dTreeFillData.Fill_Array<Float_t>("pscleft_ped",(*apsc)->pedestal,npairpsc);
+	 dTreeFillData.Fill_Array<Int_t>("pscleft_qf",(*apsc)->QF,npairpsc);
+      }
+      (*icpair)->ee.second->Get(digi_hits);
+      for (apsc = digi_hits.begin(); apsc != digi_hits.end(); ++apsc) {
+	 dTreeFillData.Fill_Array<Float_t>("pscright_ped",(*apsc)->pedestal,npairpsc);
+	 dTreeFillData.Fill_Array<Int_t>("pscright_qf",(*apsc)->QF,npairpsc);
+      }
+      npairpsc++;
+   }
+   dTreeFillData.Fill_Single<Int_t>("npairpsc",npairpsc);
+
+#ifdef VERBOSE
+   printf("Filling pstags with ntagm=%d, ntagh=%d, npairps=%d, npairpsc=%d\n",
+          ntagm, ntagh, npairps, npairpsc);
+#endif
+   dTreeInterface->Fill(dTreeFillData);
+}
+
+
+void JEventProcessor_PStagstudy::EndRun() {
+}
+
+
+void JEventProcessor_PStagstudy::Finish() {
+  // Called before program exit after event processing is finished.
+  delete dTreeInterface; //saves trees to file, closes file
+}

@@ -25,6 +25,8 @@ class DBeamHelicity_factory_CORRECTED:public JFactoryT<DBeamHelicity>{
 
 	private:
 		float dCorrectionFactor = 1.;
+		bool REJECT_TSETTLE = false;
+
 };
 
 #endif // _DBeamHelicity_factory_CORRECTED_

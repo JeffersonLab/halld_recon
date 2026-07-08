@@ -22,6 +22,13 @@ void DDetectorMatches_factory::Init()
 
   MATCH_TO_DIRC = true;
   app->SetDefaultParameter("PID:MATCH_TO_DIRC",MATCH_TO_DIRC);
+
+  FAST_TRACKING_MODE=false;
+  app->SetDefaultParameter("TRKFIT:FAST_TRACKING_MODE",FAST_TRACKING_MODE);
+  if (FAST_TRACKING_MODE) MATCH_TO_DIRC=false;
+
+  MATCH_TO_TRD = false;
+  app->SetDefaultParameter("PID:MATCH_TO_TRD",MATCH_TO_TRD);
 }
 
 //------------------
@@ -78,7 +85,10 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	event->Get(locFMWPCClusters);
 
 	vector<const DTRDSegment *> locTRDSegments;
-	event->Get(locTRDSegments);
+	//event->Get(locTRDSegments);
+	if (MATCH_TO_TRD) {
+		event->Get(locTRDSegments,"Extrapolation");
+	}
 
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches();
 
@@ -96,7 +106,9 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 		  MatchToCTOF(locParticleID, locTrackTimeBasedVector[loc_i], locCTOFPoints, locDetectorMatches);
 		  MatchToFMWPC(locTrackTimeBasedVector[loc_i], locFMWPCClusters, locDetectorMatches);
 		}
-		MatchToTRD(locParticleID, locTrackTimeBasedVector[loc_i], locTRDSegments, locDetectorMatches);
+		if (MATCH_TO_TRD) {
+			MatchToTRD(locParticleID, locTrackTimeBasedVector[loc_i], locTRDSegments, locDetectorMatches);
+		}
 		MatchToECAL(locParticleID, locTrackTimeBasedVector[loc_i], locECALShowers, locDetectorMatches);
 	}
 

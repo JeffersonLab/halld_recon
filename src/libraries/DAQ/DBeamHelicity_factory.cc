@@ -32,6 +32,8 @@ void DBeamHelicity_factory::Init()
 	
 	auto app = GetApplication();
 	app->SetDefaultParameter("PREFER_PROMPT_HELICITY_DATA", PREFER_PROMPT_HELICITY_DATA, "If both prompt and delayed helicity data are in the data stream, prefer the prompt. (default: true)");
+	app->SetDefaultParameter("HELICITY:HB_SHIFT", dHDBoardDelay, "Helicity board bits to shift to get prompt helicity. (default: 8)");
+	app->SetDefaultParameter("HELICITY:REJECT_TSETTLE", REJECT_TSETTLE, "Reject events when the helicity is changing (t_settle is on). (default: 1)");
 
 	return; //NOERROR;
 }
@@ -55,12 +57,6 @@ void DBeamHelicity_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
         jerr << "Unable to get correction from /ELECTRON_BEAM/helicity_board_shift !" << endl;
 	}
 	// Constants for determined helicity pattern? (from Ken) 
-
-
-	// override parameters on command line
-	auto app = GetApplication();
-	app->SetDefaultParameter("HELICITY:HB_SHIFT", dHDBoardDelay, "Helicity board bits to shift to get prompt helicity. (default: 8)");
-	
 	
 	return; //NOERROR;
 }
@@ -119,8 +115,13 @@ void DBeamHelicity_factory::Process(const std::shared_ptr<const JEvent>& event){
   	  locBeamHelicity = Make_DBeamHelicity(locHELIDigiHits);
   }
   
-
   if(locBeamHelicity == nullptr)  return;
+
+  // perform optional event selections 
+  if(REJECT_TSETTLE && (locBeamHelicity->t_settle==0)) {
+	locBeamHelicity->valid = false;
+  }
+  
   
   Insert(locBeamHelicity);
   
@@ -168,6 +169,7 @@ DBeamHelicity *DBeamHelicity_factory::Make_DBeamHelicity(const DHelicityData *lo
 
 	DBeamHelicity *locBeamHelicity = new DBeamHelicity;
 	locBeamHelicity->pattern_sync  = locHelicityData->trigger_pattern_sync;
+	//locBeamHelicity->t_settle      = !(locHelicityData->trigger_tstable);
 	locBeamHelicity->t_settle      = locHelicityData->trigger_tstable;
 	locBeamHelicity->helicity      = helicityDecoderCalcPolarity(locHelicityData->trigger_event_polarity, locHelicityData->helicity_seed, dHDBoardDelay);
 	locBeamHelicity->pair_sync     = locHelicityData->trigger_pair_sync;
@@ -225,8 +227,8 @@ void DBeamHelicity_factory::reportPredictorError(uint32_t testval) const
 	lval = advanceSeed(lval);
 	lval = advanceSeed(lval);
 	
-	jerr << "  Bad word: 0x" << hex << testval << endl;
-	jerr << "     Compare 0x" << rval << " to 0x" << lval << dec << endl;
+ 	jerr << "  Bad word: 0x" << hex << testval << endl;
+ 	jerr << "     Compare 0x" << rval << " to 0x" << lval << dec << endl;
 }
 
 //------------------
