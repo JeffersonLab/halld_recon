@@ -78,10 +78,11 @@ void DEventWriterROOT::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 		}
 	}
 
-	/*
+	
 	//initialize bfield map
 	auto app = locEvent->GetJApplication();
 	auto geo_manager = app->GetService<DGeometryManager>();
+	int32_t runnumber = locEvent->GetRunNumber();
     bfield = geo_manager->GetBfield(runnumber);
 
 	auto geom = geo_manager->GetDGeometry(runnumber);
@@ -90,7 +91,7 @@ void DEventWriterROOT::Initialize(const std::shared_ptr<const JEvent>& locEvent)
     vector<double>  tof_face;
     geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",tof_face);
     m_TOFdX = tof_face[0]; m_TOFdY = tof_face[1]; m_TOFfront = tof_face[2];
-	*/
+	
 }
 
 void DEventWriterROOT::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
@@ -222,6 +223,8 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, const std::
 		Create_Branches_Beam(locBranchRegister, locIsMCDataFlag);
 	Create_Branches_NeutralHypotheses(locBranchRegister, locIsMCDataFlag);
 	Create_Branches_ChargedHypotheses(locBranchRegister, locIsMCDataFlag);
+	Create_Branches_PIMU(locBranchRegister);
+	std::cout << "created branches" << std::endl;
 
 	//create branches for combos
 	locBranchRegister.Register_Single<UChar_t>("NumUnusedTracks");
@@ -802,6 +805,25 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lk_DIRC"), locArraySizeString, dInitNumTrackArraySize);
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lp_DIRC"), locArraySizeString, dInitNumTrackArraySize);
 	}
+}
+
+void DEventWriterROOT::Create_Branches_PIMU(DTreeBranchRegister& locBranchRegister) const{
+
+	string locArraySizeString = "NumChargedHypos";
+	locBranchRegister.Register_Single<UInt_t>(locArraySizeString);
+
+	string locParticleBranchName = "PIMUFeatures";
+
+	std::string branch_name_test = Build_BranchName(locParticleBranchName,"Chamber1_Multiplicity");
+	std::cout << "branch_name_test = " << branch_name_test << std::endl;
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"Chamber1_Multiplicity"),locArraySizeString,dInitNumTrackArraySize);
+
+
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"Chamber2_Multiplicity"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"Chamber3_Multiplicity"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"Chamber4_Multiplicity"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"Chamber5_Multiplicity"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"Chamber6_Multiplicity"),locArraySizeString,dInitNumTrackArraySize);
 }
 
 void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
@@ -1449,10 +1471,22 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 			Fill_BeamData(locTreeFillData, loc_i, locBeamPhotons[loc_i], locVertex, locMCThrownMatching);
 	}
 
+	
 	//INDEPENDENT CHARGED TRACKS
+	std::map<MWPCKey,std::map<int,double>> chamberWireDiffs;
+	std::vector<const DChargedTrackHypothesis*> locChargedHyposMatched;
+
 	locTreeFillData->Fill_Single<UInt_t>("NumChargedHypos", UInt_t(locChargedTrackHypotheses.size()));
-	for(size_t loc_i = 0; loc_i < locChargedTrackHypotheses.size(); ++loc_i)
+	for(size_t loc_i = 0; loc_i < locChargedTrackHypotheses.size(); ++loc_i){
 		Fill_ChargedHypo(locTreeFillData, loc_i, locChargedTrackHypotheses[loc_i], locMCThrownMatching, locThrownIndexMap, locDetectorMatches);
+		//CPP PIMU Features for Neural Net
+		const DChargedTrackHypothesis* matchedTrack;
+		Calculate_PIMUFeatures(locTreeFillData,loc_i, locEvent, locChargedTrackHypotheses[loc_i],locChargedTrackHypotheses.size(), chamberWireDiffs,matchedTrack);
+		locChargedHyposMatched.push_back(matchedTrack);
+	}
+	if(locChargedHyposMatched.size() == 2){
+		Fill_PIMUFeatures(locTreeFillData,locChargedTrackHypotheses.size(),locChargedHyposMatched,chamberWireDiffs);
+	}
 
 	//INDEPENDENT NEUTRAL PARTICLES
 	locTreeFillData->Fill_Single<UInt_t>("NumNeutralHypos", UInt_t(locNeutralParticleHypotheses.size()));
@@ -2069,25 +2103,153 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lp_DIRC"), locDIRCLp, locArrayIndex);
 	}
 }
-/*
-void DEventWriterROOT::Fill_PIMUFeatures(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrackHypotheis) const {
+
+void DEventWriterROOT::Calculate_PIMUFeatures(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const std::shared_ptr<const JEvent>& event, const DChargedTrackHypothesis* locChargedTrackHypothesis,int numTracks,std::map<MWPCKey,std::map<int,double>>& cWireDiff,const DChargedTrackHypothesis*& locCT) const {
 	
+	bool trackCount = false;
+	if(numTracks == 2) trackCount = true;
+
+	const double mpic = 0.13957;
+
 	const DTrackTimeBased* locChargedTrack = locChargedTrackHypothesis->Get_TrackTimeBased();
 
 	double trackq = locChargedTrack->charge();
+
+	DVector3 trackP3 = locChargedTrack->momentum();
+
+	TLorentzVector recP4;
+	recP4.SetVectM(trackP3,mpic);
+
 	Particle_t ptype = (trackq > 0) ? PiPlus : PiMinus; 
 	auto track_proj = DCPPSelect::SwimTracksToAllDetectors(locChargedTrack,ptype,bfield,fcalfrontfaceZ,m_TOFfront);
 
 	//if(!track_proj.projection_success) return;
 
-	DVector3 track_proj_to_tof = track_proj.tof_projection;
-	DVector3 track_proj_to_fcal = track_proj.fcal_projection;
-	std::array<DVector3,6> track_proj_to_mwpc = track_proj.mwpc_projections;
-	
+	DVector3 trackProjToTOF = track_proj.tof_projection;
+	DVector3 trackProjToFCAL = track_proj.fcal_projection;
+	std::array<DVector3,6> trackProjToMWPC = track_proj.mwpc_projections;
 
+	vector<const DTOFPoint*> locTOFPoints;
+	event->Get(locTOFPoints);
+
+	vector<const DFCALShower*> locFCALShowers;
+	event->Get(locFCALShowers);
+
+	vector<const DFCALHit*> locFCALHits;
+	event->Get(locFCALHits);
+
+	vector<const DFMWPCHit*> locFMWPCHits;
+	event->Get(locFMWPCHits);
+
+	bool projTOFFlag = false;
+	if(DCPPSelect::MatchToTOF_CPP_GEOM(locTOFPoints,trackProjToTOF)) projTOFFlag = true;
+
+	bool projFCALShowerFlag = false;
+	vector<const DFCALShower*> locFCALMatchedShowers;
+	if(DCPPSelect::MatchToFCALShower_CPP(locFCALShowers,locFCALMatchedShowers,trackProjToFCAL)) projFCALShowerFlag = true;
+
+	bool projFCALHitFlag = false;
+	vector<const DFCALHit*> locFCALMatchedHits;
+	double hitE9E25 = 0.0, hitE1E9 = 0.0, hitDOCA = 999., hitSumU = 0.0, hitSumV = 0.0;
+
+	if(projFCALShowerFlag == false){
+		if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,locFCALMatchedHits,hitE9E25,hitDOCA,hitE1E9,trackProjToFCAL,hitSumU,hitSumV)) projFCALHitFlag = true;
+	}
 	
+	bool projMWPCFlag = false;
+	std::map<MWPCKey,DVector3> mwpcProjections;
+	if(trackq > 0.0){
+		mwpcProjections.emplace(MWPCKey::fmwpc1_proj_plus,trackProjToMWPC[0]);
+		mwpcProjections.emplace(MWPCKey::fmwpc2_proj_plus,trackProjToMWPC[1]);
+		mwpcProjections.emplace(MWPCKey::fmwpc3_proj_plus,trackProjToMWPC[2]);
+		mwpcProjections.emplace(MWPCKey::fmwpc4_proj_plus,trackProjToMWPC[3]);
+		mwpcProjections.emplace(MWPCKey::fmwpc5_proj_plus,trackProjToMWPC[4]);
+		mwpcProjections.emplace(MWPCKey::fmwpc6_proj_plus,trackProjToMWPC[5]);
+	}else{
+		mwpcProjections.emplace(MWPCKey::fmwpc1_proj_minus,trackProjToMWPC[0]);
+		mwpcProjections.emplace(MWPCKey::fmwpc2_proj_minus,trackProjToMWPC[1]);
+		mwpcProjections.emplace(MWPCKey::fmwpc3_proj_minus,trackProjToMWPC[2]);
+		mwpcProjections.emplace(MWPCKey::fmwpc4_proj_minus,trackProjToMWPC[3]);
+		mwpcProjections.emplace(MWPCKey::fmwpc5_proj_minus,trackProjToMWPC[4]);
+		mwpcProjections.emplace(MWPCKey::fmwpc6_proj_minus,trackProjToMWPC[5]);
+	}
+
+	bool trackInChamber6;
+	std::map<int,double> chamber1Diff,chamber2Diff,chamber3Diff,chamber4Diff,chamber5Diff,chamber6Diff;
+	if(DCPPSelect::ComputeSingleTrackMWPCWireResiduals(locFMWPCHits,mwpcProjections,recP4.E(),trackInChamber6,trackq,chamber1Diff,chamber2Diff,chamber3Diff,chamber4Diff,chamber5Diff,chamber6Diff)) projMWPCFlag = true;
+
+	if(trackq > 0.0){
+		cWireDiff[MWPCKey::fmwpc1_proj_plus] = chamber1Diff;
+		cWireDiff[MWPCKey::fmwpc2_proj_plus] = chamber2Diff;
+		cWireDiff[MWPCKey::fmwpc3_proj_plus] = chamber3Diff;
+		cWireDiff[MWPCKey::fmwpc4_proj_plus] = chamber4Diff;
+		cWireDiff[MWPCKey::fmwpc5_proj_plus] = chamber5Diff;
+		cWireDiff[MWPCKey::fmwpc6_proj_plus] = chamber6Diff;
+	}else{
+		cWireDiff[MWPCKey::fmwpc1_proj_minus] = chamber1Diff;
+		cWireDiff[MWPCKey::fmwpc2_proj_minus] = chamber2Diff;
+		cWireDiff[MWPCKey::fmwpc3_proj_minus] = chamber3Diff;
+		cWireDiff[MWPCKey::fmwpc4_proj_minus] = chamber4Diff;
+		cWireDiff[MWPCKey::fmwpc5_proj_minus] = chamber5Diff;
+		cWireDiff[MWPCKey::fmwpc6_proj_minus] = chamber6Diff;
+	}
+
+	locCT = locChargedTrackHypothesis;
 }
-	*/
+
+void DEventWriterROOT::Fill_PIMUFeatures(DTreeFillData* locTreeFillData, int numTracks,std::vector<const DChargedTrackHypothesis*> locCT,std::map<MWPCKey,std::map<int,double>>& cWireDiff) const 
+{
+	string locParticleBranchName = "PIMUFeatures";
+
+	std::map<int,double>fmwpc1WireDiffPlus = cWireDiff.at(MWPCKey::fmwpc1_proj_plus);
+	std::map<int,double>fmwpc2WireDiffPlus = cWireDiff.at(MWPCKey::fmwpc2_proj_plus);
+	std::map<int,double>fmwpc3WireDiffPlus = cWireDiff.at(MWPCKey::fmwpc3_proj_plus);  
+	std::map<int,double>fmwpc4WireDiffPlus = cWireDiff.at(MWPCKey::fmwpc4_proj_plus);
+	std::map<int,double>fmwpc5WireDiffPlus = cWireDiff.at(MWPCKey::fmwpc5_proj_plus);
+	std::map<int,double>fmwpc6WireDiffPlus = cWireDiff.at(MWPCKey::fmwpc6_proj_plus);
+
+	std::map<int,double>fmwpc1WireDiffMinus = cWireDiff.at(MWPCKey::fmwpc1_proj_minus);
+	std::map<int,double>fmwpc2WireDiffMinus = cWireDiff.at(MWPCKey::fmwpc2_proj_minus);
+	std::map<int,double>fmwpc3WireDiffMinus = cWireDiff.at(MWPCKey::fmwpc3_proj_minus);  
+	std::map<int,double>fmwpc4WireDiffMinus = cWireDiff.at(MWPCKey::fmwpc4_proj_minus);
+	std::map<int,double>fmwpc5WireDiffMinus = cWireDiff.at(MWPCKey::fmwpc5_proj_minus);
+	std::map<int,double>fmwpc6WireDiffMinus = cWireDiff.at(MWPCKey::fmwpc6_proj_minus);
+
+	DCPPSelect::RemoveFartherDuplicateHits(fmwpc1WireDiffPlus,fmwpc1WireDiffMinus);
+	DCPPSelect::RemoveFartherDuplicateHits(fmwpc2WireDiffPlus,fmwpc2WireDiffMinus);
+	DCPPSelect::RemoveFartherDuplicateHits(fmwpc3WireDiffPlus,fmwpc3WireDiffMinus);
+	DCPPSelect::RemoveFartherDuplicateHits(fmwpc4WireDiffPlus,fmwpc4WireDiffMinus);
+	DCPPSelect::RemoveFartherDuplicateHits(fmwpc5WireDiffPlus,fmwpc5WireDiffMinus);
+	DCPPSelect::RemoveFartherDuplicateHits(fmwpc6WireDiffPlus,fmwpc6WireDiffMinus);
+
+	int fmwpc1PlusCount = static_cast<int>(fmwpc1WireDiffPlus.size());
+	int fmwpc1MinusCount = static_cast<int>(fmwpc1WireDiffMinus.size());
+	int fmwpc2PlusCount = static_cast<int>(fmwpc2WireDiffPlus.size());
+	int fmwpc2MinusCount = static_cast<int>(fmwpc2WireDiffMinus.size());
+	int fmwpc3PlusCount = static_cast<int>(fmwpc3WireDiffPlus.size());
+	int fmwpc3MinusCount = static_cast<int>(fmwpc3WireDiffMinus.size());
+	int fmwpc4PlusCount = static_cast<int>(fmwpc4WireDiffPlus.size());
+	int fmwpc4MinusCount = static_cast<int>(fmwpc4WireDiffMinus.size());
+	int fmwpc5PlusCount = static_cast<int>(fmwpc5WireDiffPlus.size());
+	int fmwpc5MinusCount = static_cast<int>(fmwpc5WireDiffMinus.size());
+	int fmwpc6PlusCount = static_cast<int>(fmwpc6WireDiffPlus.size());
+	int fmwpc6MinusCount = static_cast<int>(fmwpc6WireDiffMinus.size());
+
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber1_Multiplicity"), fmwpc1PlusCount, 0);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber2_Multiplicity"), fmwpc2PlusCount, 0);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber3_Multiplicity"), fmwpc3PlusCount, 0);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber4_Multiplicity"), fmwpc4PlusCount, 0);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber5_Multiplicity"), fmwpc5PlusCount, 0);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber6_Multiplicity"), fmwpc6PlusCount, 0);
+
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber1_Multiplicity"), fmwpc1MinusCount, 1);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber2_Multiplicity"), fmwpc2MinusCount, 1);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber3_Multiplicity"), fmwpc3MinusCount, 1);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber4_Multiplicity"), fmwpc4MinusCount, 1);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber5_Multiplicity"), fmwpc5MinusCount, 1);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber6_Multiplicity"), fmwpc6MinusCount, 1);
+
+}
 
 void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DNeutralParticleHypothesis* locNeutralParticleHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const
 {

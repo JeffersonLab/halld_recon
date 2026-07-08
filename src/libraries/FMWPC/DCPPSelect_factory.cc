@@ -192,23 +192,23 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 		int fcal_shower_piplus = 0, fcal_shower_piminus = 0, fcal_hit_piplus = 0, fcal_hit_piminus = 0;
 
 		vector<const DFCALShower*> fcal_matched_showers_piplus;
-		if(DCPPSelect::MatchToFCALShower_CPP(locFCALShowers, fcal_matched_showers_piplus,fcal_piplus_pos,fcal_piplus_mom)) fcal_shower_piplus += 1;
+		if(DCPPSelect::MatchToFCALShower_CPP(locFCALShowers, fcal_matched_showers_piplus,fcal_piplus_pos)) fcal_shower_piplus += 1;
 		
 		vector<const DFCALShower*> fcal_matched_showers_piminus;
-		if(DCPPSelect::MatchToFCALShower_CPP(locFCALShowers, fcal_matched_showers_piminus,fcal_piminus_pos,fcal_piminus_mom)) fcal_shower_piminus += 1;
+		if(DCPPSelect::MatchToFCALShower_CPP(locFCALShowers, fcal_matched_showers_piminus,fcal_piminus_pos)) fcal_shower_piminus += 1;
 			
 		vector<const DFCALHit*> fcal_matched_hits_piplus;
 		double e9e25_hit_piplus = 0.,doca_hit_piplus = 0.,e1e9_hit_piplus=0.,sumu_hit_piplus=0.,sumv_hit_piplus=0.;
 		
 		if(fcal_shower_piplus == 0){
-			if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,fcal_matched_hits_piplus,e9e25_hit_piplus,doca_hit_piplus,e1e9_hit_piplus,fcal_piplus_pos,fcal_piplus_mom,sumu_hit_piplus,sumv_hit_piplus)) fcal_hit_piplus += 1;
+			if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,fcal_matched_hits_piplus,e9e25_hit_piplus,doca_hit_piplus,e1e9_hit_piplus,fcal_piplus_pos,sumu_hit_piplus,sumv_hit_piplus)) fcal_hit_piplus += 1;
 		}
 		
 		vector<const DFCALHit*> fcal_matched_hits_piminus;
 		double e9e25_hit_piminus = 0,doca_hit_piminus = 0,e1e9_hit_piminus=0.,sumu_hit_piminus=0.,sumv_hit_piminus=0.;
 		
 		if(fcal_shower_piminus == 0){
-			if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,fcal_matched_hits_piminus,e9e25_hit_piminus,doca_hit_piminus,e1e9_hit_piminus,fcal_piminus_pos,fcal_piminus_mom,sumu_hit_piminus,sumv_hit_piminus)) fcal_hit_piminus += 1;
+			if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,fcal_matched_hits_piminus,e9e25_hit_piminus,doca_hit_piminus,e1e9_hit_piminus,fcal_piminus_pos,sumu_hit_piminus,sumv_hit_piminus)) fcal_hit_piminus += 1;
 		}
 
 		double piplus_pmag = (piplus->momentum()).Mag();
@@ -304,9 +304,31 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 		if(!DCPPSelect::ComputeMWPCWireResiduals(fmwpchits,mwpc_projection_map,track_plus_energy,track_minus_energy,mwpc_multiplicity_map,piplus_track_chamber6,piminus_track_chamber6)) return;
 
 		//CTOF Matching
-		
+		vector<const DCTOFPoint*> ctof_matched_hits;
+		std::vector<int> allowedPaddles = {1,2,3,4};
+		DCPPSelect::MatchToCTOFHit_CPP(ctofpoints,ctof_matched_hits,piplusProj.ctof_projection,allowedPaddles);
 
-
+		int paddle_counts[4] = {0,0,0,0};
+		for(unsigned int ictof = 0; ictof < ctof_matched_hits.size(); ictof++){
+			const DCTOFPoint *hit1 = ctof_matched_hits[ictof];
+			switch (hit1->bar)
+			{
+				case 1:
+					paddle_counts[0]++;
+					break;
+				case 2:
+					paddle_counts[1]++;
+					break;
+				case 3:
+					paddle_counts[2]++;
+					break;
+				case 4:
+					paddle_counts[3]++;
+					break;
+				default:
+					break;
+			} 
+		}
 
 		DKinFitUtils_GlueX *dKinFitUtils = new DKinFitUtils_GlueX(event);
         DKinFitter *dKinFitter = new DKinFitter(dKinFitUtils);   
@@ -393,6 +415,12 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 		myCPPSelect->fcal_e9e25_piminus   = fcale9e259;
 		myCPPSelect->fcal_nblocks_piplus  = fcalblocksn8;
 		myCPPSelect->fcal_nblocks_piminus = fcalblocksn9;
+
+		myCPPSelect->ctof_bar1 = paddle_counts[0];
+		myCPPSelect->ctof_bar2 = paddle_counts[1];
+		myCPPSelect->ctof_bar3 = paddle_counts[2];
+		myCPPSelect->ctof_bar4 = paddle_counts[3];
+
 
 		Insert(myCPPSelect);
 

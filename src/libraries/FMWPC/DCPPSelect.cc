@@ -108,6 +108,13 @@ ProjectionResults DCPPSelect::SwimTracksToAllDetectors(const DTrackTimeBased* lo
 	DVector3 mwpc_proj_pos_chamber6, mwpc_proj_mom_chamber6;
 	//if(rt.GetIntersectionWithPlane(fmwpc6_zpos,norm,mwpc_proj_pos_chamber6,mwpc_proj_mom_chamber6) != NOERROR) return result;
 	if(rt.GetIntersectionWithPlane(fmwpc6_zpos,norm,mwpc_proj_pos_chamber6,mwpc_proj_mom_chamber6) != NOERROR) result.mwpc_flags[5] = true;
+	
+	DVector3 ctof_proj_pos,ctof_proj_mom;
+	DVector3 ctof_face_pos(0.0,0.0,947.0);
+
+	bool ctof_flag = false;
+
+	if(rt.GetIntersectionWithPlane(ctof_face_pos,norm,ctof_proj_pos,ctof_proj_mom)) ctof_flag = true;
 
 	result.tof_projection = tof_proj_pos;
 	result.fcal_projection = fcal_proj_pos;
@@ -119,8 +126,8 @@ ProjectionResults DCPPSelect::SwimTracksToAllDetectors(const DTrackTimeBased* lo
 	result.mwpc_projections[4] = mwpc_proj_pos_chamber5;
 	result.mwpc_projections[5] = mwpc_proj_pos_chamber6;
 
-	DVector3 ctof_proj_pos;
-	//if(rt.GetIntersectionWithPlane())
+	result.ctof_projection = ctof_proj_pos;
+
 
 	result.projection_success = true;
 
@@ -160,7 +167,7 @@ bool DCPPSelect::MatchToTOF_CPP_GEOM(const vector<const DTOFPoint*>& tof_points,
   return true;
 }
 
-bool DCPPSelect::MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_showers, vector<const DFCALShower*>& fcal_matched_showers, DVector3 fcal_proj_pos, DVector3 fcal_proj_mom){
+bool DCPPSelect::MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_showers, vector<const DFCALShower*>& fcal_matched_showers, DVector3 fcal_proj_pos){
   double x1fcal = 0.0, y1fcal = 0.0;
 
   x1fcal = fcal_proj_pos.x();
@@ -186,7 +193,7 @@ bool DCPPSelect::MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_sh
   return true;
   
 }
-bool DCPPSelect::MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, vector<const DFCALHit*>& fcal_matched_hits, double& e9e25, double& doca, double& e1e9,DVector3 fcal_proj_pos, DVector3 fcal_proj_mom,double& sumUSh, double& sumVSh){
+bool DCPPSelect::MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, vector<const DFCALHit*>& fcal_matched_hits, double& e9e25, double& doca, double& e1e9,DVector3 fcal_proj_pos, double& sumUSh, double& sumVSh){
   double x1fcal = 0.0, y1fcal = 0.0;
   //int fcal_hit_match_count = 0;
   //double E1cut = 2.9;
@@ -581,6 +588,7 @@ bool DCPPSelect::MatchToCTOFHit_CPP(const vector<const DCTOFPoint*>& ctof_Hits, 
 	}
 	
 	if(bar_flags[0] == 0 && bar_flags[1] == 0 && bar_flags[2] == 0 && bar_flags[3] == 0) return false;
+	
 	for(unsigned int ictof = 0; ictof< ctof_Hits.size(); ictof++){
 		const DCTOFPoint *hit1 = ctof_Hits[ictof];
 

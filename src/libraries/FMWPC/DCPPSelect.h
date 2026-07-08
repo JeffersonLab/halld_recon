@@ -59,9 +59,9 @@ class DCPPSelect : public JObject {
 
         static bool MatchToTOF_CPP_GEOM(const vector<const DTOFPoint*>& tof_points, DVector3 tof_proj_pos);
 
-        static bool MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_showers, vector<const DFCALShower*>& fcal_matched_showers, DVector3 fcal_proj_pos, DVector3 fcal_proj_mom);
+        static bool MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_showers, vector<const DFCALShower*>& fcal_matched_showers, DVector3 fcal_proj_pos);
 
-        static bool MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, vector<const DFCALHit*>& fcal_matched_hits, double& e9e25, double& doca, double& e1e9,DVector3 fcal_proj_pos, DVector3 fcal_proj_mom,double& sumUSh, double& sumVSh);
+        static bool MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, vector<const DFCALHit*>& fcal_matched_hits, double& e9e25, double& doca, double& e1e9,DVector3 fcal_proj_pos, double& sumUSh, double& sumVSh);
 
         static bool ComputeMWPCWireResiduals(const vector<const DFMWPCHit*> locFMWPCHits,std::map<MWPCKey,DVector3> mwpc_projections,double track1_energy,double track2_energy, map<MWPCKey,int>& mwpc_multis, bool& piplus_track_chamber6, bool& piminus_track_chamber6);
 
@@ -145,6 +145,12 @@ class DCPPSelect : public JObject {
         int fmwpc5n_piminus;    //MWPC 5 Multiplicity 
         int fmwpc6n_piplus;     //MWPC 6 Multiplicity 
         int fmwpc6n_piminus;    //MWPC 6 Multiplicity 
+
+        //CTOF
+        int ctof_bar1;
+        int ctof_bar2;
+        int ctof_bar3;
+        int ctof_bar4;
 
 
     void Summarize(JObjectSummary& summary) const override {

@@ -75,7 +75,7 @@ class DEventWriterROOT : public JObject
 				const vector<const DBeamPhoton*>& locBeamPhotons, const vector<const DChargedTrackHypothesis*>& locChargedHypos,
 				const vector<const DNeutralParticleHypothesis*>& locNeutralHypos, const deque<const DParticleCombo*>& locParticleCombos) const{};
 
-		void Fill_PIMUFeatures(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrack) const;
+	
 
 		//UTILITY FUNCTIONS
 		string Convert_ToBranchName(string locInputName) const;
@@ -144,6 +144,8 @@ class DEventWriterROOT : public JObject
 		void Create_Branches_ChargedHypotheses(DTreeBranchRegister& locTreeBranchRegister, bool locIsMCDataFlag) const;
 		void Create_Branches_KinFitData(DTreeBranchRegister& locBranchRegister, const std::shared_ptr<const JEvent>& locEventLoop, const DReaction* locReaction, bool locIsMCDataFlag) const;
 
+		void Create_Branches_PIMU(DTreeBranchRegister& locBranchRegister) const;
+
 		//TREE CREATION: COMBO INFO
 			//TMap is locPositionToNameMap
 		void Create_Branches_Combo(DTreeBranchRegister& locTreeBranchRegister, const DReaction* locReaction, bool locIsMCDataFlag, TMap* locPositionToNameMap) const;
@@ -193,6 +195,8 @@ class DEventWriterROOT : public JObject
 		void Fill_ComboNeutralData(DTreeFillData* locTreeFillData, unsigned int locComboIndex, string locParticleBranchName, const DNeutralParticleHypothesis* locMeasuredNeutralHypo,
 				const DNeutralParticleHypothesis* locNeutralHypo, size_t locNeutralIndex, DKinFitType locKinFitType) const;
 
+		void Calculate_PIMUFeatures(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const std::shared_ptr<const JEvent>& event, const DChargedTrackHypothesis* locChargedTrack, int numTracks,std::map<MWPCKey,std::map<int,double>>& cWireDiff, const DChargedTrackHypothesis*& locCT) const; 
+		void Fill_PIMUFeatures(DTreeFillData* locTreeFillData, int numTracks,std::vector<const DChargedTrackHypothesis*> locCT,std::map<MWPCKey,std::map<int,double>>& cWireDiff) const;
 
 		//****************************************************************************************************************
 
