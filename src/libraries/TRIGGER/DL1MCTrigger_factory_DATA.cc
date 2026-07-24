@@ -33,18 +33,18 @@ vector<DL1MCTrigger_factory_DATA::fcal_mod> DL1MCTrigger_factory_DATA::fcal_trig
 vector<DL1MCTrigger_factory_DATA::bcal_mod> DL1MCTrigger_factory_DATA::bcal_trig_mask;
 vector<DL1MCTrigger_factory_DATA::ecal_mod> DL1MCTrigger_factory_DATA::ecal_trig_mask;
 
-int    DL1MCTrigger_factory_DATA::FCAL_CELL_THR = 65;
+int    DL1MCTrigger_factory_DATA::FCAL_CELL_THR = 165;
 int    DL1MCTrigger_factory_DATA::FCAL_NSA = 10;
 int    DL1MCTrigger_factory_DATA::FCAL_NSB = 3;
 int    DL1MCTrigger_factory_DATA::FCAL_WINDOW = 10;
 
-int    DL1MCTrigger_factory_DATA::BCAL_CELL_THR = 20;
+int    DL1MCTrigger_factory_DATA::BCAL_CELL_THR = 120;
 int    DL1MCTrigger_factory_DATA::BCAL_NSA = 19;
 int    DL1MCTrigger_factory_DATA::BCAL_NSB = 3;
 int    DL1MCTrigger_factory_DATA::BCAL_WINDOW = 20;
 
-int    DL1MCTrigger_factory_DATA::ECAL_CELL_THR = 35;
-int    DL1MCTrigger_factory_DATA::ECAL_NSA = 10;
+int    DL1MCTrigger_factory_DATA::ECAL_CELL_THR = 135;
+int    DL1MCTrigger_factory_DATA::ECAL_NSA = 15;
 int    DL1MCTrigger_factory_DATA::ECAL_NSB = 3;
 int    DL1MCTrigger_factory_DATA::ECAL_WINDOW = 15;
 
@@ -83,7 +83,8 @@ void DL1MCTrigger_factory_DATA::Init(void)
   //FCAL_WINDOW      =  10;
 
   //BCAL_ADC_PER_MEV =  34.48276; // Not corrected energy 
-  BCAL_ADC_PER_MEV =  22.7273;  
+  //BCAL_ADC_PER_MEV =  22.7273;  
+  BCAL_ADC_PER_MEV =  27.98769;
   //BCAL_CELL_THR    =  20;
   BCAL_EN_SC       =  1;
   //BCAL_NSA         =  19;
@@ -101,14 +102,29 @@ void DL1MCTrigger_factory_DATA::Init(void)
   ST_WINDOW        =  10;
   ST_NHIT          =  1;
 
-  BCAL_OFFSET      =  2;
+  // Correct calorimeters hit energy (visible energy) according to the readout window size, NSA + NSB 
+  FCAL_EN_COR   =  1.4373413;
+  BCAL_EN_COR   =  1.2364608;
 
-  SIMU_BASELINE = 0;
-  SIMU_GAIN = 0;
+  ECAL_TRIG_GAIN  =  1;
+  FCAL_TRIG_GAIN  =  0.4957;
+
+  ECAL_OFFSET       =  0;
+  FCAL_ECAL_OFFSET  =  0;
+  BCAL_ECAL_OFFSET  =  2;
+ 			  
+  BCAL_OFFSET  =  2;
+   
+  SC_OFFSET    =  6;
+ 
+  SIMU_BASELINE  = 0;
+  SIMU_GAIN = 1;
   
   OUTPUT_TREE = 0;
   USE_RAW_SAMPLES = 0;
   USE_DIGI = 1;
+
+  VERBOSE = 0;
 
   simu_baseline_fcal  =  1;
   simu_baseline_bcal  =  1;
@@ -225,7 +241,7 @@ void DL1MCTrigger_factory_DATA::Init(void)
 // 			      "Enable simulation of gain variations");
 
 
-  BCAL_ADC_PER_MEV_CORRECT  =  22.7273;
+  //BCAL_ADC_PER_MEV_CORRECT  =  22.7273;
 
   pedestal_sigma = 1.2;
 
@@ -248,6 +264,8 @@ void DL1MCTrigger_factory_DATA::Init(void)
   fcal_pedestals  =  fcal_pedestals_temp;
   ecal_gains      =  ecal_gains_temp;
   ecal_pedestals  =  ecal_pedestals_temp;
+
+  ecal_installed  =  0;
 
   if(!SIMU_BASELINE){
     simu_baseline_fcal = 0;
@@ -315,7 +333,15 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
     if(print_messages) PrintTriggers();
   }
 
+    if(print_messages) jout << "In DL1MCTrigger_factory, loading constants..." << jendl;
   
+  auto calibration = DEvent::GetJCalibration(event);
+  
+  if (calibration->Get("/ECAL/install_status", ecal_installed)){
+    jout << "DL1MCTrigger_factory: Error loading /ECAL/install_status !" << jendl;
+  }
+  
+
   if( (use_rcdb == 0) || (status > 0) || (triggers_enabled.size() == 0)){
 
     // Simulate FCAL & BCAL main production trigger only
@@ -326,10 +352,19 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
     trig_tmp.gtp.bcal      =  BCAL_EN_SC;
     trig_tmp.gtp.en_thr    =  FCAL_BCAL_EN;
     trig_tmp.gtp.fcal_min  =  200;
+    trig_tmp.gtp.fcal_min  =  200;
+    trig_tmp.gtp.fcal_max  =  65535;
+    trig_tmp.gtp.bcal_min  =  0;
+    trig_tmp.gtp.bcal_max  =  65535;
+    trig_tmp.type          =  3;
     triggers_enabled.push_back(trig_tmp);
+
+    if(ecal_installed) Load_ECAL_mask_default();
 	
-	if(print_messages) 
-	    cout << " Do not use RCDB for the trigger simulation. Default (spring 2017) trigger settings are used " << endl;
+    if(print_messages){ 
+ 		cout << " Do not use RCDB for the trigger simulation. Default (spring 2025) trigger settings with the ECAL are used." << endl;
+ 		cout << " Use -PTRIG:FCAL_EN_SC and other trigger parameters to modify the settings. The default ECAL masks will always be loaded. " << endl;
+    }
   }
 
 
@@ -340,20 +375,87 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
     return; //OBJECT_NOT_AVAILABLE;
   const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
 
+  if(ecal_installed){
+
   // extract the ECAL Geometry
   vector<const DECALGeometry*> ecalGeomVect;
   event->Get( ecalGeomVect );
   if (ecalGeomVect.size() < 1)
     return; //OBJECT_NOT_AVAILABLE;
   const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
+    
+    // ---------------------------------------------------------------
+    // ---------------- LOAD ECAL PARAMETERS FROM CCDB ---------------
+    // ---------------------------------------------------------------
+    
+    vector< double > ecal_gains_ch;
+    vector< double > ecal_pedestals_ch;
+    vector< double > ecal_bad_blocks_ch;
+    
+    if (calibration->Get("/ECAL/gains", ecal_gains_ch)){
+      jout << "DL1MCTrigger_factory: Error loading /ECAL/gains !" << jendl;
+      // Load default values of gains if CCDB table is not found
+      for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
+	for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
+	  ecal_gains[ii][jj] = 1.;	
+	}
+      }
+    } else {
+      LoadECALConst(ecal_gains, ecal_gains_ch, ecalGeom);
+      
+      if(VERBOSE == 1){
+	for(int ch = 0; ch < (int)ecal_gains_ch.size(); ch++){	
+	  int row = ecalGeom.row(ch);
+	  int col = ecalGeom.column(ch);	
+	  // Sanity check for regular ECAL (row,col) ranges
+	  if(ecalGeom.isBlockActive(row,col) && row<DECALGeometry::kECALBlocksTall
+	     && col<DECALGeometry::kECALBlocksWide){
+	    DVector2 pos = ecalGeom.positionOnFace(row,col);
+	    cout << "  ECAL GAINS:  COL =  "  <<  col << "  ROW = " << row <<  "  X = " << pos.X() <<  "  Y = " <<  pos.Y() <<  "  GAIN = " << ecal_gains[row][col] << endl;
+	  } 
+	}
+	cout << endl;      
+      }        
+    }
+    
+    if (calibration->Get("/ECAL/pedestals", ecal_pedestals_ch)){
+      jout << "DL1MCTrigger_factory: Error loading /ECAL/pedestals !" << jendl;
+      // Load default values of pedestals if CCDB table is not found
+      for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
+	for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
+	  ecal_pedestals[ii][jj] = 100.;	
+      }
+      }
+    } else {
+      LoadECALConst(ecal_pedestals, ecal_pedestals_ch, ecalGeom);
+      
+      if(VERBOSE == 1){
+	for(int ch = 0; ch < (int)ecal_pedestals_ch.size(); ch++){
+	  int row = ecalGeom.row(ch);
+	  int col = ecalGeom.column(ch);
+	  // Sanity check for regular ECAL (row,col) ranges
+	  if(ecalGeom.isBlockActive(row,col)&&row<DECALGeometry::kECALBlocksTall
+	     && col<DECALGeometry::kECALBlocksWide){
+	  cout << "ECAL Pedestals: COL =  " << col << "  ROW =  " << row << "  Pedestal " << ecal_pedestals[row][col] << endl;
+	  }
+	}	
+      }
+      cout << endl;
+    }
+    
+  }  // ECAL installled
   
-  if(print_messages) jout << "In DL1MCTrigger_factory_DATA, loading constants..." << endl;
+  // ---------------------------------------------------------------
+  // ---------------- LOAD FCAL PARAMETERS FROM CCDB ---------------
+  // ---------------------------------------------------------------
+
   
   vector< double > fcal_gains_ch;
   vector< double > fcal_pedestals_ch;
+  vector< double > fcal_bad_blocks_ch;
   
-  if (DEvent::GetCalib(event, "/FCAL/gains", fcal_gains_ch)){
-    jout << "DL1MCTrigger_factory_DATA: Error loading /FCAL/gains !" << endl;
+  if (calibration->Get("/FCAL/gains", fcal_gains_ch)){
+    jout << "DL1MCTrigger_factory: Error loading /FCAL/gains !" << jendl;
     // Load default values of gains if CCDB table is not found
     for(int ii = 0; ii < DFCALGeometry::kBlocksTall; ii++){
       for(int jj = 0; jj < DFCALGeometry::kBlocksWide; jj++){
@@ -363,23 +465,23 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
   } else {
     LoadFCALConst(fcal_gains, fcal_gains_ch, fcalGeom);
 
-    if(debug){
+    if(VERBOSE == 1){
       for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
-	if (fcalGeom.isBlockActive(ch)){
-	  int row = fcalGeom.row(ch);
-	  int col = fcalGeom.column(ch);
-	  hfcal_gains->Fill(fcal_gains[row][col]);
-	  DVector2 aaa = fcalGeom.positionOnFace(row,col);
-	  hfcal_gains2->Fill(float(aaa.X()), float(aaa.Y()), fcal_gains[row][col]);
-	  //cout << aaa.X() << "  " << aaa.Y() << endl;	  
+	int row = fcalGeom.row(ch);
+	int col = fcalGeom.column(ch);	
+	// Sanity check for regular FCAL (row,col) ranges 
+	if(fcalGeom.isBlockActive(row,col)&&row<DFCALGeometry::kBlocksTall
+	   && col<DFCALGeometry::kBlocksWide){
+	  DVector2 pos = fcalGeom.positionOnFace(row,col);
+	  cout << "  FCAL GAINS:  COL =  "  <<  col << "  ROW = " << row <<  "  X = " << pos.X() <<  "  Y = " <<  pos.Y() <<  "  GAIN = " << fcal_gains[row][col] << endl;	  
 	}	
       }
-    }
-
+      cout << endl;
+    }    
   }
 
-  if (DEvent::GetCalib(event, "/FCAL/pedestals", fcal_pedestals_ch)){
-    jout << "DL1MCTrigger_factory_DATA: Error loading /FCAL/pedestals !" << endl;
+  if (calibration->Get("/FCAL/pedestals", fcal_pedestals_ch)){
+    jout << "DL1MCTrigger_factory: Error loading /FCAL/pedestals !" << jendl;
     // Load default values of pedestals if CCDB table is not found
     for(int ii = 0; ii < DFCALGeometry::kBlocksTall; ii++){
       for(int jj = 0; jj < DFCALGeometry::kBlocksWide; jj++){
@@ -389,70 +491,117 @@ void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& ev
   } else {
     LoadFCALConst(fcal_pedestals, fcal_pedestals_ch, fcalGeom);
 
-    if(debug){
-      for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
-	if(fcalGeom.isBlockActive(ch)){
-	  int row = fcalGeom.row(ch);
-	  int col = fcalGeom.column(ch);
-	  hfcal_ped->Fill(fcal_pedestals[row][col]);
+    if(VERBOSE == 1){
+      for(int ch = 0; ch < (int)fcal_pedestals_ch.size(); ch++){
+	int row = fcalGeom.row(ch);
+	int col = fcalGeom.column(ch);
+	// Sanity check for regular FCAL (row,col) ranges 
+	if(fcalGeom.isBlockActive(row,col)&&row<DFCALGeometry::kBlocksTall
+	   && col<DFCALGeometry::kBlocksWide){
+	  cout << "FCAL Pedestals: COL =  " << col << "  ROW =  " << row << "  Pedestal =  " << fcal_pedestals[row][col] << endl;
 	}
-      }	
-    }
-    
+      }
+      cout << endl;
+    }    
   }
 
-  // ECAL tables
-  vector< double > ecal_gains_ch;
-  vector< double > ecal_pedestals_ch;
   
-  if (DEvent::GetCalib(event, "/ECAL/gains", ecal_gains_ch)){
-    jout << "DL1MCTrigger_factory_DATA: Error loading /ECAL/gains !" << endl;
-    // Load default values of gains if CCDB table is not found
-    for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
-      for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
-	ecal_gains[ii][jj] = 1.;	
-      }
-    }
-  } else {
-    LoadECALConst(ecal_gains, ecal_gains_ch, ecalGeom);
+  // ---------------------------------------------------------------
+  // ---------------- LOAD BCAL PARAMETERS FROM CCDB ---------------
+  // --------------------------------------------------------------- 
 
-    if(debug){
-      for(int ch = 0; ch < (int)ecal_gains_ch.size(); ch++){
-	      //if (ecalGeom.isBlockActive(ch)){
-	      int row = ecalGeom.row(ch);
-	      int col = ecalGeom.column(ch);
-	      hecal_gains->Fill(ecal_gains[row][col]);
-	      DVector2 aaa = ecalGeom.positionOnFace(row,col);
-	      hecal_gains2->Fill(float(aaa.X()), float(aaa.Y()), ecal_gains[row][col]);
-	      //cout << aaa.X() << "  " << aaa.Y() << endl;	  
-	      //}	
-      }
-    }
-
-  }
-
-  if (DEvent::GetCalib(event, "/ECAL/pedestals", ecal_pedestals_ch)){
-    jout << "DL1MCTrigger_factory_DATA: Error loading /ECAL/pedestals !" << endl;
-    // Load default values of pedestals if CCDB table is not found
-    for(int ii = 0; ii < DECALGeometry::kECALBlocksTall; ii++){
-      for(int jj = 0; jj < DECALGeometry::kECALBlocksWide; jj++){
-	ecal_pedestals[ii][jj] = 100.;	
-      }
-    }
-  } else {
-    LoadECALConst(ecal_pedestals, ecal_pedestals_ch, ecalGeom);
-
-    if(debug){
-      for(int ch = 0; ch < (int)ecal_gains_ch.size(); ch++){
-	      //if(ecalGeom.isBlockActive(ch)){
-	      int row = ecalGeom.row(ch);
-	      int col = ecalGeom.column(ch);
-	      hecal_ped->Fill(ecal_pedestals[row][col]);
-	      //}
-      }	
-    }
+  
+  vector<double> bcal_gains_ch;
+  vector<double> bcal_pedestals_ch;
+  vector<double> bcal_bad_blocks_ch;
+  
+  if (calibration->Get("/BCAL/ADC_gains_trig", bcal_gains_ch)){
+    jout << "Error loading /BCAL/ADC_gains_trig !" << jendl;
     
+    char str[256];
+    int channel = 0;
+    
+    for (int module = 1; module <= BCAL_NUM_MODULES; module++) {
+      for (int layer = 1; layer <= BCAL_NUM_LAYERS; layer++) {
+	for (int sector = 1; sector <= BCAL_NUM_SECTORS; sector++) {
+	  if ((channel > BCAL_MAX_CHANNELS) || (channel+1 > BCAL_MAX_CHANNELS)) {  // sanity check
+	    sprintf(str, "Too many channels for BCAL table!"
+		    " channel=%d (should be %d)", 
+		    channel, BCAL_MAX_CHANNELS);
+	    cerr << str << endl;
+	    throw JException(str);
+	  }
+	  
+	  bcal_gains.push_back( cell_calib_t(BCAL_ADC_PER_MEV,BCAL_ADC_PER_MEV) );	  
+	  channel += 2;
+	}
+      }
+    }    
   }
+  else {
+    LoadBCALConst(bcal_gains, bcal_gains_ch, 1);
+    
+    if(VERBOSE == 1){
+      for (int module = 1; module <= BCAL_NUM_MODULES; module++) {
+	for (int layer = 1; layer <= BCAL_NUM_LAYERS; layer++) {
+	  for (int sector = 1; sector <= BCAL_NUM_SECTORS; sector++) {
+
+	    const int cell =  BCAL_NUM_LAYERS*BCAL_NUM_SECTORS*(module-1) + BCAL_NUM_SECTORS*(layer-1) + (sector-1);	 
+	    cout << "BCAL gains:  Module = " <<  module <<  " Layer = " << layer << "  Sector = " << sector <<
+	      " Gain up:  " << bcal_gains.at(cell).first << " Gain down " << bcal_gains.at(cell).second << endl;	    
+	  }
+	}
+      }
+      cout << endl;
+    }
+  }
+
+  // Determine the average value of the BCAL gains
+  BCAL_average_gain();
+
+  if(VERBOSE == 1)
+    cout << "  --------  BCAL AVERAGE GAIN -----------   =  " <<  1./BCAL_ADC_PER_MEV << "   BCAL_ADC_PER_MEV = " << BCAL_ADC_PER_MEV  << endl;
+  
+  
+  if (calibration->Get("/BCAL/ADC_pedestals", bcal_pedestals_ch)){
+    jout << "Error loading /BCAL/ADC_pedestals !" << jendl;
+
+    char str[256];
+    int channel = 0;
+    
+    for (int module = 1; module <= BCAL_NUM_MODULES; module++) {
+      for (int layer = 1; layer <= BCAL_NUM_LAYERS; layer++) {
+	for (int sector = 1; sector <= BCAL_NUM_SECTORS; sector++) {
+	  if ((channel > BCAL_MAX_CHANNELS) || (channel+1 > BCAL_MAX_CHANNELS)) {  // sanity check
+	    sprintf(str, "Too many channels for BCAL table!"
+		    " channel=%d (should be %d)", 
+		    channel, BCAL_MAX_CHANNELS);
+	    cerr << str << endl;
+	    throw JException(str);
+	  }	  
+	  bcal_pedestals.push_back( cell_calib_t(100.,100.) );	  
+	  channel += 2;
+	}
+      }
+    }    
+  } else {
+    LoadBCALConst(bcal_pedestals, bcal_pedestals_ch, 0);
+
+    if(VERBOSE == 1){
+      for (int module = 1; module <= BCAL_NUM_MODULES; module++) {
+	for (int layer = 1; layer <= BCAL_NUM_LAYERS; layer++) {
+	  for (int sector = 1; sector <= BCAL_NUM_SECTORS; sector++) {
+	    
+	    const int cell =  BCAL_NUM_LAYERS*BCAL_NUM_SECTORS*(module-1) + BCAL_NUM_SECTORS*(layer-1) + (sector-1);	 
+	    cout << "BCAL pedestals:  Module = " <<  module <<  " Layer = " << layer << "  Sector = " << sector <<
+	      " Pedestal up:  " << bcal_pedestals.at(cell).first << " Pedestal down " << bcal_pedestals.at(cell).second << endl;	    
+	  }
+	}
+      }
+      cout << endl;
+    }
+  }
+  
   
   if(!SIMU_BASELINE){
     simu_baseline_fcal = 0;
@@ -589,10 +738,13 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 	    fcal_tmp.column  = col;
 
 	    fcal_tmp.energy  = fcal_hits[ii]->E;
+	    fcal_tmp.energy *= FCAL_EN_COR;
 	    fcal_tmp.time    = fcal_hits[ii]->t;
+
 	    fcal_tmp.pulse_peak = fcaldigihit->pulse_peak;
 	    fcal_tmp.pulse_time = (fcaldigihit->pulse_time >> 6) & 0x1FF; // consider only course time;
 	    fcal_tmp.pulse_integral = fcaldigihit->pulse_integral - fcaldigihit->nsamples_integral*TRIG_BASELINE;
+
 	    memset(fcal_tmp.adc_amp,0,sizeof(fcal_tmp.adc_amp));
 	    memset(fcal_tmp.adc_en, 0,sizeof(fcal_tmp.adc_en));
 
@@ -1052,43 +1204,71 @@ void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& eve
 // 	cerr << " bcal_hit_adc_en = " << bcal_hit_adc_en << endl;
 // 	cerr << " bcal_gtp_max    = " << bcal_gtp_max << endl;
 
+	int ecal_ssp_sum1 = 0;
+	int fcal_ssp_sum1 = 0;
+	int bcal_ssp_sum1 = 0;
+	
+	for(int ii = 0; ii < sample; ii++){
+	  ecal_ssp_sum1 += ecal_ssp[ii];
+	  fcal_ssp_sum1 += fcal_ssp[ii];
+	  bcal_ssp_sum1 += bcal_ssp[ii];
+	}
+	
+	if(VERBOSE == 2){
+	  cout << " MC SSP BEFORE TRIGGER ECAL = " <<  ecal_hit_en << "    " << ecal_ssp_sum1/ECAL_ADC_PER_MEV/1000. << endl;
+	  cout << " MC SSP BEFORE TRIGGER FCAL = " <<  fcal_hit_en << "    " << fcal_ssp_sum1/FCAL_ADC_PER_MEV/1000. << endl;
+	  cout << " MC SSP BEFORE TRIGGER BCAL = " <<  bcal_hit_en << "    " << bcal_ssp_sum1/BCAL_ADC_PER_MEV/1000. << endl;
+	}
 	
 	//if(l1_found){
 	  
+	if(VERBOSE == 2){	  
+	  cout << " ======================================== " << endl;
+	  cout << " ============ Trigger found ============= " << trigger->trig_mask << endl;
+	  cout << " ======================================== " << endl;
+	}
+
+	  int ecal_gtp_max = 0;	  
 	  int fcal_gtp_max = 0;
 	  int bcal_gtp_max = 0;
-	  int ecal_gtp_max = 0;
 
+	    
 	  for(unsigned int ii = 0; ii < sample; ii++){
+	    if(ecal_gtp[ii] > ecal_gtp_max) ecal_gtp_max = ecal_gtp[ii];
 	    if(fcal_gtp[ii] > fcal_gtp_max) fcal_gtp_max = fcal_gtp[ii];
 	    if(bcal_gtp[ii] > bcal_gtp_max) bcal_gtp_max = bcal_gtp[ii];
-	    if(ecal_gtp[ii] > ecal_gtp_max) ecal_gtp_max = ecal_gtp[ii];
 	  }	
+	  
+	  int trig_sample = trigger->trig_time[0] + 25;
+	  ecal_gtp_max = ecal_gtp[trig_sample];
+	  fcal_gtp_max = fcal_gtp[trig_sample];
+	  bcal_gtp_max = bcal_gtp[trig_sample];
+	  
+          trigger->ecal_en      =  ecal_hit_en;
+          //      trigger->ecal_adc     =  ecal_hit_adc_en;
+          //      trigger->ecal_adc_en  =  ecal_hit_adc_en/ECAL_ADC_PER_MEV/1000.;
+	  trigger->ecal_adc     =  ecal_ssp_sum1;
+	  trigger->ecal_adc_en  =  ecal_ssp_sum1/ECAL_ADC_PER_MEV/1000.;          
+          trigger->ecal_gtp     =  ecal_gtp_max;
+          trigger->ecal_gtp_en  =  ecal_gtp_max/ECAL_ADC_PER_MEV/1000.;
 
+	  
 	  trigger->fcal_en      =  fcal_hit_en;
-	  trigger->fcal_adc     =  fcal_hit_adc_en;
-	  trigger->fcal_adc_en  =  fcal_hit_adc_en/FCAL_ADC_PER_MEV/1000.;
+	  trigger->fcal_adc     =  fcal_ssp_sum1;
+	  trigger->fcal_adc_en  =  fcal_ssp_sum1/FCAL_ADC_PER_MEV/1000.;	  
+	  //	  trigger->fcal_adc     =  fcal_hit_adc_en;
+	  //	  trigger->fcal_adc_en  =  fcal_hit_adc_en/FCAL_ADC_PER_MEV/1000.;
 	  trigger->fcal_gtp     =  fcal_gtp_max;
 	  trigger->fcal_gtp_en  =  fcal_gtp_max/FCAL_ADC_PER_MEV/1000.;
 	  
 	  trigger->bcal_en      =  bcal_hit_en;
-	  trigger->bcal_adc     =  bcal_hit_adc_en;
-	  trigger->bcal_adc_en  =  bcal_hit_adc_en/BCAL_ADC_PER_MEV_CORRECT/2./1000.;
+	  trigger->bcal_adc     =  bcal_ssp_sum1;
+	  trigger->bcal_adc_en  =  bcal_ssp_sum1/BCAL_ADC_PER_MEV/1000.;	  
+	  //	  trigger->bcal_adc     =  bcal_hit_adc_en;
+	  //	  trigger->bcal_adc_en  =  bcal_hit_adc_en/BCAL_ADC_PER_MEV/1000.;
 	  trigger->bcal_gtp     =  bcal_gtp_max;
-	  trigger->bcal_gtp_en  =  bcal_gtp_max/BCAL_ADC_PER_MEV_CORRECT/2./1000.;	  	  
-
-	  trigger->ecal_en      =  ecal_hit_en;
-	  trigger->ecal_adc     =  ecal_hit_adc_en;
-	  trigger->ecal_adc_en  =  ecal_hit_adc_en/ECAL_ADC_PER_MEV/1000.;
-	  trigger->ecal_gtp     =  ecal_gtp_max;
-	  trigger->ecal_gtp_en  =  ecal_gtp_max/ECAL_ADC_PER_MEV/1000.;
-
-	  // scale sum according to gains applied in trigger equation
-	  trigger->fcal2_en      =  ECAL_GAIN*ecal_hit_en + FCAL_GAIN*fcal_hit_en;
-	  trigger->fcal2_adc     =  ECAL_GAIN*ecal_hit_adc_en + FCAL_GAIN*fcal_hit_adc_en;
-	  trigger->fcal2_adc_en  =  (ecal_hit_adc_en/ECAL_ADC_PER_MEV + fcal_hit_adc_en/FCAL_ADC_PER_MEV)/1000.;
-	  trigger->fcal2_gtp     =  ECAL_GAIN*ecal_gtp_max + FCAL_GAIN*fcal_gtp_max;
-	  trigger->fcal2_gtp_en  =  (ecal_gtp_max/ECAL_ADC_PER_MEV + fcal_gtp_max/FCAL_ADC_PER_MEV)/1000.;
+	  trigger->bcal_gtp_en  =  bcal_gtp_max/BCAL_ADC_PER_MEV/1000.;	  	  
+	  
 
 	  // inser trigger sums for all events
 	  Insert(trigger); 
@@ -1383,6 +1563,56 @@ auto runnumber = event->GetRunNumber();
   }
   
 
+  // Load ECAL Trigger Masks. Temporarily loaded from a function. Will be updated when masks are uploaded to the RCDB
+  if(ecal_installed){
+    Load_ECAL_mask();
+
+    for(unsigned int ii = 0; ii < ecal_trig_mask.size(); ii++){
+    
+      //    cout << " ecal_trig_mask:  II = " << ii <<  " Roc = "  << ecal_trig_mask[ii].roc << "  Slot = " << ecal_trig_mask[ii].slot << " Ch = " << ecal_trig_mask[ii].ch << endl;
+    
+      uint32_t roc_id     =   ecal_trig_mask[ii].roc;
+      unsigned int slot   =   ecal_trig_mask[ii].slot;
+      unsigned int ch     =   ecal_trig_mask[ii].ch;
+      
+      DTranslationTable::csc_t daq_index = {roc_id, slot, ch };
+      
+      DTranslationTable::DChannelInfo channel_info;
+      
+      try {		
+	channel_info = ttab[0]->GetDetectorIndex(daq_index);	      
+      }
+      
+      catch(...){
+	if(VERBOSE && print_messages) cout << "Exception: ECAL channel is not in the translation table  " <<  " Crate = " << roc_id << "  Slot = " << slot << 
+					" Channel = " << ch << endl;
+	continue;
+      } 
+      
+      int idx_col = channel_info.fcal.col;
+      int idx_row = channel_info.fcal.row;
+      
+      if(idx_col < 0)
+	ecal_trig_mask[ii].col = idx_col + 20;
+      else if(idx_col > 0) 
+	ecal_trig_mask[ii].col = idx_col + 19;
+      
+      if(idx_row < 0)
+	ecal_trig_mask[ii].row = idx_row + 20;
+      else if(idx_row > 0) 
+	ecal_trig_mask[ii].row = idx_row + 19;
+      
+    }
+    
+    if(VERBOSE == 1){
+      cout << "NUMBER OF MASKED ECAL CHANNELS = " << ecal_trig_mask.size() << endl;
+      for(unsigned int ii = 0; ii < ecal_trig_mask.size(); ii++){    
+	cout << " ecal_trig_mask:  II = " << ii <<  "  ROC = "  << ecal_trig_mask[ii].roc << "  Slot = " << ecal_trig_mask[ii].slot << " Ch = " << ecal_trig_mask[ii].ch << 
+	  "  Column = " << ecal_trig_mask[ii].col <<  "  Row = " << ecal_trig_mask[ii].row << endl;
+      }
+    }
+  }  // ECAL installed
+
 
   // Load FCAL Trigger Masks
 
@@ -1558,13 +1788,26 @@ int  DL1MCTrigger_factory_DATA::SignalPulse(double en, double time, double amp_a
   // type = 1 - FCAL
   // type = 2 - BCAL
   // type = 3 - ECAL
-
-  float exp_par = 0.358;
-
-  int pulse_length = 20;
   
-  if(type == 2) exp_par = 0.0787;
-  
+  //  float exp_par = 0.358;
+  //  if(type == 2) exp_par = 0.18;
+
+  double ecal_exp1  =  12.92;
+  double ecal_exp2  =  3.173;
+  double ecal_norm  =  ecal_exp1 - ecal_exp2;
+
+  double bcal_exp1  =  62.68;
+  double bcal_exp2  =  4.16;
+  double bcal_norm  =  bcal_exp1 - bcal_exp2;
+
+  double fcal_exp1  =  8.56;
+  double fcal_exp2  =  8.043;
+  double fcal_exp3  =  215.6;
+  double fcal_frac  =  0.001641;
+  double fcal_norm  =  fcal_exp1 - fcal_exp2 + fcal_exp3*fcal_frac;
+    
+  int pulse_length = 125;
+
   int sample_first = (int)floor(time/time_stamp);
   
   // digitization range
@@ -1572,33 +1815,44 @@ int  DL1MCTrigger_factory_DATA::SignalPulse(double en, double time, double amp_a
   int ind_max = ind_min + pulse_length + 1;
     
   if( (ind_min > sample) || (ind_min < 0)){
-    //    cout << " SignalPulse() FATAL error: time out of range   "  <<  time <<  "     " << ind_min << endl;
     return 1;
   }
   
   if(ind_max > sample){
-    //    cout << " SignalPulse(): ind_max set to maximum" << time <<  "  "  << ind_max << endl;
     ind_max = sample - 1;
   }
-  
+
+
+  double my_int = 0;
+   
   for(int i = ind_min; i < ind_max; i++ ){
     double adc_t  =  time_stamp*i - time;
-    double amp    =  exp_par*exp_par*exp(-adc_t*exp_par)*adc_t;
-    
-    //    amp_array[i] += (int)(amp*time_stamp*en + 0.5);
-    //    if(amp_array[i] > max_adc_bins){
-    //      amp_array[i] = max_adc_bins;
-    //    }   
+    if(adc_t < 0) adc_t = 0.;
 
-    //if(amp > 0.001) 
-    //	    cout<<adc_t<<" "<<amp<<" "<<en<<endl;
+    double amp = 0;
     
+    if(type == 3){      
+      amp    =  (exp(-adc_t/ecal_exp1) - exp(-adc_t/ecal_exp2))/ecal_norm;
+    } else if(type == 2) {      
+      amp    =  (exp(-adc_t/bcal_exp1) - exp(-adc_t/bcal_exp2))/bcal_norm;
+    } else if(type == 1){
+      amp    =  (exp(-adc_t/fcal_exp1) - exp(-adc_t/fcal_exp2) + fcal_frac*exp(-adc_t/fcal_exp3) )/fcal_norm;
+    } 
+    
+    //    double amp    =  exp_par*exp_par*exp(-adc_t*exp_par)*adc_t;
+        
     amp_array[i] += amp*time_stamp*en;
+
+    my_int += amp*time_stamp;
     
   }
+
+  if(VERBOSE == 2)
+    cout << " ----   CHECK  INTEGRAL -----  Detector type =  "  <<  type <<  "   Integral = " << my_int <<  endl;
   
   return 0;  
 }
+
 
 int DL1MCTrigger_factory_DATA::GTP(int detector){
 
@@ -2017,6 +2271,63 @@ void DL1MCTrigger_factory_DATA::LoadECALConst(ecal_constants_t &table, const vec
   }
 }
 
+// Fill bcal calibration tables 
+void DL1MCTrigger_factory_DATA::LoadBCALConst(bcal_constants_t &table, const vector<double> &bcal_const_ch, int type = 0){
+   char str[256];
+   int channel = 0;
+
+   int db_debug = 0;
+   
+    // reset the table before filling it
+    table.clear();
+
+    for (int module = 1; module <= BCAL_NUM_MODULES; module++) {
+        for (int layer = 1; layer <= BCAL_NUM_LAYERS; layer++) {
+            for (int sector = 1; sector <= BCAL_NUM_SECTORS; sector++) {
+                if ((channel > BCAL_MAX_CHANNELS) || (channel+1 > BCAL_MAX_CHANNELS)) {  // sanity check
+                    sprintf(str, "Too many channels for BCAL table!"
+                            " channel=%d (should be %d)", 
+                            channel, BCAL_MAX_CHANNELS);
+                    cerr << str << endl;
+                    throw JException(str);
+                }
+
+		if(type == 1){
+		  
+		  double gain1 = BCAL_ADC_PER_MEV;
+		  double gain2 = BCAL_ADC_PER_MEV;
+
+		  if(bcal_const_ch[channel] > 0)   gain1 = 1./(bcal_const_ch[channel]*1e3);
+		  if(bcal_const_ch[channel+1] > 0) gain2 = 1./(bcal_const_ch[channel+1]*1e3);
+		  
+		  table.push_back( cell_calib_t(gain1,gain2) );
+		  
+		  if (db_debug) {
+		    cout << " BCAL GAINS:  Module = " << module <<  "  Layer = " <<  layer << "  Sector = " << sector <<
+		      "  Gain 1 = " <<  gain1 << "  Gain 2 = " << gain2 << endl;
+		  }
+		} else 
+		  table.push_back( cell_calib_t(bcal_const_ch[channel],bcal_const_ch[channel+1]));		  
+		
+		
+                channel += 2;
+            }
+        }
+    }
+    
+    // check to make sure that we loaded enough channels
+    if (channel != BCAL_MAX_CHANNELS) { 
+        sprintf(str, "Not enough channels for BCAL table!"
+                " channel=%d (should be %d)", 
+                channel, BCAL_MAX_CHANNELS);
+        cerr << str << endl;
+        throw JException(str);
+    }  
+}
+
+
+
+
 void DL1MCTrigger_factory_DATA::Digitize(double adc_amp[sample], int adc_count[sample]){
 
   for(int samp = 0; samp < sample; samp++ ){
@@ -2100,3 +2411,258 @@ void DL1MCTrigger_factory_DATA::GetSeeds(const std::shared_ptr<const JEvent>& ev
     }  // Record doesn't exist
   }    // Not an HDDM file
 }
+
+void DL1MCTrigger_factory_DATA::Load_ECAL_mask(){
+  // Load a temporary mask without filling column and row information. This function will be removed once the masks are available in the RCDB.
+  // It uses crate, slot, and channel consistent with the info retrieved from the RCDB
+  ecal_trig_mask.push_back(ecal_mod{111,3,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,3,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,3,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,3,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,3,4,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{111,4,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,4,4,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,4,5,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,4,6,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,4,7,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{111,5,6,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,5,7,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,5,8,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,5,9,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,5,10,0,0});
+  
+  ecal_trig_mask.push_back(ecal_mod{111,6,9,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,6,10,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,6,11,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,6,12,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{111,7,11,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,7,12,0,0});
+  ecal_trig_mask.push_back(ecal_mod{111,7,13,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{111,8,12,0,0});
+
+  // ------------------------------
+
+  ecal_trig_mask.push_back(ecal_mod{112,3,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,3,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,3,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,3,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,3,4,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{112,4,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,4,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,4,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,4,14,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,4,15,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{112,5,11,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{112,10,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,10,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,10,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,10,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,10,4,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{112,13,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,13,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,13,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,13,14,0,0});
+  ecal_trig_mask.push_back(ecal_mod{112,13,15,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{112,14,11,0,0});
+
+  // 
+
+  ecal_trig_mask.push_back(ecal_mod{118,3,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,3,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,3,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,3,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,3,4,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{118,4,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,4,4,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,4,5,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,4,6,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,4,7,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{118,5,6,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,5,7,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,5,8,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,5,9,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,5,10,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{118,6,9,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,6,10,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,6,11,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,6,12,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{118,7,11,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,7,12,0,0});
+  ecal_trig_mask.push_back(ecal_mod{118,7,13,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{118,8,12,0,0});
+
+  // 
+
+  ecal_trig_mask.push_back(ecal_mod{114,3,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,3,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,3,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,3,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,3,4,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{114,4,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,4,4,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,4,5,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,4,6,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,4,7,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{114,5,6,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,5,7,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,5,8,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,5,9,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,5,10,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{114,6,9,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,6,10,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,6,11,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,6,12,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{114,7,11,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,7,12,0,0});
+  ecal_trig_mask.push_back(ecal_mod{114,7,13,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{114,8,12,0,0});
+
+  //
+
+  ecal_trig_mask.push_back(ecal_mod{115,3,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,3,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,3,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,3,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,3,4,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{115,4,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,4,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,4,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,4,14,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,4,15,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{115,5,11,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{115,10,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,10,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,10,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,10,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,10,4,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{115,13,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,13,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,13,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,13,14,0,0});
+  ecal_trig_mask.push_back(ecal_mod{115,13,15,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{115,14,11,0,0});
+
+  //
+
+  ecal_trig_mask.push_back(ecal_mod{116,3,0,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,3,1,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,3,2,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,3,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,3,4,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{116,4,3,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,4,4,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,4,5,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,4,6,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,4,7,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{116,5,6,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,5,7,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,5,8,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,5,9,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,5,10,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{116,6,9,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,6,10,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,6,11,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,6,12,0,0});
+  
+  ecal_trig_mask.push_back(ecal_mod{116,7,11,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,7,12,0,0});
+  ecal_trig_mask.push_back(ecal_mod{116,7,13,0,0});
+
+  ecal_trig_mask.push_back(ecal_mod{116,8,12,0,0});
+}
+
+void DL1MCTrigger_factory_DATA::Load_ECAL_mask_default(){
+  // Default masks for the first run with the ECAL in 2025
+  // Intended for use only if USE_RCDB is not used !
+  for(int col = 14; col <= 25; col++){
+    for(int row = 14; row <= 25; row++){
+      // Exclude corners
+      if( ((col == 14) && (row == 14)) || ((col == 14) && (row == 25)) ||
+	  ((col == 25) && (row == 14)) || ((col == 25) && (row == 25)))
+	continue;
+      // Don't exclude the beam hole
+      ecal_trig_mask.push_back(ecal_mod{111,3,0,col,row});
+    }
+  }   
+}
+
+void DL1MCTrigger_factory_DATA::BCAL_average_gain(){
+  
+  double GAIN_MIN = 20.;
+  double GAIN_MAX = 35.;
+  
+  vector<double> num;
+  
+  int BCAL_MAX_PAIR = BCAL_MAX_CHANNELS/2;
+  
+  for (int ii = 0; ii < BCAL_MAX_PAIR; ii++){
+    if( (bcal_gains[ii].first >  GAIN_MIN ) && (bcal_gains[ii].first <  GAIN_MAX )) 
+      num.push_back(bcal_gains[ii].first);
+    if( (bcal_gains[ii].first >  GAIN_MIN ) && (bcal_gains[ii].first <  GAIN_MAX )) 
+      num.push_back(bcal_gains[ii].second);
+  }
+  
+  sort(num.begin(),num.end());
+  
+  double dif[1600];
+  memset(dif,0,sizeof(dif));
+  
+  unsigned int slide_wind = 40;  // Typical size sqrt(BCAL_MAX_CHANNELS)
+  
+  if(VERBOSE == 1){
+    for(unsigned int ii = 0; ii < num.size(); ii++){
+      cout << " II = " <<  ii  << "   VAL: " << num[ii] << endl;
+    }
+  }
+  
+  for(unsigned int ii = 0; ii < num.size() - slide_wind; ii++){
+    dif[ii] = fabs(num[ii+slide_wind] - num[ii]);
+  }
+  
+  double min_dif = 100.;
+  double min_ind = 0;
+  
+  for (unsigned int ii = 0; ii < num.size() - slide_wind; ii++){
+    if(dif[ii] <  min_dif){
+      min_dif = dif[ii];
+      min_ind = ii;
+    }
+  }
+  
+  if(VERBOSE == 1)
+    cout << " INDEX = " << min_ind << "  NUM " << num[min_ind+slide_wind] << "  " <<  num[min_ind] << endl;
+  
+  double mean_gain = num[min_ind+slide_wind/2];
+  
+  if( (mean_gain > GAIN_MIN) && (mean_gain < GAIN_MAX)) BCAL_ADC_PER_MEV = mean_gain; 
+  
+  
+}
+

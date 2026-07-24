@@ -24,6 +24,9 @@
 
 typedef  vector< vector<double> >  fcal_constants_t;
 typedef  vector< vector<double> >  ecal_constants_t;
+typedef pair<double,double> cell_calib_t;  
+typedef vector<cell_calib_t>   bcal_constants_t;
+
 
 class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 	public:
@@ -37,14 +40,28 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		static const int  max_adc_bins  =  4096;        /* number of FADC bins */
 
 		static const int FCAL_MAX_CHANNELS = 2800;
+		static const int ECAL_MAX_CHANNELS = 1600;
+
+		// shortcut geometry factors
+		// these should really be taken from
+		// DBCALGeometry/DGeometry objects
+		static const int BCAL_NUM_MODULES  = 48;
+		static const int BCAL_NUM_LAYERS   =  4;
+		static const int BCAL_NUM_ENDS     =  2;
+		static const int BCAL_NUM_SECTORS  =  4;
+		static const int BCAL_MAX_CHANNELS =  1536;
 
 		static const int TRIG_BASELINE  = 100;
 		//static const int TRIG_BASELINE  = 0;
 
 		fcal_constants_t fcal_gains;
-                fcal_constants_t fcal_pedestals;
-                ecal_constants_t ecal_gains;
-                ecal_constants_t ecal_pedestals;
+		fcal_constants_t fcal_pedestals;
+
+		ecal_constants_t ecal_gains;
+		ecal_constants_t ecal_pedestals;
+
+		bcal_constants_t bcal_gains;
+		bcal_constants_t bcal_pedestals;
  
 		int fcal_ssp[sample];
 		int fcal_gtp[sample];
@@ -239,7 +256,10 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 	        static float ECAL_GAIN;
 	
 		int    FCAL_BCAL_EN;
-		
+
+		double BCAL_EN_COR;
+		double FCAL_EN_COR;
+	
 		float  ST_ADC_PER_MEV;
 		int    ST_CELL_THR;
 		int    ST_NSA;
@@ -247,14 +267,22 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		int    ST_WINDOW;
 		int    ST_NHIT;
 		
+		int ECAL_OFFSET;
+		int FCAL_ECAL_OFFSET;
+		int BCAL_ECAL_OFFSET;
+
 		int BCAL_OFFSET;
-		
+
+		int SC_OFFSET;
+
 		int SIMU_BASELINE;
 		int SIMU_GAIN;
 		
 		int OUTPUT_TREE;
 		int USE_RAW_SAMPLES;
-	        int USE_DIGI;
+	    int USE_DIGI;
+	        
+	    int VERBOSE;
 
 		//TREE
 		DTreeInterface* dTreeInterface;
@@ -275,6 +303,16 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		int simu_gain_bcal;
 	        int simu_gain_ecal;
 
+
+		int ecal_installed;
+
+		double ECAL_TRIG_GAIN;
+		double FCAL_TRIG_GAIN;
+
+		void Load_ECAL_mask();
+		void Load_ECAL_mask_default();
+
+
 		int Read_RCDB(const std::shared_ptr<const JEvent>& event, bool print_messages=true);		
 		int SignalPulse(double en, double time, double amp_array[sample], int type);
 	        int SignalPulseDigi(double en, double time, double amp_array[sample], int type);
@@ -291,7 +329,8 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		void PrintTriggers();				
 
 		float  BCAL_ADC_PER_MEV_CORRECT;
-		
+		                
+
 	private:
 		void Init() override;
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
@@ -303,18 +342,22 @@ class DL1MCTrigger_factory_DATA:public JFactoryT<DL1MCTrigger>{
 		void LoadFCALConst( fcal_constants_t &table, 
 				    const vector<double> &fcal_const_ch, 
 				    const DFCALGeometry  &fcalGeom);
-	        void LoadECALConst( ecal_constants_t &table, 
+	    void LoadECALConst( ecal_constants_t &table, 
 				    const vector<double> &ecal_const_ch, 
 				    const DECALGeometry  &ecalGeom);
+		void LoadBCALConst( bcal_constants_t &table, 
+							const vector<double> &bcal_const_ch, 
+							int type);
 
 
 		void GetSeeds(const std::shared_ptr<const JEvent>& event, UInt_t &seed1, UInt_t &seed2, UInt_t &seed3);
+		void BCAL_average_gain();
 
 		TH1F *hfcal_gains;
 		TH2F *hfcal_gains2;
 		TH1F *hfcal_ped;
 
-	        TH1F *hecal_gains;
+	    TH1F *hecal_gains;
 		TH2F *hecal_gains2;
 		TH1F *hecal_ped;
 
