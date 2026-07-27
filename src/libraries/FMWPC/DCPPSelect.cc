@@ -185,13 +185,26 @@ bool DCPPSelect::MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_sh
         best_doca = calculated_doca;
         best_fcal_shower = fs1;
       }
-    }
+	}
   }
   if(!best_fcal_shower) return false;
   
   fcal_matched_showers.push_back(best_fcal_shower);
   return true;
   
+}
+bool DCPPSelect::MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, DVector3 fcal_proj_pos, vector<const DFCALHit*>& fcal_matched_hits, FCALSingleHitVals& fcal_single_hit_vals){
+	double e9e25 = 0.0, e1e9 = 0.0, doca = 0.0, sumu = 0.0, sumv = 0.0;
+	MatchToFCALHit_CPP(fcal_hits,fcal_matched_hits,e9e25,doca,e1e9,fcal_proj_pos,sumu,sumv);
+
+	if(fcal_matched_hits.size() > 0) fcal_single_hit_vals.fcalSinglesFound = true;
+	fcal_single_hit_vals.fcalSingleE1E9 = e1e9;
+	fcal_single_hit_vals.fcalSingleE9E25 = e9e25;
+	fcal_single_hit_vals.fcalSingleDOCA	= doca;
+	fcal_single_hit_vals.fcalSingleSumU = sumu;
+	fcal_single_hit_vals.fcalSingleSumV = sumv;
+	
+	return (fcal_matched_hits.size() > 0);
 }
 bool DCPPSelect::MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, vector<const DFCALHit*>& fcal_matched_hits, double& e9e25, double& doca, double& e1e9,DVector3 fcal_proj_pos, double& sumUSh, double& sumVSh){
   double x1fcal = 0.0, y1fcal = 0.0;

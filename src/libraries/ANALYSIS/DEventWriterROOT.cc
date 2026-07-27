@@ -830,11 +830,12 @@ void DEventWriterROOT::Create_Branches_PIMU(DTreeBranchRegister& locBranchRegist
 
 	string locParticleBranchName = "PIMUFeatures";
 
-	std::string branch_name_test = Build_BranchName(locParticleBranchName,"Chamber1_Multiplicity");
-	std::cout << "branch_name_test = " << branch_name_test << std::endl;
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_E1E9"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_DOCA"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_NumBlocks"),locArraySizeString,dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_Energy"),locArraySizeString,dInitNumTrackArraySize);
+
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"Chamber1_Multiplicity"),locArraySizeString,dInitNumTrackArraySize);
-
-
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"Chamber2_Multiplicity"),locArraySizeString,dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"Chamber3_Multiplicity"),locArraySizeString,dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,"Chamber4_Multiplicity"),locArraySizeString,dInitNumTrackArraySize);
@@ -1491,17 +1492,19 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 	//INDEPENDENT CHARGED TRACKS
 	std::map<MWPCKey,std::map<int,double>> chamberWireDiffs;
 	std::vector<const DChargedTrackHypothesis*> locChargedHyposMatched;
+	FCALSingleHitVals fcal_single_hit_vals_plus,fcal_single_hit_vals_minus;
+	vector<const DFCALHit*> fcal_matched_hits_plus, fcal_matched_hits_minus;
 
 	locTreeFillData->Fill_Single<UInt_t>("NumChargedHypos", UInt_t(locChargedTrackHypotheses.size()));
 	for(size_t loc_i = 0; loc_i < locChargedTrackHypotheses.size(); ++loc_i){
 		Fill_ChargedHypo(locTreeFillData, loc_i, locChargedTrackHypotheses[loc_i], locMCThrownMatching, locThrownIndexMap, locDetectorMatches);
 		//CPP PIMU Features for Neural Net
 		const DChargedTrackHypothesis* matchedTrack;
-		Calculate_PIMUFeatures(locTreeFillData,loc_i, locEvent, locChargedTrackHypotheses[loc_i],locChargedTrackHypotheses.size(), chamberWireDiffs,matchedTrack);
+		Calculate_PIMUFeatures(locTreeFillData,loc_i, locEvent, locChargedTrackHypotheses[loc_i],locChargedTrackHypotheses.size(), chamberWireDiffs,matchedTrack,fcal_matched_hits_plus,fcal_matched_hits_minus,fcal_single_hit_vals_plus,fcal_single_hit_vals_minus);
 		locChargedHyposMatched.push_back(matchedTrack);
 	}
-	if(locChargedHyposMatched.size() == 2){
-		Fill_PIMUFeatures(locTreeFillData,locChargedTrackHypotheses.size(),locChargedHyposMatched,chamberWireDiffs);
+	if(locChargedHyposMatched.size() == 2 && chamberWireDiffs.size() != 0){
+		Fill_PIMUFeatures(locTreeFillData,locChargedTrackHypotheses.size(),locChargedHyposMatched,chamberWireDiffs,fcal_matched_hits_plus,fcal_matched_hits_minus,fcal_single_hit_vals_plus,fcal_single_hit_vals_minus);
 	}
 
 	//INDEPENDENT NEUTRAL PARTICLES
@@ -2005,33 +2008,32 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	  locFCALEnergy = locFCALSingleHitMatchParams->dEHit;
 	  locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_FCAL"), locFCALEnergy, locArrayIndex);
 	}
-
+	
 	double locECALEnergy = (locECALShower != NULL) ? locECALShower->E : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_ECAL"), locECALEnergy, locArrayIndex);
 
-
 	//if(locECALSingleHitMatchParams!=nullptr){
-	//  locECALEnergy = locECALSingleHitMatchParams->dEHit;
-	//  locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_ECAL"), locECALEnergy, locArrayIndex);
-	//}
-	
-	//double locCCALEnergy = (locCCALShower != NULL) ? locCCALShower->getEnergy() : 0.0;
-	//locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_CCAL"), locCCALEnergy, locArrayIndex);
-
-	//SHOWER PROPERTIES
-	double locSigLongBCAL = (locBCALShower != NULL) ? locBCALShower->sigLong : 0.0;
-	double locSigThetaBCAL = (locBCALShower != NULL) ? locBCALShower->sigTheta : 0.0;
-	double locSigTransBCAL = (locBCALShower != NULL) ? locBCALShower->sigTrans : 0.0;
-	double locRMSTimeBCAL = (locBCALShower != NULL) ? locBCALShower->rmsTime : 0.0;
-	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SigLong_BCAL"), locSigLongBCAL, locArrayIndex);
-	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SigTheta_BCAL"), locSigThetaBCAL, locArrayIndex);
-	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SigTrans_BCAL"), locSigTransBCAL, locArrayIndex);
-	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "RMSTime_BCAL"), locRMSTimeBCAL, locArrayIndex);
-	
-	double locE1E9FCAL = (locFCALShower != NULL) ? locFCALShower->getE1E9() : 0.0;
-	double locE9E25FCAL = (locFCALShower != NULL) ? locFCALShower->getE9E25() : 0.0;
-	double locSumUFCAL = (locFCALShower != NULL) ? locFCALShower->getSumU() : 0.0;
-	double locSumVFCAL = (locFCALShower != NULL) ? locFCALShower->getSumV() : 0.0;
+		//  locECALEnergy = locECALSingleHitMatchParams->dEHit;
+		//  locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_ECAL"), locECALEnergy, locArrayIndex);
+		//}
+		
+		//double locCCALEnergy = (locCCALShower != NULL) ? locCCALShower->getEnergy() : 0.0;
+		//locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_CCAL"), locCCALEnergy, locArrayIndex);
+		
+		//SHOWER PROPERTIES
+		double locSigLongBCAL = (locBCALShower != NULL) ? locBCALShower->sigLong : 0.0;
+		double locSigThetaBCAL = (locBCALShower != NULL) ? locBCALShower->sigTheta : 0.0;
+		double locSigTransBCAL = (locBCALShower != NULL) ? locBCALShower->sigTrans : 0.0;
+		double locRMSTimeBCAL = (locBCALShower != NULL) ? locBCALShower->rmsTime : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SigLong_BCAL"), locSigLongBCAL, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SigTheta_BCAL"), locSigThetaBCAL, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SigTrans_BCAL"), locSigTransBCAL, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "RMSTime_BCAL"), locRMSTimeBCAL, locArrayIndex);
+		
+		double locE1E9FCAL = (locFCALShower != NULL) ? locFCALShower->getE1E9() : 0.0;
+		double locE9E25FCAL = (locFCALShower != NULL) ? locFCALShower->getE9E25() : 0.0;
+		double locSumUFCAL = (locFCALShower != NULL) ? locFCALShower->getSumU() : 0.0;
+		double locSumVFCAL = (locFCALShower != NULL) ? locFCALShower->getSumV() : 0.0;
 	double locNumBlocksFCAL = (locFCALShower != NULL) ? locFCALShower->getNumBlocks() : 0.0;
 	if (locFCALSingleHitMatchParams!=nullptr) locNumBlocksFCAL=1.;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "E1E9_FCAL"), locE1E9FCAL, locArrayIndex);
@@ -2152,12 +2154,12 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	}
 }
 
-void DEventWriterROOT::Calculate_PIMUFeatures(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const std::shared_ptr<const JEvent>& event, const DChargedTrackHypothesis* locChargedTrackHypothesis,int numTracks,std::map<MWPCKey,std::map<int,double>>& cWireDiff,const DChargedTrackHypothesis*& locCT) const {
+void DEventWriterROOT::Calculate_PIMUFeatures(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const std::shared_ptr<const JEvent>& event, const DChargedTrackHypothesis* locChargedTrackHypothesis,int numTracks,std::map<MWPCKey,std::map<int,double>>& cWireDiff,const DChargedTrackHypothesis*& locCT, vector<const DFCALHit*>& locFCALMatchedHitsPlus,vector<const DFCALHit*>& locFCALMatchedHitsMinus, FCALSingleHitVals& fcal_single_hit_vals_plus,FCALSingleHitVals& fcal_single_hit_vals_minus) const {
 	
 	bool trackCount = false;
 	if(numTracks == 2) trackCount = true;
 
-	const double mpic = 0.13957;
+	//const double mpic = 0.13957;
 
 	const DTrackTimeBased* locChargedTrack = locChargedTrackHypothesis->Get_TrackTimeBased();
 
@@ -2165,10 +2167,12 @@ void DEventWriterROOT::Calculate_PIMUFeatures(DTreeFillData* locTreeFillData, un
 
 	DVector3 trackP3 = locChargedTrack->momentum();
 
-	TLorentzVector recP4;
-	recP4.SetVectM(trackP3,mpic);
+	double pmass = locChargedTrack->mass();
 
-	Particle_t ptype = (trackq > 0) ? PiPlus : PiMinus; 
+	TLorentzVector recP4;
+	recP4.SetVectM(trackP3,pmass);
+	Particle_t ptype = (trackq > 0) ? PiPlus : PiMinus;
+	//Particle_t ptype = (trackq > 0) ? PiPlus : PiMinus; 
 	auto track_proj = DCPPSelect::SwimTracksToAllDetectors(locChargedTrack,ptype,bfield,fcalfrontfaceZ,m_TOFfront);
 
 	//if(!track_proj.projection_success) return;
@@ -2197,11 +2201,15 @@ void DEventWriterROOT::Calculate_PIMUFeatures(DTreeFillData* locTreeFillData, un
 	if(DCPPSelect::MatchToFCALShower_CPP(locFCALShowers,locFCALMatchedShowers,trackProjToFCAL)) projFCALShowerFlag = true;
 
 	bool projFCALHitFlag = false;
-	vector<const DFCALHit*> locFCALMatchedHits;
-	double hitE9E25 = 0.0, hitE1E9 = 0.0, hitDOCA = 999., hitSumU = 0.0, hitSumV = 0.0;
-
+	//vector<const DFCALHit*> locFCALMatchedHits;
+	//double hitE9E25 = 0.0, hitE1E9 = 0.0, hitDOCA = 999., hitSumU = 0.0, hitSumV = 0.0;
 	if(projFCALShowerFlag == false){
-		if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,locFCALMatchedHits,hitE9E25,hitDOCA,hitE1E9,trackProjToFCAL,hitSumU,hitSumV)) projFCALHitFlag = true;
+		//if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,locFCALMatchedHits,hitE9E25,hitDOCA,hitE1E9,trackProjToFCAL,hitSumU,hitSumV)) projFCALHitFlag = true;
+		if(trackq > 0.0){
+			if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,trackProjToFCAL,locFCALMatchedHitsPlus,fcal_single_hit_vals_plus)) projFCALHitFlag = true;
+		}else{
+			if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,trackProjToFCAL,locFCALMatchedHitsMinus,fcal_single_hit_vals_minus)) projFCALHitFlag = true;
+		}
 	}
 	
 	bool projMWPCFlag = false;
@@ -2245,7 +2253,7 @@ void DEventWriterROOT::Calculate_PIMUFeatures(DTreeFillData* locTreeFillData, un
 	locCT = locChargedTrackHypothesis;
 }
 
-void DEventWriterROOT::Fill_PIMUFeatures(DTreeFillData* locTreeFillData, int numTracks,std::vector<const DChargedTrackHypothesis*> locCT,std::map<MWPCKey,std::map<int,double>>& cWireDiff) const 
+void DEventWriterROOT::Fill_PIMUFeatures(DTreeFillData* locTreeFillData, int numTracks,std::vector<const DChargedTrackHypothesis*> locCT,std::map<MWPCKey,std::map<int,double>>& cWireDiff,vector<const DFCALHit*>& locFCALMatchedHitsPlus,vector<const DFCALHit*>& locFCALMatchedHitsMinus, FCALSingleHitVals& fcal_single_hit_vals_plus,FCALSingleHitVals& fcal_single_hit_vals_minus) const 
 {
 	string locParticleBranchName = "PIMUFeatures";
 
@@ -2283,6 +2291,41 @@ void DEventWriterROOT::Fill_PIMUFeatures(DTreeFillData* locTreeFillData, int num
 	int fmwpc6PlusCount = static_cast<int>(fmwpc6WireDiffPlus.size());
 	int fmwpc6MinusCount = static_cast<int>(fmwpc6WireDiffMinus.size());
 
+	double single_e1e9_plus = 0.0;
+	double single_doca_plus = 999.0;
+	double single_numblocks_plus = 0.0;
+	double single_energy_plus = 0;
+
+	double single_e1e9_minus = 0.0;
+	double single_doca_minus = 999.0;
+	double single_numblocks_minus = 0.0;
+	double single_energy_minus = 0;
+
+	
+	if(fcal_single_hit_vals_plus.fcalSinglesFound && locFCALMatchedHitsPlus.size()){
+		single_e1e9_plus = fcal_single_hit_vals_plus.fcalSingleE1E9;
+		single_doca_plus = fcal_single_hit_vals_plus.fcalSingleDOCA;
+		single_numblocks_plus = locFCALMatchedHitsPlus.size();
+		single_energy_plus = locFCALMatchedHitsPlus[0]->E;
+	}
+	
+	if(fcal_single_hit_vals_minus.fcalSinglesFound && locFCALMatchedHitsMinus.size()){
+		single_e1e9_minus = fcal_single_hit_vals_minus.fcalSingleE1E9;
+		single_doca_minus = fcal_single_hit_vals_minus.fcalSingleDOCA;
+		single_numblocks_minus = locFCALMatchedHitsMinus.size();
+		single_energy_minus = locFCALMatchedHitsMinus[0]->E;
+	}
+	
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_E1E9"),single_e1e9_plus,0);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_DOCA"),single_doca_plus,0);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_NumBlocks"),single_numblocks_plus,0);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_Energy"),single_energy_plus,0);
+	
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_E1E9"),single_e1e9_minus,1);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_DOCA"),single_doca_minus,1);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_NumBlocks"),single_numblocks_minus,1);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName,"FCAL_Energy"),single_energy_minus,1);
+	
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber1_Multiplicity"), fmwpc1PlusCount, 0);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber2_Multiplicity"), fmwpc2PlusCount, 0);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Chamber3_Multiplicity"), fmwpc3PlusCount, 0);

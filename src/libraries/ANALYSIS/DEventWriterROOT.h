@@ -195,8 +195,9 @@ class DEventWriterROOT : public JObject
 		void Fill_ComboNeutralData(DTreeFillData* locTreeFillData, unsigned int locComboIndex, string locParticleBranchName, const DNeutralParticleHypothesis* locMeasuredNeutralHypo,
 				const DNeutralParticleHypothesis* locNeutralHypo, size_t locNeutralIndex, DKinFitType locKinFitType) const;
 
-		void Calculate_PIMUFeatures(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const std::shared_ptr<const JEvent>& event, const DChargedTrackHypothesis* locChargedTrack, int numTracks,std::map<MWPCKey,std::map<int,double>>& cWireDiff, const DChargedTrackHypothesis*& locCT) const; 
-		void Fill_PIMUFeatures(DTreeFillData* locTreeFillData, int numTracks,std::vector<const DChargedTrackHypothesis*> locCT,std::map<MWPCKey,std::map<int,double>>& cWireDiff) const;
+		void Calculate_PIMUFeatures(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const std::shared_ptr<const JEvent>& event, const DChargedTrackHypothesis* locChargedTrack, int numTracks,std::map<MWPCKey,std::map<int,double>>& cWireDiff, const DChargedTrackHypothesis*& locCT,vector<const DFCALHit*>& locFCALMatchedHitsPlus,vector<const DFCALHit*>& locFCALMatchedHitsMinus, FCALSingleHitVals& fcal_single_hit_vals_plus,FCALSingleHitVals& fcal_single_hit_vals_minus) const; 
+
+		void Fill_PIMUFeatures(DTreeFillData* locTreeFillData, int numTracks,std::vector<const DChargedTrackHypothesis*> locCT,std::map<MWPCKey,std::map<int,double>>& cWireDiff,vector<const DFCALHit*>& locFCALMatchedHitsPlus,vector<const DFCALHit*>& locFCALMatchedHitsMinus, FCALSingleHitVals& fcal_single_hit_vals_plus, FCALSingleHitVals& fcal_single_hit_vals_minus) const;
 
 		//****************************************************************************************************************
 

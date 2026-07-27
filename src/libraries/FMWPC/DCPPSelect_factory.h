@@ -60,13 +60,6 @@
 #include <FCAL/DFCALShower.h>
 
 
-
-
-
-
-
-
-
 class DCPPSelect_factory:public JFactoryT<DCPPSelect>{
 	public:
 		DCPPSelect_factory(){

@@ -20,6 +20,8 @@
 #include <TOF/DTOFPoint.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALHit.h>
+#include <BCAL/DBCALShower.h>
+#include <BCAL/DBCALHit.h>
 #include <FMWPC/DFMWPCHit.h>
 #include <FMWPC/DCTOFPoint.h>
 
@@ -32,6 +34,15 @@ struct ProjectionResults {
     std::array<bool,6> mwpc_flags;
     std::array<DVector3,6> mwpc_projections;
     DVector3 ctof_projection;
+};
+
+struct FCALSingleHitVals {
+    bool fcalSinglesFound = false; 
+    double fcalSingleE1E9 = 0.0;
+    double fcalSingleE9E25 = 999.0;
+    double fcalSingleDOCA = 0.0;
+    double fcalSingleSumU = 0.0;
+    double fcalSingleSumV = 0.0;
 };
 
 enum class MWPCKey {
@@ -60,8 +71,11 @@ class DCPPSelect : public JObject {
         static bool MatchToTOF_CPP_GEOM(const vector<const DTOFPoint*>& tof_points, DVector3 tof_proj_pos);
 
         static bool MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_showers, vector<const DFCALShower*>& fcal_matched_showers, DVector3 fcal_proj_pos);
+        
+        static bool MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, DVector3 fcal_proj_pos, vector<const DFCALHit*>& fcal_matched_hits, FCALSingleHitVals& fcal_single_hit_vals);
 
         static bool MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, vector<const DFCALHit*>& fcal_matched_hits, double& e9e25, double& doca, double& e1e9,DVector3 fcal_proj_pos, double& sumUSh, double& sumVSh);
+
 
         static bool ComputeMWPCWireResiduals(const vector<const DFMWPCHit*> locFMWPCHits,std::map<MWPCKey,DVector3> mwpc_projections,double track1_energy,double track2_energy, map<MWPCKey,int>& mwpc_multis, bool& piplus_track_chamber6, bool& piminus_track_chamber6);
 
@@ -93,6 +107,13 @@ class DCPPSelect : public JObject {
 
         bool IS_TrackDOCAGood;
 
+        //BCAL 
+        bool PlusTrack_EnergyInBCAL;
+        bool MinusTrack_EnergyInBCAL;
+
+        bool BCALShowersExist;
+        bool BCALHitsExist;
+
         //TOF 
         bool IS_PlusTrackInTOF;
         bool IS_MinusTrackInTOF;
@@ -114,6 +135,11 @@ class DCPPSelect : public JObject {
         int fcal_showers_count_piminus; //Number of FCAL Showers pi- track
         int fcal_hit_count_piplus;      //Number of FCAL Showers pi+ track
         int fcal_hit_count_piminus;     //Number of FCAL Showers pi- track
+
+        int fcal_showers_only;
+        int fcal_hits_only;
+        int fcal_shower_plus_minus_hit;
+        int fcal_shower_minus_plus_hit;
 
         //FMWPC Features
         bool IS_Chamber1ExtrapReal_plus;
