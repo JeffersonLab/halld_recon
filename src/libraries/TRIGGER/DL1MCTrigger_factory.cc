@@ -1380,7 +1380,7 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
   
   
   auto json = rtvsCnd->ToJsonDocument();               // The CODA rtvs is serialized as JSon dictionary.  
-  string fileName(json["%(config)"].GetString());      // We need item with name '%(config)'
+  string fileName(json.at("%(config)").get_string());  // We need item with name '%(config)'
   
   auto file = connection.GetFile(runnumber, fileName);
   

@@ -23,6 +23,9 @@ using namespace std;
 int DBeamHelicity_factory::dIHWP   = 0;
 int DBeamHelicity_factory::dBeamOn = 1;
 
+static int num_bad_events = 0;
+
+
 //------------------
 // Init
 //------------------
@@ -34,6 +37,7 @@ void DBeamHelicity_factory::Init()
 	app->SetDefaultParameter("PREFER_PROMPT_HELICITY_DATA", PREFER_PROMPT_HELICITY_DATA, "If both prompt and delayed helicity data are in the data stream, prefer the prompt. (default: true)");
 	app->SetDefaultParameter("HELICITY:HB_SHIFT", dHDBoardDelay, "Helicity board bits to shift to get prompt helicity. (default: 8)");
 	app->SetDefaultParameter("HELICITY:REJECT_TSETTLE", REJECT_TSETTLE, "Reject events when the helicity is changing (t_settle is on). (default: 1)");
+	app->SetDefaultParameter("HELICITY:VERBOSE", VERBOSE, "Verbose output level for helicity decoding. (default: 0)");
 
 	return; //NOERROR;
 }
@@ -161,9 +165,19 @@ DBeamHelicity *DBeamHelicity_factory::Make_DBeamHelicity(vector<const DHELIDigiH
 //------------------
 DBeamHelicity *DBeamHelicity_factory::Make_DBeamHelicity(const DHelicityData *locHelicityData)
 {
+    static pthread_mutex_t error_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 	if(!checkPredictor(locHelicityData->last_helicity_state_pattern_sync)) {
-		jerr << "Consistency check of Helicity Decoder Board data failed!" << endl;
-		reportPredictorError(locHelicityData->last_helicity_state_pattern_sync);
+		if(VERBOSE) {
+			jerr << "Consistency check of Helicity Decoder Board data failed!" << endl;
+			reportPredictorError(locHelicityData->last_helicity_state_pattern_sync);
+		}
+		
+		// keep track of the number of bad events
+   		pthread_mutex_lock(&error_mutex);
+		num_bad_events++;
+		pthread_mutex_unlock(&error_mutex);
+		
 		return nullptr;
 	}
 
@@ -243,6 +257,17 @@ void DBeamHelicity_factory::EndRun()
 // Finish
 //------------------
 void DBeamHelicity_factory::Finish()
-{
+{	
+    // Only print messages for one thread 
+    static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_lock(&print_mutex);
+    static bool print_messages = true;
+    if(print_messages) {
+        print_messages = false;
+		jout << "Number of events with helicity decoding errors = " << num_bad_events << endl;
+    }
+    pthread_mutex_unlock(&print_mutex);
+	
+	
 	return; //NOERROR;
 }
