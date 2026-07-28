@@ -87,27 +87,27 @@ ProjectionResults DCPPSelect::SwimTracksToAllDetectors(const DTrackTimeBased* lo
 
 	DVector3 mwpc_proj_pos_chamber1, mwpc_proj_mom_chamber1;
 	//if(rt.GetIntersectionWithPlane(fmwpc1_zpos,norm,mwpc_proj_pos_chamber1,mwpc_proj_mom_chamber1) != NOERROR) return result;
-	if(rt.GetIntersectionWithPlane(fmwpc1_zpos,norm,mwpc_proj_pos_chamber1,mwpc_proj_mom_chamber1) != NOERROR) result.mwpc_flags[0] = true;
+	if(rt.GetIntersectionWithPlane(fmwpc1_zpos,norm,mwpc_proj_pos_chamber1,mwpc_proj_mom_chamber1) == NOERROR) result.mwpc_flags[0] = true;
 
 	DVector3 mwpc_proj_pos_chamber2, mwpc_proj_mom_chamber2;
 	//if(rt.GetIntersectionWithPlane(fmwpc2_zpos,norm,mwpc_proj_pos_chamber2,mwpc_proj_mom_chamber2) != NOERROR) return result;
-	if(rt.GetIntersectionWithPlane(fmwpc2_zpos,norm,mwpc_proj_pos_chamber2,mwpc_proj_mom_chamber2) != NOERROR) result.mwpc_flags[1] = true;
+	if(rt.GetIntersectionWithPlane(fmwpc2_zpos,norm,mwpc_proj_pos_chamber2,mwpc_proj_mom_chamber2) == NOERROR) result.mwpc_flags[1] = true;
 
 	DVector3 mwpc_proj_pos_chamber3, mwpc_proj_mom_chamber3;
 	//if(rt.GetIntersectionWithPlane(fmwpc3_zpos,norm,mwpc_proj_pos_chamber3,mwpc_proj_mom_chamber3) != NOERROR) return result;
-	if(rt.GetIntersectionWithPlane(fmwpc3_zpos,norm,mwpc_proj_pos_chamber3,mwpc_proj_mom_chamber3) != NOERROR) result.mwpc_flags[2] = true;
+	if(rt.GetIntersectionWithPlane(fmwpc3_zpos,norm,mwpc_proj_pos_chamber3,mwpc_proj_mom_chamber3) == NOERROR) result.mwpc_flags[2] = true;
 
 	DVector3 mwpc_proj_pos_chamber4, mwpc_proj_mom_chamber4;
 	//if(rt.GetIntersectionWithPlane(fmwpc4_zpos,norm,mwpc_proj_pos_chamber4,mwpc_proj_mom_chamber4) != NOERROR) return result;
-	if(rt.GetIntersectionWithPlane(fmwpc4_zpos,norm,mwpc_proj_pos_chamber4,mwpc_proj_mom_chamber4) != NOERROR) result.mwpc_flags[3] = true;
+	if(rt.GetIntersectionWithPlane(fmwpc4_zpos,norm,mwpc_proj_pos_chamber4,mwpc_proj_mom_chamber4) == NOERROR) result.mwpc_flags[3] = true;
 
 	DVector3 mwpc_proj_pos_chamber5, mwpc_proj_mom_chamber5;
 	//if(rt.GetIntersectionWithPlane(fmwpc5_zpos,norm,mwpc_proj_pos_chamber5,mwpc_proj_mom_chamber5) != NOERROR) return result;
-	if(rt.GetIntersectionWithPlane(fmwpc5_zpos,norm,mwpc_proj_pos_chamber5,mwpc_proj_mom_chamber5) != NOERROR) result.mwpc_flags[4] = true;
+	if(rt.GetIntersectionWithPlane(fmwpc5_zpos,norm,mwpc_proj_pos_chamber5,mwpc_proj_mom_chamber5) == NOERROR) result.mwpc_flags[4] = true;
 
 	DVector3 mwpc_proj_pos_chamber6, mwpc_proj_mom_chamber6;
 	//if(rt.GetIntersectionWithPlane(fmwpc6_zpos,norm,mwpc_proj_pos_chamber6,mwpc_proj_mom_chamber6) != NOERROR) return result;
-	if(rt.GetIntersectionWithPlane(fmwpc6_zpos,norm,mwpc_proj_pos_chamber6,mwpc_proj_mom_chamber6) != NOERROR) result.mwpc_flags[5] = true;
+	if(rt.GetIntersectionWithPlane(fmwpc6_zpos,norm,mwpc_proj_pos_chamber6,mwpc_proj_mom_chamber6) == NOERROR) result.mwpc_flags[5] = true;
 	
 	DVector3 ctof_proj_pos,ctof_proj_mom;
 	DVector3 ctof_face_pos(0.0,0.0,947.0);

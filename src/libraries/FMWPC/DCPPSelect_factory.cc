@@ -141,6 +141,8 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
     	dAnalysisUtilities->Calc_DOCA(piplus, piminus, posp, posn, track_doca);
     	//Quasi-vertex constraint
     	if(track_doca>1.5) track_doca_check = false;
+		const DVector3 vtx = 0.5*(posp+posn);
+		if(fabs(vtx.Z()) > 15.) return;
 	}
 
 	vector<const DFMWPCHit*> fmwpchits;
