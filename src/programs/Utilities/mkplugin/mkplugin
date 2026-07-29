@@ -257,7 +257,7 @@ sub Usage()
 	print "This script superceeds some similar functionality in the mkprocessor\n";
 	print "script. Unlike mkprocessor, the mkplugin script will create a directory\n";
 	print "for the files and write the files to it. In addition, it will create\n";
-	print "a default Makefile so that one can immediately compile the new plugin.\n";
+	print "a default SConstruct so that one can immediately compile the new plugin.\n";
 	print "\n";
 	print "The C++ files generated will define a class based on JEventProcessor.\n";
 	print "The \"name\" parameter specifies a unique name for the class.\n";
