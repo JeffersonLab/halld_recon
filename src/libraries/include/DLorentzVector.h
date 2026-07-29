@@ -11,10 +11,10 @@
 
 #ifndef USE_SSE2
 
-#include <TLorentzVector.h>
-typedef TLorentzVector DLorentzVector;
-//#include <DLorentzVectorS.h>
-//typedef DLorentzVectorS DLorentzVector;
+//#include <TLorentzVector.h>
+//typedef TLorentzVector DLorentzVector;
+#include <DLorentzVectorS.h>
+typedef DLorentzVectorS DLorentzVector;
 
 #else
 
