@@ -70,6 +70,7 @@ class DDetectorMatches_factory : public JFactoryT<DDetectorMatches>
   void MatchToTrack(const DParticleID* locParticleID, const DECALShower* locECALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const;
 
   bool ENABLE_FCAL_SINGLE_HITS, ENABLE_ECAL_SINGLE_HITS,MATCH_TO_DIRC, MATCH_TO_TRD;
+  bool FAST_TRACKING_MODE;
 };
 
 #endif // _DDetectorMatches_factory_

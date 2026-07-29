@@ -72,6 +72,9 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 		TH1I *dpip_pim;
 		TH1I *dKp_Km;
 		TH1I *dpim_proton;
+		TH1I *dpim_proton_Kshort;
+		TH1I *dKshort;
+		TH2I *dpim_proton_pippim;
 		TH1I *dpip_pim_pi0;
 		TH2I *dbeta_vs_p;
 		TH2I *dbeta_vs_p_BCAL;

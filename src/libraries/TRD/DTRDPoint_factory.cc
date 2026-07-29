@@ -31,11 +31,11 @@ void DTRDPoint_factory::Init()
 	
   dE_DIFF_MAX = 10000.;
   app->SetDefaultParameter("TRDPOINT:dE_DIFF_MAX",dE_DIFF_MAX,
-			   "Difference between Point_Hit charge in X and Y planes to be considered a coincidence (default: 10000.)");
+			   "Difference between Point charge in X and Y planes to be considered a coincidence (default: 10000.)");
 
-  MIN_NClusters = 3;
+  MIN_NClusters = 1;
   app->SetDefaultParameter("TRDPOINT:MIN_NClusters", MIN_NClusters,
-			   "Minimum number of clusters in a plane (default: 3)");
+			   "Minimum number of clusters in a plane (default: 1)");
   
 }
 
@@ -84,10 +84,11 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 	// Get strip clusters
 	vector<const DTRDStripCluster*> stripClus;
 	event->Get(stripClus);
+	if (stripClus.size()==0) return;
 
     // if (stripClus.size() > 10) cout << "DTRDPoint_factory::Process() ... num input clusters = " << stripClus.size() << endl;
 
-	// Sift through clusters and select out X and Y plane wires
+	// Sift through clusters and select out X and Y plane strips
 	vector<const DTRDStripCluster*> stripClusX,stripClusY;
 	for (unsigned int i=0; i < stripClus.size(); i++) {
 		// TODO: make some enums so it's more clear what plane 1 and 2 are...
@@ -97,7 +98,7 @@ void DTRDPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 			stripClusY.push_back(stripClus[i]);
 	}
 
-	if (stripClusX.size() < MIN_NClusters || stripClusY.size() < MIN_NClusters) {
+	if ((int)stripClusX.size() < MIN_NClusters || (int)stripClusY.size() < MIN_NClusters) {
 		// cout << "DTRDPoint_factory::Process() ... not enough clusters in one of the planes, skipping event" << endl;
 		return; // skip this event if not enough clusters
 	}

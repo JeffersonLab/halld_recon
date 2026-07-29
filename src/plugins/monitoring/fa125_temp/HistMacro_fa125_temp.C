@@ -11,7 +11,7 @@
 
 {
 	TDirectory *locTopDirectory = gDirectory;
-	std::cout << "HistMacro_fa125_temp: Entering..." << std::endl;
+	//std::cout << "HistMacro_fa125_temp: Entering..." << std::endl;
 
 	//Goto Beam Path
 	TDirectory *locDirectory = (TDirectory*)gDirectory->FindObjectAny("fa125_temp");
@@ -36,7 +36,7 @@
 		locCanvas = gPad->GetCanvas();
 
 	//Draw
-	std::cout << "HistMacro_fa125_temp: Drawing Canvas" << std::endl;
+	//std::cout << "HistMacro_fa125_temp: Drawing Canvas" << std::endl;
 	locCanvas->cd();
         gStyle->SetGridStyle(1);
 	gPad->SetTicks();
@@ -45,7 +45,7 @@
 
 	if(locHist != NULL)
 	{
-      std::cout << "HistMacro_fa125_temp: Drawing Hist" << std::endl;
+          //std::cout << "HistMacro_fa125_temp: Drawing Hist" << std::endl;
 		locHist->GetXaxis()->SetTitleSize(0.05);
 		locHist->GetYaxis()->SetTitleSize(0.05);
 		locHist->GetXaxis()->SetLabelSize(0.05);
@@ -65,7 +65,7 @@
 	// ------ The following is used by RSAI --------
 	if( rs_GetFlag("Is_RSAI")==1 ){
 
-          std::cout << "HistMacro_fa125_temp: RSAI block" << std::endl;
+          //std::cout << "HistMacro_fa125_temp: RSAI block" << std::endl;
 
           double Nevents = locHist->GetEntries();
 

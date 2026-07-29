@@ -23,7 +23,6 @@ using namespace std;
 
 #include <TROOT.h>
 
-
 //------------------
 // CDCSortByRincreasing
 //------------------
@@ -292,6 +291,7 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
       double min_dphi=1e9;
       double phi=candidate->dPosition.Phi();
       double t0=candidate->dMinimumDriftTime;
+      double t0_sigma=2.5; // crude estimate
       unsigned int sc_hit_index=0;
       if (haveStartCounter){
 	for (unsigned int j=0;j<schits.size();j++){
@@ -307,6 +307,7 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
       DetectorSystem_t t0_detector=candidate->dDetector;
       if (min_dphi<SC_DPHI_CUT){
 	t0_detector=SYS_START;
+	t0_sigma=0.3;
 	t0=schits[sc_hit_index]->t;
       }
       else { // If matching to start counter did not work, try to match to BCAL
@@ -350,6 +351,7 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
 	if (matched_points.size()>=MIN_BCAL_MATCHES){
 	  t0_detector=SYS_BCAL;
 	  t0=matched_points[0]->t();
+	  t0_sigma=0.35;
 	  // Crude correction for flight time from target
 	  t0-=2.2; // assum s=65 cm at roughly the speed of light
 	}
@@ -359,11 +361,11 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
 	rt->Reset();
 	rt->q = candidate->dCharge;
 
-	DoFit(i,candidate,rt,event,ParticleMass(PiPlus),t0,t0_detector);
+	DoFit(i,candidate,rt,event,ParticleMass(PiPlus),t0,t0_sigma,t0_detector);
 	// Only do fit for proton mass hypothesis for low momentum particles
 	if (candidate->dMomentum.Mag()<PROTON_MOM_THRESH){
 	  rt->Reset();
-	  DoFit(i,candidate,rt,event,ParticleMass(Proton),t0,t0_detector);
+	  DoFit(i,candidate,rt,event,ParticleMass(Proton),t0,t0_sigma,t0_detector);
 	}
       }
       else{
@@ -384,7 +386,7 @@ void DTrackWireBased_factory::Process(const std::shared_ptr<const JEvent>& event
 
 	    rt->Reset();
             rt->q = candidate->dCharge;
-            DoFit(i,candidate,rt,event,ParticleMass(Particle_t(mass_hypotheses[j])),t0,t0_detector);
+            DoFit(i,candidate,rt,event,ParticleMass(Particle_t(mass_hypotheses[j])),t0,t0_sigma,t0_detector);
          }
 
       }
@@ -497,7 +499,7 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
 				    const DTrackCandidate *candidate,
 				    DReferenceTrajectory *rt,
 				    const std::shared_ptr<const JEvent>& event,
-				    double mass,double t0,
+				    double mass,double t0,double t0_sigma,
 				    DetectorSystem_t t0_detector){
    // Get the hits from the candidate
   vector<const DFDCPseudo*>myfdchits=candidate->fdchits;
@@ -513,7 +515,7 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
       fitter->AddHits(mycdchits);
 
       status=fitter->FitTrack(candidate->dPosition,candidate->dMomentum,
-			      candidate->dCharge,mass,t0,t0_detector);
+			      candidate->dCharge,mass,t0,t0_sigma,t0_detector);
    }
    else{
      fitter->Reset();
@@ -531,7 +533,7 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
       kd.setMomentum(candidate->dMomentum);
       status=fitter->FindHitsAndFitTrack(kd,rt,event,mass,
 					 mycdchits.size()+2*myfdchits.size(),
-					 t0,t0_detector);
+					 t0,t0_sigma,t0_detector);
       if (fitter->GetChisq()<0 || status==DTrackFitter::kFitNotDone){
 	if (DEBUG_LEVEL>1)
 	  _DBG_ << "Using hits from candidate..." << endl;
@@ -541,7 +543,7 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
          fitter->AddHits(mycdchits);
 
          status=fitter->FitTrack(candidate->dPosition,candidate->dMomentum,
-				 candidate->dCharge,mass,t0,t0_detector);
+				 candidate->dCharge,mass,t0,t0_sigma,t0_detector);
       }
    }
 
@@ -560,10 +562,11 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
       case DTrackFitter::kFitSuccess:
          if(!isfinite(fitter->GetFitParameters().position().X())) break;
          {    
-            // Make a new wire-based track
-             DTrackWireBased *track = new DTrackWireBased();
-             *static_cast<DTrackingData*>(track) = fitter->GetFitParameters();
-
+	   // Make a new wire-based track
+	   DTrackWireBased *track = new DTrackWireBased();
+	   *static_cast<DTrackingData*>(track) = fitter->GetFitParameters();
+	   
+	   track->setTime(track->t0());
             track->chisq = fitter->GetChisq();
             track->Ndof = fitter->GetNdof();
             track->FOM = TMath::Prob(track->chisq, track->Ndof);
@@ -575,17 +578,14 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
             // Add hits used as associated objects
             vector<const DCDCTrackHit*> cdchits = fitter->GetCDCFitHits();
             vector<const DFDCPseudo*> fdchits = fitter->GetFDCFitHits();
-            sort(cdchits.begin(), cdchits.end(), CDCSortByRincreasing);
-            sort(fdchits.begin(), fdchits.end(), FDCSortByZincreasing);
+	    track->NumFDC=fdchits.size();
+	    track->NumCDC=cdchits.size();
             for(unsigned int m=0; m<cdchits.size(); m++)track->AddAssociatedObject(cdchits[m]);
             for(unsigned int m=0; m<fdchits.size(); m++)track->AddAssociatedObject(fdchits[m]);
 
 	    // Set CDC ring & FDC plane hit patterns before candidate tracks are associated
-	    vector<const DCDCTrackHit*> tempCDCTrackHits = track->Get<DCDCTrackHit>();
-	    vector<const DFDCPseudo*> tempFDCPseudos = track->Get<DFDCPseudo>();
-
-	    track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
-	    track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
+	    track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(cdchits);
+	    track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(fdchits);
 
             // Add DTrackCandidate as associated object
             track->AddAssociatedObject(candidate);
@@ -668,6 +668,7 @@ void DTrackWireBased_factory::AddMissingTrackHypothesis(vector<DTrackWireBased*>
 
   // Copy over DKinematicData part from the result of a successful fit
   wirebased_track->setPID(IDTrack(q, my_mass));
+  wirebased_track->setTime(src_track->t0());
   wirebased_track->chisq = src_track->chisq;
   wirebased_track->Ndof = src_track->Ndof;
   wirebased_track->pulls = src_track->pulls;
@@ -675,6 +676,8 @@ void DTrackWireBased_factory::AddMissingTrackHypothesis(vector<DTrackWireBased*>
   wirebased_track->candidateid=src_track->candidateid;
   wirebased_track->FOM=src_track->FOM;
   wirebased_track->IsSmoothed=src_track->IsSmoothed;
+  wirebased_track->NumFDC=src_track->NumFDC;
+  wirebased_track->NumCDC=src_track->NumCDC;
   wirebased_track->dCDCRings=src_track->dCDCRings;
   wirebased_track->dFDCPlanes=src_track->dFDCPlanes;
 
