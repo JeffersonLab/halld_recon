@@ -719,6 +719,9 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	// Global PID
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "PIDFOM"), locArraySizeString, dInitNumTrackArraySize);
 
+	// Electron-pion neural net
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E_Pi_Score"), locArraySizeString, dInitNumTrackArraySize);
+
 	//TRACKING INFO
 	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Tracking"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ChiSq_Tracking"), locArraySizeString, dInitNumTrackArraySize);
@@ -1913,6 +1916,9 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 
 	// Global PID
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "PIDFOM"), locChargedTrackHypothesis->Get_FOM(), locArrayIndex);
+
+	// Electron-pion neural net
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "E_Pi_Score"), locChargedTrackHypothesis->Get_EPiScore());
 
 	//TRACKING INFO
 	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Tracking"), locTrackTimeBased->Ndof, locArrayIndex);

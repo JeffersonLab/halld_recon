@@ -40,6 +40,11 @@ void DChargedTrackHypothesis_factory::Init()
 
 	CDC_CORRECT_DEDX_THETA = true;
 	GetApplication()->SetDefaultParameter("PID:CDC_CORRECT_DEDX_THETA",CDC_CORRECT_DEDX_THETA);
+
+	vector< string > varsMinus( inputVars, inputVars + sizeof( inputVars )/sizeof( char* ) );
+  	dEPIClassifierMinus = new ReadMLPMinus( varsMinus );
+  	vector< string > varsPlus( inputVars, inputVars + sizeof( inputVars )/sizeof( char* ) );
+  	dEPIClassifierPlus = new ReadMLPPlus( varsPlus );
 }
 
 //------------------
@@ -294,6 +299,13 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	  locChargedTrackHypothesis->Set_FMWPCMatchParams(locFMWPCMatchParamsVec[0]);
 	}
 
+	// Define some variables to use in the e-pi classifier later.
+	// These will keep track of whether the track is seen in the FCAL
+	// as well as the FCAL DOCA and FCAL E9/E25 if it is.
+	double ePi_EoverP = -1.0;
+	double ePi_FCAL_DOCA = -1.0;
+	double ePi_FCAL_E9E25 = -1.0;
+
 	//PID
 	if(locChargedTrackHypothesis->t1_detector() == SYS_BCAL)
 	{
@@ -324,6 +336,12 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 //		double locFlightTimePCorrelation = locDetectorMatches->Get_FlightTimePCorrelation(locTrackTimeBased, SYS_FCAL); //uncomment when ready!!
 //		Add_TimeToTrackingMatrix(locChargedTrackHypothesis, locCovarianceMatrix.get(), locFCALShowerMatchParams->dFlightTimeVariance, locFCALShower->dCovarianceMatrix(4, 4), locFlightTimePCorrelation); //uncomment when ready!!
 		(*locCovarianceMatrix)(6, 6) = 0.7*0.7+locFCALShowerMatchParams->dFlightTimeVariance;
+	
+		// Fill e-pi variables only if track in FCAL
+		ePi_EoverP = locFCALShower->getEnergy(); // TODO: Add the "p" in E/p here.
+		                                         // Need to get kin fit momentum.
+		ePi_FCAL_DOCA = locFCALShowerMatchParams->dDOCAToShower;
+		ePi_FCAL_E9E25 = locFCALShower->getE9E25();
 	}
 
 	locChargedTrackHypothesis->setErrorMatrix(locCovarianceMatrix);
@@ -349,6 +367,10 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	//Calculate PID ChiSq, NDF, FOM
 	locChargedTrackHypothesis->Set_TimeAtPOCAToVertex(locChargedTrackHypothesis->time());
 	dPIDAlgorithm->Calc_ChargedPIDFOM(locChargedTrackHypothesis);
+
+	// Attach results of e-pi classifier
+	int charge = locChargedTrackHypothesis->charge();
+	locChargedTrackHypothesis->SetEPiScore(getEPIClassifierScore(charge, EoverP, FCAL_DOCA, FCAL_E9E25));
 
 	return locChargedTrackHypothesis;
 }
@@ -608,4 +630,27 @@ double DChargedTrackHypothesis_factory::Correct_CDC_dEdx_int(double theta_deg, d
   }
 
   return dedxcf;
+}
+
+double DChargedTrackHypothesis_factory::getEPIClassifierScore(Particle_t pid, double EoverP, double FCAL_DOCA, double FCAL_E9E25)
+{
+	// Boilerplate score is -1.0 in case of no FCAL or non e+/e- hypothesis.
+	double ePiScore = -1.0;
+
+	if (EoverP >= 0.0 && FCAL_DOCA >= 0.0 && FCAL_E9E25 >= 0.0){
+
+		vector< double > mvaInputs( 3 );
+
+		mvaInputs[0] = EoverP;
+		mvaInputs[1] = FCAL_DOCA;
+		mvaInputs[2] = FCAL_E9E25;
+
+		if (pid == Positron) {
+			ePiScore = dEPIClassifierPlus->GetMvaValue( mvaInputs );
+		} else if (pid == Electron) {
+			ePiScore = dEPIClassifierMinus->GetMvaValue( mvaInputs );
+		}
+	}
+
+	return ePiScore;
 }

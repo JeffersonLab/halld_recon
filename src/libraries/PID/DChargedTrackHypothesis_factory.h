@@ -19,6 +19,8 @@
 #include <TOF/DTOFPoint.h>
 #include <BCAL/DBCALShower.h>
 #include <FCAL/DFCALShower.h>
+#include "FMWPC/DEPIClassifierMLPMinus.h"
+#include "FMWPC/DEPIClassifierMLPlus.h"
 #include "DResourcePool.h"
 
 using namespace std;
@@ -44,6 +46,14 @@ class DChargedTrackHypothesis_factory:public JFactoryT<DChargedTrackHypothesis>
 	private:
 		const DParticleID* dPIDAlgorithm;
 
+		// Bring in the electrion-pion classifier. As of this writing, the
+		// arguments for each are the same. So drop the plus/minus labels and
+		// choose which classifier to feed into by charge.
+		const char* inputVars[3] = { "EoverP", "FCAL_DOCA", "FCAL_E9E25" };
+		ReadMLPMinus* dEPIClassifierMinus;
+		ReadMLPPlus*  dEPIClassifierPlus;
+		double getEPIClassifierScore(Particle_t pid, double EoverP, double FCAL_DOCA, double FCAL_E9E25);
+
 		//RESOURCE POOL
 		//For some reason, JANA doesn't call factory destructor until AFTER the threads have been closed
 		//This causes the pool destructor to crash.  Instead, delete in fini();
@@ -60,6 +70,8 @@ class DChargedTrackHypothesis_factory:public JFactoryT<DChargedTrackHypothesis>
 				Recycle_Hypothesis(locHypo);
 			mData.clear();
 			delete dResourcePool_ChargedTrackHypothesis;
+			delete dEPIClassifierMinus;
+			delete dEPIClassifierPlus;
 		}
 
                 bool CDC_CORRECT_DEDX_THETA;   // use the correction for dE/dx with theta

@@ -61,6 +61,8 @@ class DChargedTrackHypothesis : public DKinematicData
 		double Get_ChiSq(void) const{return dTimingInfo->dChiSq;}
 		double Get_FOM(void) const{return dTimingInfo->dFOM;}
 
+		double Get_EPiScore(void) const{return dEPiScore;}
+
 		//Match params (return nullptr if no match)
 		shared_ptr<const DSCHitMatchParams> Get_SCHitMatchParams(void) const{return dTrackingInfo->dSCHitMatchParams;}
 		shared_ptr<const DTOFHitMatchParams> Get_TOFHitMatchParams(void) const{return dTrackingInfo->dTOFHitMatchParams;}
@@ -88,6 +90,9 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_ChiSq_EOverP(DetectorSystem_t detector,double locChiSq, unsigned int locNDF);
 		void Set_dEdx_CDC_amp(double locCDCdEdx_amp);
 		void Set_dEdx_CDC_int(double locCDCdEdx_int);
+
+		// Classifier
+		void Get_EPiScore(void) const{return dEPiScore;}
 
 		//Match params
 		void Set_SCHitMatchParams(shared_ptr<const DSCHitMatchParams> locMatchParams){dTrackingInfo->dSCHitMatchParams = locMatchParams;}
@@ -191,6 +196,8 @@ class DChargedTrackHypothesis : public DKinematicData
 		shared_ptr<DTimingInfo> dTimingInfo = nullptr;
 		shared_ptr<DTrackingInfo> dTrackingInfo = nullptr;
 		shared_ptr<DEOverPInfo> dEOverPInfo = nullptr;
+
+		double dEPiScore;
 
 		//RESOURCE POOLS
 		static thread_local shared_ptr<DResourcePool<DTimingInfo>> dResourcePool_TimingInfo;
@@ -385,6 +392,11 @@ inline void DChargedTrackHypothesis::Set_ChiSq_Overall(double locChiSq, unsigned
 	dTimingInfo->dChiSq = locChiSq;
 	dTimingInfo->dNDF = locNDF;
 	dTimingInfo->dFOM = locFOM;
+}
+
+inline void DChargedTrackHypothesis::Set_EPiScore(double locEPiScore)
+{
+	dEPiScore = locEPiScore;
 }
 
 inline void DChargedTrackHypothesis::Reset(void)
