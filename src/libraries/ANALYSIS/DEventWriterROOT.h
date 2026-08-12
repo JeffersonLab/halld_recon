@@ -44,6 +44,9 @@
 #include "ANALYSIS/DTreeInterface.h"
 #include "ANALYSIS/DReactionVertexInfo.h"
 
+#include "FMWPC/DEPIClassifierMLPMinus.h"
+#include "FMWPC/DEPIClassifierMLPlus.h"
+
 using namespace std;
 
 class DEventWriterROOT : public JObject
@@ -90,9 +93,9 @@ class DEventWriterROOT : public JObject
 		unsigned int dInitNumComboArraySize;
 
 		double dTargetCenterZ;
-  double dFdcPackages[4];
-  vector<string>dFDCxLeaves={"FDC1_X","FDC2_X","FDC3_X","FDC4_X"};
-  vector<string>dFDCyLeaves={"FDC1_Y","FDC2_Y","FDC3_Y","FDC4_Y"};
+  		double dFdcPackages[4];
+  		vector<string>dFDCxLeaves={"FDC1_X","FDC2_X","FDC3_X","FDC4_X"};
+  		vector<string>dFDCyLeaves={"FDC1_Y","FDC2_Y","FDC3_Y","FDC4_Y"};
 
 		//DEFAULT ACTIONS LISTED SEPARATELY FROM CUSTOM (in case in derived class user does something bizarre)
 		map<const DReaction*, DCutAction_ThrownTopology*> dCutActionMap_ThrownTopology;
@@ -268,6 +271,13 @@ class DEventWriterROOT : public JObject
 		//Fill the tracking pulls into the tree:
 		void fillTreeTrackPullBranches(DTreeFillData* locTreeFillData,string yourBranchName,DKinFitType yourFitType,map<DKinFitPullType, double> yourPullsMap, int yourIndex, bool isNeutral, const DKinematicData* particle, const DKinematicData* particleFit) const;
 
+		// Bring in the electrion-pion classifier. As of this writing, the
+		// arguments for each are the same. So drop the plus/minus labels and
+		// choose which classifier to feed into by charge.
+		const char* dEPIClassifierInputVars[3] = { "EoverP", "FCAL_DOCA", "FCAL_E9E25" };
+		ReadMLPMinus* dEPIClassifierMinus;
+		ReadMLPPlus*  dEPIClassifierPlus;
+		double getEPIClassifierScore(const DChargedTrackHypothesis* locChargedHypo);
 };
 
 inline string DEventWriterROOT::Convert_ToBranchName(string locInputName) const

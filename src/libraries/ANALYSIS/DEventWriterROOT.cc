@@ -79,6 +79,12 @@ void DEventWriterROOT::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 				Create_DataTree(locReaction, locEvent, !locMCThrowns.empty());
 		}
 	}
+
+	// CREATE E-PI CLASSIFIERS
+	vector< string > varsMinus( dEPIClassifierInputVars, dEPIClassifierInputVars + sizeof( dEPIClassifierInputVars )/sizeof( char* ) );
+  	dEPIClassifierMinus = new ReadMLPMinus( varsMinus );
+  	vector< string > varsPlus( dEPIClassifierInputVars, dEPIClassifierInputVars + sizeof( dEPIClassifierInputVars )/sizeof( char* ) );
+  	dEPIClassifierPlus = new ReadMLPPlus( varsPlus );
 }
 
 void DEventWriterROOT::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
@@ -117,6 +123,10 @@ DEventWriterROOT::~DEventWriterROOT(void)
 		delete locMapPair.second;
 	for(auto& locMapPair : dCutActionMap_BDTSignalCombo)
 		delete locMapPair.second;
+
+	//Delete e-pi classifier
+	delete dEPIClassifierMinus;
+	delete dEPIClassifierPlus;
 }
 
 void DEventWriterROOT::Create_ThrownTree(const std::shared_ptr<const JEvent>& locEvent, string locOutputFileName) const
@@ -719,9 +729,6 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	// Global PID
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "PIDFOM"), locArraySizeString, dInitNumTrackArraySize);
 
-	// Electron-pion neural net
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E_Pi_Score"), locArraySizeString, dInitNumTrackArraySize);
-
 	//TRACKING INFO
 	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Tracking"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ChiSq_Tracking"), locArraySizeString, dInitNumTrackArraySize);
@@ -1016,6 +1023,9 @@ void DEventWriterROOT::Create_Branches_ComboTrack(DTreeBranchRegister& locBranch
 		if(locKinFitType != d_P4Fit)
 			locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_KinFit"), dInitNumComboArraySize);
 	}
+
+	//CLASSIFIER
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "EPiScore"), locArraySizeString, dInitNumComboArraySize);
 }
 
 void DEventWriterROOT::Create_Branches_ComboNeutral(DTreeBranchRegister& locBranchRegister, string locParticleBranchName, DKinFitType locKinFitType) const
@@ -1917,9 +1927,6 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	// Global PID
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "PIDFOM"), locChargedTrackHypothesis->Get_FOM(), locArrayIndex);
 
-	// Electron-pion neural net
-	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "E_Pi_Score"), locChargedTrackHypothesis->Get_EPiScore());
-
 	//TRACKING INFO
 	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Tracking"), locTrackTimeBased->Ndof, locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ChiSq_Tracking"), locTrackTimeBased->chisq, locArrayIndex);
@@ -2507,6 +2514,9 @@ void DEventWriterROOT::Fill_ComboChargedData(DTreeFillData* locTreeFillData, uns
 		TLorentzVector locP4_KinFit(locDP4.Px(), locDP4.Py(), locDP4.Pz(), locDP4.E());
 		locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_KinFit"), locP4_KinFit, locComboIndex);
 	}
+
+	//CLASSIFIER
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "EPiScore"), getEPIClassifierScore(locChargedHypo), locComboIndex);
 }
 
 void DEventWriterROOT::Fill_ComboNeutralData(DTreeFillData* locTreeFillData, unsigned int locComboIndex, string locParticleBranchName, const DNeutralParticleHypothesis* locMeasuredNeutralHypo, const DNeutralParticleHypothesis* locNeutralHypo, size_t locNeutralIndex, DKinFitType locKinFitType) const
@@ -3261,4 +3271,47 @@ void DEventWriterROOT::fillTreeTrackPullBranches(DTreeFillData* locTreeFillData,
         locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "tanLambda_Pull"),myTrackingPulls[2],yourIndex);
 	locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "D_Pull"),myTrackingPulls[3],yourIndex);
     }
+}
+
+
+double DEventWriterROOT::getEPIClassifierScore(const DChargedTrackHypothesis* locChargedHypo)
+{
+	// Classifier inputs
+	Particle_t pid;
+
+	double KIN_P = -1.0;
+	double FCAL_E = -1.0;
+	double FCAL_E9E25 = -1.0;
+	double FCAL_DOCA = -1.0;
+
+	// Boilerplate score is -1.0 in case of no FCAL or non e+/e- hypothesis.
+	double ePiScore = -1.0;
+
+	pid = locChargedHypo->PID();
+
+	// Fill e-pi variables only if track in FCAL
+	if (locChargedHypo->t1_detector() == SYS_FCAL)
+	{
+		KIN_P      = locChargedHypo->lorentzMomentum()->P();
+		FCAL_E     = locChargedHypo->dFCALShower->getEnergy();
+		FCAL_E9E25 = locChargedHypo->dFCALShower->getE9E25();
+		FCAL_DOCA  = locChargedHypo->Get_FCALShowerMatchParams()->dDOCAToShower;	
+	}
+
+	if (KIN_P > 0.0 && FCAL_E >= 0.0 && FCAL_DOCA >= 0.0 && FCAL_E9E25 >= 0.0){
+
+		vector< double > mvaInputs( 3 );
+
+		mvaInputs[0] = FCAL_E / KIN_P;
+		mvaInputs[1] = FCAL_DOCA;
+		mvaInputs[2] = FCAL_E9E25;
+
+		if (pid == Positron) {
+			ePiScore = dEPIClassifierPlus->GetMvaValue( mvaInputs );
+		} else if (pid == Electron) {
+			ePiScore = dEPIClassifierMinus->GetMvaValue( mvaInputs );
+		}
+	}
+
+	return ePiScore;
 }
