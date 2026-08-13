@@ -3274,7 +3274,7 @@ void DEventWriterROOT::fillTreeTrackPullBranches(DTreeFillData* locTreeFillData,
 }
 
 
-double DEventWriterROOT::getEPIClassifierScore(const DChargedTrackHypothesis* locChargedHypo)
+double DEventWriterROOT::getEPIClassifierScore(const DChargedTrackHypothesis* locChargedHypo) const
 {
 	// Classifier inputs
 	Particle_t pid;
@@ -3292,9 +3292,9 @@ double DEventWriterROOT::getEPIClassifierScore(const DChargedTrackHypothesis* lo
 	// Fill e-pi variables only if track in FCAL
 	if (locChargedHypo->t1_detector() == SYS_FCAL)
 	{
-		KIN_P      = locChargedHypo->lorentzMomentum()->P();
-		FCAL_E     = locChargedHypo->dFCALShower->getEnergy();
-		FCAL_E9E25 = locChargedHypo->dFCALShower->getE9E25();
+		KIN_P      = locChargedHypo->lorentzMomentum().P();
+		FCAL_E     = locChargedHypo->Get_FCALShowerMatchParams()->dFCALShower->getEnergy();
+		FCAL_E9E25 = locChargedHypo->Get_FCALShowerMatchParams()->dFCALShower->getE9E25();
 		FCAL_DOCA  = locChargedHypo->Get_FCALShowerMatchParams()->dDOCAToShower;	
 	}
 

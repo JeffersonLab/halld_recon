@@ -165,6 +165,9 @@ class IClassifierReader {
 
 #endif
 
+#ifndef READ_MLP_PLUS
+#define READ_MLP_PLUS
+
 class ReadMLPPlus : public IClassifierReader {
 
  public:
@@ -365,7 +368,7 @@ inline double ReadMLPPlus::GetMvaValue__( const std::vector<double>& inputValues
   return fWeights2[0];
 }
 
-double ReadMLPPlus::ActivationFnc(double x) const {
+inline double ReadMLPPlus::ActivationFnc(double x) const {
   // fast hyperbolic tan approximation
   if (x > 4.97) return 1;
   if (x < -4.97) return -1;
@@ -374,7 +377,7 @@ double ReadMLPPlus::ActivationFnc(double x) const {
   float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
   return a / b;
 }
-double ReadMLPPlus::OutputActivationFnc(double x) const {
+inline double ReadMLPPlus::OutputActivationFnc(double x) const {
   // sigmoid
   return 1.0/(1.0+exp(-x));
 }
@@ -496,3 +499,5 @@ inline void ReadMLPPlus::Transform( std::vector<double>& iv, int sigOrBgd ) cons
 {
   Transform_1( iv, sigOrBgd );
 }
+
+#endif

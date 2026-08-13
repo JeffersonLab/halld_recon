@@ -45,7 +45,7 @@
 #include "ANALYSIS/DReactionVertexInfo.h"
 
 #include "FMWPC/DEPIClassifierMLPMinus.h"
-#include "FMWPC/DEPIClassifierMLPlus.h"
+#include "FMWPC/DEPIClassifierMLPPlus.h"
 
 using namespace std;
 
@@ -277,7 +277,7 @@ class DEventWriterROOT : public JObject
 		const char* dEPIClassifierInputVars[3] = { "EoverP", "FCAL_DOCA", "FCAL_E9E25" };
 		ReadMLPMinus* dEPIClassifierMinus;
 		ReadMLPPlus*  dEPIClassifierPlus;
-		double getEPIClassifierScore(const DChargedTrackHypothesis* locChargedHypo);
+		double getEPIClassifierScore(const DChargedTrackHypothesis* locChargedHypo) const;
 };
 
 inline string DEventWriterROOT::Convert_ToBranchName(string locInputName) const
