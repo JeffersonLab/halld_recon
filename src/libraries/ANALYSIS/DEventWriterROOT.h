@@ -274,7 +274,8 @@ class DEventWriterROOT : public JObject
 		// Bring in the electrion-pion classifier. As of this writing, the
 		// arguments for each are the same. So drop the plus/minus labels and
 		// choose which classifier to feed into by charge.
-		const char* dEPIClassifierInputVars[3] = { "EoverP", "FCAL_DOCA", "FCAL_E9E25" };
+		const char* dEPIClassifierPlusInputVars[3]  = { "EoverP_plus",  "FCAL_DOCA_ep", "FCAL_E9E25_ep" };
+		const char* dEPIClassifierMinusInputVars[3] = { "EoverP_minus", "FCAL_DOCA_em", "FCAL_E9E25_em" };
 		ReadMLPMinus* dEPIClassifierMinus;
 		ReadMLPPlus*  dEPIClassifierPlus;
 		double getEPIClassifierScore(const DChargedTrackHypothesis* locChargedHypo) const;

@@ -81,9 +81,9 @@ void DEventWriterROOT::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 	}
 
 	// CREATE E-PI CLASSIFIERS
-	vector< string > varsMinus( dEPIClassifierInputVars, dEPIClassifierInputVars + sizeof( dEPIClassifierInputVars )/sizeof( char* ) );
+	vector< string > varsMinus( dEPIClassifierMinusInputVars, dEPIClassifierMinusInputVars + sizeof( dEPIClassifierMinusInputVars )/sizeof( char* ) );
   	dEPIClassifierMinus = new ReadMLPMinus( varsMinus );
-  	vector< string > varsPlus( dEPIClassifierInputVars, dEPIClassifierInputVars + sizeof( dEPIClassifierInputVars )/sizeof( char* ) );
+  	vector< string > varsPlus( dEPIClassifierPlusInputVars, dEPIClassifierPlusInputVars + sizeof( dEPIClassifierPlusInputVars )/sizeof( char* ) );
   	dEPIClassifierPlus = new ReadMLPPlus( varsPlus );
 }
 
