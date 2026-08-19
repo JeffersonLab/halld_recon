@@ -10,6 +10,10 @@
 #include "JEventProcessor_CalCal2.h"
 #include <TDirectory.h>
 #include <TRACKING/DTrackCandidate.h>
+#include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -129,6 +133,45 @@ void JEventProcessor_CalCal2::Init()
   app->SetDefaultParameter("CalCal:ECAL_COUNT_FILE",ECAL_COUNT_FILE);
   FCAL_COUNT_FILE="fcal_counts.dat";
   app->SetDefaultParameter("CalCal:FCAL_COUNT_FILE",FCAL_COUNT_FILE);
+
+  KAFKA_ENABLE=false;
+  app->SetDefaultParameter("CalCal:KAFKA_ENABLE",KAFKA_ENABLE,
+			   "Publish final gain constants to Kafka when librdkafka support is compiled in");
+  KAFKA_BROKERS="localhost:9092";
+  app->SetDefaultParameter("CalCal:KAFKA_BROKERS",KAFKA_BROKERS,
+			   "Comma-separated Kafka bootstrap brokers");
+  KAFKA_TOPIC="calcal2.calibration.constants";
+  app->SetDefaultParameter("CalCal:KAFKA_TOPIC",KAFKA_TOPIC,
+			   "Kafka topic for final calibration constants");
+  KAFKA_SOURCE_TOPIC="jana.calibration";
+  app->SetDefaultParameter("CalCal:KAFKA_SOURCE_TOPIC",KAFKA_SOURCE_TOPIC,
+			   "Source topic recorded in Kafka calibration messages");
+
+#ifdef HAVE_LIBRDKAFKA
+  if (KAFKA_ENABLE){
+    char errstr[512];
+    auto config=rd_kafka_conf_new();
+    if (rd_kafka_conf_set(config,"bootstrap.servers",KAFKA_BROKERS.c_str(),
+			  errstr,sizeof(errstr)) != RD_KAFKA_CONF_OK){
+      cerr << "CalCal2: unable to configure Kafka producer: " << errstr << endl;
+      rd_kafka_conf_destroy(config);
+      KAFKA_ENABLE=false;
+    }
+    else {
+      kafka_producer=rd_kafka_new(RD_KAFKA_PRODUCER,config,errstr,sizeof(errstr));
+      if (kafka_producer==nullptr){
+		cerr << "CalCal2: unable to create Kafka producer: " << errstr << endl;
+		rd_kafka_conf_destroy(config);
+		KAFKA_ENABLE=false;
+      }
+    }
+  }
+#else
+  if (KAFKA_ENABLE){
+    cerr << "CalCal2: Kafka output was requested, but this plugin was built without librdkafka support" << endl;
+    KAFKA_ENABLE=false;
+  }
+#endif
 }
 
 //------------------
@@ -137,6 +180,7 @@ void JEventProcessor_CalCal2::Init()
 void JEventProcessor_CalCal2::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
   auto runnumber = event->GetRunNumber();
+  run_number=runnumber;
   auto app = event->GetJApplication();
   auto geo_manager = app->GetService<DGeometryManager>();
   auto dgeom = geo_manager->GetDGeometry(runnumber);
@@ -333,6 +377,14 @@ void JEventProcessor_CalCal2::Finish()
       fcalcountfile << fcal_counts[i] << endl;
     }
   }
+
+#ifdef HAVE_LIBRDKAFKA
+  if (KAFKA_ENABLE && kafka_producer!=nullptr){
+    PublishCalibrationConstants("ECAL",ecal_gains);
+    PublishCalibrationConstants("FCAL",fcal_gains);
+    CloseKafkaProducer();
+  }
+#endif
   for (size_t i=0;i<ecal_gains.size();i++){
     int row=dECALGeom->row(i);
     int col=dECALGeom->column(i);
@@ -352,6 +404,46 @@ void JEventProcessor_CalCal2::Finish()
     }
   }
 }
+
+#ifdef HAVE_LIBRDKAFKA
+void JEventProcessor_CalCal2::PublishCalibrationConstants(const string& detector,
+					  const vector<double>& gains){
+  if (gains.empty()) return;
+
+  const auto timestamp=chrono::duration<double>(
+	chrono::system_clock::now().time_since_epoch()).count();
+  ostringstream payload;
+  payload << "{\"timestamp\":" << fixed << setprecision(3) << timestamp
+	  << ",\"channels\":{";
+  for (size_t i=0;i<gains.size();i++){
+    if (i!=0) payload << ',';
+    payload << '\"' << i << "\":" << defaultfloat << setprecision(17) << gains[i];
+  }
+  payload << "},\"source_topic\":\"" << KAFKA_SOURCE_TOPIC << "\"}";
+
+  const auto key="CalCal2:"+to_string(run_number)+":"+detector+":gain";
+  const auto message=payload.str();
+  auto err=rd_kafka_producev(kafka_producer,
+			     RD_KAFKA_V_TOPIC(KAFKA_TOPIC.c_str()),
+			     RD_KAFKA_V_KEY(key.data(),key.size()),
+			     RD_KAFKA_V_VALUE(message.data(),message.size()),
+			     RD_KAFKA_V_END);
+  if (err!=RD_KAFKA_RESP_ERR_NO_ERROR){
+    cerr << "CalCal2: failed to queue " << detector << " Kafka constants: "
+	 << rd_kafka_err2str(err) << endl;
+  }
+  rd_kafka_poll(kafka_producer,0);
+}
+
+void JEventProcessor_CalCal2::CloseKafkaProducer(){
+  auto err=rd_kafka_flush(kafka_producer,10000);
+  if (err!=RD_KAFKA_RESP_ERR_NO_ERROR){
+    cerr << "CalCal2: Kafka flush failed: " << rd_kafka_err2str(err) << endl;
+  }
+  rd_kafka_destroy(kafka_producer);
+  kafka_producer=nullptr;
+}
+#endif
 
 // Apply pi0 mass constraint with the assumption that the error in the opening
 // angle is negligible

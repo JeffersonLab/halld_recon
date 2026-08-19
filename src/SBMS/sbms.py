@@ -743,6 +743,19 @@ def AddRCDB(env):
 		AddSQLite(env)
 
 ##################################
+# librdkafka
+##################################
+def AddKafka(env):
+	# Kafka publishing is optional.  Define LIBRDKAFKA_HOME to compile it in.
+	librdkafka_home = os.getenv('LIBRDKAFKA_HOME')
+	if(librdkafka_home != None) :
+		env.AppendUnique(CPPDEFINES = ['HAVE_LIBRDKAFKA'])
+		env.AppendUnique(CPPPATH = ['%s/include' % librdkafka_home])
+		env.AppendUnique(LIBPATH = ['%s/lib' % librdkafka_home])
+		env.AppendUnique(RPATH = ['%s/lib' % librdkafka_home])
+		env.AppendUnique(LIBS = ['rdkafka'])
+
+##################################
 # EVIO
 ##################################
 def AddEVIO(env):

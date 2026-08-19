@@ -33,6 +33,10 @@
 #include <fstream>
 #include "DANA/DEvent.h"
 
+#ifdef HAVE_LIBRDKAFKA
+#include <librdkafka/rdkafka.h>
+#endif
+
 class JEventProcessor_CalCal2:public JEventProcessor{
 public:
   JEventProcessor_CalCal2();
@@ -63,6 +67,12 @@ private:
 		       vector<double>&Evec,vector<double>&Vvec) const;
   void UpdateGains(vector<double>&Evec,vector<const DECALHit*>&hits);
   void UpdateGains(vector<double>&Evec,vector<const DFCALHit*>&hits);
+
+#ifdef HAVE_LIBRDKAFKA
+  void PublishCalibrationConstants(const string& detector,
+          const vector<double>& gains);
+  void CloseKafkaProducer();
+#endif
   
   std::shared_ptr<JLockService> lockService; //Used to access all the services, its value should be set inside Init()
 
@@ -74,6 +84,13 @@ private:
   bool USE_DVERTEX;
   bool ENABLE_OUTPUT;
   string ECAL_COUNT_FILE,ECAL_GAIN_FILE,FCAL_COUNT_FILE,FCAL_GAIN_FILE;
+  bool KAFKA_ENABLE;
+  string KAFKA_BROKERS,KAFKA_TOPIC,KAFKA_SOURCE_TOPIC;
+  unsigned int run_number=0;
+
+#ifdef HAVE_LIBRDKAFKA
+  rd_kafka_t *kafka_producer=nullptr;
+#endif
   
   const DECALGeometry *dECALGeom=NULL;
   vector<double>ecal_gains,old_ecal_gains,ecal_counts;

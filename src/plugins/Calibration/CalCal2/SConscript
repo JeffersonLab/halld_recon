@@ -8,6 +8,7 @@ env = env.Clone()
 
 sbms.AddDANA(env)
 sbms.AddROOT(env)
+sbms.AddKafka(env)
 sbms.plugin(env)
 
 
