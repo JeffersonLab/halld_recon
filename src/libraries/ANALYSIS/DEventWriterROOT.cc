@@ -17,6 +17,7 @@ static bool STORE_MC_TRAJECTORIES = false;
 
 static bool STORE_SC_VETO_INFO = false;
 static bool STORE_THROWN_DECAYING_PARTICLES = true;
+static bool STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS = true; //true = current (post-c3deea4b6) behavior: 1 row per TAGGEDMCGEN entry; false = pre-c3deea4b6: collapse to TAGGEDMCGEN[0]/MCGEN[0]
 
 void DEventWriterROOT::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
@@ -129,6 +130,7 @@ void DEventWriterROOT::Create_ThrownTree(const std::shared_ptr<const JEvent>& lo
 	// set parameters specifically for thrown trees
 	// if(japp->Exists("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES"))
 	japp->GetParameter("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES",STORE_THROWN_DECAYING_PARTICLES); cout << "ANALYSIS:STORE_THROWN_DECAYING_PARTICLES set to " << STORE_THROWN_DECAYING_PARTICLES << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;
+	japp->GetParameter("ANALYSIS:STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS",STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS); cout << "ANALYSIS:STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS set to " << STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;
 
 	//TTREE BRANCHES
 	DTreeBranchRegister locBranchRegister;
@@ -637,6 +639,7 @@ void DEventWriterROOT::Create_Branches_Thrown(DTreeBranchRegister& locBranchRegi
 	locBranchRegister.Register_Single<TLorentzVector>(Build_BranchName("ThrownBeam", "X4")); //reported at target center
 	locBranchRegister.Register_Single<TLorentzVector>(Build_BranchName("ThrownBeam", "P4"));
 	locBranchRegister.Register_Single<Float_t>(Build_BranchName("ThrownBeam", "GeneratedEnergy"));
+	locBranchRegister.Register_Single<Bool_t>(Build_BranchName("ThrownBeam", "IsTAGH")); //true: beam photon tagged in TAGH; false: TAGM or SYS_NULL (untagged/MCGEN fallback)
 
 	//EVENT-WIDE INFO
 	locBranchRegister.Register_Single<ULong64_t>("NumPIDThrown_FinalState"); //19 digits
@@ -1188,22 +1191,43 @@ void DEventWriterROOT::Fill_ThrownTree(const std::shared_ptr<const JEvent>& locE
 	vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints;
 	locEvent->Get(locDMCTrajectoryPoints);
 
-	const DBeamPhoton* locTaggedMCGenBeam = locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]; //if empty: will have to do. 
+	//if empty: will have to do.
+	//If STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS: write one row per TAGGEDMCGEN entry instead of collapsing
+	//to locTaggedMCGenBeams[0]: in TAGH/TAGM overlap regions TAGGEDMCGEN correctly holds one entry per
+	//truth-tagged system (mirroring DBeamPhoton_factory_TRUTH), and the reconstructed side is likewise
+	//left un-merged, so collapsing the thrown side to a single row would undercount the "thrown"
+	//denominator relative to the (correctly doubled) reconstructed numerator in any analysis that
+	//divides by this tree's row count instead of querying DBeamPhoton:TAGGEDMCGEN object counts
+	//directly. Otherwise (flag off), reproduce the pre-c3deea4b6 single-row-per-event behavior for
+	//consumers that expect exactly one Thrown_Tree row per event.
+	vector<const DBeamPhoton*> locThrownTreeBeams;
+	if(STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS)
+	{
+		locThrownTreeBeams = locTaggedMCGenBeams.empty() ?
+			vector<const DBeamPhoton*>(1, locMCGenBeams[0]) : locTaggedMCGenBeams;
+	}
+	else
+	{
+		locThrownTreeBeams = vector<const DBeamPhoton*>(1, locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]);
+	}
 
 	DEvent::GetLockService(locEvent)->RootWriteLock();
 
-	//primary event info
-	dThrownTreeFillData.Fill_Single<UInt_t>("RunNumber", locEvent->GetRunNumber());
-	dThrownTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEvent->GetEventNumber());
+	for(const DBeamPhoton* locTaggedMCGenBeam : locThrownTreeBeams)
+	{
+		//primary event info
+		dThrownTreeFillData.Fill_Single<UInt_t>("RunNumber", locEvent->GetRunNumber());
+		dThrownTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEvent->GetEventNumber());
 
-	//throwns
-	Fill_ThrownInfo(&dThrownTreeFillData, locMCReaction, locTaggedMCGenBeam, locMCThrownsToSave, locThrownIndexMap, locNumPIDThrown_FinalState, locPIDThrown_Decaying, locDMCTrajectoryPoints);
+		//throwns
+		Fill_ThrownInfo(&dThrownTreeFillData, locMCReaction, locTaggedMCGenBeam, locMCThrownsToSave, locThrownIndexMap, locNumPIDThrown_FinalState, locPIDThrown_Decaying, locDMCTrajectoryPoints);
 
-	//Custom Branches
-	Fill_CustomBranches_ThrownTree(&dThrownTreeFillData, locEvent, locMCReaction, locMCThrownsToSave);
+		//Custom Branches
+		Fill_CustomBranches_ThrownTree(&dThrownTreeFillData, locEvent, locMCReaction, locMCThrownsToSave);
 
-	//FILL TTREE
-	dThrownTreeInterface->Fill(dThrownTreeFillData);
+		//FILL TTREE
+		dThrownTreeInterface->Fill(dThrownTreeFillData);
+	}
 
 	
 	DEvent::GetLockService(locEvent)->RootUnLock();
@@ -1702,6 +1726,7 @@ void DEventWriterROOT::Fill_ThrownInfo(DTreeFillData* locTreeFillData, const DMC
 	DLorentzVector locThrownBeamP4 = locTaggedMCGenBeam->lorentzMomentum();
 	TLorentzVector locThrownBeamTP4(locThrownBeamP4.Px(), locThrownBeamP4.Py(), locThrownBeamP4.Pz(), locThrownBeamP4.E());
 	locTreeFillData->Fill_Single<TLorentzVector>(Build_BranchName("ThrownBeam", "P4"), locThrownBeamTP4);
+	locTreeFillData->Fill_Single<Bool_t>(Build_BranchName("ThrownBeam", "IsTAGH"), locTaggedMCGenBeam->dSystem == SYS_TAGH);
 
 	//THROWN PRODUCTS
 	locTreeFillData->Fill_Single<UInt_t>("NumThrown", locMCThrowns.size());

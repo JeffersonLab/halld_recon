@@ -30,6 +30,8 @@
     h1->GetXaxis()->SetRangeUser(0.08,0.18);
     h1->SetStats(0);
     f1->SetParameter(0,h1->GetMaximum());
+    f1->SetParameter(1,h1->GetBinCenter(h1->GetMaximumBin()));
+    f1->SetParameter(2,h1->GetRMS());
     h1->Fit("f1");
     h1->Draw();
 
@@ -40,7 +42,7 @@
     TPaveText *pt1 = new TPaveText(0.6, 0.65, 0.99, 0.89, "NDC");
     pt1->SetFillColor(0);
     double mean=f1->GetParameter(1)*1000;
-    double sigma=f1->GetParameter(2)*1000;
+    double sigma=fabs(f1->GetParameter(2))*1000;
     pt1->AddText(Form("M_{#pi^{0}} = %.3f MeV",mean));
     pt1->AddText(Form("#sigma_{#pi^{0}} = %.3f MeV",sigma));
     pt1->AddText(Form("#sigma/M = %.3f %%",sigma/mean*100));
@@ -56,6 +58,8 @@
     f1->SetParameter(2,0.008);
     f1->SetParameter(1,0.135);
     f1->SetParameter(0,h2->GetMaximum());
+    f1->SetParameter(1,h2->GetBinCenter(h2->GetMaximumBin()));
+    f1->SetParameter(2,h2->GetRMS());
     h2->Fit("f1");
     h2->Draw();
 
@@ -66,7 +70,7 @@
     TPaveText *pt2 = new TPaveText(0.6, 0.65, 0.99, 0.89, "NDC");
     pt2->SetFillColor(0);
     double mean=f1->GetParameter(1)*1000;
-    double sigma=f1->GetParameter(2)*1000;
+    double sigma=fabs(f1->GetParameter(2))*1000;
     pt2->AddText(Form("M_{#pi^{0}} = %.3f MeV",mean));
     pt2->AddText(Form("#sigma_{#pi^{0}} = %.3f MeV",sigma));
     pt2->AddText(Form("#sigma/M = %.3f %%",sigma/mean*100));
@@ -80,6 +84,8 @@
     f1->SetParameter(3,2);
     f1->SetParameter(4,-10);
     f1->SetParameter(0,h3->GetMaximum());
+    f1->SetParameter(1,h3->GetBinCenter(h3->GetMaximumBin()));
+    f1->SetParameter(2,h3->GetRMS());
     h3->GetXaxis()->SetRangeUser(0.08,0.18);
     h3->SetStats(0);
     h3->Fit("f1");
@@ -92,7 +98,7 @@
     TPaveText *pt3 = new TPaveText(0.6, 0.65, 0.99, 0.89, "NDC");
     pt3->SetFillColor(0);
     double mean=f1->GetParameter(1)*1000;
-    double sigma=f1->GetParameter(2)*1000;
+    double sigma=fabs(f1->GetParameter(2))*1000;
     pt3->AddText(Form("M_{#pi^{0}} = %.3f MeV",mean));
     pt3->AddText(Form("#sigma_{#pi^{0}} = %.3f MeV",sigma));
     pt3->AddText(Form("#sigma/M = %.3f %%",sigma/mean*100));

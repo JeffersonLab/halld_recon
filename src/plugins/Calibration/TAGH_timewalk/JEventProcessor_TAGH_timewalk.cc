@@ -153,13 +153,14 @@ void JEventProcessor_TAGH_timewalk::Process(const std::shared_ptr<const JEvent>&
     vector <const DRFTime*> rfTimesPSC;
 
 
+    bool psc_rftime_found = false;
+    
     event->Get(rfTimesPSC,"PSC");
 
-    if (rfTimesPSC.size() > 0)
+    if (rfTimesPSC.size() > 0) {
       rfTimePSC = rfTimesPSC[0];
-    else
-      return; // NOERROR;
-
+      psc_rftime_found = true;
+    }
 
     event->Get(rfTimes,"TAGH");
 
@@ -174,12 +175,15 @@ void JEventProcessor_TAGH_timewalk::Process(const std::shared_ptr<const JEvent>&
     double t_rf_psc     =  0.;
     int    psc_found    =  0.;
 
-    if((ps_pairs.size() > 0) && (psc_pairs.size() > 0)){
-
-      double psc_time  = (psc_pairs[0]->ee.first->t  +  psc_pairs[0]->ee.second->t)/2.;
-      t_rf_psc = dRFTimeFactory->Step_TimeToNearInputTime(rfTimePSC->dTime, psc_time);      
-
-      psc_found = 1;
+    if(psc_rftime_found) {
+    
+        if((ps_pairs.size() > 0) && (psc_pairs.size() > 0)){
+            
+            double psc_time  = (psc_pairs[0]->ee.first->t  +  psc_pairs[0]->ee.second->t)/2.;
+            t_rf_psc = dRFTimeFactory->Step_TimeToNearInputTime(rfTimePSC->dTime, psc_time);      
+            
+            psc_found = 1;
+        }
     }
 
 
@@ -214,7 +218,7 @@ void JEventProcessor_TAGH_timewalk::Process(const std::shared_ptr<const JEvent>&
         hTAGHRF_tdcTimeDiffVsPulseHeight[id]->Fill(pulse_height,t_tdc-t_RF);
         hTAGHRF_correctedTdcTimeDiffVsPulseHeight[id]->Fill(pulse_height,t-t_RF);
 
-	if(psc_found){
+	if(psc_found && psc_rftime_found) {
 
 	  double Elow  = taghGeom.getElow(id);
 	  double Ehigh = taghGeom.getEhigh(id);

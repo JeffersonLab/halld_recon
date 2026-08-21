@@ -118,7 +118,17 @@ void JEventProcessor_CalCal2::Init()
   app->SetDefaultParameter("CalCal:ECAL_SCALE_FACTOR",ECAL_SCALE_FACTOR);
   FCAL_SCALE_FACTOR=0.96;
   app->SetDefaultParameter("CalCal:FCAL_SCALE_FACTOR",FCAL_SCALE_FACTOR);
-  
+
+  ENABLE_OUTPUT=true;
+  app->SetDefaultParameter("CalCal:ENABLE_OUTPUT",ENABLE_OUTPUT);
+  ECAL_GAIN_FILE="ecal_gains.dat";
+  app->SetDefaultParameter("CalCal:ECAL_GAIN_FILE",ECAL_GAIN_FILE);
+  FCAL_GAIN_FILE="fcal_gains.dat";
+  app->SetDefaultParameter("CalCal:FCAL_GAIN_FILE",FCAL_GAIN_FILE);
+  ECAL_COUNT_FILE="ecal_counts.dat";
+  app->SetDefaultParameter("CalCal:ECAL_COUNT_FILE",ECAL_COUNT_FILE);
+  FCAL_COUNT_FILE="fcal_counts.dat";
+  app->SetDefaultParameter("CalCal:FCAL_COUNT_FILE",FCAL_COUNT_FILE);
 }
 
 //------------------
@@ -130,35 +140,48 @@ void JEventProcessor_CalCal2::BeginRun(const std::shared_ptr<const JEvent> &even
   auto app = event->GetJApplication();
   auto geo_manager = app->GetService<DGeometryManager>();
   auto dgeom = geo_manager->GetDGeometry(runnumber);
+  DEvent::GetCalib(event, "/ECAL/gains", old_ecal_gains);
+  DEvent::GetCalib(event, "/FCAL/gains", old_fcal_gains);
   if (dgeom->HaveInsert()){
     event->GetSingle(dECALGeom);
-    ifstream infile("ecal_gains.dat");
-    for (size_t i=0;i<1600;i++){
+  }
+  if (ENABLE_OUTPUT){
+    if (dgeom->HaveInsert()){
+      ifstream infile(ECAL_GAIN_FILE);
+      for (size_t i=0;i<1600;i++){
+	double dummy;
+	infile >> dummy;
+	ecal_gains.push_back(dummy);
+      }
+      ifstream countfile(ECAL_COUNT_FILE);
+      for (size_t i=0;i<1600;i++){
+	double dummy;
+	countfile >> dummy;
+	ecal_counts.push_back(dummy);
+      }
+    }
+    ifstream infile(FCAL_GAIN_FILE);
+    for (size_t i=0;i<old_fcal_gains.size();i++){
       double dummy;
       infile >> dummy;
-      ecal_gains.push_back(dummy);
+      fcal_gains.push_back(dummy);
     }
-    ifstream countfile("ecal_counts.dat");
-    for (size_t i=0;i<1600;i++){
+    ifstream countfile(FCAL_COUNT_FILE);
+    for (size_t i=0;i<old_fcal_gains.size();i++){
       double dummy;
       countfile >> dummy;
-      ecal_counts.push_back(dummy);
+      fcal_counts.push_back(dummy);
     }
-    DEvent::GetCalib(event, "/ECAL/gains", old_ecal_gains);
   }
-
-  DEvent::GetCalib(event, "/FCAL/gains", old_fcal_gains);
-  ifstream infile("fcal_gains.dat");
-  for (size_t i=0;i<old_fcal_gains.size();i++){
-    double dummy;
-    infile >> dummy;
-    fcal_gains.push_back(dummy);
-  }
-  ifstream countfile("fcal_counts.dat");
-  for (size_t i=0;i<old_fcal_gains.size();i++){
-    double dummy;
-    countfile >> dummy;
-    fcal_counts.push_back(dummy);
+  else {
+    for (size_t i=0;i<1600;i++){
+      ecal_counts.push_back(0);
+      ecal_gains.push_back(1.);
+    }
+    for (size_t i=0;i<2800;i++){
+      fcal_counts.push_back(0);
+      fcal_gains.push_back(1.);
+    }
   }
   event->GetSingle(dFCALGeom);
 }
@@ -292,9 +315,25 @@ void JEventProcessor_CalCal2::EndRun()
 //------------------
 void JEventProcessor_CalCal2::Finish()
 {
-  ofstream ecalgainfile("ecal_gains.dat");
+  if (ENABLE_OUTPUT){
+    ofstream ecalgainfile(ECAL_GAIN_FILE);
+    for (size_t i=0;i<ecal_gains.size();i++){
+      ecalgainfile << ecal_gains[i] << endl;
+    }
+    ofstream ecalcountfile(ECAL_COUNT_FILE);
+    for (size_t i=0;i<ecal_gains.size();i++){
+      ecalcountfile << ecal_counts[i] << endl;
+    }
+    ofstream fcalgainfile(FCAL_GAIN_FILE);
+    for (size_t i=0;i<fcal_gains.size();i++){
+      fcalgainfile << fcal_gains[i] << endl;
+    }
+    ofstream fcalcountfile(FCAL_COUNT_FILE);
+    for (size_t i=0;i<fcal_gains.size();i++){
+      fcalcountfile << fcal_counts[i] << endl;
+    }
+  }
   for (size_t i=0;i<ecal_gains.size();i++){
-    ecalgainfile << ecal_gains[i] << endl;
     int row=dECALGeom->row(i);
     int col=dECALGeom->column(i);
     if (dECALGeom->isBlockActive(row,col)){
@@ -303,13 +342,7 @@ void JEventProcessor_CalCal2::Finish()
       hEcalCounts2D->Fill(col,row,ecal_counts[i]);
     }
   }
-  ofstream ecalcountfile("ecal_counts.dat");
-  for (size_t i=0;i<ecal_gains.size();i++){
-    ecalcountfile << ecal_counts[i] << endl;
-  }
-  ofstream fcalgainfile("fcal_gains.dat");
   for (size_t i=0;i<fcal_gains.size();i++){
-    fcalgainfile << fcal_gains[i] << endl;
     int row=dFCALGeom->row(i);
     int col=dFCALGeom->column(i);
     if (dFCALGeom->isBlockActive(row,col)){
@@ -317,10 +350,6 @@ void JEventProcessor_CalCal2::Finish()
       hFcalGains2D->Fill(col,row,fcal_gains[i]);
       hFcalCounts2D->Fill(col,row,fcal_counts[i]);
     }
-  }
-  ofstream fcalcountfile("fcal_counts.dat");
-  for (size_t i=0;i<fcal_gains.size();i++){
-    fcalcountfile << fcal_counts[i] << endl;
   }
 }
 

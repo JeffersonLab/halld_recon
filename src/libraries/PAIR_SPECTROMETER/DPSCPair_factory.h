@@ -11,6 +11,7 @@
 #include <JANA/JFactoryT.h>
 #include "DPSCPair.h"
 
+
 class DPSCPair_factory:public JFactoryT<DPSCPair>{
  public:
   DPSCPair_factory(){};
@@ -24,6 +25,9 @@ class DPSCPair_factory:public JFactoryT<DPSCPair>{
   void Process(const std::shared_ptr<const JEvent>& event) override;
   void EndRun() override;
   void Finish() override;
+
+    bool USE_ADC_HITS = true;
+    bool USE_TDC_HITS = true;
 };
 
 #endif // _DPSCPair_factory_

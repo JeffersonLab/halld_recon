@@ -72,7 +72,9 @@ private:
   double ECAL_VAR_E_PAR0,ECAL_VAR_E_PAR1,ECAL_VAR_E_PAR2;
   double FCAL_VAR_E_PAR0,FCAL_VAR_E_PAR1,FCAL_VAR_E_PAR2;
   bool USE_DVERTEX;
-
+  bool ENABLE_OUTPUT;
+  string ECAL_COUNT_FILE,ECAL_GAIN_FILE,FCAL_COUNT_FILE,FCAL_GAIN_FILE;
+  
   const DECALGeometry *dECALGeom=NULL;
   vector<double>ecal_gains,old_ecal_gains,ecal_counts;
 

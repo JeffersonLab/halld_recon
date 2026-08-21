@@ -89,7 +89,10 @@ void JEventProcessor_PSC_TW::Init()
 	//  ... fill historgrams or trees ...
 	// GetLockService(locEvent)->RootUnLock();
 	//
+    
+    app->SetDefaultParameter("PSC_TW:RF_TAG", dRFTag, "Tag value for getting specific RF time (default: PSC)");
 
+    
    TDirectory *main = gDirectory;
    TDirectory *pscDir = gDirectory->mkdir("PSC_TW");
    pscDir->cd();
@@ -165,7 +168,7 @@ void JEventProcessor_PSC_TW::Process(const std::shared_ptr<const JEvent>& event)
    vector<const DPSCPair*>	pairs;
 
    event->Get(pairs);
-   event->Get(locRFTimes,"PSC");
+   event->Get(locRFTimes,dRFTag);
 
    const DRFTime* locRFTime = NULL;
 
