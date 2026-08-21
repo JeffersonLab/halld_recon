@@ -1032,29 +1032,17 @@ bool DKinFitUtils::Calc_PathLength(const DKinFitParticle* locKinFitParticle, con
 
 	if(dDebugLevel >= 20)
 	{
-<<<<<<< HEAD
-		cout << "Calc_PathLength: Combined matrix: " << endl;
-		//Print_Matrix(locTempMatrix);
-		cout << "Calc_PathLength: Transform matrix: " << endl;
-		//Print_Matrix(locTransformationMatrix);
-=======
 		Get_DebugStream() << "Calc_PathLength: Combined matrix: " << endl;
 		Print_Matrix(locTempMatrix);
 		Get_DebugStream() << "Calc_PathLength: Transform matrix: " << endl;
 		Print_Matrix(locTransformationMatrix);
->>>>>>> master
 	}
 
 	locTempMatrix.Similarity(locTransformationMatrix);
 	if(dDebugLevel >= 20)
 	{
-<<<<<<< HEAD
-		cout << "path/life matrix: " << endl;
-		//Print_Matrix(locTempMatrix);
-=======
 		Get_DebugStream() << "path/life matrix: " << endl;
 		Print_Matrix(locTempMatrix);
->>>>>>> master
 	}
 
 	locPathLengthPair.second = sqrt(locTempMatrix(0, 0));
@@ -1340,8 +1328,6 @@ void DKinFitUtils::Print_Matrix(const TMatrixD& locMatrix) const
 		Get_DebugStream() << endl;
 	}
 }
-<<<<<<< HEAD
-=======
 
 void DKinFitUtils::Print_Matrix(const TMatrixF& locMatrix) const
 {
@@ -1352,4 +1338,3 @@ void DKinFitUtils::Print_Matrix(const TMatrixF& locMatrix) const
 		Get_DebugStream() << endl;
 	}
 }
->>>>>>> master

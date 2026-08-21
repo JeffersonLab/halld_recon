@@ -2608,13 +2608,8 @@ void DKinFitter::Calc_Pulls(void)
 		{
 			map<DKinFitPullType, double>& locParticlePulls = locIterator->second;
 			auto locKinFitParticle = locIterator->first;
-<<<<<<< HEAD
 			DVector3 locMomentum = locKinFitParticle->Get_Momentum();
-			cout << "particle PID, p3 = " << locKinFitParticle->Get_PID() << ", " << locMomentum.Px() << ", " << locMomentum.Py() << ", " << locMomentum.Pz() << ":" << endl;
-=======
-			TVector3 locMomentum = locKinFitParticle->Get_Momentum();
 			dKinFitUtils->Get_DebugStream() << "particle PID, p3 = " << locKinFitParticle->Get_PID() << ", " << locMomentum.Px() << ", " << locMomentum.Py() << ", " << locMomentum.Pz() << ":" << endl;
->>>>>>> master
 			for(size_t loc_i = 0; loc_i < 8; ++loc_i)
 			{
 				if(locParticlePulls.find((DKinFitPullType)loc_i) != locParticlePulls.end())
@@ -2805,13 +2800,8 @@ void DKinFitter::Update_CovarianceMatrices(bool locDecayingParticlesOnlyFlag)
 
 		if(dDebugLevel >= 50)
 		{
-<<<<<<< HEAD
-			cout << "FINAL COV MATRIX (enclosed decaying particle):" << endl;
-			//			dKinFitUtils->Print_Matrix(*locCovarianceMatrix);
-=======
 			dKinFitUtils->Get_DebugStream() << "FINAL COV MATRIX (enclosed decaying particle):" << endl;
 			dKinFitUtils->Print_Matrix(*locCovarianceMatrix);
->>>>>>> master
 		}
 	}
 

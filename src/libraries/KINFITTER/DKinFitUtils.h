@@ -9,6 +9,7 @@
 #include "DVector3.h"
 #include "DLorentzVector.h"
 #include "TMatrixFSym.h"
+#include "TMatrixF.h"
 
 #include "JANA/JEvent.h"
 
@@ -106,6 +107,7 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 	protected:
 
 		void Print_Matrix(const TMatrixD& locMatrix) const;
+                void Print_Matrix(const TMatrixF& locMatrix) const;
  
 		/************************************************************* ABSTRACT FUNCTIONS ***********************************************************/
 
