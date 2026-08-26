@@ -3290,12 +3290,14 @@ double DEventWriterROOT::getEPIClassifierScore(const DChargedTrackHypothesis* lo
 	pid = locChargedHypo->PID();
 
 	// Fill e-pi variables only if track in FCAL
-	if (locChargedHypo->t1_detector() == SYS_FCAL)
-	{
+	const DFCALShower* locFCALShower = NULL;
+	shared_ptr<const DFCALShowerMatchParams> locFCALShowerMatchParams = locChargedHypo->Get_FCALShowerMatchParams();
+	if (locFCALShowerMatchParams != nullptr){
+		locFCALShower = locFCALShowerMatchParams->dFCALShower;
 		KIN_P      = locChargedHypo->lorentzMomentum().P();
-		FCAL_E     = locChargedHypo->Get_FCALShowerMatchParams()->dFCALShower->getEnergy();
-		FCAL_E9E25 = locChargedHypo->Get_FCALShowerMatchParams()->dFCALShower->getE9E25();
-		FCAL_DOCA  = locChargedHypo->Get_FCALShowerMatchParams()->dDOCAToShower;	
+		FCAL_E     = locFCALShower->getEnergy();
+		FCAL_E9E25 = locFCALShower->getE9E25();
+		FCAL_DOCA  = locFCALShowerMatchParams->dDOCAToShower;
 	}
 
 	if (KIN_P > 0.0 && FCAL_E >= 0.0 && FCAL_DOCA >= 0.0 && FCAL_E9E25 >= 0.0){
@@ -3306,9 +3308,9 @@ double DEventWriterROOT::getEPIClassifierScore(const DChargedTrackHypothesis* lo
 		mvaInputs[1] = FCAL_DOCA;
 		mvaInputs[2] = FCAL_E9E25;
 
-		if (pid == Positron) {
+		if (pid == Positron || pid == PiPlus) {
 			ePiScore = dEPIClassifierPlus->GetMvaValue( mvaInputs );
-		} else if (pid == Electron) {
+		} else if (pid == Electron || pid == PiMinus) {
 			ePiScore = dEPIClassifierMinus->GetMvaValue( mvaInputs );
 		}
 	}
