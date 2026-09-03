@@ -11,6 +11,8 @@
 #include <JANA/JFactoryT.h>
 #include "DECALCluster.h"
 #include "DECALShower.h"
+#include "DECALHit.h"
+#include "DECALGeometry.h"
 
 class DECALShower_factory:public JFactoryT<DECALShower>{
 public:
@@ -26,6 +28,8 @@ private:
 
   double GetCorrectedEnergy(double E) const;
   double GetCorrectedZ(double E) const;
+  void GetUV(const DECALCluster *cluster,const DVector3 &showerPos,
+	     const DVector3 &trackPos,double &sumU,double &sumV) const;
   
   double mECALz,mECALzBack;
   double SHOWER_ENERGY_THRESHOLD,ECAL_C_EFFECTIVE;
@@ -33,6 +37,8 @@ private:
   double E_CORRECTION_PAR1,E_CORRECTION_PAR2,E_CORRECTION_PAR3;
   double E_CORRECTION_PAR4;
   bool ENABLE_ENERGY_CORRECTION;
+
+  const DECALGeometry *dECALGeom=NULL;
 };
 
 #endif // _DECALShower_factory_

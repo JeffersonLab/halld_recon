@@ -15,6 +15,7 @@
 #include <DANA/DGeometryManager.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
 #include <HDGEOMETRY/DGeometry.h>
+#include <TRACKING/DTrackWireBased.h>
 #include <units.h>
 
 //------------------
@@ -53,6 +54,9 @@ void DECALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   auto geom = geo_manager->GetDGeometry(runnumber);
   geom->GetECALZ(mECALz);
   mECALzBack=mECALz+20.;
+  if (geom->HaveInsert()){
+    event->GetSingle(dECALGeom);
+  }
 
   // Get calibration constant
   auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
@@ -76,6 +80,7 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   vector<const DECALCluster*>clusters;
   event->Get(clusters);
+  auto wbtracks=event->Get<DTrackWireBased>();
 
   for (size_t i=0;i<clusters.size();i++){
     const DECALCluster *cluster=clusters[i];
@@ -109,7 +114,25 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       cov(3,0)=cov(0,3)=X0_over_E*cov(0,0);
       shower->ExyztCovariance.ResizeTo(5,5);
       shower->ExyztCovariance=cov;
-      
+
+      // Find position of closest track to the shower
+      double min_distance=1e6;
+      DVector3 proj_pos_for_shower_shape(0,0,shower->pos.z());
+      for (const auto& wbtrack:wbtracks){
+	DVector3 proj_pos,proj_mom;
+	if (!wbtrack->GetProjection(SYS_ECAL,proj_pos,&proj_mom)) continue;
+	proj_pos+=((shower->pos.z()-proj_pos.z())/proj_mom.z())*proj_mom;
+	DVector3 diff=shower->pos-proj_pos;
+	double d=diff.Perp();
+	if (d<min_distance){
+	  min_distance=d;
+	  proj_pos_for_shower_shape=proj_pos;
+	}
+      }
+      // Compute a couple of shower shaper parameters
+      GetUV(cluster,shower->pos,proj_pos_for_shower_shape,shower->sumU,
+	    shower->sumV);
+      shower->docaToTrack=min_distance;
       shower->AddAssociatedObject(cluster);
 	
       Insert(shower);
@@ -147,4 +170,30 @@ double DECALShower_factory::GetCorrectedZ(double E) const {
   double dZmax=radiation_length*(0.5+log(E/critical_energy));
 
   return mECALz+dZmax;
+}
+
+// Compute the energy-weighted second moment of the shower along and
+// perpendicular to an axis formed by  pointing from the shower to nearest
+// track. This code mimics similar code in DFCALShower_factory.
+void DECALShower_factory::GetUV(const DECALCluster *cluster,
+				const DVector3 &showerPos,
+				const DVector3 &trackPos,double &sumU,
+				double &sumV) const{
+  DVector3 u = ( showerPos-trackPos).Unit();
+  DVector3 zhat(0,0,1 );
+  DVector3 v = u.Cross(zhat);
+  sumU=0.;
+  sumV=0.;
+  double sumE=0.;
+  
+  auto hits=cluster->Get<DECALHit>();
+  for (const auto& hit:hits){
+    DVector2 blockPos=dECALGeom->positionOnFace(hit->row,hit->column);
+    DVector3 diff(blockPos.X()-showerPos.x(),blockPos.Y()-showerPos.y(),0.);
+    sumU+=hit->E*pow(u.Dot(diff),2);
+    sumV+=hit->E*pow(v.Dot(diff),2);
+    sumE+=hit->E;
+  }
+  sumU/=sumE;
+  sumV/=sumE;
 }
