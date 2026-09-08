@@ -132,7 +132,7 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       // Compute a couple of shower shaper parameters
       GetUV(cluster,shower->pos,proj_pos_for_shower_shape,shower->sumU,
 	    shower->sumV);
-      shower->docaToTrack=min_distance;
+      shower->docaTrack=min_distance;
       shower->AddAssociatedObject(cluster);
 	
       Insert(shower);

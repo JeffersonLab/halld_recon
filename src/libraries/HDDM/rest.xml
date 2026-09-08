@@ -36,6 +36,8 @@
                 lunit="cm" tunit="ns" Eunit="GeV">
       <ecalShowerProperties minOccurs="0" maxOccurs="1"
                             E1E9="float" E9E25="float"/>
+      <ecalShowerMoreProperties minOccurs="0" maxOccurs="1"
+				docaTrack="float" sumU="float" sumV="float"/>
     </ecalShower>  
     <fcalShower minOccurs="0" maxOccurs="unbounded" jtag="string"
                 x="float" y="float" z="float" t="float" E="float"

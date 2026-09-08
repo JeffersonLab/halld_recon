@@ -1167,6 +1167,16 @@ bool DEventSourceREST::Extract_DECALShower(hddm_r::HDDM *record,
       shower->E1E9=locEcalShowerPropertiesIterator->getE1E9();
       shower->E9E25=locEcalShowerPropertiesIterator->getE9E25();
     }
+    const hddm_r::EcalShowerMorePropertiesList& locEcalShowerMorePropertiesList = iter->getEcalShowerMorePropertiesList();
+    hddm_r::EcalShowerMorePropertiesList::iterator locEcalShowerMorePropertiesIterator = locEcalShowerMorePropertiesList.begin();
+    shower->sumU=0.;
+    shower->sumV=0.;
+    shower->docaTrack=0.;
+    if(locEcalShowerMorePropertiesIterator != locEcalShowerMorePropertiesList.end()) {
+      shower->sumU=locEcalShowerMorePropertiesIterator->getSumU();
+      shower->sumV=locEcalShowerMorePropertiesIterator->getSumV();
+      shower->docaTrack=locEcalShowerMorePropertiesIterator->getDocaTrack();
+    }
        
     data.push_back(shower);
   }

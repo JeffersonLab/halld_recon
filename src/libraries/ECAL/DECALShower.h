@@ -24,7 +24,7 @@ struct DECALShower : public JObject {
   TMatrixFSym ExyztCovariance;
   bool isNearBorder;
   int nBlocks;
-  double sumU,sumV,docaToTrack;
+  double sumU,sumV,docaTrack;
 
   float EErr() const { return sqrt(ExyztCovariance(0,0)); }
   float xErr() const { return sqrt(ExyztCovariance(1,1)); }
@@ -82,7 +82,7 @@ struct DECALShower : public JObject {
     summary.add(isNearBorder,"Near border?","%d");
     summary.add(sumU,"U moment","%5.3f");
     summary.add(sumV,"V moment","%5.3f");
-    summary.add(docaToTrack,"Distance to nearest track","%5.3f");
+    summary.add(docaTrack,"Distance to nearest track","%5.3f");
   }
 };
 
