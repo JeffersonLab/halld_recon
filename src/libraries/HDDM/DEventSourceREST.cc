@@ -2104,6 +2104,15 @@ bool DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const JEve
          locDetectorMatches->Set_DistanceToNearestTrack(locBCALShowers[locShowerIndex], locDeltaPhi, locDeltaZ);
       }
 
+      const hddm_r::EcalDOCAtoTrackList &ecaldocaList = iter->getEcalDOCAtoTracks();
+      hddm_r::EcalDOCAtoTrackList::iterator ecaldocaIter = ecaldocaList.begin();
+      for(; ecaldocaIter != ecaldocaList.end(); ++ecaldocaIter)
+      {
+         size_t locShowerIndex = ecaldocaIter->getShower();
+         double locDOCA = ecaldocaIter->getDoca();
+         locDetectorMatches->Set_DistanceToNearestTrack(locECALShowers[locShowerIndex], locDOCA);
+      }
+
       const hddm_r::FcalDOCAtoTrackList &fcaldocaList = iter->getFcalDOCAtoTracks();
       hddm_r::FcalDOCAtoTrackList::iterator fcaldocaIter = fcaldocaList.begin();
       for(; fcaldocaIter != fcaldocaList.end(); ++fcaldocaIter)

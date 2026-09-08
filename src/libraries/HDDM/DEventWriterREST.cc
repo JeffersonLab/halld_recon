@@ -998,6 +998,17 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 			fcalDocaList().setShower(loc_j);
 			fcalDocaList().setDoca(locDistance);
 		}
+		
+		for(size_t loc_j = 0; loc_j < ecalshowers.size(); ++loc_j)
+		{
+			double locDistance = 0.0;
+			if(!locDetectorMatches[loc_i]->Get_DistanceToNearestTrack(ecalshowers[loc_j], locDistance))
+				continue;
+
+			hddm_r::EcalDOCAtoTrackList ecalDocaList = matches().addEcalDOCAtoTracks(1);
+			ecalDocaList().setShower(loc_j);
+			ecalDocaList().setDoca(locDistance);
+		}
 	}
 
 	// write the resulting record to the output stream

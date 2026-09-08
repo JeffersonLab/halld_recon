@@ -199,6 +199,9 @@
       <bcalDOCAtoTrack maxOccurs="unbounded" minOccurs="0"
                 shower="int" deltaphi="float" deltaz="float"
                 lunit="cm"/>
+      <ecalDOCAtoTrack maxOccurs="unbounded" minOccurs="0"
+                shower="int" doca="float"
+                lunit="cm"/>
       <fcalDOCAtoTrack maxOccurs="unbounded" minOccurs="0"
                 shower="int" doca="float"
                 lunit="cm"/>
