@@ -25,23 +25,7 @@ class DChargedTrack_factory_PreSelect : public JFactoryT<DChargedTrack>
 		};
 		~DChargedTrack_factory_PreSelect(){};
 
-		void Recycle_Hypotheses(vector<DChargedTrack*>& locHypos){dResourcePool_ChargedTrack->Recycle(locHypos);}
-		void Recycle_Hypotheses(vector<const DChargedTrack*>& locHypos){dResourcePool_ChargedTrack->Recycle(locHypos);}
-		void Recycle_Hypothesis(const DChargedTrack* locHypo){dResourcePool_ChargedTrack->Recycle(locHypo);}
-
-		size_t Get_NumObjectsAllThreads(void) const{return dResourcePool_ChargedTrack->Get_NumObjectsAllThreads();}
-		DChargedTrack* Get_Resource(void)
-		{
-			auto locHypo = dResourcePool_ChargedTrack->Get_Resource();
-			return locHypo;
-		}
-
-
 	private:
-		//RESOURCE POOL
-		vector<DChargedTrack*> dCreated;
-		DResourcePool<DChargedTrack>* dResourcePool_ChargedTrack = nullptr;
-
 		void Init() override;
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
 		void Process(const std::shared_ptr<const JEvent>& event) override;

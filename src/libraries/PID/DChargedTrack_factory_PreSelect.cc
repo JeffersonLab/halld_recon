@@ -12,11 +12,6 @@
 //------------------
 void DChargedTrack_factory_PreSelect::Init()
 {
-	// Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory.
-	// This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.
-	SetFactoryFlag(NOT_OBJECT_OWNER);
-	dResourcePool_ChargedTrack = new DResourcePool<DChargedTrack>();
-	dResourcePool_ChargedTrack->Set_ControlParams(50, 20, 400, 4000, 0);
 
 	dMinTrackingFOM = -1.0;
 	dHasDetectorMatchFlag = true; //require tracks to have a detector match
@@ -37,11 +32,6 @@ void DChargedTrack_factory_PreSelect::BeginRun(const std::shared_ptr<const JEven
 //------------------
 void DChargedTrack_factory_PreSelect::Process(const std::shared_ptr<const JEvent>& event)
 {
-	//Clear objects from last event
-	dResourcePool_ChargedTrack->Recycle(dCreated);
-	dCreated.clear();
-	mData.clear();
-
 	vector<const DChargedTrack*> locChargedTracks;
 	event->Get(locChargedTracks);
 
@@ -51,33 +41,22 @@ void DChargedTrack_factory_PreSelect::Process(const std::shared_ptr<const JEvent
 	//cut on min-tracking-FOM and has-detector-match
 	for(size_t loc_i = 0; loc_i < locChargedTracks.size(); ++loc_i)
 	{
-		DChargedTrack* locChargedTrack_PreSelected = new DChargedTrack(*locChargedTracks[loc_i]);
-		
-		// get rid of hypotheses which don't pass the preselect cuts
-		auto locHypothesisItr = locChargedTrack_PreSelected->dChargedTrackHypotheses.begin();
-		while( locHypothesisItr != locChargedTrack_PreSelected->dChargedTrackHypotheses.end()) {
-
-			if(!Cut_TrackingFOM(*locHypothesisItr)) {
-				locHypothesisItr = locChargedTrack_PreSelected->dChargedTrackHypotheses.erase(locHypothesisItr);  // delete and move to next
-				continue;
-			}
-			if(!Cut_HasDetectorMatch(*locHypothesisItr, locDetectorMatches)) {
-				locHypothesisItr = locChargedTrack_PreSelected->dChargedTrackHypotheses.erase(locHypothesisItr);  // delete and move to next
-				continue;
-			}
-			
-			locHypothesisItr++;   // move to next element
-		}
-
-		// keep the particle if any of the hypotheses survive
-		if(locChargedTrack_PreSelected->dChargedTrackHypotheses.size() > 0)
-			Insert(const_cast<DChargedTrack*>(locChargedTrack_PreSelected));
-		else
-			delete locChargedTrack_PreSelected;
-
+	  bool locIsSelected=false;
+	  vector<const DChargedTrackHypothesis*>locHypotheses;
+	  for (auto &locHypothesis:locChargedTracks[loc_i]->dChargedTrackHypotheses){
+	    if (Cut_TrackingFOM(locHypothesis)
+		&& Cut_HasDetectorMatch(locHypothesis, locDetectorMatches)){
+	      locHypotheses.push_back(locHypothesis);
+	      locIsSelected=true;
+	    }
+	  }
+	  if (locIsSelected){
+	    DChargedTrack *locChargedTrack_PreSelected=new DChargedTrack();
+	    locChargedTrack_PreSelected->candidateid=locChargedTracks[loc_i]->candidateid;
+	    locChargedTrack_PreSelected->dChargedTrackHypotheses=locHypotheses;
+	    Insert(locChargedTrack_PreSelected);
+	  }
 	}
-
-	dCreated = mData;
 }
 
 bool DChargedTrack_factory_PreSelect::Cut_HasDetectorMatch(const DChargedTrackHypothesis* locChargedTrackHypothesis, const DDetectorMatches* locDetectorMatches) const
@@ -107,9 +86,6 @@ void DChargedTrack_factory_PreSelect::EndRun()
 //------------------
 void DChargedTrack_factory_PreSelect::Finish()
 {
-	for(auto locHypo : mData)
-		Recycle_Hypothesis(locHypo);
-	mData.clear();
-	delete dResourcePool_ChargedTrack;
+
 }
 
