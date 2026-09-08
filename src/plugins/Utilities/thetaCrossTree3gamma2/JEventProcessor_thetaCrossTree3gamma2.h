@@ -1,4 +1,4 @@
- // $Id$
+// $Id$
 //
 //    File: JEventProcessor_thetaCrossTree.h
 // Created: Fri Aug  8 03:02:21 PM EDT 2025
@@ -7,8 +7,8 @@
 
 /// For more information on the syntax changes between JANA1 and JANA2, visit: https://jeffersonlab.github.io/JANA2/#/jana1to2/jana1-to-jana2
 
-#ifndef _JEventProcessor_thetaCrossTree2_
-#define _JEventProcessor_thetaCrossTree2_
+#ifndef _JEventProcessor_thetaCrossTree3gamma2_
+#define _JEventProcessor_thetaCrossTree3gamma2_
 
 #include <JANA/JEventProcessor.h>
 #include <JANA/Services/JLockService.h> // Required for accessing services
@@ -81,11 +81,11 @@ void chi2func(int& npar, double* grad, double& fval, double* par, int flag) {
 }
 
 
-class JEventProcessor_thetaCrossTree2:public JEventProcessor{
+class JEventProcessor_thetaCrossTree3gamma2:public JEventProcessor{
     public:
-        JEventProcessor_thetaCrossTree2();
-        ~JEventProcessor_thetaCrossTree2();
-        const char* className(void){return "JEventProcessor_thetaCrossTree2";}
+        JEventProcessor_thetaCrossTree3gamma2();
+        ~JEventProcessor_thetaCrossTree3gamma2();
+        const char* className(void){return "JEventProcessor_thetaCrossTree3gamma2";}
 
   double caleres(double e, const bool fcal){
     const float a = 2.4e-2, b = 5.4e-2, d = 0.75e-2;
@@ -94,7 +94,7 @@ class JEventProcessor_thetaCrossTree2:public JEventProcessor{
     if(!fcal) sig *=  2.;
     return sig;
   }
-  void fitm0(double e1, double e2, double s1, double s2, double m0,
+  double fitm0(double e1, double e2, double s1, double s2, double m0,
              double& ec1, double& ec2) {
 
     FitParams params{e1, e2, s1, s2, m0};
@@ -113,10 +113,19 @@ class JEventProcessor_thetaCrossTree2:public JEventProcessor{
     minuit.GetParameter(0, ec1, err);
     minuit.GetParameter(1, ec2, err);
 
+    double amin, edm, errdef;
+    int nvpar, nparx, istat;
+
+    minuit.mnstat(amin, edm, errdef, nvpar, nparx, istat);
+
+    return amin;
+    
+    //return minuit.MinValue();
+    
   }
 
 
-  void get_pi0_momentum_and_mass(const DLorentzVector p1, const bool fcal1,
+  double get_pi0_momentum_and_mass(const DLorentzVector p1, const bool fcal1,
                                  const DLorentzVector p2, const bool fcal2,
                                  double &sc1,  double &sc2) {
 
@@ -126,20 +135,20 @@ class JEventProcessor_thetaCrossTree2:public JEventProcessor{
     const double s1  = caleres(e1,fcal1);
     const double s2  = caleres(e2,fcal2);
 
-    double ec1, ec2;
-    fitm0(e1,e2,s1,s2,m0,ec1,ec2);
+    double ec1, ec2, chi2;
+    chi2 = fitm0(e1,e2,s1,s2,m0,ec1,ec2);
     //cout << " m0=" << m0 << " mc=" << m0*sqrt(ec1*ec2/e1/e2) << " e1 = " << e1  << " ec1 = " << ec1                                                                                                                                                                        
     //<< " e2 = " << e2  << " ec2 = " << ec2 << endl                                                                                                                                                                                                                         
     sc1 = ec1/e1;
     sc2 = ec2/e2;
-    return;
+    return chi2;
   }
-  void get_pi0_energyScaled(const double e1, const double e2, const double et, double &st1, double & st2, const bool fcal1, const bool fcal2){
+  void get_pi0_energyScaled(const double e1, const double e2, const double e3, const double et, double &st1, double & st2, const bool fcal1, const bool fcal2){
     const double s1 = caleres(e1, fcal1);
     const double s2 = caleres(e2, fcal2);
 
-    const double ec1 = e1 + (et - e1 - e2)/(s2/s1 + 1);
-    const double ec2 = e2 + (et - e1 - e2)/(s1/s2 + 1);
+    const double ec1 = e1 + ((et - e3) - e1 - e2)/(s2/s1 + 1);
+    const double ec2 = e2 + ((et - e3) - e1 - e2)/(s1/s2 + 1);
 
     st1 = ec1/e1;
     st2 = ec2/e2;
@@ -163,9 +172,10 @@ class JEventProcessor_thetaCrossTree2:public JEventProcessor{
   TH1 * h, *WH, * Bunch_time_hist, * ThetaD, * ED, * ThetaDFCAL, * EDFCAL, * ThetaDBCAL, * EDBCAL;
   TH2 * FCal_centroid, * EThetaD, * EThetaDFCAL, * EThetaDBCAL;
   
-  float runNum_fill, evtNum_fill, E1_fill, E2_fill, E1s_fill, E2s_fill;
-  vector<float> ri_fill, rj_fill, beamE_fill, w_fill, E1t, E2t;
-
+  float runNum_fill, evtNum_fill, E1_fill, E2_fill, E3_fill, E12s_fill, E13s_fill, E21s_fill, E23s_fill, E31s_fill, E32s_fill;
+  vector<float> ri_fill, rj_fill, rk_fill, beamE_fill, w_fill, E12t, E21t, E13t, E31t, E23t, E32t;
+  int chi2;
+  
   float runNum_fill_BCAL, evtNum_fill_BCAL, E1_fill_BCAL, E2_fill_BCAL, E1s_fill_BCAL, E2s_fill_BCAL;
   vector<float> ri_fill_BCAL, rj_fill_BCAL, beamE_fill_BCAL, w_fill_BCAL, E1t_BCAL, E2t_BCAL;
 
@@ -175,5 +185,4 @@ class JEventProcessor_thetaCrossTree2:public JEventProcessor{
 };
 
 #endif // _JEventProcessor_thetaCrossTree_
-
 

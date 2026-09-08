@@ -195,6 +195,14 @@ void JEventProcessor_cpp_ana_tree::Init()
     Pion2_pz = ptree->Branch("Pion2_pz",&p2z,"p2z/F");
     Pion2_pe = ptree->Branch("Pion2_pe",&p2e,"p2e/F");
 
+    Pion1_x = ptree->Branch("Pion1_x",&p1x_pos,"p1x/F");
+    Pion1_y = ptree->Branch("Pion1_y",&p1y_pos,"p1y/F");
+    Pion1_z = ptree->Branch("Pion1_z",&p1z_pos,"p1z/F");
+
+    Pion2_x = ptree->Branch("Pion2_x",&p2x_pos,"p2x/F");
+    Pion2_y = ptree->Branch("Pion2_y",&p2y_pos,"p2y/F");
+    Pion2_z = ptree->Branch("Pion2_z",&p2z_pos,"p2z/F");
+
     EPI_MLP_Response_plus = ptree->Branch("EPI_MLP_Response_plus",&epimlp_plus,"epimlp_plus/F");
     EPI_MLP_Response_minus = ptree->Branch("EPI_MLP_Response_minus",&epimlp_minus,"epimlp_minus/F");
 
@@ -206,6 +214,7 @@ void JEventProcessor_cpp_ana_tree::Init()
     Track2_Energy = ptree->Branch("Track2_Energy",&t2e,"t2e/F");
     Elasticity = ptree->Branch("Elasticity",&elas,"elas/F");
     Weight = ptree->Branch("Weight",&wght,"wght/F");
+    Tagger_ID = ptree->Branch("Tagger_ID",&tagid,"tagid/F");
     KinFit_Chisq = ptree->Branch("KinFit_Chisq",&mm_chi,"mm_chi/F");
     Track_Mom_8_KinFit = ptree->Branch("Track_Mom_8_KinFit",&mp_8_kf,"mp_8_kf/F");
     Track_Mom_9_KinFit = ptree->Branch("Track_Mom_9_KinFit",&mp_9_kf,"mp_9_kf/F");
@@ -458,7 +467,7 @@ void JEventProcessor_cpp_ana_tree::Process(const std::shared_ptr<const JEvent> &
 
         double piplus_e = calculateTrackEnergy(piplus3_mom,mpic);
         double piminus_e = calculateTrackEnergy(piminus3_mom,mpic); 
-        if(piplus_e + piminus_e < 4.0) continue;
+        //if(piplus_e + piminus_e < 4.0) continue;
 
         if(!(pimu->IS_PlusTrackInTOF && pimu->IS_MinusTrackInTOF)) continue;
         counter++;
@@ -469,6 +478,8 @@ void JEventProcessor_cpp_ana_tree::Process(const std::shared_ptr<const JEvent> &
 
         wght = pimu->beam_weight;
         bE = pimu->beam_energy;
+
+        tagid = pimu->tagger_id;
             
         mm_chi = pimu->kinfit_chisq;
         kf_ndf = pimu->kinfit_ndf;
@@ -509,6 +520,14 @@ void JEventProcessor_cpp_ana_tree::Process(const std::shared_ptr<const JEvent> &
         fmwpc6m8 = pimu->fmwpc6n_piplus;
         fmwpc6m9 = pimu->fmwpc6n_piminus;
 
+        p1x_pos = pimu->piplus3pos.X();
+        p1y_pos = pimu->piplus3pos.Y();
+        p1z_pos = pimu->piplus3pos.Z();
+
+        p2x_pos = pimu->piplus3pos.X();
+        p2y_pos = pimu->piplus3pos.Y();
+        p2z_pos = pimu->piplus3pos.Z();
+
         p1x = rec_piplus.X();
         p1y = rec_piplus.Y();
         p1z = rec_piplus.Z();
@@ -526,6 +545,9 @@ void JEventProcessor_cpp_ana_tree::Process(const std::shared_ptr<const JEvent> &
         p2x_kf = pimu->piminus3mom_kf.X();
         p2y_kf = pimu->piminus3mom_kf.Y();
         p2z_kf = pimu->piminus3mom_kf.Z();
+
+        t1t = pimu->piplusTime;
+        t2t = pimu->piminusTime;
 
         ctofbar1 = pimu->ctof_bar1;
         ctofbar2 = pimu->ctof_bar2;

@@ -94,10 +94,17 @@ class DCPPSelect : public JObject {
         //Beam Info
         double beam_weight;
         double beam_energy;
+        bool tagger_id;
         
         //Track Info
+        DVector3 piplus3pos;
+        DVector3 piminus3pos;
+        
         DVector3 piplus3mom;
         DVector3 piminus3mom;
+
+        double piplusTime;
+        double piminusTime;
 
         //KinFit 
         DVector3 piplus3mom_kf;

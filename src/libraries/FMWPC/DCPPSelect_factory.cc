@@ -88,9 +88,12 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 	vector<const DBeamPhoton*> beamphotons;
     event->Get(beamphotons);
 
+	vector<const DChargedTrack*> locChargedTracks;
+    event->Get(locChargedTracks);
+	if (locChargedTracks.size()!=2) return;
+
 	vector<const DEventRFBunch*> rf;
     event->Get(rf);
-
     if(rf.size() == 0) return;
 
     double locRFTime = rf[0]->dTime;
@@ -98,10 +101,6 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 
 	vector<const DTOFPoint*> locTOFPoints;
 	event->Get(locTOFPoints);
-
-	vector<const DChargedTrack*> locChargedTracks;
-    event->Get(locChargedTracks);
-	if (locChargedTracks.size()!=2) return;
 
 	vector<const DFCALShower*> locFCALShowers;
     event->Get(locFCALShowers);
@@ -134,6 +133,7 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
     if(dAnalysisUtilities==NULL) {
         cerr << "unable to get DAnalysisUtilities pointer" << endl;
         track_doca_check = false;
+		//return;
     }
 
 	if(track_doca_check){
@@ -156,12 +156,21 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 	double track_plus_energy = calculateTrackEnergy(piplus->momentum(),mpic);
 	double track_minus_energy = calculateTrackEnergy(piminus->momentum(),mpic);
 
+	double track_plus_time = piplus->time();
+	double track_minus_time = piminus->time();
+
 	for(unsigned int ib = 0; ib < beamphotons.size();ib++){
 		double beamE=beamphotons[ib]->energy();
         double dt_rf=beamphotons[ib]->time()-locRFTime;
         double weight=1.;
         bool got_beam_photon = false;
-        
+		bool tagger_type;
+		if(beamphotons[ib]->dSystem == SYS_TAGH){
+			tagger_type = 0; 
+		}
+		if(beamphotons[ib]->dSystem == SYS_TAGM){
+			tagger_type = 1; 
+		}
         if(fabs(dt_rf)>6.012 && fabs(dt_rf)<18.036){
             weight = -1./6.;
             got_beam_photon=true;
@@ -189,6 +198,9 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 		if(DCPPSelect::MatchToTOF_CPP_GEOM(locTOFPoints,tof_piplus_pos)) tof_match_plus +=1;
 		if(DCPPSelect::MatchToTOF_CPP_GEOM(locTOFPoints,tof_piminus_pos)) tof_match_minus +=1; 
 
+
+		//std::cout << "tof_match_plus= " << tof_match_plus << std::endl; 
+		//std::cout << "tof_match_minus= " << tof_match_minus << std::endl;
 		DVector3 fcal_face_pos(0.0,0.0,fcalfrontfaceZ);
 		DVector3 fcal_piplus_pos,fcal_piminus_pos,fcal_piplus_mom,fcal_piminus_mom;
 
@@ -371,9 +383,14 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 
 		myCPPSelect->beam_weight = weight;
 		myCPPSelect->beam_energy = beamE;
+		myCPPSelect->tagger_id = tagger_type;
 		
+		myCPPSelect->piplus3pos = piplus->position();
+		myCPPSelect->piminus3pos = piminus->position();
 		myCPPSelect->piplus3mom = piplus->momentum();
 		myCPPSelect->piminus3mom = piminus->momentum();
+		myCPPSelect->piplusTime = track_plus_time;
+		myCPPSelect->piminusTime = track_minus_time;
 
 		myCPPSelect->piplus3mom_kf = pip_p4_kinfit.Vect();
 		myCPPSelect->piminus3mom_kf = pim_p4_kinfit.Vect();

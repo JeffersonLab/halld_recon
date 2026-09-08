@@ -49,6 +49,7 @@ void JEventProcessor_thetaCrossTree2::Init()
     lockService = app->GetService<JLockService>();
 
     h = new TH1I("h", "cuts", 10, -1, 9);
+    WH = new TH1D("W", "W tot", 100, .1, .2);
     Bunch_time_hist = new TH1D("BunchTime", "Bunch Time", 500, -30, 30);
     FCal_centroid = new TH2D("FCal_centroid", "FCal centroid", 250, -75, 75, 250, -75, 75);
     ThetaD = new TH1D("theta", "Theta", 5000, 0, 100);
@@ -139,21 +140,38 @@ void JEventProcessor_thetaCrossTree2::Process(const std::shared_ptr<const JEvent
 
   //std::cout << "test/n";
 
+  lockService->RootFillLock(this);
+  h->Fill(0);
+  lockService->RootFillUnLock(this);
   
   vector<const DChargedTrack*> locChargedTracks;
   event->Get(locChargedTracks, "PreSelect");
   if(locChargedTracks.size() != 0) return;
 
   lockService->RootFillLock(this);
-  h->Fill(0);
+  h->Fill(1);
   lockService->RootFillUnLock(this);
+
+  //vector<const DL1Trigger*> trig;
+  //event->Get(trig);
 
   vector<const DTrigger*> trig;
   event->Get(trig);
-  
-  //cout << "trig bit test: " <<  trig[0]->Get_L1TriggerBits() << endl;
+
+  if(trig.empty()){
+    //cout << "Trig 1 empty " << endl;
+    return;
+  }
+  //if(trig2.empty()){
+  //  cout << "Trig 2 empty " << endl;
+  //  return;
+    //}
+
+  //cout << "trig bit test: " <<  trig[0]->trig_mask << endl;
+  //cout << "trig bit test2: " << trig2[0]->Get_L1TriggerBits() << endl;
+  //cout << endl;
   //return;
-  if(trig.empty()) return;
+  //if(trig.empty() || trig2.empty()) return;
   
   
   //std::cout << "Trig: " << trig[0]->trig_mask << std::endl;
@@ -166,20 +184,21 @@ void JEventProcessor_thetaCrossTree2::Process(const std::shared_ptr<const JEvent
   //if(!(trig[0]->trig_mask & 1) && !(trig[0]->trig_mask & 4)) return;
 
   lockService->RootFillLock(this);
-  h->Fill(1);
+  h->Fill(2);
   lockService->RootFillUnLock(this);
   //cout << "Wasn't rejected!\n";
   //trig_mask instead of Getter function for DL1Trigger
   //if(((trig[0]->trig_mask & 0x1) && (trig[0]->trig_mask & 0x3)) && (trig[0]->trig_mask ^ 0x5)) return;
+  if(trig[0]->Get_L1TriggerBits() != 1 && trig[0]->Get_L1TriggerBits() != 5) return;
   //cout << "Got past trig!" 
-  if(((trig[0]->Get_L1TriggerBits()  & 0x1) && (trig[0]->Get_L1TriggerBits()  & 0x3)) && (trig[0]->Get_L1TriggerBits()  ^ 0x5)) return;
+  //if(((trig[0]->Get_L1TriggerBits()  & 0x1) && (trig[0]->Get_L1TriggerBits()  & 0x3)) && (trig[0]->Get_L1TriggerBits()  ^ 0x5)) return;
   //std::cout << "Above declaration\n";                                                                                                                                                                                                                                      
   vector<const DBeamPhoton*> locBeamPhoton;
   event->Get(locBeamPhoton);
   if(locBeamPhoton.size() == 0) return;
 
   lockService->RootFillLock(this);
-  h->Fill(2);
+  h->Fill(3);
   lockService->RootFillUnLock(this);
   //std::cout << "Below declaration\n";                                                                                                                                        
 
@@ -191,7 +210,7 @@ void JEventProcessor_thetaCrossTree2::Process(const std::shared_ptr<const JEvent
   if(isnan(locRFTime)) return;
 
   lockService->RootFillLock(this);
-  h->Fill(3);
+  h->Fill(4);
   lockService->RootFillUnLock(this);
   //lockService->RootFillLock(this);
   //RFTime_hist->Fill(locRFTime);
@@ -209,7 +228,7 @@ void JEventProcessor_thetaCrossTree2::Process(const std::shared_ptr<const JEvent
   if(locNeutralShowers.size()!=2) return;
 
   lockService->RootFillLock(this);
-  h->Fill(4);
+  h->Fill(5);
   lockService->RootFillUnLock(this);
 
   bool TOF_veto = false;//, TOF_veto_compl = false;//, BCAL_veto = false;
@@ -266,6 +285,8 @@ void JEventProcessor_thetaCrossTree2::Process(const std::shared_ptr<const JEvent
     const DFCALShower *s1 = locFCALShowers[s];
 
     int center_id;
+
+    
     
     const DFCALCluster* locAssociatedCluster = NULL;
     s1->GetSingle(locAssociatedCluster);
@@ -280,6 +301,8 @@ void JEventProcessor_thetaCrossTree2::Process(const std::shared_ptr<const JEvent
        block_to_square[center_id]==3) outer_FCal = true;                               //  skip outer part 
     
   }
+
+  cout << "got here!" << endl;
   
   for(int i = 0; i < locNeutralShowers.size(); i ++){
     for (int j = 0; j < locNeutralShowers.size(); j++){
@@ -334,7 +357,10 @@ void JEventProcessor_thetaCrossTree2::Process(const std::shared_ptr<const JEvent
       const DLorentzVector gj_p4(gj_p3, Egj);
 
       double theta = (gi_p3 + gj_p3).Theta();
-      
+
+      double W = (gi_p4 + gj_p4).M();
+      cout << "W: " << (gi_p4 + gj_p4).M() << endl << endl;
+      /*******
       for(unsigned int t = 0; t < locTOFHitVector.size(); t++){
 	//std::cout << "Got to TOF loop\n";
 
@@ -380,6 +406,7 @@ void JEventProcessor_thetaCrossTree2::Process(const std::shared_ptr<const JEvent
 	//std::cout << "TOF cut test!\n";
 	TOF_veto = true;
       }
+      *////////////
       //if(TOF_veto) continue;
       lockService->RootFillLock(this);
       h->Fill(6);
@@ -524,8 +551,8 @@ void JEventProcessor_thetaCrossTree2::Process(const std::shared_ptr<const JEvent
         //EThetaDBCAL->Fill(gj_p3.Theta()*180/TMath::Pi(), Egj);   
       }
       
-      
-      if(!TOF_veto){
+      WH->Fill(W);
+      //if(!TOF_veto){
 	//cout << "finishted!" << endl;
 	runNum_fill = runNum;
 	evtNum_fill = eventNum;
@@ -539,7 +566,7 @@ void JEventProcessor_thetaCrossTree2::Process(const std::shared_ptr<const JEvent
 	w_fill = w_vec;
 	E1t = scaledE1;
 	E2t = scaledE2;
-      }
+	//}
 
       /*
       if(!BCAL_veto){

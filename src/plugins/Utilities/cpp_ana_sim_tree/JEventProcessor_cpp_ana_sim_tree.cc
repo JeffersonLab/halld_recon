@@ -205,6 +205,7 @@ void JEventProcessor_cpp_ana_sim_tree::Init()
     Track2_Energy = ptree->Branch("Track2_Energy",&t2e,"t2e/F");
     Elasticity = ptree->Branch("Elasticity",&elas,"elas/F");
     Weight = ptree->Branch("Weight",&wght,"wght/F");
+    Tagger_ID = ptree->Branch("Tagger_ID",&tagid,"tagid/F");
     KinFit_Chisq = ptree->Branch("KinFit_Chisq",&mm_chi,"mm_chi/F");
     Track_Mom_8_KinFit = ptree->Branch("Track_Mom_8_KinFit",&mp_8_kf,"mp_8_kf/F");
     Track_Mom_9_KinFit = ptree->Branch("Track_Mom_9_KinFit",&mp_9_kf,"mp_9_kf/F");
@@ -457,7 +458,7 @@ void JEventProcessor_cpp_ana_sim_tree::Process(const std::shared_ptr<const JEven
 
         double piplus_e = calculateTrackEnergy(piplus3_mom,mpic);
         double piminus_e = calculateTrackEnergy(piminus3_mom,mpic); 
-        if(piplus_e + piminus_e < 4.0) continue;
+        //if(piplus_e + piminus_e < 4.0) continue;
 
         if(!(pimu->IS_PlusTrackInTOF && pimu->IS_MinusTrackInTOF)) continue;
 
