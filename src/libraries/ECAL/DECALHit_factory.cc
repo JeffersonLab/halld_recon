@@ -66,12 +66,14 @@ void DECALHit_factory::Init(void)
             vector<double>(kECALBlocksWide));
     vector< vector<double > > adc_offsets_tmp(kECALBlocksTall, 
             vector<double>(kECALBlocksWide));
-
+    vector< vector<double > > bad_blocks_tmp(kECALBlocksTall, 
+	    vector<double>(kECALBlocksWide));
+    
     gains         =   gains_tmp;
     pedestals     =   pedestals_tmp;
     time_offsets  =   time_offsets_tmp;
     adc_offsets   =   adc_offsets_tmp;
-
+    bad_blocks    =   bad_blocks_tmp;
 
     adc_en_scale    =  0;
     adc_time_scale  =  0;
@@ -117,7 +119,8 @@ void DECALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     vector< double > ecal_pedestals_ch;
     vector< double > time_offsets_ch;
     vector< double > adc_offsets_ch;
-
+    vector< double > bad_blocks_ch;
+    
     // load scale factors
     map<string,double> scale_factors;
 
@@ -142,36 +145,38 @@ void DECALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 
     // load time walk parameters
     map<string,double> time_walk_parms;
-
+    
     if (DEvent::GetCalib(event, "/ECAL/time_walk", time_walk_parms))
-        jout << "Error loading /ECAL/time_walk !" << endl;
+      jout << "Error loading /ECAL/time_walk !" << endl;
     if (time_walk_parms.find("par1") != time_walk_parms.end()){
       time_walk_par1 = time_walk_parms["par1"];
     }
     else
-        jerr << "Unable to get par1 from /ECAL/time_walk !" << endl;
+      jerr << "Unable to get par1 from /ECAL/time_walk !" << endl;
     if (scale_factors.find("par2") != time_walk_parms.end()){
       time_walk_par2 = time_walk_parms["par2"];
     }
     else
-        jerr << "Unable to get par2 from /ECAL/time_walk !" << endl;
-
+      jerr << "Unable to get par2 from /ECAL/time_walk !" << endl;
+    
     if (DEvent::GetCalib(event, "/ECAL/gains", ecal_gains_ch))
       jout << "DECALHit_factory: Error loading /ECAL/gains !" << endl;
     if (DEvent::GetCalib(event, "/ECAL/pedestals", ecal_pedestals_ch))
       jout << "DECALHit_factory: Error loading /ECAL/pedestals !" << endl;
 
     if (DEvent::GetCalib(event, "/ECAL/timing_offsets", time_offsets_ch))
-        jout << "Error loading /ECAL/timing_offsets !" << endl;
+      jout << "Error loading /ECAL/timing_offsets !" << endl;
     if (DEvent::GetCalib(event, "/ECAL/adc_offsets", adc_offsets_ch))
-        jout << "Error loading /ECAL/adc_offsets !" << endl;
-
+      jout << "Error loading /ECAL/adc_offsets !" << endl;
+    if (DEvent::GetCalib(event, "/ECAL/bad_block", bad_blocks_ch))
+      jout << "Error loading /ECAL/bad_block !" << endl;
+    
 
     LoadECALConst(gains, ecal_gains_ch);
     LoadECALConst(pedestals, ecal_pedestals_ch);
     LoadECALConst(time_offsets, time_offsets_ch);
     LoadECALConst(adc_offsets, adc_offsets_ch);
-
+    LoadECALConst(bad_blocks, bad_blocks_ch);
     
     if(HIT_DEBUG  == 1){
 
@@ -215,6 +220,16 @@ void DECALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 	}
 	cout << endl;
       }
+
+      cout << endl;
+      cout << " -------  Bad blocks -----------" << endl;
+      
+      for(int ii = 0; ii < 40; ii++){
+	for(int jj = 0; jj < 40; jj++){
+	  cout << "  " << bad_blocks[ii][jj];	
+	}
+	cout << endl;
+      } 
       
       cout << endl;
       cout << "ADC_EN_SCALE   = " << adc_en_scale << endl;
@@ -287,6 +302,8 @@ void DECALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
         double pulse_time_correct   =  adc_time_scale * pulse_time + base_time - time_offsets[digihit->row][digihit->column] + 
 	  adc_offsets[digihit->row][digihit->column];
 	
+
+	if(bad_blocks[digihit->row][digihit->column] > 0.5) continue;
 	
 	if(pulse_int_ped_subt > 0 && pulse_time > 0){
 	  
