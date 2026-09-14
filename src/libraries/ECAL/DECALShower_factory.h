@@ -39,6 +39,7 @@ private:
   bool ENABLE_ENERGY_CORRECTION;
 
   const DECALGeometry *dECALGeom=NULL;
+  double mVertexZ; // assume center of target, so it does not vary event by event
 };
 
 #endif // _DECALShower_factory_

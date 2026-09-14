@@ -57,6 +57,7 @@ void DECALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   if (geom->HaveInsert()){
     event->GetSingle(dECALGeom);
   }
+  geom->GetTargetZ(mVertexZ);
 
   // Get calibration constant
   auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
@@ -116,23 +117,26 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       shower->ExyztCovariance=cov;
 
       // Find position of closest track to the shower
-      double min_distance=1e6;
+      double min_distance=1e6,timeTrack=1e6;
       DVector3 proj_pos_for_shower_shape(0,0,shower->pos.z());
       for (const auto& wbtrack:wbtracks){
 	DVector3 proj_pos,proj_mom;
-	if (!wbtrack->GetProjection(SYS_ECAL,proj_pos,&proj_mom)) continue;
+	double flight_time=0.;
+	if (!wbtrack->GetProjection(SYS_ECAL,proj_pos,&proj_mom,&flight_time)) continue;
 	proj_pos+=((shower->pos.z()-proj_pos.z())/proj_mom.z())*proj_mom;
 	DVector3 diff=shower->pos-proj_pos;
 	double d=diff.Perp();
 	if (d<min_distance){
 	  min_distance=d;
 	  proj_pos_for_shower_shape=proj_pos;
+	  timeTrack=(wbtrack->position().z()-mVertexZ)/SPEED_OF_LIGHT+flight_time;
 	}
       }
       // Compute a couple of shower shaper parameters
       GetUV(cluster,shower->pos,proj_pos_for_shower_shape,shower->sumU,
 	    shower->sumV);
       shower->docaTrack=min_distance;
+      shower->timeTrack=timeTrack;
       shower->AddAssociatedObject(cluster);
 	
       Insert(shower);
