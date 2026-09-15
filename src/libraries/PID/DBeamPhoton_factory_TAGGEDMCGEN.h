@@ -12,6 +12,8 @@
 #include <PID/DBeamPhoton.h>
 #include "PID/DMCReaction.h"
 #include "DANA/DStatusBits.h"
+#include "TAGGER/DTAGHHit.h"
+#include "TAGGER/DTAGMHit.h"
 
 class DBeamPhoton_factory_TAGGEDMCGEN:public JFactoryT<DBeamPhoton>{
 	public:

@@ -14,6 +14,8 @@
 #include <PAIR_SPECTROMETER/DPSCHit.h>
 #include <PAIR_SPECTROMETER/DPSCPair.h>
 
+#include <string>
+
 class JEventProcessor_PSC_TW:public JEventProcessor{
    public:
       JEventProcessor_PSC_TW();
@@ -27,6 +29,8 @@ class JEventProcessor_PSC_TW:public JEventProcessor{
       void Finish() override;
 
       std::shared_ptr<JLockService> lockService;
+
+      std::string dRFTag = "PSC";
 };
 
 #endif // _JEventProcessor_PSC_TW_

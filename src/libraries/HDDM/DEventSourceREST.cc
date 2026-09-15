@@ -1167,6 +1167,18 @@ bool DEventSourceREST::Extract_DECALShower(hddm_r::HDDM *record,
       shower->E1E9=locEcalShowerPropertiesIterator->getE1E9();
       shower->E9E25=locEcalShowerPropertiesIterator->getE9E25();
     }
+    const hddm_r::EcalShowerMorePropertiesList& locEcalShowerMorePropertiesList = iter->getEcalShowerMorePropertiesList();
+    hddm_r::EcalShowerMorePropertiesList::iterator locEcalShowerMorePropertiesIterator = locEcalShowerMorePropertiesList.begin();
+    shower->sumU=0.;
+    shower->sumV=0.;
+    shower->docaTrack=0.;
+    shower->timeTrack=0.;
+    if(locEcalShowerMorePropertiesIterator != locEcalShowerMorePropertiesList.end()) {
+      shower->sumU=locEcalShowerMorePropertiesIterator->getSumU();
+      shower->sumV=locEcalShowerMorePropertiesIterator->getSumV();
+      shower->docaTrack=locEcalShowerMorePropertiesIterator->getDocaTrack();
+      shower->timeTrack=locEcalShowerMorePropertiesIterator->getTimeTrack();
+    }
        
     data.push_back(shower);
   }
@@ -2092,6 +2104,15 @@ bool DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const JEve
          double locDeltaPhi = bcaldocaIter->getDeltaphi();
          double locDeltaZ = bcaldocaIter->getDeltaz();
          locDetectorMatches->Set_DistanceToNearestTrack(locBCALShowers[locShowerIndex], locDeltaPhi, locDeltaZ);
+      }
+
+      const hddm_r::EcalDOCAtoTrackList &ecaldocaList = iter->getEcalDOCAtoTracks();
+      hddm_r::EcalDOCAtoTrackList::iterator ecaldocaIter = ecaldocaList.begin();
+      for(; ecaldocaIter != ecaldocaList.end(); ++ecaldocaIter)
+      {
+         size_t locShowerIndex = ecaldocaIter->getShower();
+         double locDOCA = ecaldocaIter->getDoca();
+         locDetectorMatches->Set_DistanceToNearestTrack(locECALShowers[locShowerIndex], locDOCA);
       }
 
       const hddm_r::FcalDOCAtoTrackList &fcaldocaList = iter->getFcalDOCAtoTracks();

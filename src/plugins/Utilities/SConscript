@@ -6,7 +6,7 @@ Import('*')
 # Default targets (always built)
 subdirs = ['danarest', 'evio_writer', 'evio-hddm']
 subdirs.extend(['pi0bcalskim', 'trackeff_missing','ps_skim', 'trigger_skims', 'exclusivepi0skim', 'randomtrigger_skim', 'pi0fcaltofskim' ])
-subdirs.extend(['omega_skim', 'syncskim', 'epem_ml_skim', 'npp_skim', 'cpp_skim', 'production_check'])
+subdirs.extend(['omega_skim', 'syncskim', 'epem_ml_skim', 'npp_skim', 'cpp_skim', 'production_check', 'cdc_thresholds'])
 
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)
 

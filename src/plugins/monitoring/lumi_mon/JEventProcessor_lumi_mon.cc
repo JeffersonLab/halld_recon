@@ -123,6 +123,8 @@ static TH1F *htagm_hit_t_time_all;
 
 static TH1D *hdt_psc_rf, *hdt_ps_rf, *hdt_tagh_rf, *hdt_tagm_rf;
 
+static bool message = true;
+
 
 // Define RFTime_factory
 DRFTime_factory* dRFTimeFactory;
@@ -150,6 +152,8 @@ void JEventProcessor_lumi_mon::Init()
   auto app = GetApplication();
   lockService = app->GetService<JLockService>();
 
+  app->SetDefaultParameter("lumi_mon:RFsrc", RFsrc, "Select the source of the RF signal: default PSC");
+  
   TDirectory *main = gDirectory;
   TDirectory *dlumi_mon = gDirectory->mkdir("Lumi_mon");
   dlumi_mon->cd();
@@ -288,7 +292,20 @@ void JEventProcessor_lumi_mon::Process(const std::shared_ptr<const JEvent> &even
 
 	// RF 
 	vector<const DRFTime*>   locRFTimes;
-	event->Get(locRFTimes, "PSC");
+
+      	event->Get(locRFTimes, RFsrc);
+
+	if(locRFTimes.size() == 0){
+	  if(message && (event->GetEventNumber() != 0) ){
+	    // Switch to the TAGH RF, if the PSC RF (or the RF specified by the parameter) is not available
+	    cout << " RF is not availbale, switch to the TAGH  " << event->GetEventNumber() << endl;
+	    message = false;
+	  }
+	  event->Get(locRFTimes, "TAGH");
+	}
+	
+
+	
 	const DRFTime* locRFTime = NULL;
 	
 	if (locRFTimes.size() > 0)

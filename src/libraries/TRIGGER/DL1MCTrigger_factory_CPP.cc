@@ -1143,7 +1143,7 @@ void DL1MCTrigger_factory_CPP::Read_RCDB(const shared_ptr<const JEvent>& event, 
   if(!rtvsCnd)  throw JException("Read_RCDB: rtvs is not set");
 
   auto json = rtvsCnd->ToJsonDocument();
-  string fileName = json["%(config)"].GetString();
+  string fileName(json.at("%(config)").get_string());
   auto file = connection.GetFile(runnumber, fileName);
   if(!file) throw JException("Read_RCDB: missed json file");
 

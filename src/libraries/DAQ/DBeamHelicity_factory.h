@@ -39,7 +39,9 @@ class DBeamHelicity_factory:public JFactoryT<DBeamHelicity>{
 
 		bool PREFER_PROMPT_HELICITY_DATA;
 		bool REJECT_TSETTLE = true;
-				
+		
+		int VERBOSE = 0;
+						
 		uint32_t dHDBoardDelay;
 };
 

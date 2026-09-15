@@ -282,6 +282,11 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	  hddm_r::EcalShowerPropertiesList locEcalShowerPropertiesList = ecal().addEcalShowerPropertiesList(1);
 	  locEcalShowerPropertiesList().setE1E9(ecalshowers[i]->E1E9);
 	  locEcalShowerPropertiesList().setE9E25(ecalshowers[i]->E9E25);
+	  hddm_r::EcalShowerMorePropertiesList locEcalShowerMorePropertiesList = ecal().addEcalShowerMorePropertiesList(1);
+	  locEcalShowerMorePropertiesList().setSumU(ecalshowers[i]->sumU);
+	  locEcalShowerMorePropertiesList().setSumV(ecalshowers[i]->sumV);
+	  locEcalShowerMorePropertiesList().setDocaTrack(ecalshowers[i]->docaTrack);
+	  locEcalShowerMorePropertiesList().setTimeTrack(ecalshowers[i]->timeTrack);
 	}
 	// push any DFCALShower objects to the output record
 	for (size_t i=0; i < fcalshowers.size(); i++)
@@ -993,6 +998,17 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 			hddm_r::FcalDOCAtoTrackList fcalDocaList = matches().addFcalDOCAtoTracks(1);
 			fcalDocaList().setShower(loc_j);
 			fcalDocaList().setDoca(locDistance);
+		}
+		
+		for(size_t loc_j = 0; loc_j < ecalshowers.size(); ++loc_j)
+		{
+			double locDistance = 0.0;
+			if(!locDetectorMatches[loc_i]->Get_DistanceToNearestTrack(ecalshowers[loc_j], locDistance))
+				continue;
+
+			hddm_r::EcalDOCAtoTrackList ecalDocaList = matches().addEcalDOCAtoTracks(1);
+			ecalDocaList().setShower(loc_j);
+			ecalDocaList().setDoca(locDistance);
 		}
 	}
 

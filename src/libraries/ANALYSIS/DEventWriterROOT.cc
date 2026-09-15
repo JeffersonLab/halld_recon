@@ -17,6 +17,7 @@ static bool STORE_MC_TRAJECTORIES = false;
 
 static bool STORE_SC_VETO_INFO = false;
 static bool STORE_THROWN_DECAYING_PARTICLES = true;
+static bool STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS = true; //true = current (post-c3deea4b6) behavior: 1 row per TAGGEDMCGEN entry; false = pre-c3deea4b6: collapse to TAGGEDMCGEN[0]/MCGEN[0]
 
 void DEventWriterROOT::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
@@ -129,6 +130,7 @@ void DEventWriterROOT::Create_ThrownTree(const std::shared_ptr<const JEvent>& lo
 	// set parameters specifically for thrown trees
 	// if(japp->Exists("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES"))
 	japp->GetParameter("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES",STORE_THROWN_DECAYING_PARTICLES); cout << "ANALYSIS:STORE_THROWN_DECAYING_PARTICLES set to " << STORE_THROWN_DECAYING_PARTICLES << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;
+	japp->GetParameter("ANALYSIS:STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS",STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS); cout << "ANALYSIS:STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS set to " << STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;
 
 	//TTREE BRANCHES
 	DTreeBranchRegister locBranchRegister;
@@ -637,6 +639,7 @@ void DEventWriterROOT::Create_Branches_Thrown(DTreeBranchRegister& locBranchRegi
 	locBranchRegister.Register_Single<TLorentzVector>(Build_BranchName("ThrownBeam", "X4")); //reported at target center
 	locBranchRegister.Register_Single<TLorentzVector>(Build_BranchName("ThrownBeam", "P4"));
 	locBranchRegister.Register_Single<Float_t>(Build_BranchName("ThrownBeam", "GeneratedEnergy"));
+	locBranchRegister.Register_Single<Bool_t>(Build_BranchName("ThrownBeam", "IsTAGH")); //true: beam photon tagged in TAGH; false: TAGM or SYS_NULL (untagged/MCGEN fallback)
 
 	//EVENT-WIDE INFO
 	locBranchRegister.Register_Single<ULong64_t>("NumPIDThrown_FinalState"); //19 digits
@@ -765,12 +768,19 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "NumBlocks_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E1E9_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E9E25_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumU_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumV_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
+	
 
 	//SHOWER MATCHING:
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaZ"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DeltaT"), locArraySizeString, dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackECAL_DOCA"), locArraySizeString, dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackECAL_DeltaT"), locArraySizeString, dInitNumTrackArraySize);
 
 	//DIRC:
 	if(DIRC_OUTPUT) {
@@ -854,13 +864,20 @@ void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_CCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
 	if(ECAL_VERBOSE_OUTPUT) {
+	  	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E1E9_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E9E25_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumU_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumV_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "NumBlocks_ECAL"), locArraySizeString, dInitNumNeutralArraySize);
+		
 	}
 	//NEARBY TRACKS
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaZ"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DeltaT"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackECAL_DOCA"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackECAL_DeltaT"), locArraySizeString, dInitNumNeutralArraySize);
 
 	//PHOTON PID INFO
 		//Computed using DVertex (best estimate of reaction vertex using all "good" tracks)
@@ -1188,22 +1205,43 @@ void DEventWriterROOT::Fill_ThrownTree(const std::shared_ptr<const JEvent>& locE
 	vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints;
 	locEvent->Get(locDMCTrajectoryPoints);
 
-	const DBeamPhoton* locTaggedMCGenBeam = locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]; //if empty: will have to do. 
+	//if empty: will have to do.
+	//If STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS: write one row per TAGGEDMCGEN entry instead of collapsing
+	//to locTaggedMCGenBeams[0]: in TAGH/TAGM overlap regions TAGGEDMCGEN correctly holds one entry per
+	//truth-tagged system (mirroring DBeamPhoton_factory_TRUTH), and the reconstructed side is likewise
+	//left un-merged, so collapsing the thrown side to a single row would undercount the "thrown"
+	//denominator relative to the (correctly doubled) reconstructed numerator in any analysis that
+	//divides by this tree's row count instead of querying DBeamPhoton:TAGGEDMCGEN object counts
+	//directly. Otherwise (flag off), reproduce the pre-c3deea4b6 single-row-per-event behavior for
+	//consumers that expect exactly one Thrown_Tree row per event.
+	vector<const DBeamPhoton*> locThrownTreeBeams;
+	if(STORE_TAGGEDMCGEN_PER_SYSTEM_ROWS)
+	{
+		locThrownTreeBeams = locTaggedMCGenBeams.empty() ?
+			vector<const DBeamPhoton*>(1, locMCGenBeams[0]) : locTaggedMCGenBeams;
+	}
+	else
+	{
+		locThrownTreeBeams = vector<const DBeamPhoton*>(1, locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]);
+	}
 
 	DEvent::GetLockService(locEvent)->RootWriteLock();
 
-	//primary event info
-	dThrownTreeFillData.Fill_Single<UInt_t>("RunNumber", locEvent->GetRunNumber());
-	dThrownTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEvent->GetEventNumber());
+	for(const DBeamPhoton* locTaggedMCGenBeam : locThrownTreeBeams)
+	{
+		//primary event info
+		dThrownTreeFillData.Fill_Single<UInt_t>("RunNumber", locEvent->GetRunNumber());
+		dThrownTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEvent->GetEventNumber());
 
-	//throwns
-	Fill_ThrownInfo(&dThrownTreeFillData, locMCReaction, locTaggedMCGenBeam, locMCThrownsToSave, locThrownIndexMap, locNumPIDThrown_FinalState, locPIDThrown_Decaying, locDMCTrajectoryPoints);
+		//throwns
+		Fill_ThrownInfo(&dThrownTreeFillData, locMCReaction, locTaggedMCGenBeam, locMCThrownsToSave, locThrownIndexMap, locNumPIDThrown_FinalState, locPIDThrown_Decaying, locDMCTrajectoryPoints);
 
-	//Custom Branches
-	Fill_CustomBranches_ThrownTree(&dThrownTreeFillData, locEvent, locMCReaction, locMCThrownsToSave);
+		//Custom Branches
+		Fill_CustomBranches_ThrownTree(&dThrownTreeFillData, locEvent, locMCReaction, locMCThrownsToSave);
 
-	//FILL TTREE
-	dThrownTreeInterface->Fill(dThrownTreeFillData);
+		//FILL TTREE
+		dThrownTreeInterface->Fill(dThrownTreeFillData);
+	}
 
 	
 	DEvent::GetLockService(locEvent)->RootUnLock();
@@ -1701,6 +1739,7 @@ void DEventWriterROOT::Fill_ThrownInfo(DTreeFillData* locTreeFillData, const DMC
 	DLorentzVector locThrownBeamP4 = locTaggedMCGenBeam->lorentzMomentum();
 	TLorentzVector locThrownBeamTP4(locThrownBeamP4.Px(), locThrownBeamP4.Py(), locThrownBeamP4.Pz(), locThrownBeamP4.E());
 	locTreeFillData->Fill_Single<TLorentzVector>(Build_BranchName("ThrownBeam", "P4"), locThrownBeamTP4);
+	locTreeFillData->Fill_Single<Bool_t>(Build_BranchName("ThrownBeam", "IsTAGH"), locTaggedMCGenBeam->dSystem == SYS_TAGH);
 
 	//THROWN PRODUCTS
 	locTreeFillData->Fill_Single<UInt_t>("NumThrown", locMCThrowns.size());
@@ -1859,8 +1898,8 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	  locECALShower = locECALShowerMatchParams->dECALShower;
 	}
 
-	//shared_ptr<const DECALSingleHitMatchParams> locECALSingleHitMatchParams
-	//  = locChargedTrackHypothesis->Get_ECALSingleHitMatchParams();
+	shared_ptr<const DECALSingleHitMatchParams> locECALSingleHitMatchParams
+	  = locChargedTrackHypothesis->Get_ECALSingleHitMatchParams();
 	
 	//IDENTIFIERS
 	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "TrackID"), locTrackTimeBased->candidateid, locArrayIndex);
@@ -1982,6 +2021,16 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "NumBlocks_FCAL"), locNumBlocksFCAL, locArrayIndex);
 
 	double locNumBlocksECAL = (locECALShower != NULL) ? locECALShower->nBlocks : 0.0;
+	
+	double locE1E9ECAL = (locECALShower != NULL) ? locECALShower->E1E9 : 0.0;
+	double locE9E25ECAL = (locECALShower != NULL) ? locECALShower->E9E25 : 0.0;
+	double locSumUECAL = (locECALShower != NULL) ? locECALShower->sumU : 0.0;
+	double locSumVECAL = (locECALShower != NULL) ? locECALShower->sumV : 0.0;
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "E1E9_ECAL"), locE1E9ECAL, locArrayIndex);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "E9E25_ECAL"), locE9E25ECAL, locArrayIndex);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SumU_ECAL"), locSumUECAL, locArrayIndex);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SumV_ECAL"), locSumVECAL, locArrayIndex);
+	if (locECALSingleHitMatchParams!=nullptr) locNumBlocksECAL=1.;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "NumBlocks_ECAL"), locNumBlocksECAL, locArrayIndex);
 
 	//TIMING INFO
@@ -2005,6 +2054,31 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locTrackBCAL_DeltaPhi, locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaZ"), locTrackBCAL_DeltaZ, locArrayIndex);
 
+	//SHOWER MATCHING: ECAL
+	double locDOCAToShower_ECAL = 999.0;
+	double locDeltaT_TrackToShower_ECAL = 999.0;
+	if(locECALShowerMatchParams!=nullptr) {
+	  locDOCAToShower_ECAL = locECALShowerMatchParams->dDOCAToShower;
+	  locDeltaT_TrackToShower_ECAL = locECALShower->t
+	    -(locChargedTrackHypothesis->t0()
+	      + locECALShowerMatchParams->dFlightTime);
+	}
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackECAL_DOCA"), locDOCAToShower_ECAL, locArrayIndex);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackECAL_DeltaT"), locDeltaT_TrackToShower_ECAL, locArrayIndex);
+
+	// Single hit matching:  ECAL
+	if(locECALSingleHitMatchParams!=nullptr){
+	  double locDOCAToECALHit = locECALSingleHitMatchParams->dDOCAToHit;
+	  locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackECAL_DOCA"), locDOCAToECALHit, locArrayIndex);
+
+	  locDeltaT_TrackToShower_ECAL = locECALSingleHitMatchParams->dTHit
+	    - ( locChargedTrackHypothesis->t0()
+		+ locECALSingleHitMatchParams->dFlightTime);
+	  locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackECAL_DeltaT"), locDeltaT_TrackToShower_ECAL, locArrayIndex);
+
+	}
+
+	
 	//SHOWER MATCHING: FCAL
 	double locDOCAToShower_FCAL = 999.0;
 	double locDeltaT_TrackToShower_FCAL = 999.0;
@@ -2192,7 +2266,7 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 		double locE9E25FCAL = (locFCALShower != NULL) ? locFCALShower->getE9E25() : 0.0;
 		double locSumUFCAL = (locFCALShower != NULL) ? locFCALShower->getSumU() : 0.0;
 		double locSumVFCAL = (locFCALShower != NULL) ? locFCALShower->getSumV() : 0.0;
-        double locNumBlocksFCAL = (locFCALShower != NULL) ? locFCALShower->getNumBlocks() : 0.0;
+		double locNumBlocksFCAL = (locFCALShower != NULL) ? locFCALShower->getNumBlocks() : 0.0;
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "E1E9_FCAL"), locE1E9FCAL, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "E9E25_FCAL"), locE9E25FCAL, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SumU_FCAL"), locSumUFCAL, locArrayIndex);
@@ -2202,6 +2276,14 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 
 	if(ECAL_VERBOSE_OUTPUT) {
 		double locNumBlocksECAL = (locECALShower != NULL) ? locECALShower->nBlocks : 0.0;
+		double locE1E9ECAL = (locECALShower != NULL) ? locECALShower->E1E9 : 0.0;
+		double locE9E25ECAL = (locECALShower != NULL) ? locECALShower->E9E25 : 0.0;
+		double locSumUECAL = (locECALShower != NULL) ? locECALShower->sumU : 0.0;
+		double locSumVECAL = (locECALShower != NULL) ? locECALShower->sumV  : 0.0;	
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "E1E9_ECAL"), locE1E9ECAL, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "E9E25_ECAL"), locE9E25ECAL, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SumU_ECAL"), locSumUECAL, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "SumV_ECAL"), locSumVECAL, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "NumBlocks_ECAL"), locNumBlocksECAL, locArrayIndex);
 	}	
     
@@ -2222,6 +2304,20 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 	}
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locNearestTrackBCALDeltaPhi, locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaZ"), locNearestTrackBCALDeltaZ, locArrayIndex);
+
+	//Track DOCA to Shower - FCAL
+	double locDistanceToNearestTrack_ECAL = 999.0;
+	double locDeltaT_TrackToShower_ECAL = 999.0;
+	if(locECALShower != NULL)
+	{
+		if(!locDetectorMatches->Get_DistanceToNearestTrack(locECALShower, locDistanceToNearestTrack_ECAL))
+			locDistanceToNearestTrack_ECAL = 999.0;
+		if(locDistanceToNearestTrack_ECAL > 999.0)
+			locDistanceToNearestTrack_ECAL = 999.0;
+		locDeltaT_TrackToShower_ECAL = locECALShower->t - ( locNeutralParticleHypothesis->t0() + locECALShower->timeTrack );
+	}
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackECAL_DOCA"),   locDistanceToNearestTrack_ECAL, locArrayIndex);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackECAL_DeltaT"), locDeltaT_TrackToShower_ECAL, locArrayIndex);
 
 	//Track DOCA to Shower - FCAL
 	double locDistanceToNearestTrack_FCAL = 999.0;
