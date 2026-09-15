@@ -26,7 +26,7 @@ def main():
   num_of_events = int(par['num_of_events'])
 
   gxenv(ver_xml)
-  run_period = run_period = get_runperiod(runnum)
+  run_period = get_runperiod(runnum)
   evio_path = get_evio_path(run_period, runnum)
 
   # Checks if the output file already exists.

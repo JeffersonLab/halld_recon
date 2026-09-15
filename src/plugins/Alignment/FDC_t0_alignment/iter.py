@@ -28,11 +28,11 @@ def main():
           filedata = file.read()
       # Replace the target string
       filedata = filedata.replace('ITER', str(i))
-          
+
       # Write the file out again
       with open(input_par_file, 'w') as file:
           file.write(filedata)
-          
+
       # run mille
       par = get_par(input_par_file)
       output_dir = par['path_to_output_dir'].rstrip('/') + '/'
@@ -45,7 +45,7 @@ def main():
       mille = "./mille.py " + input_par_file + " " + runnum
       print("=== Running mille ===")
       os.system(mille)
-      
+
       # run pede
       shutil.copyfile(ccdb_in_path,ccdb_out_path)
       pede = "./pede.py " + input_par_file + " " + runnum
