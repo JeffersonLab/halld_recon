@@ -1172,10 +1172,12 @@ bool DEventSourceREST::Extract_DECALShower(hddm_r::HDDM *record,
     shower->sumU=0.;
     shower->sumV=0.;
     shower->docaTrack=0.;
+    shower->timeTrack=0.;
     if(locEcalShowerMorePropertiesIterator != locEcalShowerMorePropertiesList.end()) {
       shower->sumU=locEcalShowerMorePropertiesIterator->getSumU();
       shower->sumV=locEcalShowerMorePropertiesIterator->getSumV();
       shower->docaTrack=locEcalShowerMorePropertiesIterator->getDocaTrack();
+      shower->timeTrack=locEcalShowerMorePropertiesIterator->getTimeTrack();
     }
        
     data.push_back(shower);

@@ -286,6 +286,7 @@ bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locE
 	  locEcalShowerMorePropertiesList().setSumU(ecalshowers[i]->sumU);
 	  locEcalShowerMorePropertiesList().setSumV(ecalshowers[i]->sumV);
 	  locEcalShowerMorePropertiesList().setDocaTrack(ecalshowers[i]->docaTrack);
+	  locEcalShowerMorePropertiesList().setTimeTrack(ecalshowers[i]->timeTrack);
 	}
 	// push any DFCALShower objects to the output record
 	for (size_t i=0; i < fcalshowers.size(); i++)
