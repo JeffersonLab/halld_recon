@@ -3,6 +3,7 @@
 
 import sys
 import os
+import glob
 import subprocess
 
 
@@ -32,8 +33,13 @@ def main():
   #################################
   subprocess.call(['swif2', 'create', work_flow])
   for runnum in run_list:
+    run_period = get_runperiod(runnum)
+    evio_path = get_evio_path(run_period, runnum)
+    file_name = os.path.basename(evio_path)
+
     call_list = ['swif2', 'add-job', '-workflow', work_flow, '-account', 'halld', '-partition', 'production']
     call_list += ['-ram', '24g', '-os', 'el9', '-cores', "24", '-time', '4h', '-disk', '30gb']
+    call_list += ['-input', file_name, 'mss:' + evio_path]
     call_list += ['-stdout', swif_out_dir + '%s_%06d.out' % (work_flow, runnum)]
     call_list += ['-stderr', swif_out_dir + '%s_%06d.err' % (work_flow, runnum)]
     call_list += [script_dir + 'mille.py %s %d' % (input_par_file, runnum)]
@@ -55,6 +61,27 @@ def get_par(input_par_file):
 
   return mydict
 
+def get_evio_path(run_period, runnum):
+  for br in range(10):
+    candidate = '/mss/halld/%s/rawdata/Run%06d/hd_rawdata_%06d_%03d.evio' % (run_period, runnum, runnum, br)
+    if os.path.exists(candidate):
+      print('Found:', candidate)
+      return candidate
+
+  print('[Error] cannot find evio files')
+  exit(1)
+
+
+def get_runperiod(runnum):
+  dir_list = glob.glob('/mss/halld/RunPeriod-*/rawdata/Run%06d' % runnum)
+  if len(dir_list) != 1:
+    print('Error in get_runperiod', dir_list)
+    exit(1)
+  run_period = ''
+  for x in dir_list[0].split('/'):
+    if 'RunPeriod' in x:
+      run_period = x
+  return run_period
 
 if __name__ == '__main__':
   main()

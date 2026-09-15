@@ -26,7 +26,7 @@ def main():
   num_of_events = int(par['num_of_events'])
 
   gxenv(ver_xml)
-  run_period = get_runperiod(runnum)
+  run_period = run_period = get_runperiod(runnum)
   evio_path = get_evio_path(run_period, runnum)
 
   # Checks if the output file already exists.
@@ -68,7 +68,8 @@ def main():
 
 def get_evio_path(run_period, runnum):
   for br in range(10):
-    candidate = '/cache/halld/%s/rawdata/Run%06d/hd_rawdata_%06d_%03d.evio' % (run_period, runnum, runnum, br)
+    #candidate = '/cache/halld/%s/rawdata/Run%06d/hd_rawdata_%06d_%03d.evio' % (run_period, runnum, runnum, br)
+    candidate = 'hd_rawdata_%06d_%03d.evio' % (runnum, br)
     if os.path.exists(candidate):
       print('Found:', candidate)
       return candidate
