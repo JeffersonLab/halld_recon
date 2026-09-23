@@ -41,6 +41,10 @@ void DECALShower_factory::Init()
 
   ENABLE_ENERGY_CORRECTION=true;
   app->SetDefaultParameter("ECAL:ENABLE_ENERGY_CORRECTION",ENABLE_ENERGY_CORRECTION);
+
+  ENERGY_CORRECTION_TYPE = 1;
+  app->SetDefaultParameter("ECAL:ENERGY_CORRECTION_TYPE",ENERGY_CORRECTION_TYPE);
+  
 }
 
 //------------------
@@ -72,6 +76,12 @@ void DECALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   E_CORRECTION_PAR1=ecal_E_correction_parms["p1"];
   E_CORRECTION_PAR2=ecal_E_correction_parms["p2"];
   E_CORRECTION_PAR3=ecal_E_correction_parms["p3"];
+  
+  jcalib->Get("ECAL/E_correction_parms1",ecal_E_correction_parms);
+  E_CORRECTION1_PAR1=ecal_E_correction_parms["p1"];
+  E_CORRECTION1_PAR2=ecal_E_correction_parms["p2"];
+  E_CORRECTION1_PAR3=ecal_E_correction_parms["p3"];
+  
 }
 
 //------------------
@@ -87,9 +97,14 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
     const DECALCluster *cluster=clusters[i];
 
     double E=cluster->E;
+
     if (ENABLE_ENERGY_CORRECTION){
-      E=GetCorrectedEnergy(cluster->E);
+      if(ENERGY_CORRECTION_TYPE == 1)
+	E=GetCorrectedEnergy(cluster->E);
+      else if(ENERGY_CORRECTION_TYPE == 2)
+	E=GetCorrectedEnergy1(cluster->E);
     }
+    
     if (E>SHOWER_ENERGY_THRESHOLD){
       DECALShower *shower=new DECALShower;
       shower->nBlocks=cluster->nBlocks;
@@ -164,6 +179,15 @@ double DECALShower_factory::GetCorrectedEnergy(double Ecluster) const {
   return E_CORRECTION_PAR1*Ecluster+E_CORRECTION_PAR2/sqrt(Ecluster)
     +E_CORRECTION_PAR3/Ecluster;
 }
+
+// New energy-correction parameterization using the MC shape
+// for a 6-count flash-ADC amplitude threshold. (AS, 9/24/26)
+double DECALShower_factory::GetCorrectedEnergy1(double Ecluster) const {
+  return E_CORRECTION1_PAR1*Ecluster + E_CORRECTION1_PAR2*sqrt(Ecluster) +
+    E_CORRECTION1_PAR3/Ecluster;
+
+}
+
 
 // Correct the z-position of the shower to account for the shower depth
 double DECALShower_factory::GetCorrectedZ(double E) const {
