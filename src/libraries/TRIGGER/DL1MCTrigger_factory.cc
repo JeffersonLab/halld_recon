@@ -23,6 +23,8 @@ using namespace jana;
 
 static bool print_data_message = true;
 
+
+
 //------------------
 // init
 //------------------
@@ -43,14 +45,14 @@ jerror_t DL1MCTrigger_factory::init(void)
   // spring run of 2017: 25 F + B > 45000
 
   FCAL_ADC_PER_MEV =  3.73;
-  FCAL_CELL_THR    =  65;
-  FCAL_EN_SC       =  25;
+  FCAL_CELL_THR    =  165;
+  FCAL_EN_SC       =  35;
   FCAL_NSA         =  10;
   FCAL_NSB         =  3;
   FCAL_WINDOW      =  10;
 
-  BCAL_ADC_PER_MEV =  34.48276; // Not corrected energy 
-  BCAL_CELL_THR    =  20;
+  BCAL_ADC_PER_MEV =  27.98769; 
+  BCAL_CELL_THR    =  120;
   BCAL_EN_SC       =  1;
   BCAL_NSA         =  19;
   BCAL_NSB         =  3;
@@ -74,6 +76,9 @@ jerror_t DL1MCTrigger_factory::init(void)
   
   VERBOSE = 0;
   
+  // Correct calorimeters hit energy (visible energy) according to the readout window size, NSA + NSB 
+  FCAL_EN_COR   =  1.4373413;
+  BCAL_EN_COR   =  1.2364608;
 
   simu_baseline_fcal  =  1;
   simu_baseline_bcal  =  1;
@@ -142,7 +147,7 @@ jerror_t DL1MCTrigger_factory::init(void)
 			      "Enable more verbose output");
 
 
-  BCAL_ADC_PER_MEV_CORRECT  =  22.7273;
+  //BCAL_ADC_PER_MEV_CORRECT  =  22.7273;  // REMOVE
 
   pedestal_sigma = 1.2;
 
@@ -233,6 +238,11 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     trig_tmp.gtp.bcal      =  BCAL_EN_SC;
     trig_tmp.gtp.en_thr    =  FCAL_BCAL_EN;
     trig_tmp.gtp.fcal_min  =  200;
+    trig_tmp.gtp.fcal_min  =  200;
+    trig_tmp.gtp.fcal_max  =  65535;
+    trig_tmp.gtp.bcal_min  =  0;
+    trig_tmp.gtp.bcal_max  =  65535;
+    trig_tmp.type          =  3;
     triggers_enabled.push_back(trig_tmp);
 	
 	if(print_messages) 
@@ -249,8 +259,17 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
   
   if(print_messages) jout << "In DL1MCTrigger_factory, loading constants..." << endl;
   
+  //eventLoop->GetCalib
+    
+  
+  // ---------------------------------------------------------------
+  // ---------------- LOAD FCAL PARAMETERS FROM CCDB ---------------
+  // ---------------------------------------------------------------
+
+  
   vector< double > fcal_gains_ch;
   vector< double > fcal_pedestals_ch;
+  vector< double > fcal_bad_blocks_ch;
   
   if (eventLoop->GetCalib("/FCAL/gains", fcal_gains_ch)){
     jout << "DL1MCTrigger_factory: Error loading /FCAL/gains !" << endl;
@@ -263,23 +282,19 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
   } else {
     LoadFCALConst(fcal_gains, fcal_gains_ch, fcalGeom);
 
-    if(debug){
+    if(VERBOSE == 1){
       for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
 	int row = fcalGeom.row(ch);
 	int col = fcalGeom.column(ch);	
-	// Sanity check for regular FCAL (row,col) ranges (anticipating 
-	// future upgrade to FCAL to include insert)
+	// Sanity check for regular FCAL (row,col) ranges 
 	if(fcalGeom.isBlockActive(row,col)&&row<DFCALGeometry::kBlocksTall
 	   && col<DFCALGeometry::kBlocksWide){
-	  hfcal_gains->Fill(fcal_gains[row][col]);
-	  DVector2 aaa = fcalGeom.positionOnFace(row,col);
-	  hfcal_gains2->Fill(float(aaa.X()), float(aaa.Y()), fcal_gains[row][col]);
-	  //	  cout << aaa.X() << "  " << aaa.Y() << endl;
-	  
+	  DVector2 pos = fcalGeom.positionOnFace(row,col);
+	  cout << "  FCAL GAINS:  COL =  "  <<  col << "  ROW = " << row <<  "  X = " << pos.X() <<  "  Y = " <<  pos.Y() <<  "  GAIN = " << fcal_gains[row][col] << endl;	  
 	}	
       }
-    }
-
+      cout << endl;
+    }    
   }
 
   if (eventLoop->GetCalib("/FCAL/pedestals", fcal_pedestals_ch)){
@@ -293,47 +308,118 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
   } else {
     LoadFCALConst(fcal_pedestals, fcal_pedestals_ch, fcalGeom);
 
-    if(debug){
-      for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
+    if(VERBOSE == 1){
+      for(int ch = 0; ch < (int)fcal_pedestals_ch.size(); ch++){
 	int row = fcalGeom.row(ch);
 	int col = fcalGeom.column(ch);
-	// Sanity check for regular FCAL (row,col) ranges (anticipating 
-	// future upgrade to FCAL to include insert)
+	// Sanity check for regular FCAL (row,col) ranges 
 	if(fcalGeom.isBlockActive(row,col)&&row<DFCALGeometry::kBlocksTall
 	   && col<DFCALGeometry::kBlocksWide){
-	  hfcal_ped->Fill(fcal_pedestals[row][col]);
+	  cout << "FCAL Pedestals: COL =  " << col << "  ROW =  " << row << "  Pedestal =  " << fcal_pedestals[row][col] << endl;
 	}
-      }	
-    }
-    
+      }
+      cout << endl;
+    }    
   }
+
   
-  vector< double > bcal_gains_ch;
-  if (eventLoop->GetCalib("/BCAL/ADC_gains::default", bcal_gains_ch)) {
-	jout << "DL1MCTrigger_factory: Error loading /FCAL/gains !" << endl;
-	bcal_average_gain = 1.;
-	// Load default values of gains if CCDB table is not found
-    for (int module=1; module<=BCAL_NUM_MODULES; module++) {
-        for (int layer=1; layer<=BCAL_NUM_LAYERS; layer++) {
-            for (int sector=1; sector<=BCAL_NUM_SECTORS; sector++) {
-				bcal_gains.push_back( cell_calib_t(1.,1.) );
-			}
-		}
+  // ---------------------------------------------------------------
+  // ---------------- LOAD BCAL PARAMETERS FROM CCDB ---------------
+  // --------------------------------------------------------------- 
+
+  
+  vector<double> bcal_gains_ch;
+  vector<double> bcal_pedestals_ch;
+  vector<double> bcal_bad_blocks_ch;
+  
+  if (eventLoop->GetCalib("/BCAL/ADC_gains_trig", bcal_gains_ch)){
+    jout << "Error loading /BCAL/ADC_gains_trig !" << endl;
+    
+    char str[256];
+    int channel = 0;
+    
+    for (int module = 1; module <= BCAL_NUM_MODULES; module++) {
+      for (int layer = 1; layer <= BCAL_NUM_LAYERS; layer++) {
+	for (int sector = 1; sector <= BCAL_NUM_SECTORS; sector++) {
+	  if ((channel > BCAL_MAX_CHANNELS) || (channel+1 > BCAL_MAX_CHANNELS)) {  // sanity check
+	    sprintf(str, "Too many channels for BCAL table!"
+		    " channel=%d (should be %d)", 
+		    channel, BCAL_MAX_CHANNELS);
+	    cerr << str << endl;
+	    throw JException(str);
+	  }
+	  
+	  bcal_gains.push_back( cell_calib_t(BCAL_ADC_PER_MEV,BCAL_ADC_PER_MEV) );	  
+	  channel += 2;
 	}
-  } else {
-  	int channel = 0;
-  	bcal_average_gain = 0.;
-    for (int module=1; module<=BCAL_NUM_MODULES; module++) {
-        for (int layer=1; layer<=BCAL_NUM_LAYERS; layer++) {
-            for (int sector=1; sector<=BCAL_NUM_SECTORS; sector++) {
-				bcal_gains.push_back( cell_calib_t(bcal_gains_ch[channel],bcal_gains_ch[channel+1]) );
-				bcal_average_gain += bcal_gains_ch[channel] + bcal_gains_ch[channel+1];
-				channel += 2;
-			}
-		}
-	}
-	bcal_average_gain /= (double)channel;
+      }
+    }    
   }
+  else {
+    LoadBCALConst(bcal_gains, bcal_gains_ch, 1);
+    
+    if(VERBOSE == 1){
+      for (int module = 1; module <= BCAL_NUM_MODULES; module++) {
+	for (int layer = 1; layer <= BCAL_NUM_LAYERS; layer++) {
+	  for (int sector = 1; sector <= BCAL_NUM_SECTORS; sector++) {
+
+	    const int cell =  BCAL_NUM_LAYERS*BCAL_NUM_SECTORS*(module-1) + BCAL_NUM_SECTORS*(layer-1) + (sector-1);	 
+	    cout << "BCAL gains:  Module = " <<  module <<  " Layer = " << layer << "  Sector = " << sector <<
+	      " Gain up:  " << bcal_gains.at(cell).first << " Gain down " << bcal_gains.at(cell).second << endl;	    
+	  }
+	}
+      }
+      cout << endl;
+    }
+  }
+
+  // Determine the average value of the BCAL gains
+  BCAL_average_gain();
+
+  if(VERBOSE == 1)
+    cout << "  --------  BCAL AVERAGE GAIN -----------   =  " <<  1./BCAL_ADC_PER_MEV << "   BCAL_ADC_PER_MEV = " << BCAL_ADC_PER_MEV  << endl;
+  
+  
+  if (eventLoop->GetCalib("/BCAL/ADC_pedestals", bcal_pedestals_ch)){
+    jout << "Error loading /BCAL/ADC_pedestals !" << endl;
+
+    char str[256];
+    int channel = 0;
+    
+    for (int module = 1; module <= BCAL_NUM_MODULES; module++) {
+      for (int layer = 1; layer <= BCAL_NUM_LAYERS; layer++) {
+	for (int sector = 1; sector <= BCAL_NUM_SECTORS; sector++) {
+	  if ((channel > BCAL_MAX_CHANNELS) || (channel+1 > BCAL_MAX_CHANNELS)) {  // sanity check
+	    sprintf(str, "Too many channels for BCAL table!"
+		    " channel=%d (should be %d)", 
+		    channel, BCAL_MAX_CHANNELS);
+	    cerr << str << endl;
+	    throw JException(str);
+	  }	  
+	  bcal_pedestals.push_back( cell_calib_t(100.,100.) );	  
+	  channel += 2;
+	}
+      }
+    }    
+  } else {
+    LoadBCALConst(bcal_pedestals, bcal_pedestals_ch, 0);
+
+    if(VERBOSE == 1){
+      for (int module = 1; module <= BCAL_NUM_MODULES; module++) {
+	for (int layer = 1; layer <= BCAL_NUM_LAYERS; layer++) {
+	  for (int sector = 1; sector <= BCAL_NUM_SECTORS; sector++) {
+	    
+	    const int cell =  BCAL_NUM_LAYERS*BCAL_NUM_SECTORS*(module-1) + BCAL_NUM_SECTORS*(layer-1) + (sector-1);	 
+	    cout << "BCAL pedestals:  Module = " <<  module <<  " Layer = " << layer << "  Sector = " << sector <<
+	      " Pedestal up:  " << bcal_pedestals.at(cell).first << " Pedestal down " << bcal_pedestals.at(cell).second << endl;	    
+	  }
+	}
+      }
+      cout << endl;
+    }
+  }
+
+  
 
   
   if(!SIMU_BASELINE){
@@ -464,7 +550,9 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    fcal_tmp.column  = col;
 
 	    fcal_tmp.energy  = fcal_hits[ii]->E;
+	    fcal_tmp.energy *= FCAL_EN_COR;
 	    fcal_tmp.time    = time;
+
 	    memset(fcal_tmp.adc_amp,0,sizeof(fcal_tmp.adc_amp));
 	    memset(fcal_tmp.adc_en, 0,sizeof(fcal_tmp.adc_en));
 
@@ -594,7 +682,9 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    bcal_tmp.time    = time;
 	    memset(bcal_tmp.adc_amp,0,sizeof(bcal_tmp.adc_amp));
 	    memset(bcal_tmp.adc_en, 0,sizeof(bcal_tmp.adc_en));
-	    
+
+	    bcal_tmp.energy *= BCAL_EN_COR;
+
 	    double bcal_adc_en  = bcal_tmp.energy*BCAL_ADC_PER_MEV*1000;
 
 	    // Account for gain fluctuations
@@ -602,11 +692,13 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	      int the_cell = BCAL_NUM_LAYERS*BCAL_NUM_SECTORS*(module-1) + BCAL_NUM_SECTORS*(layer-1) + (sector-1);
 	      double gain  =  1.;
 	      if(end == DBCALGeometry::kUpstream)
-	      	gain  =  bcal_gains[the_cell].first / bcal_average_gain;	   
+	      	gain  =  bcal_gains[the_cell].first;	   
 	      else
-	        gain  =  bcal_gains[the_cell].second / bcal_average_gain;	   
+	        gain  =  bcal_gains[the_cell].second;	   
 	      
-	      bcal_adc_en *= gain;
+	      gain /= BCAL_ADC_PER_MEV;
+
+	      bcal_adc_en *= gain;  // Gains for the BCAL were inverted
 	    }
 	    
 	    status = SignalPulse(bcal_adc_en, bcal_tmp.time, bcal_tmp.adc_en, 2);
@@ -678,29 +770,60 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
 	// Search for triggers
 
-	l1_found = FindTriggers(trigger,sc_hits);       
+	l1_found = FindTriggers(trigger,sc_hits);
+
+	int fcal_ssp_sum1 = 0;
+	int bcal_ssp_sum1 = 0;
+	
+	for(int ii = 0; ii < sample; ii++){
+	  fcal_ssp_sum1 += fcal_ssp[ii];
+	  bcal_ssp_sum1 += bcal_ssp[ii];
+	}
+	
+	if(VERBOSE == 2){
+	  cout << " MC SSP BEFORE TRIGGER FCAL = " <<  fcal_hit_en << "    " << fcal_ssp_sum1/FCAL_ADC_PER_MEV/1000. << endl;
+	  cout << " MC SSP BEFORE TRIGGER BCAL = " <<  bcal_hit_en << "    " << bcal_ssp_sum1/BCAL_ADC_PER_MEV/1000. << endl;
+	}
 
 	if(l1_found){
 	  
+	if(VERBOSE == 2){	  
+	  cout << " ======================================== " << endl;
+	  cout << " ============ Trigger found ============= " << trigger->trig_mask << endl;
+	  cout << " ======================================== " << endl;
+	}
+
 	  int fcal_gtp_max = 0;
 	  int bcal_gtp_max = 0;
-	  
+
+	    
 	  for(unsigned int ii = 0; ii < sample; ii++){
 	    if(fcal_gtp[ii] > fcal_gtp_max) fcal_gtp_max = fcal_gtp[ii];
 	    if(bcal_gtp[ii] > bcal_gtp_max) bcal_gtp_max = bcal_gtp[ii];
 	  }	
+	  
+	  int trig_sample = trigger->trig_time[0] + 25;
+// 	  cerr << "trig_mask = " << trigger->trig_mask << endl;
+// 	  cerr << "trig_sample = " << trig_sample << endl;
+	  fcal_gtp_max = fcal_gtp[trig_sample];
+	  bcal_gtp_max = bcal_gtp[trig_sample];
 	  	  
 	  trigger->fcal_en      =  fcal_hit_en;
-	  trigger->fcal_adc     =  fcal_hit_adc_en;
-	  trigger->fcal_adc_en  =  fcal_hit_adc_en/FCAL_ADC_PER_MEV/1000.;
+	  trigger->fcal_adc     =  fcal_ssp_sum1;
+	  trigger->fcal_adc_en  =  fcal_ssp_sum1/FCAL_ADC_PER_MEV/1000.;	  
+	  //	  trigger->fcal_adc     =  fcal_hit_adc_en;
+	  //	  trigger->fcal_adc_en  =  fcal_hit_adc_en/FCAL_ADC_PER_MEV/1000.;
 	  trigger->fcal_gtp     =  fcal_gtp_max;
 	  trigger->fcal_gtp_en  =  fcal_gtp_max/FCAL_ADC_PER_MEV/1000.;
 	  
 	  trigger->bcal_en      =  bcal_hit_en;
-	  trigger->bcal_adc     =  bcal_hit_adc_en;
-	  trigger->bcal_adc_en  =  bcal_hit_adc_en/BCAL_ADC_PER_MEV_CORRECT/2./1000.;
+	  trigger->bcal_adc     =  bcal_ssp_sum1;
+	  trigger->bcal_adc_en  =  bcal_ssp_sum1/BCAL_ADC_PER_MEV/1000.;	  
+	  //	  trigger->bcal_adc     =  bcal_hit_adc_en;
+	  //	  trigger->bcal_adc_en  =  bcal_hit_adc_en/BCAL_ADC_PER_MEV/1000.;
 	  trigger->bcal_gtp     =  bcal_gtp_max;
-	  trigger->bcal_gtp_en  =  bcal_gtp_max/BCAL_ADC_PER_MEV_CORRECT/2./1000.;	  	  
+	  trigger->bcal_gtp_en  =  bcal_gtp_max/BCAL_ADC_PER_MEV/1000.;	  	  
+	  
 	  
 	  _data.push_back(trigger);	 
 	  
@@ -1117,13 +1240,27 @@ int  DL1MCTrigger_factory::SignalPulse(double en, double time, double amp_array[
   // Parameterize and digitize pulse shapes. Sum up amplitudes
   // type = 1 - FCAL
   // type = 2 - BCAL
-
-  float exp_par = 0.358;
-
-  int pulse_length = 20;
+  // type = 3 - ECAL
   
-  if(type == 2) exp_par = 0.18;
-  
+  //  float exp_par = 0.358;
+  //  if(type == 2) exp_par = 0.18;
+
+  double ecal_exp1  =  12.92;
+  double ecal_exp2  =  3.173;
+  double ecal_norm  =  ecal_exp1 - ecal_exp2;
+
+  double bcal_exp1  =  62.68;
+  double bcal_exp2  =  4.16;
+  double bcal_norm  =  bcal_exp1 - bcal_exp2;
+
+  double fcal_exp1  =  8.56;
+  double fcal_exp2  =  8.043;
+  double fcal_exp3  =  215.6;
+  double fcal_frac  =  0.001641;
+  double fcal_norm  =  fcal_exp1 - fcal_exp2 + fcal_exp3*fcal_frac;
+    
+  int pulse_length = 125;
+
   int sample_first = (int)floor(time/time_stamp);
   
   // digitization range
@@ -1131,30 +1268,44 @@ int  DL1MCTrigger_factory::SignalPulse(double en, double time, double amp_array[
   int ind_max = ind_min + pulse_length + 1;
     
   if( (ind_min > sample) || (ind_min < 0)){
-    //    cout << " SignalPulse() FATAL error: time out of range   "  <<  time <<  "     " << ind_min << endl;
     return 1;
   }
   
   if(ind_max > sample){
-    //    cout << " SignalPulse(): ind_max set to maximum" << time <<  "  "  << ind_max << endl;
     ind_max = sample - 1;
   }
-  
+
+
+  double my_int = 0;
+   
   for(int i = ind_min; i < ind_max; i++ ){
     double adc_t  =  time_stamp*i - time;
-    double amp    =  exp_par*exp_par*exp(-adc_t*exp_par)*adc_t;
+    if(adc_t < 0) adc_t = 0.;
+
+    double amp = 0;
     
-    //    amp_array[i] += (int)(amp*time_stamp*en + 0.5);
-    //    if(amp_array[i] > max_adc_bins){
-    //      amp_array[i] = max_adc_bins;
-    //    }   
+    if(type == 3){      
+      amp    =  (exp(-adc_t/ecal_exp1) - exp(-adc_t/ecal_exp2))/ecal_norm;
+    } else if(type == 2) {      
+      amp    =  (exp(-adc_t/bcal_exp1) - exp(-adc_t/bcal_exp2))/bcal_norm;
+    } else if(type == 1){
+      amp    =  (exp(-adc_t/fcal_exp1) - exp(-adc_t/fcal_exp2) + fcal_frac*exp(-adc_t/fcal_exp3) )/fcal_norm;
+    } 
     
+    //    double amp    =  exp_par*exp_par*exp(-adc_t*exp_par)*adc_t;
+        
     amp_array[i] += amp*time_stamp*en;
+
+    my_int += amp*time_stamp;
     
   }
+
+  if(VERBOSE == 2)
+    cout << " ----   CHECK  INTEGRAL -----  Detector type =  "  <<  type <<  "   Integral = " << my_int <<  endl;
   
   return 0;  
 }
+
 
 int DL1MCTrigger_factory::GTP(int detector){
 
@@ -1388,6 +1539,10 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
 
   int trig_found = 0;
   
+  // ??
+  trigger->trig_time[0] = -1;
+  trigger->trig_time[2] = -1;
+  
   // Main production trigger  
   for(unsigned int ii = 0; ii < triggers_enabled.size(); ii++){
     
@@ -1411,7 +1566,8 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
 
       int gtp_energy  = 0;
       int bcal_energy = 0;
-      
+      int fcal_energy = 0;
+    
       for(unsigned int samp = 0; samp < sample; samp++){
 	
 	int bcal_samp = samp - BCAL_OFFSET;
@@ -1424,13 +1580,19 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
 	  bcal_energy = bcal_gtp[bcal_samp];
 	}
 	
+	fcal_energy = fcal_gtp[samp];
 	
-	gtp_energy = triggers_enabled[ii].gtp.fcal*fcal_gtp[samp] + 
-	  triggers_enabled[ii].gtp.bcal*bcal_energy;
+	if(bcal_energy > triggers_enabled[ii].gtp.bcal_max)
+	  bcal_energy =  triggers_enabled[ii].gtp.bcal_max;
+
+	if(fcal_energy > triggers_enabled[ii].gtp.fcal_max)
+	  fcal_energy =  triggers_enabled[ii].gtp.fcal_max;
 	
 	if(debug1)
 	  cout << " GTP energy = " << gtp_energy << "   " << triggers_enabled[ii].gtp.en_thr << endl;
 
+	gtp_energy = triggers_enabled[ii].gtp.fcal*fcal_energy + 
+	  triggers_enabled[ii].gtp.bcal*bcal_energy;
 
 	if(gtp_energy >= triggers_enabled[ii].gtp.en_thr){
 
@@ -1495,6 +1657,7 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
 	  bcal_energy = bcal_gtp[bcal_samp];
 	}
 	
+	
 	gtp_energy = triggers_enabled[ii].gtp.bcal*bcal_energy;
 	
 	if(gtp_energy >= triggers_enabled[ii].gtp.en_thr){
@@ -1511,9 +1674,70 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
 
   }    // Loop over triggers found in the config file
   
+  // HACK
+  if( (trigger->trig_time[0] < 0) && (trigger->trig_time[2] > 0) )
+  	trigger->trig_time[0] = trigger->trig_time[2];
+  
   return trig_found;
   
 }
+
+// Fill bcal calibration tables 
+void DL1MCTrigger_factory::LoadBCALConst(bcal_constants_t &table, const vector<double> &bcal_const_ch, int type = 0){
+   char str[256];
+   int channel = 0;
+
+   int db_debug = 0;
+   
+    // reset the table before filling it
+    table.clear();
+
+    for (int module = 1; module <= BCAL_NUM_MODULES; module++) {
+        for (int layer = 1; layer <= BCAL_NUM_LAYERS; layer++) {
+            for (int sector = 1; sector <= BCAL_NUM_SECTORS; sector++) {
+                if ((channel > BCAL_MAX_CHANNELS) || (channel+1 > BCAL_MAX_CHANNELS)) {  // sanity check
+                    sprintf(str, "Too many channels for BCAL table!"
+                            " channel=%d (should be %d)", 
+                            channel, BCAL_MAX_CHANNELS);
+                    cerr << str << endl;
+                    throw JException(str);
+                }
+
+		if(type == 1){
+		  
+		  double gain1 = BCAL_ADC_PER_MEV;
+		  double gain2 = BCAL_ADC_PER_MEV;
+
+		  if(bcal_const_ch[channel] > 0)   gain1 = 1./(bcal_const_ch[channel]*1e3);
+		  if(bcal_const_ch[channel+1] > 0) gain2 = 1./(bcal_const_ch[channel+1]*1e3);
+		  
+		  table.push_back( cell_calib_t(gain1,gain2) );
+		  
+		  if (db_debug) {
+		    cout << " BCAL GAINS:  Module = " << module <<  "  Layer = " <<  layer << "  Sector = " << sector <<
+		      "  Gain 1 = " <<  gain1 << "  Gain 2 = " << gain2 << endl;
+		  }
+		} else 
+		  table.push_back( cell_calib_t(bcal_const_ch[channel],bcal_const_ch[channel+1]));		  
+		
+		
+                channel += 2;
+            }
+        }
+    }
+    
+    // check to make sure that we loaded enough channels
+    if (channel != BCAL_MAX_CHANNELS) { 
+        sprintf(str, "Not enough channels for BCAL table!"
+                " channel=%d (should be %d)", 
+                channel, BCAL_MAX_CHANNELS);
+        cerr << str << endl;
+        throw JException(str);
+    }  
+}
+
+
+
 
 
 // Fill fcal calibration tables similar to FCALHit factory
@@ -1609,3 +1833,58 @@ void DL1MCTrigger_factory::GetSeeds(JEventLoop *loop, uint64_t eventnumber, UInt
     }  // Record doesn't exist
   }    // Not an HDDM file
 }
+
+void DL1MCTrigger_factory::BCAL_average_gain(){
+  
+  double GAIN_MIN = 20.;
+  double GAIN_MAX = 35.;
+  
+  vector<double> num;
+  
+  int BCAL_MAX_PAIR = BCAL_MAX_CHANNELS/2;
+  
+  for (int ii = 0; ii < BCAL_MAX_PAIR; ii++){
+    if( (bcal_gains[ii].first >  GAIN_MIN ) && (bcal_gains[ii].first <  GAIN_MAX )) 
+      num.push_back(bcal_gains[ii].first);
+    if( (bcal_gains[ii].first >  GAIN_MIN ) && (bcal_gains[ii].first <  GAIN_MAX )) 
+      num.push_back(bcal_gains[ii].second);
+  }
+  
+  sort(num.begin(),num.end());
+  
+  double dif[1600];
+  memset(dif,0,sizeof(dif));
+  
+  unsigned int slide_wind = 40;  // Typical size sqrt(BCAL_MAX_CHANNELS)
+  
+  if(VERBOSE == 1){
+    for(unsigned int ii = 0; ii < num.size(); ii++){
+      cout << " II = " <<  ii  << "   VAL: " << num[ii] << endl;
+    }
+  }
+  
+  for(unsigned int ii = 0; ii < num.size() - slide_wind; ii++){
+    dif[ii] = fabs(num[ii+slide_wind] - num[ii]);
+  }
+  
+  double min_dif = 100.;
+  double min_ind = 0;
+  
+  for (unsigned int ii = 0; ii < num.size() - slide_wind; ii++){
+    if(dif[ii] <  min_dif){
+      min_dif = dif[ii];
+      min_ind = ii;
+    }
+  }
+  
+  if(VERBOSE == 1)
+    cout << " INDEX = " << min_ind << "  NUM " << num[min_ind+slide_wind] << "  " <<  num[min_ind] << endl;
+  
+  double mean_gain = num[min_ind+slide_wind/2];
+  
+  if( (mean_gain > GAIN_MIN) && (mean_gain < GAIN_MAX)) BCAL_ADC_PER_MEV = mean_gain; 
+  
+  
+}
+
+

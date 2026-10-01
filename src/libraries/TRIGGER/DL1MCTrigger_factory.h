@@ -25,7 +25,7 @@
 typedef  vector< vector<double> >  fcal_constants_t;
 
 typedef pair<double,double> cell_calib_t;  
-typedef vector<cell_calib_t>  bcal_digi_constants_t;
+typedef vector<cell_calib_t>  bcal_constants_t;
 
 class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 	public:
@@ -45,13 +45,16 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 		static const int BCAL_NUM_LAYERS   =  4;
 		static const int BCAL_NUM_ENDS     =  2;
 		static const int BCAL_NUM_SECTORS  =  4;
+        static const int BCAL_MAX_CHANNELS =  1536;
 
 		static const int TRIG_BASELINE  = 100;
 
 		fcal_constants_t fcal_gains;
         fcal_constants_t fcal_pedestals;
         
-        bcal_digi_constants_t bcal_gains;
+		bcal_constants_t bcal_gains;
+		bcal_constants_t bcal_pedestals;
+		bcal_constants_t bcal_bad_blocks;  
  
 		int fcal_ssp[sample];
 		int fcal_gtp[sample];
@@ -183,6 +186,9 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 
 		int    FCAL_BCAL_EN;
 		
+		double BCAL_EN_COR;
+		double FCAL_EN_COR;
+		
 		float  ST_ADC_PER_MEV;
 		int    ST_CELL_THR;
 		int    ST_NSA;
@@ -237,11 +243,15 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 		
 		
 		void LoadFCALConst( fcal_constants_t &table, 
-				    const vector<double> &fcal_const_ch, 
-				    const DFCALGeometry  &fcalGeom);	
+				    		const vector<double> &fcal_const_ch, 
+				    		const DFCALGeometry  &fcalGeom);	
+		void LoadBCALConst( bcal_constants_t &table, 
+							const vector<double> &bcal_const_ch, 
+							int type);
 
 
 		void GetSeeds(JEventLoop *loop,  uint64_t eventnumber, UInt_t &seed1, UInt_t &seed2, UInt_t &seed3);
+		void BCAL_average_gain();
 
 		TH1F *hfcal_gains;
 		TH2F *hfcal_gains2;
