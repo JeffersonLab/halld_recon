@@ -27,6 +27,8 @@ private:
   void Finish() override;                     ///< Called after last event of last event source has been processed.
 
   double GetCorrectedEnergy(double E) const;
+  double GetCorrectedEnergy1(double E) const;
+  
   double GetCorrectedZ(double E) const;
   void GetUV(const DECALCluster *cluster,const DVector3 &showerPos,
 	     const DVector3 &trackPos,double &sumU,double &sumV) const;
@@ -35,8 +37,10 @@ private:
   double SHOWER_ENERGY_THRESHOLD,ECAL_C_EFFECTIVE;
   double E_VAR1,E_VAR2,E_VAR3,POS_RES1,POS_RES2;
   double E_CORRECTION_PAR1,E_CORRECTION_PAR2,E_CORRECTION_PAR3;
+  double E_CORRECTION1_PAR1,E_CORRECTION1_PAR2,E_CORRECTION1_PAR3,E_CORRECTION1_PAR4;  
   double E_CORRECTION_PAR4;
   bool ENABLE_ENERGY_CORRECTION;
+  int ENERGY_CORRECTION_TYPE;
 
   const DECALGeometry *dECALGeom=NULL;
   double mVertexZ; // assume center of target, so it does not vary event by event
