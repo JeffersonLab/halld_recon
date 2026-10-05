@@ -60,6 +60,7 @@ void JEventProcessor_FCAL2_invmass::Init()
 			      30,-0.1,5.9,500,0,1);
   h_Epred_ECAL_ECAL_vs_E=new TH2F("h_Epred_ECAL_ECAL_vs_E","ECAL+ECAL;E [GeV];E{{pred}(2#gamma) [GeV]",
 				  240,0.0,6.,240,0.,6.);
+  h_dE_over_E_ECAL=new TH2F("h_dE_over_E_ECAL",";E(pred) [GeV];(E(shower)-E(pred))/E(pred)",60,0,6,100,-0.25,0.25);
   h_2gamma_ECAL_ECAL_vs_ch=new TH2F("h_2gamma_ECAL_ECAL_vs_ch","ECAL+ECAL;channel;m(2#gamma) [GeV]",
 				    1600,-0.5,1599.5,100,0.08,0.18);
   h_2gamma_ECAL_FCAL=new TH1F("h_2gamma_ECAL_FCAL","ECAL+FCAL;m(2#gamma) [GeV]",
@@ -73,6 +74,7 @@ void JEventProcessor_FCAL2_invmass::Init()
 			      30,-0.1,5.9,500,0,1);
   h_Epred_FCAL_FCAL_vs_E=new TH2F("h_Epred_FCAL_FCAL_vs_E","FCAL+FCAL;E [GeV];E{{pred}(2#gamma) [GeV]",
 				  240,0.0,6.,240,0.,6.);
+  h_dE_over_E_FCAL=new TH2F("h_dE_over_E_FCAL",";E(pred) [GeV];(E(shower)-E(pred))/E(pred)",60,0,6,100,-0.25,0.25);
   h_2gamma_FCAL_FCAL_vs_ch=new TH2F("h_2gamma_FCAL_FCAL_vs_ch","FCAL+FCAL;channel;m(2#gamma) [GeV]",
 				    2800,-0.5,2799.5,100,0.08,0.18);
   h_2gamma_BCAL_BCAL=new TH1F("h_2gamma_BCAL_BCAL","BCAL+BCAL;m(2#gamma) [GeV]",
@@ -145,6 +147,21 @@ void JEventProcessor_FCAL2_invmass::Process(const std::shared_ptr<const JEvent> 
     double dt=shower->dSpacetimeVertex.T()-diff.Mag()/29.98-t0_rf;
     if (fabs(dt)>2.) continue;
 
+    // Cluster energy
+    double E1cluster=0.;
+    if (dynamic_cast<const DECALShower*>(shower->dBCALFCALShower)){
+      auto cluster=shower->dBCALFCALShower->GetSingle<DECALCluster>();
+      if (cluster){
+	E1cluster=cluster->E;
+      }
+    }
+    if (dynamic_cast<const DFCALShower*>(shower->dBCALFCALShower)){
+      auto cluster=shower->dBCALFCALShower->GetSingle<DFCALCluster>();
+      if (cluster){
+	E1cluster=cluster->getEnergy();
+      }
+    } 
+   
     for(size_t j=i+1;j<neutrals.size();j++){
       gamma=neutrals[j]->Get_Hypothesis(Gamma);
  
@@ -176,8 +193,24 @@ void JEventProcessor_FCAL2_invmass::Process(const std::shared_ptr<const JEvent> 
       // Expected E for E1=E2
       double Epred=ParticleMass(Pi0)/sqrt(2.*(1.-dir1.Dot(dir2)));
 
+      // Cluster energy
+      double E2cluster=0.;
+      if (dynamic_cast<const DECALShower*>(shower->dBCALFCALShower)){
+	auto cluster=shower->dBCALFCALShower->GetSingle<DECALCluster>();
+	if (cluster){
+	  E2cluster=cluster->E;
+	}
+      }
+      if (dynamic_cast<const DFCALShower*>(shower->dBCALFCALShower)){
+	  auto cluster=shower->dBCALFCALShower->GetSingle<DFCALCluster>();
+	  if (cluster){
+	    E2cluster=cluster->getEnergy();
+	  }
+      } 
+   
       // Fill some mass histograms
-      double E_average=0.5*(E1+E2);
+      double E_average=0.5*(E1cluster+E2cluster);
+      double Es_average=0.5*(E1+E2);
       if (det1==SYS_BCAL && det2==SYS_BCAL){
 	h_2gamma_BCAL_BCAL->Fill(mass);
       }
@@ -191,20 +224,23 @@ void JEventProcessor_FCAL2_invmass::Process(const std::shared_ptr<const JEvent> 
       }
       else if (det1==SYS_ECAL && det2==SYS_ECAL){
 	h_2gamma_ECAL_ECAL->Fill(mass);
-	if (fabs(E1-E2)<DELTA_E_CUT){
+	if (fabs(E1cluster-E2cluster)<DELTA_E_CUT){
 	  h_2gamma_ECAL_ECAL_vs_E->Fill(E_average,mass);
-	  if (mass>0.05 && mass<0.16){
+	  if (mass>0.11 && mass<0.16){
 	    h_Epred_ECAL_ECAL_vs_E->Fill(E_average,Epred);
+	    h_dE_over_E_ECAL->Fill(Epred,(Es_average-Epred)/Epred);
 	  }
 	}
 	auto ecal_shower=static_cast<const DECALShower *>(shower->dBCALFCALShower);
 	auto ecal_cluster=ecal_shower->GetSingle<DECALCluster>();
-	h_2gamma_ECAL_ECAL_vs_ch->Fill(ecal_cluster->channel_Emax,mass);
+	if (ecal_cluster){
+	  h_2gamma_ECAL_ECAL_vs_ch->Fill(ecal_cluster->channel_Emax,mass);
+	}
       }
       else if ((det1==SYS_ECAL && det2==SYS_FCAL)
 	       || (det2==SYS_ECAL && det1==SYS_FCAL)){
 	h_2gamma_ECAL_FCAL->Fill(mass);
-	if (fabs(E1-E2)<0.1){
+	if (fabs(E1cluster-E2cluster)<0.1){
 	  h_2gamma_ECAL_FCAL_vs_E->Fill(E_average,mass);
 	}
       }
@@ -212,13 +248,16 @@ void JEventProcessor_FCAL2_invmass::Process(const std::shared_ptr<const JEvent> 
 	h_2gamma_FCAL_FCAL->Fill(mass);
 	if (fabs(E1-E2)<DELTA_E_CUT){
 	  h_2gamma_FCAL_FCAL_vs_E->Fill(E_average,mass);
-	  if (mass>0.05 && mass<0.16){
+	  if (mass>0.11 && mass<0.16){
 	    h_Epred_FCAL_FCAL_vs_E->Fill(E_average,Epred);
+	    h_dE_over_E_FCAL->Fill(Epred,(Es_average-Epred)/Epred);
 	  }
 	}
 	auto fcal_shower=static_cast<const DFCALShower *>(shower->dBCALFCALShower);
 	auto fcal_cluster=fcal_shower->GetSingle<DFCALCluster>();
-	h_2gamma_FCAL_FCAL_vs_ch->Fill(fcal_cluster->getChannelEmax(),mass);
+	if (fcal_cluster){
+	  h_2gamma_FCAL_FCAL_vs_ch->Fill(fcal_cluster->getChannelEmax(),mass);
+	}
       }   
     }
   }
