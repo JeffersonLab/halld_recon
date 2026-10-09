@@ -36,6 +36,7 @@ private:
   TH2F *h_Epred_ECAL_ECAL_vs_E,*h_2gamma_ECAL_ECAL_vs_ch;
   TH2F *h_Epred_FCAL_FCAL_vs_E,*h_2gamma_FCAL_FCAL_vs_ch;
   TH1F *h_2gamma_BCAL_BCAL,*h_2gamma_BCAL_FCAL,*h_2gamma_BCAL_ECAL;
+  TH2F *h_dE_over_E_ECAL,*h_dE_over_E_FCAL;
   
   DVector3 m_FCALCenter;
   double SHOWER_THRESHOLD,ECAL_POS_CUT,DELTA_E_CUT;
