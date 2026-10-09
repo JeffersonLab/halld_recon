@@ -59,8 +59,8 @@ void JEventProcessor_pi0bcalskim::Init()
 {
 	auto app = GetApplication();
 
-	MIN_SH1_E = 0.2;
-	MIN_SH2_E = 0.2;
+	MIN_SH1_E = 0.4;
+	MIN_SH2_E = 0.4;
 
 	WRITE_EVIO = 1;
 	WRITE_HDDM = 0;
@@ -228,8 +228,8 @@ void JEventProcessor_pi0bcalskim::Process(const std::shared_ptr<const JEvent>& e
 		TLorentzVector sh2_p(sh2_E*sh2_x/sh2_R,sh2_E*sh2_y/sh2_R,sh2_E*sh2_z/sh2_R,sh2_E);
 		TLorentzVector ptot = sh1_p+sh2_p;
 		inv_mass = ptot.M();
-		Candidate |= ( (sh2_E>0.4) && (inv_mass<0.25) && (inv_mass>0.05));
-        if((sh2_E>0.4) && (inv_mass<0.25) && (inv_mass>0.05)) {
+		Candidate |= (  (sh1_E>MIN_SH1_E) && (sh2_E>MIN_SH2_E) && (inv_mass<0.25) && (inv_mass>0.05));
+        if( (sh1_E>MIN_SH1_E) && (sh2_E>MIN_SH2_E) && (inv_mass<0.25) && (inv_mass>0.05)) {
             if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locBCALShowers[i]) == locObjectsToSave.end())
                 locObjectsToSave.push_back(static_cast<const JObject *>(locBCALShowers[i]));
             if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locBCALShowers[j]) == locObjectsToSave.end())
