@@ -341,9 +341,15 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(const std::shared_ptr<const JEven
    else dECALz=1000.;
    if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
 
-   geom->GetFMWPCZ_vec(dFMWPCz_vec);
-   geom->GetFMWPCSize(dFMWPCsize);
-   geom->GetCTOFZ(dCTOFz);
+   FMWPC_INSTALLED = false;
+   map<string,string> fmwpc_installed;
+   DEvent::GetCalib(event, "/FMWPC/install_status", fmwpc_installed);
+   if(atoi(fmwpc_installed["status"].data()) == 1){
+     FMWPC_INSTALLED = true;
+     geom->GetFMWPCZ_vec(dFMWPCz_vec);
+     geom->GetFMWPCSize(dFMWPCsize);
+     geom->GetCTOFZ(dCTOFz);
+   }
 
    vector<double>tof_face;
    geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",
@@ -8604,7 +8610,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   bool hit_fcal_exit=false;
   bool hit_fcal=false;
   bool hit_gemtrd=false;
-  bool got_fmwpc=(dFMWPCz_vec.size()>0)?true:false;
   bool got_ecal=(dECALz<1000.)?true:false;
   bool got_gemtrd=(dGEMTRDz<1000.)?true:false;
   unsigned int fmwpc_index=0;
@@ -8710,13 +8715,15 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
 	ds=(newz-z)/dz_ds;
       }
     }
-    if (fmwpc_index<dFMWPCz_vec.size()&&newz>dFMWPCz_vec[fmwpc_index]){
-      newz=dFMWPCz_vec[fmwpc_index]+EPS;
-      ds=(newz-z)/dz_ds;
-    }
-    if (got_fmwpc&&newz>dCTOFz){
-      newz=dCTOFz+EPS;
-      ds=(newz-z)/dz_ds;
+    if (FMWPC_INSTALLED){ 
+      if (fmwpc_index<dFMWPCz_vec.size()&&newz>dFMWPCz_vec[fmwpc_index]){
+	newz=dFMWPCz_vec[fmwpc_index]+EPS;
+	ds=(newz-z)/dz_ds;
+      }
+      if (newz>dCTOFz){
+	newz=dCTOFz+EPS;
+	ds=(newz-z)/dz_ds;
+      }
     }
     s+=ds;
 
@@ -8768,24 +8775,25 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       }
       if (hit_fcal_exit==false && newz>dFCALzBack){
 	AddExtrapolation(SYS_FCAL,z,S,t,s);
-	if (got_fmwpc==false) return NOERROR;
+	if (FMWPC_INSTALLED==false) return NOERROR;
 	
 	hit_fcal_exit=true;
       }
     }
       
     // Deal with muon detector
-    if (got_fmwpc
-	&& (fabs(S(state_x))>dFMWPCsize || (fabs(S(state_y))>dFMWPCsize))){  
-      return NOERROR;
-    }
-    if (fmwpc_index<dFMWPCz_vec.size() && newz>dFMWPCz_vec[fmwpc_index]){
-      AddExtrapolation(SYS_FMWPC,z,S,t,s);
-      fmwpc_index++;
-    }
-    if (got_fmwpc && newz>dCTOFz){
-      AddExtrapolation(SYS_CTOF,z,S,t,s);
-      return NOERROR;
+    if (FMWPC_INSTALLED){
+      if (fabs(S(state_x))>dFMWPCsize || (fabs(S(state_y))>dFMWPCsize)){  
+	return NOERROR;
+      }
+      if (fmwpc_index<dFMWPCz_vec.size() && newz>dFMWPCz_vec[fmwpc_index]){
+	AddExtrapolation(SYS_FMWPC,z,S,t,s);
+	fmwpc_index++;
+      }
+      if (newz>dCTOFz){
+	AddExtrapolation(SYS_CTOF,z,S,t,s);
+	return NOERROR;
+      }
     }
   }
 

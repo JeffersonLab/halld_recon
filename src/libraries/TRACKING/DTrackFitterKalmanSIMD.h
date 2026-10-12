@@ -514,6 +514,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   unsigned int break_point_fdc_index;
 
   bool DEBUG_HISTS;
+  bool FMWPC_INSTALLED;
   bool ENABLE_BOUNDARY_CHECK;
   int DEBUG_LEVEL;
   bool USE_T0_FROM_WIRES;
