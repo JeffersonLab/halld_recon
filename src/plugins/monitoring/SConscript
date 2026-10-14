@@ -11,6 +11,7 @@ subdirs = [
 'CDC_online',
 'CDC_roc_hits',
 'DAQ_online',
+'dc_basics',
 'fa125_itrig',
 'fa125_temp',
 'FCAL_online',
