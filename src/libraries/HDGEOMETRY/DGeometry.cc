@@ -2662,6 +2662,13 @@ bool DGeometry::GetTargetLength(double &target_length) const
     return true;
   }
   
+  // Liquid deuterium target
+  if (Get("//section[@name='Target']/pcon[@name='LID2']/real[@name='length']/[@value]", zLength)){
+    target_length=zLength[0];
+    jgeom->SetVerbose(1);   // reenable error messages
+    return true;
+  }
+
   // Liquid helium target
   if (Get("//section[@name='Target']/pcon[@name='LIHE']/real[@name='length']/[@value]", zLength)){
     target_length=zLength[0];
