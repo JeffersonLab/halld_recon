@@ -11,6 +11,9 @@
 #include <limits>
 using namespace std;
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include "DTAGHHit_factory_Calib.h"
 #include "DTAGHDigiHit.h"
 #include "DTAGHTDCDigiHit.h"
@@ -18,7 +21,7 @@ using namespace std;
 #include <DAQ/Df250PulseIntegral.h>
 #include <DAQ/Df250PulsePedestal.h>
 
-using namespace jana;
+
 
 const int DTAGHHit_factory_Calib::k_counter_dead;
 const int DTAGHHit_factory_Calib::k_counter_good;
@@ -26,23 +29,25 @@ const int DTAGHHit_factory_Calib::k_counter_bad;
 const int DTAGHHit_factory_Calib::k_counter_noisy;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTAGHHit_factory_Calib::init(void)
+void DTAGHHit_factory_Calib::Init()
 {
+	auto app = GetApplication();
+
     // set default config. parameters
     DELTA_T_ADC_TDC_MAX = 10.0; // ns
-    gPARMS->SetDefaultParameter("TAGHHit:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX,
+    app->SetDefaultParameter("TAGHHit:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX,
     "Maximum difference in ns between a (calibrated) fADC time and"
     " F1TDC time for them to be matched in a single hit");
     ADC_THRESHOLD = 200.0; // ADC counts
-    gPARMS->SetDefaultParameter("TAGHHit:ADC_THRESHOLD",ADC_THRESHOLD,
+    app->SetDefaultParameter("TAGHHit:ADC_THRESHOLD",ADC_THRESHOLD,
     "pulse height threshold");
 
     CHECK_FADC_ERRORS = true;
-    gPARMS->SetDefaultParameter("TAGHHit:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
+    app->SetDefaultParameter("TAGHHit:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
 
-    // initialize calibration constants
+    // Initialize calibration constants
     fadc_a_scale = 0;
     fadc_t_scale = 0;
     t_base = 0;
@@ -56,15 +61,17 @@ jerror_t DTAGHHit_factory_Calib::init(void)
         tdc_time_offsets[counter] = 0;
         counter_quality[counter] = 0;
     }
-
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTAGHHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTAGHHit_factory_Calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	auto runnumber = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
     static set<int> runs_announced;
@@ -81,41 +88,42 @@ jerror_t DTAGHHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnu
     fadc_t_scale    = 0.0625;     // ns per count
     t_base           = 0.;      // ns
 
-    if(print_messages) jout << "In DTAGHHit_factory, loading constants..." << std::endl;
+    if(print_messages) jout << "In DTAGHHit_factory, loading constants..." << jendl;
 
     // load base time offset
     map<string,double> base_time_offset;
-    if (eventLoop->GetCalib("/PHOTON_BEAM/hodoscope/base_time_offset",base_time_offset))
-        jout << "Error loading /PHOTON_BEAM/hodoscope/base_time_offset !" << endl;
+    if (calibration->Get("/PHOTON_BEAM/hodoscope/base_time_offset",base_time_offset))
+        jout << "Error loading /PHOTON_BEAM/hodoscope/base_time_offset !" << jendl;
     if (base_time_offset.find("TAGH_BASE_TIME_OFFSET") != base_time_offset.end())
         t_base = base_time_offset["TAGH_BASE_TIME_OFFSET"];
     else
-        jerr << "Unable to get TAGH_BASE_TIME_OFFSET from /PHOTON_BEAM/hodoscope/base_time_offset !" << endl;
+        jerr << "Unable to get TAGH_BASE_TIME_OFFSET from /PHOTON_BEAM/hodoscope/base_time_offset !" << jendl;
 
     if (base_time_offset.find("TAGH_TDC_BASE_TIME_OFFSET") != base_time_offset.end())
         t_tdc_base = base_time_offset["TAGH_TDC_BASE_TIME_OFFSET"];
     else
-        jerr << "Unable to get TAGH_TDC_BASE_TIME_OFFSET from /PHOTON_BEAM/hodoscope/base_time_offset !" << endl;
+        jerr << "Unable to get TAGH_TDC_BASE_TIME_OFFSET from /PHOTON_BEAM/hodoscope/base_time_offset !" << jendl;
 
-    if (load_ccdb_constants("fadc_gains", "gain", fadc_gains) &&
-        load_ccdb_constants("fadc_pedestals", "pedestal", fadc_pedestals) &&
-        load_ccdb_constants("fadc_time_offsets", "offset", fadc_time_offsets) &&
-        load_ccdb_constants("tdc_time_offsets", "offset", tdc_time_offsets) &&
-        load_ccdb_constants("counter_quality", "code", counter_quality) &&
-        load_ccdb_constants("tdc_timewalk", "c0", tdc_twalk_c0) &&
-        load_ccdb_constants("tdc_timewalk", "c1", tdc_twalk_c1) &&
-        load_ccdb_constants("tdc_timewalk", "c2", tdc_twalk_c2) &&
-        load_ccdb_constants("tdc_timewalk", "c3", tdc_twalk_c3))
+    if (load_ccdb_constants(calibration, "fadc_gains", "gain", fadc_gains) &&
+        load_ccdb_constants(calibration, "fadc_pedestals", "pedestal", fadc_pedestals) &&
+        load_ccdb_constants(calibration, "fadc_time_offsets", "offset", fadc_time_offsets) &&
+        load_ccdb_constants(calibration, "tdc_time_offsets", "offset", tdc_time_offsets) &&
+        load_ccdb_constants(calibration, "counter_quality", "code", counter_quality) &&
+        load_ccdb_constants(calibration, "tdc_timewalk", "c0", tdc_twalk_c0) &&
+        load_ccdb_constants(calibration, "tdc_timewalk", "c1", tdc_twalk_c1) &&
+        load_ccdb_constants(calibration, "tdc_timewalk", "c2", tdc_twalk_c2) &&
+        load_ccdb_constants(calibration, "tdc_timewalk", "c3", tdc_twalk_c3))
     {
-        return NOERROR;
+        return;
     }
-    return UNRECOVERABLE_ERROR;
+    throw JException("Unrecoverable error!");  //  TODO: Reexamine
+    // return UNRECOVERABLE_ERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTAGHHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTAGHHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 {
     /// Generate DTAGHHit object for each DTAGHDigiHit object.
     /// This is where the first set of calibration constants
@@ -126,19 +134,21 @@ jerror_t DTAGHHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
 
+    vector<DTAGHHit *> results, filtered_results;
+
     // extract the TAGH geometry
     vector<const DTAGHGeometry*> taghGeomVect;
-    eventLoop->Get( taghGeomVect );
+    event->Get( taghGeomVect );
     if (taghGeomVect.size() < 1)
-        return OBJECT_NOT_AVAILABLE;
+        return; // OBJECT_NOT_AVAILABLE;
     const DTAGHGeometry& taghGeom = *(taghGeomVect[0]);
 
     const DTTabUtilities* locTTabUtilities = nullptr;
-    loop->GetSingle(locTTabUtilities);
+    event->GetSingle(locTTabUtilities);
 
     // First loop over all TAGHDigiHits and make DTAGHHits out of them
     vector<const DTAGHDigiHit*> digihits;
-    loop->Get(digihits);
+    event->Get(digihits);
     for (unsigned int i=0; i < digihits.size(); i++) {
         const DTAGHDigiHit *digihit = digihits[i];
         int counter = digihit->counter_id;
@@ -160,7 +170,7 @@ jerror_t DTAGHHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
 
         // nsamples_pedestal should always be positive for valid data - err on the side of caution for now
         if(nsamples_pedestal == 0) {
-            jerr << "DTAGHDigiHit with nsamples_pedestal == 0 !   Event = " << eventnumber << endl;
+            jerr << "DTAGHDigiHit with nsamples_pedestal == 0 !   Event = " << event->GetEventNumber() << jendl;
             continue;
         }
 
@@ -200,16 +210,21 @@ jerror_t DTAGHHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         hit->is_double = false;
 
         hit->AddAssociatedObject(digihit);
-        _data.push_back(hit);
+        results.push_back(hit);
     }
 
     // Next, loop over TDC hits, matching them to the existing fADC hits
     // where possible and updating their time information. If no match is
     // found, then create a new hit with just the TDC info.
     vector<const DTAGHTDCDigiHit*> tdcdigihits;
-    loop->Get(tdcdigihits);
+    event->Get(tdcdigihits);
     for (unsigned int i=0; i < tdcdigihits.size(); i++) {
         const DTAGHTDCDigiHit *digihit = tdcdigihits[i];
+
+        // throw away hits from bad or noisy counters
+        int quality = counter_quality[digihit->counter_id];
+        if (quality == k_counter_dead || quality == k_counter_bad || quality == k_counter_noisy)
+            continue;
 
         // Apply calibration constants here
         int counter = digihit->counter_id;
@@ -218,11 +233,11 @@ jerror_t DTAGHHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         // Look for existing hits to see if there is a match
         // or create new one if there is no match
         DTAGHHit *hit = nullptr;
-        for (unsigned int j=0; j < _data.size(); ++j) {
-            if (_data[j]->counter_id == counter &&
-                fabs(T - _data[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
+        for (unsigned int j=0; j < results.size(); ++j) {
+            if (results[j]->counter_id == counter &&
+                fabs(T - results[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
                 {
-                    hit = _data[j];
+                    hit = results[j];
                 }
         }
         if (hit == nullptr) {
@@ -237,7 +252,7 @@ jerror_t DTAGHHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
             hit->npe_fadc = numeric_limits<double>::quiet_NaN();
             hit->has_fADC = false;
             hit->is_double = false;
-            _data.push_back(hit);
+        	results.push_back(hit);
         }
         hit->time_tdc = T;
         hit->has_TDC = true;
@@ -251,38 +266,43 @@ jerror_t DTAGHHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         hit->t = T;
         hit->AddAssociatedObject(digihit);
     }
-    return NOERROR;
+    
+
+    for(auto hit : results)
+    	if(hit->has_fADC==true || hit->has_TDC==true)
+    		filtered_results.push_back(hit);
+
+    Set(filtered_results);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTAGHHit_factory_Calib::erun(void)
+void DTAGHHit_factory_Calib::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTAGHHit_factory_Calib::fini(void)
+void DTAGHHit_factory_Calib::Finish()
 {
-    return NOERROR;
 }
 
 //---------------------
 // load_ccdb_constants
 //---------------------
 bool DTAGHHit_factory_Calib::load_ccdb_constants(
+	JCalibration* calibration,
     std::string table_name,
     std::string column_name,
     double result[TAGH_MAX_COUNTER+1])
 {
     std::vector< std::map<std::string, double> > table;
     std::string ccdb_key = "/PHOTON_BEAM/hodoscope/" + table_name;
-    if (eventLoop->GetCalib(ccdb_key, table))
+    if (calibration->Get(ccdb_key, table))
     {
-        jout << "Error loading " << ccdb_key << " from ccdb!" << std::endl;
+        jout << "Error loading " << ccdb_key << " from ccdb!" << jendl;
         return false;
     }
     for (unsigned int i=0; i < table.size(); ++i) {

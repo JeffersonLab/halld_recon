@@ -46,7 +46,11 @@ MyProcessor::MyProcessor()
 //------------------------------------------------------------------
 MyProcessor::~MyProcessor()
 {
-	//Close the ROOT file
+    // Moving forward, resources _really_ need to be closed in the Finish() callback
+    // instead. So why we doing that here? Because lots of other GlueX components fill
+    // histograms in THEIR destructors, and ROOT will helpfully segfault if you try to 
+    // fill a histogram after you've closed the corresponding file.
+
 	if(ROOTfile!=NULL){
 		ROOTfile->Write();
 		ROOTfile->Close();
@@ -57,9 +61,9 @@ MyProcessor::~MyProcessor()
 }
 
 //------------------------------------------------------------------
-// init   -Open output file here (e.g. a ROOT file)
+// Init   -Open output file here (e.g. a ROOT file)
 //------------------------------------------------------------------
-jerror_t MyProcessor::init(void)
+void MyProcessor::Init()
 {
 	// open ROOT file
 	ROOTfile = new TFile(OUTPUT_FILENAME.c_str(),"RECREATE","Produced by hd_root");
@@ -70,16 +74,25 @@ jerror_t MyProcessor::init(void)
 	
 	cout<<"Opened ROOT file \""<<OUTPUT_FILENAME<<"\" ..."<<endl;
 
-	return NOERROR;
+	return;
 }
 
 //------------------------------------------------------------------
-// brun
+// BeginRun
 //------------------------------------------------------------------
-jerror_t MyProcessor::brun(JEventLoop *eventLoop, int32_t runnumber)
+void MyProcessor::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	// Manually set gDirectory to ROOTfile because its value is not propagated
+	// from the main thread (which calls ::Init) to the thread that runs ::BeginRun.
+	// Setting it here ensures that all subsequent plugins see the correct gDirectory,
+	// since their ::BeginRun methods are called after this point. 
+	// This issue appeared after upgrading from ROOT 6.24.04 to 6.32.08.
+	gDirectory = ROOTfile;
+	
 	vector<string> factory_names;
-	eventLoop->GetFactoryNames(factory_names);
+	for (JFactory* factory : event->GetFactorySet()->GetAllFactories()) {
+		factory_names.push_back(factory->GetFactoryName());
+	}
 
 	usleep(100000); //this just gives the Main thread a chance to finish printing the "Launching threads" message
 	cout<<endl;
@@ -132,37 +145,40 @@ jerror_t MyProcessor::brun(JEventLoop *eventLoop, int32_t runnumber)
 	}
 	
 	cout<<endl;
-
-	return NOERROR;
 }
 
 //------------------------------------------------------------------
-// evnt   -Fill tree here
+// Process   -Fill tree here
 //------------------------------------------------------------------
-jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 {
+	// Manually set gDirectory to ROOTfile because its value is not propagated
+	// from the other threads (::Init/BeginRun) to the thread that runs ::Process.
+	// All JEventProcessors for an event run in the same thread, so setting this value here
+	// ensures that subsequent plugins see the correct gDirectory when their ::Process methods are called.
+	// This issue appeared after upgrading from ROOT 6.24.04 to 6.32.08.
+	gDirectory = ROOTfile;
+
 	// Loop over factories explicitly mentioned on command line
 	for(unsigned int i=0;i<toprint.size();i++){
 		string name =fac_info[i].dataClassName;
 		string tag = fac_info[i].tag;
-		JFactory_base *factory = eventLoop->GetFactory(name,tag.c_str());
-		if(!factory)factory = eventLoop->GetFactory("D" + name,tag.c_str());
-		if(factory){
+		JFactory *factory = event->GetFactory(name,tag.c_str());
+		if(!factory)factory = event->GetFactory("D" + name,tag.c_str());
+			if(factory){
 			try{
-				factory->GetNrows();
+				factory->Create(event);
 			}catch(...){
 				// someone threw an exception
 			}
 		}
 	}
-	return NOERROR;
 }
 
 //------------------------------------------------------------------
-// fini
+// Finish
 //------------------------------------------------------------------
-jerror_t MyProcessor::fini(void)
-{	
-	return NOERROR;
+void MyProcessor::Finish()
+{
 }
 

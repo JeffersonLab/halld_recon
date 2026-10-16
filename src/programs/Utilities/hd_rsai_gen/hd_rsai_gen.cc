@@ -20,6 +20,10 @@
 #include <TASImage.h>
 
 #include <DANA/DApplication.h>
+#include <JANA/JApplication.h>
+#include <JANA/CLI/JMain.h>
+
+using namespace std;
 
 #include "rs_macroutils.h"
 
@@ -36,11 +40,11 @@ static int MIN_EVENTS_RSAI = 1.0E5;
 
 
 void ParseCommandLineArguments(int &narg, char *argv[]);
-void Usage(void);
+void Usage();
 
 
-void MacroThread(JApplication *app);
-void ExecuteMacro(TDirectory *f, string macro);
+void MacroThread(DApplication *app);
+void ExecuteMacro(DApplication *dapp, TDirectory *f, string macro);
 
 
 //-----------
@@ -52,26 +56,27 @@ int main(int narg, char *argv[])
 	ParseCommandLineArguments(narg, argv);
 
 	// Instantiate an event loop object
-	DApplication app(narg, argv);
+	DApplication dapp(narg, argv);
+	auto app = dapp.GetJApp();
 
-	gPARMS->SetDefaultParameter( "RSAI:OUTPUT_DIR", OUTPUT_DIR, "Directory to write image files to.");
-	gPARMS->SetDefaultParameter( "RSAI:POLL_DELAY", POLL_DELAY, "Minimum time to wait between executing macros in seconds.");
-	gPARMS->SetDefaultParameter( "RSAI:MIN_EVENTS_RSAI", MIN_EVENTS_RSAI, "Baseline min. number of events before macro emits image. (Individual macros may scale or ignore this).");
+	app->SetDefaultParameter( "RSAI:OUTPUT_DIR", OUTPUT_DIR, "Directory to write image files to.");
+	app->SetDefaultParameter( "RSAI:POLL_DELAY", POLL_DELAY, "Minimum time to wait between executing macros in seconds.");
+	app->SetDefaultParameter( "RSAI:MIN_EVENTS_RSAI", MIN_EVENTS_RSAI, "Baseline min. number of events before macro emits image. (Individual macros may scale or ignore this).");
 
 	// Launch a separate thread for periodically running the macros.
-	std::thread macrothr(MacroThread, &app);
+	std::thread macrothr(MacroThread, &dapp);
 
 	while(! MACRO_THREAD_RUNNING ) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	
 	// Run though all events, calling our event processor's methods
-	app.monitor_heartbeat = 0;
-	app.Run();
+	// app.monitor_heartbeat = 0;  // TODO: NWB: Re-enable
+	jana::Execute(app, dapp.GetUserOptions());
 
 	DONE = true;
 	macrothr.join();
 
-	if( app.GetExitCode() ) cerr << "Exit code: " << app.GetExitCode() << endl;
-	return app.GetExitCode();
+	if( app->GetExitCode() ) cerr << "Exit code: " << app->GetExitCode() << endl;
+	return app->GetExitCode();
 }
 
 
@@ -95,12 +100,8 @@ void ParseCommandLineArguments(int &narg, char *argv[])
 //-----------
 // Usage
 //-----------
-void Usage(void)
+void Usage()
 {
-	// Make sure a JApplication object exists so we can call Usage()
-	JApplication *app = japp;
-	if(app == NULL) app = new DApplication(0, NULL);
-
 	cout<<"Usage:"<<endl;
 	cout<<"       hd_rsai_gen [options] source1 source2 ..."<<endl;
 	cout<<endl;
@@ -109,7 +110,7 @@ void Usage(void)
 	cout<<endl;
 	cout<<"Options:"<<endl;
 	cout<<endl;
-	app->Usage();
+	jana::PrintUsageOptions();
 	cout<<endl;
 	cout<<"   -h        Print this message"<<endl;
 	cout<<endl;
@@ -120,11 +121,11 @@ void Usage(void)
 //-----------
 // MacroThread
 //-----------
-void MacroThread(JApplication *app)
+void MacroThread(DApplication *dapp)
 {
 	std::cout << "Macro thread started!" << std::endl;
 
-	japp->RootWriteLock();
+	dapp->RootWriteLock();
 	// Create TCanvas, but set ROOT to batch mode so that it doesn't actually open a window.
 	gROOT->SetBatch(kTRUE);
 	auto c1 = new TCanvas("c1", "A Canvas", 1600, 1200);
@@ -142,7 +143,7 @@ void MacroThread(JApplication *app)
 	gROOT->ProcessLine("extern void rs_SavePad(const string fname, int ipad);");
 	gROOT->ProcessLine("void InsertSeriesData(string sdata){}"); // disable insertion of time series data for RSAI
 	gROOT->ProcessLine("void InsertSeriesMassFit(string ptype, double mass, double width, double mass_err, double width_err, double unix_time=0.0){}"); // (same as previous)
-	japp->RootUnLock();
+	dapp->RootUnLock();
 
 	// Set flag so macros will NOT automatically reset histograms after
 	// a successful fit. This flag is used by RSTimeSeries
@@ -197,7 +198,7 @@ void MacroThread(JApplication *app)
 
 			c1->cd();
 			c1->Clear();
-			ExecuteMacro(base_root_dir, macroString);
+			ExecuteMacro(dapp, base_root_dir, macroString);
 
 			// Due to some long standing bug in TPad, the SaveAs method does not work
 			// properly and we are advised to use only TCanvas::SaveAs. See:
@@ -293,7 +294,7 @@ void MacroThread(JApplication *app)
 		}
 
 		// Lock ROOT
-		japp->RootWriteLock();
+		dapp->RootWriteLock();
 
 		//std::cout << "--- MACROS list ----------------------------" << std::endl;
 		//for(auto p : MACROS) std::cout << " -- " << p.first << std::endl;
@@ -338,7 +339,7 @@ void MacroThread(JApplication *app)
 		hnamepaths_to_reset.clear();
 
 		// Unlock ROOT
-		japp->RootUnLock();
+		dapp->RootUnLock();
 
 		// sleep for awhile
 		sleep(POLL_DELAY);
@@ -352,10 +353,10 @@ void MacroThread(JApplication *app)
 //-------------------
 // ExecuteMacro
 //-------------------
-void ExecuteMacro(TDirectory *f, string macro)
+void ExecuteMacro(DApplication *dapp, TDirectory *f, string macro)
 {
 	// Lock ROOT
-	japp->RootWriteLock();
+	dapp->RootWriteLock();
 
 	TDirectory *savedir = gDirectory;
 	f->cd();
@@ -392,7 +393,7 @@ void ExecuteMacro(TDirectory *f, string macro)
 	savedir->cd();
 
 	// Unlock ROOT
-	japp->RootUnLock();
+	dapp->RootUnLock();
 
 }
 

@@ -6,16 +6,13 @@
 
 
 #include "JEventProcessor_eventWriterHDDM.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_eventWriterHDDM());
+	app->Add(new JEventProcessor_eventWriterHDDM());
 }
 } // "C"
 
@@ -25,7 +22,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_eventWriterHDDM::JEventProcessor_eventWriterHDDM()
 {
-
+	SetTypeName("JEventProcessor_eventWriterHDDM");
 }
 
 //------------------
@@ -37,54 +34,48 @@ JEventProcessor_eventWriterHDDM::~JEventProcessor_eventWriterHDDM()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_eventWriterHDDM::init(void)
+void JEventProcessor_eventWriterHDDM::Init()
 {
 	// This is called once at program startup. 
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_eventWriterHDDM::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_eventWriterHDDM::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_eventWriterHDDM::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_eventWriterHDDM::Process(const std::shared_ptr<const JEvent>& event)
 {
   // Write this event to the rest output stream.                                                                                                                                                             
     vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
-  loop->Get(locEventWriterHDDMVector);
-  locEventWriterHDDMVector[0]->Write_HDDMEvent(loop, ""); 
+  event->Get(locEventWriterHDDMVector);
+  locEventWriterHDDMVector[0]->Write_HDDMEvent(event, "");
   //  std::cout<<"done"<<std::endl;
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_eventWriterHDDM::erun(void)
+void JEventProcessor_eventWriterHDDM::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_eventWriterHDDM::fini(void)
+void JEventProcessor_eventWriterHDDM::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

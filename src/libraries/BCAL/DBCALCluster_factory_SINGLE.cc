@@ -12,47 +12,48 @@ using namespace std;
 
 #include "DBCALCluster_factory_SINGLE.h"
 #include <BCAL/DBCALPoint.h>
-#include <DANA/DApplication.h>
-using namespace jana;
+
+#include <JANA/JEvent.h>
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DBCALCluster_factory_SINGLE::init(void)
+void DBCALCluster_factory_SINGLE::Init()
 {
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBCALCluster_factory_SINGLE::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DBCALCluster_factory_SINGLE::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	DApplication* app = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-	DGeometry* geom = app->GetDGeometry(runnumber);
+	auto run_number = event->GetRunNumber();
+	auto app = GetApplication();
+	auto geom = app->GetService<DGeometryManager>()->GetDGeometry(run_number);
 	geom->GetTargetZ(m_z_target_center);
 
 	// load BCAL geometry
 	vector<const DBCALGeometry *> BCALGeomVec;
-	eventLoop->Get(BCALGeomVec);
+	event->Get(BCALGeomVec);
 	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	dBCALGeom = BCALGeomVec[0];
 
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBCALCluster_factory_SINGLE::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DBCALCluster_factory_SINGLE::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Get DBCALPoint objects
 	vector<const DBCALPoint*> bcalpoints;
-	loop->Get(bcalpoints);
+	event->Get(bcalpoints);
 	
 	// Need at least one DBCALPoint object to make a cluster
-	if(bcalpoints.size() == 0) return NOERROR;
+	if(bcalpoints.size() == 0) return;
 	
 	// Create DBCALCluster object and add all DBCALPoint objects to it
 	DBCALCluster *cluster = new DBCALCluster(m_z_target_center, dBCALGeom);
@@ -62,24 +63,20 @@ jerror_t DBCALCluster_factory_SINGLE::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
 	
 	// Store in _data so it is published to JANA
-	_data.push_back(cluster);
-	
-	return NOERROR;
+	Insert(cluster);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DBCALCluster_factory_SINGLE::erun(void)
+void DBCALCluster_factory_SINGLE::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DBCALCluster_factory_SINGLE::fini(void)
+void DBCALCluster_factory_SINGLE::Finish()
 {
-	return NOERROR;
 }
 

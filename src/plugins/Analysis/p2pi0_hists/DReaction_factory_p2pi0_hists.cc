@@ -9,9 +9,9 @@
 #include "DReaction_factory_p2pi0_hists.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DReaction_factory_p2pi0_hists::init(void)
+void DReaction_factory_p2pi0_hists::Init()
 {
 	// Make as many DReaction objects as desired
 	DReactionStep* locReactionStep = NULL;
@@ -71,9 +71,9 @@ jerror_t DReaction_factory_p2pi0_hists::init(void)
 
 	// PID
 	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction, false));
-        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 1.0, Unknown, SYS_TOF)); //false: measured data //Unknown: All PIDs
-        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 10.0, Unknown, SYS_BCAL)); //false: measured data //Unknown: All PIDs
-        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 10.0, Unknown, SYS_FCAL)); //false: measured data //Unknown: All PIDs
+        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 1.0, UnknownParticle, SYS_TOF)); //false: measured data //UnknownParticle: All PIDs
+        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 10.0, UnknownParticle, SYS_BCAL)); //false: measured data //UnknownParticle: All PIDs
+        locReaction->Add_AnalysisAction(new DCutAction_PIDDeltaT(locReaction, false, 10.0, UnknownParticle, SYS_FCAL)); //false: measured data //UnknownParticle: All PIDs
 
         // Custom histograms for p2pi0 (no KinFit cut)
         locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false,500,0.,1., "NoKinFit_Measured"));
@@ -82,18 +82,15 @@ jerror_t DReaction_factory_p2pi0_hists::init(void)
 	// Kinematics
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: fill histograms with measured particle data
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
-
-	return NOERROR;
+	Insert(locReaction); //Register the DReaction with the factory
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_p2pi0_hists::fini(void)
+void DReaction_factory_p2pi0_hists::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
 }
 

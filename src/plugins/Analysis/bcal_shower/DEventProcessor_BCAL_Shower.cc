@@ -10,7 +10,7 @@
 #include <TLorentzVector.h>
 #include "TMath.h"
 
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALTruthShower.h"
 #include "BCAL/DBCALCluster.h"
@@ -33,15 +33,15 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_BCAL_Shower()); //register this plugin
+		locApplication->Add(new DEventProcessor_BCAL_Shower()); //register this plugin
 	}
 } // "C"
 
 #define FCAL_Z_OFFSET 640.0-65.0
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_BCAL_Shower::init(void)
+void DEventProcessor_BCAL_Shower::Init()
 {
 	TDirectory *dir = new TDirectoryFile("BCAL","BCAL");
 	dir->cd();
@@ -336,60 +336,56 @@ jerror_t DEventProcessor_BCAL_Shower::init(void)
 	
 	dEventWriterROOT = NULL;
 	dEventWriterREST = NULL;
-
-	return NOERROR;
 }
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_BCAL_Shower::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void DEventProcessor_BCAL_Shower::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called whenever the run number changes
 
 	/*
 	//Optional: Retrieve REST writer for writing out skims
-	locEventLoop->GetSingle(dEventWriterREST);
+	locEvent->GetSingle(dEventWriterREST);
 	*/
 
 	//vector<const DTrackFinder *> finders;
-	//locEventLoop->Get(finders);
+	//locEvent->Get(finders);
 	//finder = const_cast<DTrackFinder*>(finders[0]);
 
 	/*
 	//Recommeded: Create output ROOT TTrees (nothing is done if already created)
-	locEventLoop->GetSingle(dEventWriterROOT);
-	dEventWriterROOT->Create_DataTrees(locEventLoop);
+	locEvent->GetSingle(dEventWriterROOT);
+	dEventWriterROOT->Create_DataTrees(locEvent);
 	*/
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
 
 
 
 
-jerror_t DEventProcessor_BCAL_Shower::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_BCAL_Shower::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
-	eventnum = locEventNumber;
+	eventnum = locEvent->GetEventNumber();
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
@@ -400,7 +396,7 @@ jerror_t DEventProcessor_BCAL_Shower::evnt(jana::JEventLoop* locEventLoop, uint6
 
 
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	vector<const DBCALShower*> locBCALShowers;
 	vector<const DFCALShower*> locFCALShowers;
@@ -412,30 +408,30 @@ jerror_t DEventProcessor_BCAL_Shower::evnt(jana::JEventLoop* locEventLoop, uint6
 	vector<const DBCALPoint*> locBCALPoints;
 	vector<const DVertex*> kinfitVertex;
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
-	locEventLoop->Get(locBCALShowers);
-	locEventLoop->Get(locFCALShowers);
-	locEventLoop->Get(bcalhits);
-	locEventLoop->Get(mcthrowns);
-	locEventLoop->Get(truthshowers);
-	locEventLoop->Get(locBCALClusters);
-	locEventLoop->Get(locFCALClusters);
-	locEventLoop->Get(locBCALPoints);
-	locEventLoop->Get(kinfitVertex);
+	locEvent->GetSingle(locDetectorMatches);
+	locEvent->Get(locBCALShowers);
+	locEvent->Get(locFCALShowers);
+	locEvent->Get(bcalhits);
+	locEvent->Get(mcthrowns);
+	locEvent->Get(truthshowers);
+	locEvent->Get(locBCALClusters);
+	locEvent->Get(locFCALClusters);
+	locEvent->Get(locBCALPoints);
+	locEvent->Get(kinfitVertex);
 
 	vector<const DTrackTimeBased*> locTrackTimeBased;
-	locEventLoop->Get(locTrackTimeBased);
+	locEvent->Get(locTrackTimeBased);
 
 	const DKinematicData* locKinematicData;
-	//locEventLoop->Get(locKinematicData);
+	//locEvent->Get(locKinematicData);
 
 
 	DVector3 crude_vertex;
 	vector <const DChargedTrackHypothesis*> locChargedTrackHypothesis;
-	locEventLoop->Get(locChargedTrackHypothesis);
+	locEvent->Get(locChargedTrackHypothesis);
 
 //	vector <const DTrackCandidate *> locTrackCandidate;
-//	locEventLoop->Get(locTrackCandidate,"StraightLine");
+//	locEvent->Get(locTrackCandidate,"StraightLine");
 
 // = static_cast<const DChargedTrackHypothesis* (locKinematicData);
 	//DChargedTrackHypothesis * locChargedTrack = const_cast<const DChargedTrackHypothesis *> (locChargedTrackHypothesis);
@@ -443,19 +439,19 @@ jerror_t DEventProcessor_BCAL_Shower::evnt(jana::JEventLoop* locEventLoop, uint6
 	//deque <const DChargedTrackHypothesis *> locChargedTrack = static_cast <const DChargedTrackHypothesis*>(locKinematicData);
 
 /*	vector <const DNeutralParticleHypothesis *> locNeutralParticleHypothesis;
-	locEventLoop->Get(locNeutralParticleHypothesis);
+	locEvent->Get(locNeutralParticleHypothesis);
 	double locTheta;
 	locTheta = locNeutralParticleHypothesis->momentum().Theta*180.0/TMath::Pi();
 	Theta->Fill(locTheta);*/
 
 
  	vector <const DChargedTrackHypothesis*> locParticles;
-	locEventLoop->Get(locParticles);
+	locEvent->Get(locParticles);
 	//vector <const DKinematicData*> locParticles;
-	//locEventLoop->Get(locParticles);
+	//locEvent->Get(locParticles);
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	vector <const DBCALShower *> matchedShowers;
 	vector < const DBCALShower *> matchedShowersneg;
@@ -592,7 +588,7 @@ jerror_t DEventProcessor_BCAL_Shower::evnt(jana::JEventLoop* locEventLoop, uint6
 	//locVertexZ = locVertex.Z();
 
 	if(locParticles.size() == 0)
-		return NOERROR;
+		return;
 
 	double locDOCA, locDOCA2, locSmallestDOCA, locTime0;
 	double locAverageTime = 0.0;
@@ -1039,7 +1035,7 @@ jerror_t DEventProcessor_BCAL_Shower::evnt(jana::JEventLoop* locEventLoop, uint6
 
 /*
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks);
+	locEvent->Get(locChargedTracks);
 
 	for(size_t i = 0 ; i < locChargedTracks.size(); ++i)
 	{
@@ -1860,7 +1856,7 @@ for(size_t i = 0 ; i < locChargedTracks.size(); ++i)
 
 /*			
 			vector<const DBCALPoint* > bcalpoints;
-			locEventLoop->Get(bcalpoints);
+			locEvent->Get(bcalpoints);
 				for(unsigned int i = 0; i < bcalpoints.size(); i++)
 				  {
 			           if(locDetectorMatches->Get_IsMatchedToTrack(bcalpoints[i]))
@@ -2742,33 +2738,29 @@ for(size_t i = 0 ; i < locChargedTracks.size(); ++i)
 		}
 	}
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 
 	/*
 	//Optional: Save event to output REST file. Use this to create skims.
-	dEventWriterREST->Write_RESTEvent(locEventLoop, "BCAL_Shower"); //string is part of output file name
+	dEventWriterREST->Write_RESTEvent(locEvent, "BCAL_Shower"); //string is part of output file name
 	*/
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_BCAL_Shower::erun(void)
+void DEventProcessor_BCAL_Shower::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_BCAL_Shower::fini(void)
+void DEventProcessor_BCAL_Shower::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

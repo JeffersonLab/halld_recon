@@ -14,12 +14,14 @@
 --------------------------------------------------------------------------*/
 
 
+#include <TDirectoryFile.h>
+#include <DANA/DEvent.h>
 #include "JEventProcessor_CCAL_ComptonGains.h"
 
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-    	app->AddProcessor(new JEventProcessor_CCAL_ComptonGains());
+    	app->Add(new JEventProcessor_CCAL_ComptonGains());
 }
 } // "C"
 
@@ -34,33 +36,7 @@ void InitPlugin(JApplication *app){
 
 JEventProcessor_CCAL_ComptonGains::JEventProcessor_CCAL_ComptonGains()
 {
-	// Set defaults:
-	
-	BYPASS_TRIG = false;
-	
-	MIN_FCAL_ENERGY_CUT  =   0.5;
-	MIN_CCAL_ENERGY_CUT  =   3.0;
-	MIN_BEAM_ENERGY_CUT  =   5.0;
-	
-	COPL_CUT             =  20.0;
-	DELTA_K_CUT          =   0.5;
-	
-	
-	
-	gPARMS->SetDefaultParameter( "CCAL_ComptonGains:BYPASS_TRIG", BYPASS_TRIG, 
-			"Set to true to bypass trigger information (for simulation)" );
-	
-	gPARMS->SetDefaultParameter( "CCAL_ComptonGains:MIN_FCAL_ENERGY_CUT", MIN_FCAL_ENERGY_CUT,
-			"Minimum energy of FCAL Shower" );
-	gPARMS->SetDefaultParameter( "CCAL_ComptonGains:MIN_CCAL_ENERGY_CUT", MIN_CCAL_ENERGY_CUT,
-			"Minimum energy of CCAL Shower" );
-	gPARMS->SetDefaultParameter( "CCAL_ComptonGains:MIN_BEAM_ENERGY_CUT", MIN_BEAM_ENERGY_CUT,
-			"Minimum beam photon energy" );
-	
-	gPARMS->SetDefaultParameter( "CCAL_ComptonGains:COPL_CUT", COPL_CUT,
-			"Coplanarity Cut (degrees)" );
-	gPARMS->SetDefaultParameter( "CCAL_ComptonGains:DELTA_K_CUT", DELTA_K_CUT );
-	
+	SetTypeName("JEventProcessor_CCAL_ComptonGains");
 }
 
 
@@ -68,13 +44,38 @@ JEventProcessor_CCAL_ComptonGains::JEventProcessor_CCAL_ComptonGains()
 
 //==========================================================
 //
-//   init
+//   Init
 //
 //==========================================================
 
-jerror_t JEventProcessor_CCAL_ComptonGains::init(void)
+void JEventProcessor_CCAL_ComptonGains::Init()
 {
-  	
+	// Set defaults:
+        auto app = GetApplication();
+
+	BYPASS_TRIG = false;
+
+	MIN_FCAL_ENERGY_CUT  =   0.5;
+	MIN_CCAL_ENERGY_CUT  =   3.0;
+	MIN_BEAM_ENERGY_CUT  =   5.0;
+
+	COPL_CUT             =  20.0;
+	DELTA_K_CUT          =   0.5;
+
+	app->SetDefaultParameter( "CCAL_ComptonGains:BYPASS_TRIG", BYPASS_TRIG,
+				     "Set to true to bypass trigger information (for simulation)" );
+
+	app->SetDefaultParameter( "CCAL_ComptonGains:MIN_FCAL_ENERGY_CUT", MIN_FCAL_ENERGY_CUT,
+				     "Minimum energy of FCAL Shower" );
+	app->SetDefaultParameter( "CCAL_ComptonGains:MIN_CCAL_ENERGY_CUT", MIN_CCAL_ENERGY_CUT,
+				     "Minimum energy of CCAL Shower" );
+	app->SetDefaultParameter( "CCAL_ComptonGains:MIN_BEAM_ENERGY_CUT", MIN_BEAM_ENERGY_CUT,
+				     "Minimum beam photon energy" );
+
+	app->SetDefaultParameter( "CCAL_ComptonGains:COPL_CUT", COPL_CUT,
+				     "Coplanarity Cut (degrees)" );
+	app->SetDefaultParameter( "CCAL_ComptonGains:DELTA_K_CUT", DELTA_K_CUT );
+
 	
 	// TOF/FCAL Matching Plots
 	
@@ -185,11 +186,6 @@ jerror_t JEventProcessor_CCAL_ComptonGains::init(void)
 	
 	h_tof_match = new TH1F( "tof_match", "TOF Match", 2, -0.5, 1.5 );
 	
-	
-	
-	
-	
-  	return NOERROR;
 }
 
 
@@ -197,37 +193,31 @@ jerror_t JEventProcessor_CCAL_ComptonGains::init(void)
 
 ///==========================================================
 //
-//   brun
+//   BeginRun
 //
 //==========================================================
 
-jerror_t JEventProcessor_CCAL_ComptonGains::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_CCAL_ComptonGains::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 	
-	DGeometry*   dgeom = NULL;
-  	DApplication* dapp = dynamic_cast< DApplication* >( eventLoop->GetJApplication() );
-  	if( dapp )   dgeom = dapp->GetDGeometry( runnumber );
-   	
+	DGeometry* dgeom = DEvent::GetDGeometry(event);
 	if( dgeom ){
     	  	dgeom->GetTargetZ( m_beamZ );
 		dgeom->GetFCALPosition( m_fcalX, m_fcalY, m_fcalZ );
 		dgeom->GetCCALPosition( m_ccalX, m_ccalY, m_ccalZ );
   	} else{
     	  	cerr << "No geometry accessbile to compton_analysis plugin." << endl;
-    	  	return RESOURCE_UNAVAILABLE;
+    	  	return; // RESOURCE_UNAVAILABLE;
   	}
 	
 	
-	jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+	JCalibration *jcalib = DEvent::GetJCalibration(event);
   	std::map<string, float> beam_spot;
   	jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   	m_beamX  =  beam_spot.at("x");
   	m_beamY  =  beam_spot.at("y");
 	
 	
-	
-	
-  	return NOERROR;
 }
 
 
@@ -235,11 +225,11 @@ jerror_t JEventProcessor_CCAL_ComptonGains::brun(JEventLoop *eventLoop, int32_t 
 
 //==========================================================
 //
-//   evnt
+//   Process
 //
 //==========================================================
 
-jerror_t JEventProcessor_CCAL_ComptonGains::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void JEventProcessor_CCAL_ComptonGains::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	
 	
@@ -248,12 +238,12 @@ jerror_t JEventProcessor_CCAL_ComptonGains::evnt(JEventLoop *eventLoop, uint64_t
 	else {
 		const DL1Trigger *trig = NULL;
   		try {
-      	  		eventLoop->GetSingle(trig);
+      	  		locEvent->GetSingle(trig);
   		} catch (...) {}
-		if (trig == NULL) { return NOERROR; }
+		if (trig == NULL) { return; }
 		
 		uint32_t fp_trigmask = trig->fp_trig_mask; 
-		if( fp_trigmask ) return NOERROR;
+		if( fp_trigmask ) return;
 	}
 	
 	
@@ -262,10 +252,10 @@ jerror_t JEventProcessor_CCAL_ComptonGains::evnt(JEventLoop *eventLoop, uint64_t
 	
 	const DEventRFBunch *locRFBunch = NULL;
 	try { 
-	  	eventLoop->GetSingle( locRFBunch, "CalorimeterOnly" );
-	} catch (...) { return NOERROR; }
+	  	locEvent->GetSingle( locRFBunch, "CalorimeterOnly" );
+	} catch (...) { return; }
 	double rfTime = locRFBunch->dTime;
-	if( locRFBunch->dNumParticleVotes < 2 ) return NOERROR;
+	if( locRFBunch->dNumParticleVotes < 2 ) return;
 	
 	
 	
@@ -281,20 +271,18 @@ jerror_t JEventProcessor_CCAL_ComptonGains::evnt(JEventLoop *eventLoop, uint64_t
 	vector< const DFCALShower* > fcal_showers;
 	vector< const DTOFPoint*   >  tof_points;
 	
-	eventLoop->Get( beam_photons );
-	eventLoop->Get( ccal_showers );
-	eventLoop->Get( fcal_showers );
-	eventLoop->Get(  tof_points  );
+	locEvent->Get( beam_photons );
+	locEvent->Get( ccal_showers );
+	locEvent->Get( fcal_showers );
+	locEvent->Get(  tof_points  );
 	
 	vector< const DFCALShower* > ComptonShowers_FCAL;
 	vector< const DCCALShower* > ComptonShowers_CCAL;
 	
 	
 	
-	
-	japp->RootFillLock(this);  // Acquire root lock
-	
-	
+	DEvent::GetLockService(locEvent)->RootFillLock(this);  // Acquire root lock
+
 	
 	/*
 	
@@ -344,10 +332,8 @@ jerror_t JEventProcessor_CCAL_ComptonGains::evnt(JEventLoop *eventLoop, uint64_t
 	
 	
 	if( n_fcal_showers != 1 || n_ccal_showers != 1 ) {
-		
-		japp->RootFillUnLock(this);  // Release root lock
-		return NOERROR;
-		
+		DEvent::GetLockService(locEvent)->RootFillUnLock(this);  // Release root lock
+		return;
 	}
 	
 	
@@ -390,8 +376,10 @@ jerror_t JEventProcessor_CCAL_ComptonGains::evnt(JEventLoop *eventLoop, uint64_t
 	
 	//----------   Apply a Coplanarity cut:
 	
-	if( fabs( deltaPhi - 180. )  >  COPL_CUT ) return NOERROR;
-	
+	if( fabs( deltaPhi - 180. )  >  COPL_CUT ) {
+		DEvent::GetLockService(locEvent)->RootFillUnLock(this);  // Release root lock
+		return; // NOERROR;
+	}	
 	
 	
 	
@@ -484,14 +472,9 @@ jerror_t JEventProcessor_CCAL_ComptonGains::evnt(JEventLoop *eventLoop, uint64_t
 		
 	}
 	
-	japp->RootFillUnLock(this);  // Release root lock
+	DEvent::GetLockService(locEvent)->RootFillUnLock(this);  // Release root lock
 	
 	
-	
-	
-	
-	
-  	return NOERROR;
 }
 
 
@@ -499,14 +482,12 @@ jerror_t JEventProcessor_CCAL_ComptonGains::evnt(JEventLoop *eventLoop, uint64_t
 
 //==========================================================
 //
-//   erun
+//   EndRun
 //
 //==========================================================
 
-jerror_t JEventProcessor_CCAL_ComptonGains::erun(void)
+void JEventProcessor_CCAL_ComptonGains::EndRun()
 {
-  	
-  	return NOERROR;
 }
 
 
@@ -514,14 +495,12 @@ jerror_t JEventProcessor_CCAL_ComptonGains::erun(void)
 
 //==========================================================
 //
-//   fini
+//   Finish
 //
 //==========================================================
 
-jerror_t JEventProcessor_CCAL_ComptonGains::fini(void)
+void JEventProcessor_CCAL_ComptonGains::Finish()
 {
-	
-  	return NOERROR;
 }
 
 

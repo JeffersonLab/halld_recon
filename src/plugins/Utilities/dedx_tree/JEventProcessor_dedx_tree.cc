@@ -6,7 +6,6 @@
 //
 
 #include "JEventProcessor_dedx_tree.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
@@ -16,7 +15,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_dedx_tree());
+	app->Add(new JEventProcessor_dedx_tree());
 }
 } // "C"
 
@@ -28,7 +27,7 @@ thread_local DTreeFillData JEventProcessor_dedx_tree::dTreeFillData;
 //------------------
 JEventProcessor_dedx_tree::JEventProcessor_dedx_tree()
 {
-
+	SetTypeName("JEventProcessor_dedx_tree");
 }
 
 //------------------
@@ -42,11 +41,10 @@ JEventProcessor_dedx_tree::~JEventProcessor_dedx_tree()
 //------------------
 // init
 //------------------
-jerror_t JEventProcessor_dedx_tree::init(void)
+void JEventProcessor_dedx_tree::Init()
 {
 	// This is called once at program startup. 
 
-  
     //TTREE INTERFACE
     //MUST DELETE WHEN FINISHED: OR ELSE DATA WON'T BE SAVED!!!
     dTreeInterface = DTreeInterface::Create_DTreeInterface("dedx_tree", "dedx_tree.root");
@@ -76,47 +74,46 @@ jerror_t JEventProcessor_dedx_tree::init(void)
 
     //REGISTER BRANCHES
     dTreeInterface->Create_Branches(locTreeBranchRegister);
-
-    return NOERROR;
 }
 
 //------------------
 // brun
 //------------------
-jerror_t JEventProcessor_dedx_tree::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_dedx_tree::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t JEventProcessor_dedx_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_dedx_tree::Process(const std::shared_ptr<const JEvent> &event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
 	// japp->RootFillLock(this);
 	//  ... fill historgrams or trees ...
 	// japp->RootFillUnLock(this);
 
+  auto eventnumber = event->GetEventNumber();
+
   // select events with physics events, i.e., not LED and other front panel triggers
   const DTrigger* locTrigger = NULL; 
-  loop->GetSingle(locTrigger); 
-  if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) return NOERROR;
+  event->GetSingle(locTrigger);
+  if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) return;
 
   const DVertex* locVertex  = NULL;
-  loop->GetSingle(locVertex);
+  event->GetSingle(locVertex);
   double z = locVertex->dSpacetimeVertex.Z();
-  if ((z < 45.0) || (z > 85.0)) return NOERROR;
+  if ((z < 45.0) || (z > 85.0)) return;
 
   double x = locVertex->dSpacetimeVertex.X();
   double y = locVertex->dSpacetimeVertex.Y();
@@ -124,9 +121,9 @@ jerror_t JEventProcessor_dedx_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 
   vector<const DChargedTrack*> ctracks;
-  loop->Get(ctracks);
+  event->Get(ctracks);
 
-  if ((int)ctracks.size() ==0) return NOERROR;
+  if ((int)ctracks.size() ==0) return;
 
   dTreeFillData.Fill_Single<ULong64_t>("eventnumber",(ULong64_t)eventnumber);
 
@@ -178,31 +175,25 @@ jerror_t JEventProcessor_dedx_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
 
   }
-
-
-	return NOERROR;
 }
 
 //------------------
 // erun
 //------------------
-jerror_t JEventProcessor_dedx_tree::erun(void)
+void JEventProcessor_dedx_tree::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t JEventProcessor_dedx_tree::fini(void)
+void JEventProcessor_dedx_tree::Finish()
 {
 	// Called before program exit after event processing is finished.
 
         delete dTreeInterface; //saves trees to file, closes file
-
-	return NOERROR;
 }
 

@@ -9,19 +9,14 @@
 #define _DEventSourceHDDMGenerator_
 
 #include <JANA/JEventSourceGenerator.h>
-using namespace jana;
 
 class DEventSourceHDDMGenerator:public JEventSourceGenerator{
 	public:
-		DEventSourceHDDMGenerator(){}
-		~DEventSourceHDDMGenerator(){}
-		const char* className(void){return static_className();}
-		static const char* static_className(void){return "DEventSourceHDDMGenerator";}
-		
-		const char* Description(void);
-		double CheckOpenable(string source);
-		JEventSource* MakeJEventSource(string source);
-		
+		std::string GetType() const override { return "DEventSourceHDDM"; }
+		std::string GetDescription() const override;
+
+		double CheckOpenable(std::string source) override;
+		JEventSource* MakeJEventSource(std::string source) override;
 };
 
 #endif // _DEventSourceHDDMGenerator_

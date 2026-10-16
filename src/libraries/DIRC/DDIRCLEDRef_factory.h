@@ -11,16 +11,15 @@
 #include <utility>
 using namespace std;
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DDIRCLEDRef.h"
 #include "TTAB/DTranslationTable.h"
 #include "TTAB/DTTabUtilities.h"
 #include <DAQ/Df250PulseData.h>
 #include <DAQ/DCAEN1290TDCHit.h>
-using namespace jana;
 
 
-class DDIRCLEDRef_factory:public jana::JFactory<DDIRCLEDRef>{
+class DDIRCLEDRef_factory:public JFactoryT<DDIRCLEDRef>{
  public:
   DDIRCLEDRef_factory(){};
   ~DDIRCLEDRef_factory(){};
@@ -37,11 +36,11 @@ class DDIRCLEDRef_factory:public jana::JFactory<DDIRCLEDRef>{
   DDIRCLEDRef* FindMatch(double T);
   
  private:
-  jerror_t init(void);
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-  jerror_t erun(void);
-  jerror_t fini(void);
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
   
   double CalcWalkCorrIntegral(DDIRCLEDRef* hit);
   double CalcWalkCorrAmplitude(DDIRCLEDRef* hit);

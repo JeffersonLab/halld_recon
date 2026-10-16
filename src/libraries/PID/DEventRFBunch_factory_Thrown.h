@@ -11,28 +11,29 @@
 #include <iostream>
 #include <iomanip>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <PID/DEventRFBunch.h>
 #include <PID/DBeamPhoton.h>
 #include <RF/DRFTime.h>
 #include <TRACKING/DMCThrown.h>
 
 using namespace std;
-using namespace jana;
 
-class DEventRFBunch_factory_Thrown : public jana::JFactory<DEventRFBunch>
+
+class DEventRFBunch_factory_Thrown : public JFactoryT<DEventRFBunch>
 {
 	public:
-		DEventRFBunch_factory_Thrown(){};
+		DEventRFBunch_factory_Thrown(){
+			SetTag("Thrown");
+		};
 		~DEventRFBunch_factory_Thrown(){};
-		const char* Tag(void){return "Thrown";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 };
 
 #endif // _DEventRFBunch_factory_Thrown_

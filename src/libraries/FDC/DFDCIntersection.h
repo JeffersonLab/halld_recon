@@ -11,7 +11,6 @@
 #include <cmath>
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 #include <DVector3.h>
 #include "FDC/DFDCHit.h"
 #include "FDC/DFDCWire.h"
@@ -26,13 +25,13 @@ class DFDCIntersection:public JObject{
 		const DFDCWire *wire2;
 		DVector3 pos;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "layer1", "%d", wire1->layer);
-			AddString(items, "wire1", "%d", wire1->wire);
-			AddString(items, "angle1(deg)", "%3.1f", wire1->angle*180.0/M_PI);
-			AddString(items, "layer2", "%d", wire2->layer);
-			AddString(items, "wire2", "%d", wire2->wire);
-			AddString(items, "angle2(deg)", "%3.1f", wire2->angle*180.0/M_PI);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(wire1->layer, "layer1", "%d");
+			summary.add(wire1->wire, "wire1", "%d");
+			summary.add(wire1->angle*180.0/M_PI, "angle1(deg)", "%3.1f");
+			summary.add(wire2->layer, "layer2", "%d");
+			summary.add(wire2->wire, "wire2", "%d");
+			summary.add(wire2->angle*180.0/M_PI, "angle2(deg)", "%3.1f");
 		}
 };
 

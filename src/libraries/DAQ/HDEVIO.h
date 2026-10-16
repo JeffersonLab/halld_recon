@@ -10,6 +10,8 @@
 
 #ifndef _DBG_
 #define _DBG_ cout<<__FILE__<<":"<<__LINE__<<" "
+#endif
+#ifndef _DBG__
 #define _DBG__ cout<<__FILE__<<":"<<__LINE__<<endl
 #endif
 

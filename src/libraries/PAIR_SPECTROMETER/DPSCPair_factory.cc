@@ -13,7 +13,9 @@ using namespace std;
 
 #include "DPSCPair_factory.h"
 #include "DPSCHit.h"
-using namespace jana;
+
+#include <JANA/JEvent.h>
+
 
 inline bool DPSCPair_SortByTimeDifference(const DPSCPair* pair1, const DPSCPair* pair2)
 {
@@ -23,74 +25,88 @@ inline bool DPSCPair_SortByTimeDifference(const DPSCPair* pair1, const DPSCPair*
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DPSCPair_factory::init(void)
+void DPSCPair_factory::Init()
 {
+  auto app = GetApplication();
   DELTA_T_PAIR_MAX = 10.0; // ns
-  gPARMS->SetDefaultParameter("PSCPair:DELTA_T_PAIR_MAX",DELTA_T_PAIR_MAX,
+  app->SetDefaultParameter("PSCPair:DELTA_T_PAIR_MAX",DELTA_T_PAIR_MAX,
 			      "Maximum difference in ns between a pair of hits"
 			      " in left and right arm of coarse PS");
-  return NOERROR;
+  app->SetDefaultParameter("PSCPair:USE_ADC_HITS", USE_ADC_HITS, "Require PSC hits to have a fADC time (default: true)");
+  app->SetDefaultParameter("PSCPair:USE_TDC_HITS", USE_TDC_HITS, "Require PSC hits to have a TDC time (default: true)");
+  
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DPSCPair_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DPSCPair_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DPSCPair_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DPSCPair_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
+  if(!USE_ADC_HITS && !USE_TDC_HITS)
+  	return;
+
   // get coarse pair spectrometer hits
   vector<const DPSCHit*> hits;
-  loop->Get(hits);
+  event->Get(hits);
   // form PSC left-right hit pairs and sort by time difference
   pair<const DPSCHit*,const DPSCHit*> ee;
   if (hits.size()>1) {
     for (unsigned int i=0; i < hits.size()-1; i++) {
       for (unsigned int j=i+1; j < hits.size(); j++) {
-	if (!hits[i]->has_TDC||!hits[j]->has_TDC) continue;
-	if (!hits[i]->has_fADC||!hits[j]->has_fADC) continue;
-	if (std::abs(hits[i]->arm-hits[j]->arm)==1&&fabs(hits[i]->t-hits[j]->t)<DELTA_T_PAIR_MAX) {
-	  if (hits[i]->arm==0) {
-	    ee.first = hits[i];
-	    ee.second = hits[j];
-	  }
-	  else if (hits[i]->arm==1) {
-	    ee.first = hits[j];
-	    ee.second = hits[i];
-	  }
-	  DPSCPair *pair = new DPSCPair;
-	  pair->ee = ee;
-	  _data.push_back(pair);
-	}
+          if (USE_TDC_HITS && (!hits[i]->has_TDC||!hits[j]->has_TDC)) continue;
+          if (USE_ADC_HITS && (!hits[i]->has_fADC||!hits[j]->has_fADC)) continue;
+          
+          double t1 = -1.e6, t2 = -1.e6;
+          if( USE_ADC_HITS && USE_TDC_HITS ) {
+          	t1 = hits[i]->t;
+          	t2 = hits[j]->t;
+          } else if(!USE_TDC_HITS) {
+          	t1 = hits[i]->time_fadc;
+          	t2 = hits[j]->time_fadc;
+          } else {  // !USE_ADC_HITS
+          	t1 = hits[i]->t;
+          	t2 = hits[j]->t;
+          }
+          
+          if ( (std::abs(hits[i]->arm-hits[j]->arm)==1&&fabs(t1-t2)<DELTA_T_PAIR_MAX) ) {
+              if (hits[i]->arm==0) {
+                  ee.first = hits[i];
+                  ee.second = hits[j];
+              }
+              else if (hits[i]->arm==1) {
+                  ee.first = hits[j];
+                  ee.second = hits[i];
+              }
+              DPSCPair *pair = new DPSCPair;
+              pair->ee = ee;
+              Insert(pair);
+          }
       }
     }
   }
-  sort(_data.begin(),_data.end(),DPSCPair_SortByTimeDifference);
-
-  return NOERROR;
+  sort(mData.begin(),mData.end(),DPSCPair_SortByTimeDifference);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DPSCPair_factory::erun(void)
+void DPSCPair_factory::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DPSCPair_factory::fini(void)
+void DPSCPair_factory::Finish()
 {
-  return NOERROR;
 }
 

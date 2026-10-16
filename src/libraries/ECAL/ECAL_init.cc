@@ -1,26 +1,24 @@
 // $Id: FCAL_init.cc 5342 2009-07-09 15:46:12Z davidl $
+#include <JANA/JFactorySet.h>
+#include <JANA/JFactoryT.h>
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
-
-#include <ECAL/DECALTruthShower_factory.h>
-#include <ECAL/DECALGeometry_factory.h>
-
+#include "DECALTruthShower_factory.h"
 #include "DECALDigiHit.h"
 #include "DECALHit_factory.h"
-
-
 #include "DECALRefDigiHit.h"
+#include "DECALCluster_factory.h"
+#include "DECALShower_factory.h"
+#include "DECALGeometry_factory.h"
 
-jerror_t ECAL_init(JEventLoop *loop)
+void ECAL_init(JFactorySet *factorySet)
 {
-	/// Create and register ECAL data factories
-  	loop->AddFactory(new JFactory<DECALDigiHit>());
-  	loop->AddFactory(new JFactory<DECALRefDigiHit>());
-	loop->AddFactory(new DECALHit_factory());
-	loop->AddFactory(new JFactory<DECALHit>("TRUTH"));
-	loop->AddFactory(new DECALTruthShower_factory());
-	loop->AddFactory(new DECALGeometry_factory());
-
-	return NOERROR;
+  /// Create and register ECAL data factories
+  factorySet->Add(new JFactoryT<DECALDigiHit>());
+  factorySet->Add(new JFactoryT<DECALRefDigiHit>());
+  factorySet->Add(new DECALHit_factory());
+  factorySet->Add(new JFactoryT<DECALHit>("TRUTH"));
+  factorySet->Add(new DECALTruthShower_factory());
+  factorySet->Add(new DECALCluster_factory());
+  factorySet->Add(new DECALShower_factory());
+  factorySet->Add(new DECALGeometry_factory());
 }

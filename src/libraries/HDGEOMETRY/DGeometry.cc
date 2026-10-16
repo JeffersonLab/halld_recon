@@ -6,13 +6,16 @@
 //
 
 #include <algorithm>
-using namespace std;
+
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/Geometry/JGeometryXML.h>
 
 #include "DGeometry.h"
-#include <JANA/JGeometryXML.h>
 #include "FDC/DFDCWire.h"
 #include "FDC/DFDCGeometry.h"
 #include <ansi_escape.h>
+#include "TString.h"
+
 
 using namespace std;
 
@@ -23,20 +26,25 @@ using namespace std;
 //---------------------------------
 // DGeometry    (Constructor)
 //---------------------------------
-DGeometry::DGeometry(JGeometry *jgeom, DApplication *dapp, int32_t runnumber)
+DGeometry::DGeometry(JGeometry *jgeom, DGeometryManager *dgeoman, JApplication* app, int32_t runnumber)
 {
 	this->jgeom = jgeom;
-	this->dapp = dapp;
-	this->bfield = NULL; // don't ask for B-field object before we're asked for it
+	this->dgeoman = dgeoman;
+	this->app = app;
+	this->jcalman = app->GetService<JCalibrationManager>();
+	this->bfield = nullptr; // don't ask for B-field object before we're asked for it
 	this->runnumber = runnumber;
 	this->materialmaps_read = false;
 	this->materials_read = false;
 	
-	pthread_mutex_init(&bfield_mutex, NULL);
-	pthread_mutex_init(&materialmap_mutex, NULL);
-	pthread_mutex_init(&materials_mutex, NULL);
+	pthread_mutex_init(&bfield_mutex, nullptr);
+	pthread_mutex_init(&materialmap_mutex, nullptr);
+	pthread_mutex_init(&materials_mutex, nullptr);
 
 	ReadMaterialMaps();
+
+	PRINT_POSITIONS=false;
+	app->SetDefaultParameter("GEOMETRY:PRINT_POSITIONS",PRINT_POSITIONS);
 }
 
 //---------------------------------
@@ -61,7 +69,7 @@ DGeometry::~DGeometry()
 DMagneticFieldMap* DGeometry::GetBfield(void) const
 {
 	pthread_mutex_lock(&bfield_mutex);
-	if(bfield == NULL) bfield = dapp->GetBfield(runnumber);
+	if(bfield == NULL) bfield = dgeoman->GetBfield(runnumber);
 	pthread_mutex_unlock(&bfield_mutex);
 
 	return bfield;
@@ -72,7 +80,7 @@ DMagneticFieldMap* DGeometry::GetBfield(void) const
 //---------------------------------
 DLorentzDeflections* DGeometry::GetLorentzDeflections(void)
 {
-	return dapp->GetLorentzDeflections(runnumber);
+	return dgeoman->GetLorentzDeflections(runnumber);
 }
 
 //---------------------------------
@@ -108,7 +116,7 @@ void DGeometry::ReadMaterialMaps(void) const
 		return;
 	}
 
-	JCalibration * jcalib = dapp->GetJCalibration(runnumber);
+	JCalibration * jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
 	if(!jcalib){
 		_DBG_<<"ERROR:  Unable to get JCalibration object!"<<endl;
 		pthread_mutex_unlock(&materialmap_mutex);
@@ -132,16 +140,16 @@ void DGeometry::ReadMaterialMaps(void) const
 	
 	// Inform user what's happening
 	if(material_namepaths.size()==0){
-		jerr<<"No material maps found in calibration DB!!"<<endl;
+		jerr<<"No material maps found in calibration DB!!"<<jendl;
 		pthread_mutex_unlock(&materialmap_mutex);
 		return;
 	}
-	jout<<"Found "<<material_namepaths.size()<<" material maps in calib. DB"<<endl;
+	jout<<"Found "<<material_namepaths.size()<<" material maps in calib. DB"<<jendl;
 	
 	if(false){ // save this to work off configuration parameter
-		jout<<"Will read in the following:"<<endl;
+		jout<<"Will read in the following:"<<jendl;
 		for(unsigned int i=0; i<material_namepaths.size(); i++){
-			jout<<"  "<<material_namepaths[i]<<endl;
+			jout<<"  "<<material_namepaths[i]<<jendl;
 		}
 	}
 
@@ -152,7 +160,7 @@ void DGeometry::ReadMaterialMaps(void) const
 		// DMaterialMap constructor prints line so we conserve real
 		// estate by having each recycle the line
 		//cout<<ansi_up(1)<<string(85, ' ')<<"\r";
-		DMaterialMap *mat = new DMaterialMap(material_namepaths[i], jcalib);
+		DMaterialMap *mat = new DMaterialMap(material_namepaths[i], jcalib, app->GetJParameterManager());
 		if( ! mat->IS_VALID ) {
 			// This particular map may not exist for this run/variation
 			// (e.g. CPP uses maps downstream of TOF)
@@ -163,7 +171,7 @@ void DGeometry::ReadMaterialMaps(void) const
 		Npoints_total += (unsigned int)(mat->GetNr()*mat->GetNz());
 	}
 	//cout<<ansi_up(1)<<string(85, ' ')<<"\r";
-	jout<<"Read in "<<materialmaps.size()<<" material maps for run "<<runnumber<<" containing "<<Npoints_total<<" grid points total"<<endl;
+	jout<<"Read in "<<materialmaps.size()<<" material maps for run "<<runnumber<<" containing "<<Npoints_total<<" grid points total"<<jendl;
 
 	// Set flag that maps have been read and unlock mutex
 	materialmaps_read = true;
@@ -855,7 +863,7 @@ bool DGeometry::GetCDCWires(vector<vector<DCDCWire *> >&cdcwires) const{
    double dX=0.0, dY=0.0, dZ=0.0;
    double dPhiX=0.0,dPhiY=0.0,dPhiZ=0.0;
 
-   JCalibration * jcalib = dapp->GetJCalibration(runnumber);
+   JCalibration * jcalib = jcalman->GetJCalibration(runnumber);
    vector<map<string,double> >vals;
    if (jcalib->Get("CDC/global_alignment",vals)==false){
       map<string,double> &row = vals[0];
@@ -936,7 +944,7 @@ bool DGeometry::GetCDCWires(vector<vector<DCDCWire *> >&cdcwires) const{
       cdc_offsets.push_back(tempvec);
    }
    else{
-      jerr<< "CDC wire alignment table not available... bailing... " <<endl;
+      jerr<< "CDC wire alignment table not available... bailing... " <<jendl;
       exit(0);
    }
 
@@ -1045,7 +1053,7 @@ bool DGeometry::GetCDCWires(vector<vector<DCDCWire *> >&cdcwires) const{
 //---------------------------------
 bool DGeometry::GetFDCCathodes(vector<vector<DFDCCathode *> >&fdccathodes) const{
    // Get offsets tweaking nominal geometry from calibration database
-   JCalibration * jcalib = dapp->GetJCalibration(runnumber);
+   JCalibration * jcalib = jcalman->GetJCalibration(runnumber);
    vector<map<string,double> >vals;
    vector<fdc_cathode_offset_t>fdc_cathode_offsets;
    if (jcalib->Get("FDC/cathode_alignment",vals)==false){
@@ -1098,7 +1106,7 @@ bool DGeometry::GetFDCCathodes(vector<vector<DFDCCathode *> >&fdccathodes) const
       }
    }
    else{
-      jerr << "Strip pitch calibration unavailable -- setting default..." <<endl;
+      jerr << "Strip pitch calibration unavailable -- setting default..." <<jendl;
       // set some sensible default
       for (unsigned int i=0;i<2*FDC_NUM_LAYERS;i++){
 
@@ -1187,27 +1195,24 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
    dY[3]=offsets[1];
 
    // Get offsets tweaking nominal geometry from calibration database
-   JCalibration * jcalib = dapp->GetJCalibration(runnumber);
+   JCalibration * jcalib = jcalman->GetJCalibration(runnumber);
    vector<map<string,double> >vals;
-   vector<fdc_wire_offset_t>fdc_wire_offsets;
+   vector<double>fdc_wire_z_offsets;
    if (jcalib->Get("FDC/wire_alignment",vals)==false){
       for(unsigned int i=0; i<vals.size(); i++){
          map<string,double> &row = vals[i];
-
-         // Get the offsets from the calibration database 
-         fdc_wire_offset_t temp;
-         temp.du=row["dU"];
-         //temp.du=0.;
-
-         temp.dphi=row["dPhi"];
-         //temp.dphi=0.;
-
-         temp.dz=row["dZ"];
-         //  temp.dz=0.;
-
-         fdc_wire_offsets.push_back(temp);
+         fdc_wire_z_offsets.push_back(row["dZ"]);
       }
    }
+   vector<double>fdc_wire_u_offsets;
+   vector<double>fdc_wire_v_offsets;
+   if (jcalib->Get("FDC/cell_offsets",vals)==false){
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      fdc_wire_u_offsets.push_back(row["xshift"]);
+      fdc_wire_v_offsets.push_back(row["yshift"]);
+    }
+  }
 
    vector<fdc_wire_rotation_t>fdc_wire_rotations;
    if (jcalib->Get("FDC/cell_rotations",vals)==false){
@@ -1226,8 +1231,9 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
 
    // Generate the vector of wire plane parameters
    for(int i=0; i<FDC_NUM_LAYERS; i++){
-      double angle=-stereo_angles[i]*M_PI/180.+fdc_wire_offsets[i].dphi;
-
+     double angle=-stereo_angles[i]*M_PI/180.;
+     double angle2=angle + M_PI_2;
+     
       vector<DFDCWire *>temp;
       for(int j=0; j<WIRES_PER_PLANE; j++){
          unsigned int pack_id=i/6;
@@ -1239,19 +1245,21 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
 
          // find coordinates of center of wire in rotated system
          float u = U_OF_WIRE_ZERO + WIRE_SPACING*(float)(j);
-         w->u=u+fdc_wire_offsets[i].du;
+         w->u=u+fdc_wire_u_offsets[i];
 
          // Rotate coordinates into lab system and set the wire's origin
          // Note that the FDC measures "angle" such that angle=0
          // corresponds to the anode wire in the vertical direction
          // (i.e. at phi=90 degrees).
-         float x = u*sin(angle + M_PI/2.0);
-         float y = u*cos(angle + M_PI/2.0);
+         float x = u*sin(angle2);
+         float y = u*cos(angle2);
          w->origin.SetXYZ(x,y,0.);
          w->origin.RotateX(ThetaX[pack_id]+fdc_wire_rotations[i].dPhiX);
          w->origin.RotateY(ThetaY[pack_id]+fdc_wire_rotations[i].dPhiY);
          w->origin.RotateZ(ThetaZ[pack_id]+fdc_wire_rotations[i].dPhiZ);
-         DVector3 globalOffsets(dX[pack_id],dY[pack_id],z_wires[i]+fdc_wire_offsets[i].dz);
+         DVector3 globalOffsets(dX[pack_id]-fdc_wire_v_offsets[i]*cos(angle2),
+				dY[pack_id]+fdc_wire_v_offsets[i]*sin(angle2),
+				z_wires[i]+fdc_wire_z_offsets[i]);
          w->origin+=globalOffsets;
 
          // Length of wire is set by active radius
@@ -1768,22 +1776,29 @@ bool DGeometry::GetBCALPhiShift(float &bcal_phi_shift) const
 //---------------------------------
 bool DGeometry::GetECALZ(double &z_ecal) const
 {
-   vector<double> CrystalEcalpos;
-   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//section/composition/posXYZ[@volume='CrystalECAL']/@X_Y_Z", CrystalEcalpos);
-   jgeom->SetVerbose(1);   // reenable error messages
+  z_ecal=0;
+  if (GetFCALZ(z_ecal)){    
+    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+    vector<double>CrystalEcalpos;
+    if (Get("//section/composition/posXYZ[@volume='CrystalECAL']/@X_Y_Z", CrystalEcalpos)){
+      vector<double> FCALCenter;
+      Get("//section/composition/posXYZ[@volume='forwardEMcal]/@X_Y_Z", FCALCenter);
+      vector<double>block;
+      Get("//box[@name='XTBL']/@X_Y_Z",block);
 
-   if(!good){
-	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
-      //_DBG_<<"Unable to retrieve ECAL position."<<endl;  
-      z_ecal = 1279.376;   
-      return false;
-   }else{
-	   z_ecal = CrystalEcalpos[2];
+      jgeom->SetVerbose(1);   // reenable error messages
+     
+      z_ecal += FCALCenter[2]+CrystalEcalpos[2]-0.5*block[2];
+
+      if (PRINT_POSITIONS){
+	cout << "ECAL front position: " << z_ecal << " cm" << endl;
+      }
+      
       return true;
-   }
+    }
+  }
+  return false;
 }
-
 
 //---------------------------------
 // GetCCALZ
@@ -1989,6 +2004,11 @@ bool DGeometry::GetFCALZ(double &z_fcal) const
       return false;
    }else{
       z_fcal = ForwardEMcalpos[2];
+
+      if (PRINT_POSITIONS){
+	cout << "FCAL front position: " << z_fcal << " cm" << endl;
+      }
+      
       return true;
    }
 }
@@ -2058,18 +2078,33 @@ bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const
   }
 }
 
+// Check for presence of FCAL2 insert
+bool DGeometry::HaveInsert() const{
+  int ncopy=0;
+  jgeom->SetVerbose(0);
+  bool have_insert
+    =Get("//composition[@name='XTrow0']/mposX[@volume='XTModule']/@ncopy",
+	 ncopy);
+  jgeom->SetVerbose(1);
+  return have_insert;
+}
+
 //---------------------------------
 // GetFCALInsertRowSize
 //---------------------------------
 bool DGeometry::GetFCALInsertRowSize(int &insert_row_size) const
 {
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+
+   bool good = Get("//composition[@name='XTrow0']/mposX[@volume='XTModule']/@ncopy",insert_row_size);
+   // For backward compatibility with prototype geometry definition:
+   if (!good){
+     good = Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+   }
+
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
-	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
-      //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;  
       insert_row_size = 0;   
       return false;
    }else{
@@ -2078,12 +2113,27 @@ bool DGeometry::GetFCALInsertRowSize(int &insert_row_size) const
 }
 
 //---------------------------------
+// GetFCALInsertSize
+//---------------------------------
+double DGeometry::GetFCALInsertSize() const{
+  int insertRowSize=0;
+  if (GetFCALInsertRowSize(insertRowSize)){
+    vector<double>insertBlock;
+    // Use nominal crystal separation to be on the safe side.  This is slightly
+    // larger than the actual measured separations from the survey.
+    return 0.5*double(insertRowSize)*2.09;
+  }
+
+  return 0.;
+}
+
+//---------------------------------
 // GetFCALBlockSize
 //---------------------------------
 bool DGeometry::GetFCALBlockSize(vector<double> &block) const
 {
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//box[@name='LGBL']/@X_Y_Z",block);
+   bool good = Get("//box[@name='LGBU']/@X_Y_Z",block);
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
@@ -2101,12 +2151,12 @@ bool DGeometry::GetFCALBlockSize(vector<double> &block) const
 bool DGeometry::GetFCALInsertBlockSize(vector<double> &block) const
 {
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//box[@name='LTB1']/@X_Y_Z",block);
+   bool good = Get("//box[@name='XTMD']/@X_Y_Z",block);
+   // for backward compatiblity
+   if (!good) good=Get("//box[@name='LTB1']/@X_Y_Z",block);
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
-	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
-      //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;  
       return false;
    }else{
       return true;
@@ -2142,6 +2192,83 @@ bool DGeometry::GetDIRCZ(double &z_dirc) const
 }
 
 //---------------------------------
+// GetGEMTRDz
+//---------------------------------
+bool DGeometry::GetGEMTRDz(double &z_gemtrd) const
+{
+  z_gemtrd=9999.;
+  vector<double> origin;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+  bool good = Get("//section/composition/posXYZ[@volume='GEMTRD']/@X_Y_Z",origin);
+  jgeom->SetVerbose(1);   // reenable error messages
+
+  if(!good){
+    _DBG_<<"Unable to retrieve GEMTRD position."<<endl;
+    return false;
+  }
+
+  vector<double>readout;
+  Get("//posXYZ[@volume='GTRO']/@X_Y_Z",readout);
+ 
+  z_gemtrd=origin[2]+readout[2];
+  
+  if (PRINT_POSITIONS){
+    cout << "GEMTRD readout position: z=" << z_gemtrd << " cm" << endl;
+  }
+  
+  return true;
+}
+
+//---------------------------------
+// GetGEMTRDxy_vec
+//---------------------------------
+bool DGeometry::GetGEMTRDxy_vec(vector<double>&xvec, vector<double>&yvec) const
+{
+  vector<double> TRDorigin;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+  bool good = Get("//section/composition/posXYZ[@volume='GEMTRD']/@X_Y_Z",TRDorigin);
+  jgeom->SetVerbose(1);   // reenable error messages
+
+  if(!good){
+    _DBG_<<"Unable to retrieve GEMTRD position."<<endl;
+    return false;
+  }
+  vector<double>TRDModulePos;
+  Get("//posXYZ[@volume='gemTRDmodule']/@X_Y_Z/layer[@value='1']", TRDModulePos);
+  vector<double>TRDModuleCenter;
+  Get("//posXYZ[@volume='gemSensitiveVolume']/@X_Y_Z", TRDModuleCenter);
+  
+  xvec.push_back(TRDorigin[0]+TRDModulePos[0]+TRDModuleCenter[0]);
+  yvec.push_back(TRDorigin[1]+TRDModulePos[1]+TRDModuleCenter[1]);
+  if (PRINT_POSITIONS){
+    cout << "GEMTRD position: x=" << xvec[xvec.size()-1] << " cm" << endl;
+    cout << "GEMTRD position: y=" << yvec[xvec.size()-1] << " cm" << endl;
+  }
+  
+  return true;
+}
+
+//---------------------------------
+// GetGEMTRDsize
+//---------------------------------
+
+bool DGeometry::GetGEMTRDsize(double &xsize,double &ysize, double &zsize) const
+{
+  vector<double> TRDdimensions;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+  bool good = Get("//box[@name='GTSV']/@X_Y_Z",TRDdimensions);
+  jgeom->SetVerbose(1);   // reenable error messages
+
+  if (good){
+    xsize=TRDdimensions[0];
+    ysize=TRDdimensions[1];
+    zsize=TRDdimensions[2];
+  }
+  return false;
+}
+
+
+//---------------------------------
 // GetTRDZ
 //---------------------------------
 bool DGeometry::GetTRDZ(vector<double> &z_trd) const
@@ -2167,7 +2294,7 @@ bool DGeometry::GetTRDZ(vector<double> &z_trd) const
        jout << z_trd_plane << ", ";
        z_trd.push_back(z_trd_plane);
      }
-     jout << "cm" << endl;
+     jout << "cm" << jendl;
    }
 
    return true;
@@ -2191,6 +2318,11 @@ bool DGeometry::GetTOFZ(double &CenterVPlane,double &CenterHPlane,
   // also save position midway between the two planes
   CenterMPlane=0.5*(CenterHPlane+CenterVPlane);
 
+  if (PRINT_POSITIONS){
+    cout << "TOF plane#1 z=" << CenterHPlane << " cm" <<endl;
+    cout << "TOF plane#2 z=" << CenterVPlane << " cm" <<endl;
+  }
+  
   return true;
 }
 
@@ -2436,6 +2568,11 @@ bool DGeometry::GetTargetZ(double &z_target) const
    if(gluex_target_exists) {
      z_target = xyz_vessel[2] + xyz_target[2] + xyz_detector[2];
      jgeom->SetVerbose(1);   // reenable error messages
+     
+     if (PRINT_POSITIONS){
+       cout << "Target center z=" << z_target << " cm " << endl;
+     }
+     
      return true;
    }
 
@@ -2525,6 +2662,13 @@ bool DGeometry::GetTargetLength(double &target_length) const
     return true;
   }
   
+  // Liquid deuterium target
+  if (Get("//section[@name='Target']/pcon[@name='LID2']/real[@name='length']/[@value]", zLength)){
+    target_length=zLength[0];
+    jgeom->SetVerbose(1);   // reenable error messages
+    return true;
+  }
+
   // Liquid helium target
   if (Get("//section[@name='Target']/pcon[@name='LIHE']/real[@name='length']/[@value]", zLength)){
     target_length=zLength[0];
@@ -2567,7 +2711,7 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
 				    ) const
 {
 				    
-  JCalibration *jcalib = dapp->GetJCalibration(runnumber);
+  JCalibration *jcalib = jcalman->GetJCalibration(runnumber);
 
   // Check if Start Counter geometry is present
   vector<double> sc_origin;
@@ -2620,6 +2764,7 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
     	loaded_paddle_offsets = true;
     
     // Create vectors of positions and normal vectors for each paddle
+    DVector3 nose_position;
     for (unsigned int i=0;i<30;i++){
       double phi=ThetaZ+dSCdphi*(double(i)+0.5);
       double sinphi=sin(phi);
@@ -2670,12 +2815,23 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
 	dirvec.push_back(dir);
 	posvec.push_back(DVector3(oldray.X()+dx,oldray.Y()+dy,oldray.Z()+z0));
       }
+
+      if (PRINT_POSITIONS){
+	nose_position+=posvec[posvec.size()-1];
+      }
+      
       posvec.push_back(DVector3(ray.X()+dx,ray.Y()+dy,ray.Z()+z0)); //SAVE THE ENDPOINT OF THE LAST PLANE
       pos.push_back(posvec);
       norm.push_back(dirvec);
 		  
       posvec.clear();
       dirvec.clear();
+    }
+    
+    if (PRINT_POSITIONS){
+      nose_position*=1./30.;
+      cout << "Start counter nose position:" <<endl;
+      nose_position.Print();
     }
     
   }

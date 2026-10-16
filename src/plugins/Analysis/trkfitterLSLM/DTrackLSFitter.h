@@ -35,13 +35,13 @@ class DReferenceTrajectory;
 class DTrackLSFitter:public DTrackFitter
 {
  public:
-  DTrackLSFitter(JEventLoop *loop);
+  DTrackLSFitter(const std::shared_ptr<const JEvent>& loop);
   ~DTrackLSFitter();
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);			///< Called everytime a new run number is detected.
-  jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);		///< Called every event.
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
   uint64_t eventNo;
-  jerror_t erun(void);
+  void EndRun(void);
   jerror_t fini(void);
   int debug_level;
   HepVector getParams();

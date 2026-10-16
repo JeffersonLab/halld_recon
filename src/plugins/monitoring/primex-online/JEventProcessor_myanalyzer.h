@@ -39,7 +39,6 @@
 #include <HDGEOMETRY/DGeometry.h>
 #include <PID/DChargedTrack.h>
 #include "TRACKING/DTrackTimeBased.h"
-#include "HistogramTools.h"
 #include "PID/DMCReaction.h"
 #include <PID/DDetectorMatches.h>
 
@@ -58,27 +57,26 @@
 #include <thread>
 #include <mutex>
 
-using namespace jana;
 using namespace std;
 
 
 
-class JEventProcessor_myanalyzer:public jana::JEventProcessor{
+class JEventProcessor_myanalyzer:public JEventProcessor{
 	public:
 		JEventProcessor_myanalyzer()  {};
 		~JEventProcessor_myanalyzer() {};
 		const char* className(void){return "JEventProcessor_myanalyzer";}
 
 	private:
-		jerror_t init(void);
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-		jerror_t erun(void);
-		jerror_t fini(void);
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 		
 		int fcalLayer(int row, int col);
 		
-		jerror_t FillParticleVectors(vector<const DChargedTrack *>&tracks,
+		void FillParticleVectors(vector<const DChargedTrack *>&tracks,
 					     vector<const DTrackTimeBased *>&pims,
 					     vector<const DTrackTimeBased *>&pips);
 		

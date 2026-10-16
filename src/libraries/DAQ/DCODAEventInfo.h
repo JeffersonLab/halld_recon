@@ -10,7 +10,6 @@
 #define _DCODAEventInfo_
 
 #include <JANA/JObject.h>
-using namespace jana;
 
 class DCODAEventInfo:public JObject{
 	public:
@@ -24,12 +23,12 @@ class DCODAEventInfo:public JObject{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "run_number"    , "%d" , run_number);
-			AddString(items, "run_type"      , "%d" , run_type);
-			AddString(items, "event_number"  , "%ld", event_number);
-			AddString(items, "event_type"    , "%d" , event_type);
-			AddString(items, "avg_timestamp" , "%ld", avg_timestamp);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(run_number, NAME_OF(run_number), "%d");
+			summary.add(run_type, NAME_OF(run_type), "%d");
+			summary.add(event_number, NAME_OF(event_number), "%ld");
+			summary.add(event_type, NAME_OF(event_type), "%d");
+			summary.add(avg_timestamp, NAME_OF(avg_timestamp), "%ld");
 		}
 		
 };

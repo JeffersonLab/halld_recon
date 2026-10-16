@@ -57,9 +57,9 @@ def main():
     cmd_list.append('-PTRACKINGPULLS:TREEFILE=%stree%06d.root' % (output_dir, runnum))
     cmd_list.append('-PTRKFIT:ALIGNMENT=1')
     cmd_list.append('-PNTHREADS=24')
-    cmd_list.append('-PJANA:BATCH_MODE=1')
+    cmd_list.append('-Pjana:global_loglevel=FATAL')
   if num_of_events > 0:
-    cmd_list.append('-PEVENTS_TO_KEEP=%d' % num_of_events)
+    cmd_list.append('-Pjana:nevents=%d' % num_of_events)
   cmd_list.append(evio_path)
   cmd_list.append('-o')
   cmd_list.append(output_file)
@@ -68,7 +68,8 @@ def main():
 
 def get_evio_path(run_period, runnum):
   for br in range(10):
-    candidate = '/cache/halld/%s/rawdata/Run%06d/hd_rawdata_%06d_%03d.evio' % (run_period, runnum, runnum, br)
+    #candidate = '/cache/halld/%s/rawdata/Run%06d/hd_rawdata_%06d_%03d.evio' % (run_period, runnum, runnum, br)
+    candidate = 'hd_rawdata_%06d_%03d.evio' % (runnum, br)
     if os.path.exists(candidate):
       print('Found:', candidate)
       return candidate

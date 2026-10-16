@@ -5,19 +5,31 @@
 // Creator: davidl (on Darwin harriet.jlab.org 13.4.0 i386)
 //
 
+// 12 Feb 2026  Naomi's strategy for dealing with EVIO data format errors, which can be caused by aged or radiation-aged electronics:
+// Create a DBadHit(rocid,slot) for monitoring
+// If appropriate, clear the physics triggers from the event - possible because the built trigger bank is parsed before the physics data types. 
+// if there is no rocid, these are used:
+// 0 : error found in swap_bank 
+// 1 : TS scaler
+// 2 : f250 scaler bank
+// 3 : EPICS events
+// 4 : BOR events
+// 5 : Trigger bank
+
+
+
+
 #include <unistd.h>
 
 #include "DEVIOWorkerThread.h"
 #include "JEventSource_EVIOpp.h"
 #include "LinkAssociations.h"
 
-#include <swap_bank.h>
+#include "swap_bank.h"
 #include <DANA/JExceptionDataFormat.h>
 
 using namespace std;
 using namespace std::chrono;
-
-
 
 //---------------------------------
 // DEVIOWorkerThread    (Constructor)
@@ -47,7 +59,11 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	// for someone to notify it. That won't happen before this
 	// constructor completes so we do the remaining initializations
 	// below.
-	
+
+
+        PrintLimitFDC = 0;
+        PrintLimitCDC = 0;
+  
 	VERBOSE             = 0;
 	Nrecycled           = 0;     // Incremented in JEventSource_EVIOpp::Dispatcher()
 	MAX_EVENT_RECYCLES  = 1000;  // In EVIO events (not L1 trigger events!) overwritten in JEventSource_EVIOpp constructor
@@ -61,7 +77,6 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	buff                = new uint32_t[buff_len];
 
 	PARSE_F250          = true;
-	SKIP_F250_FORMAT_ERROR = false;
 	PARSE_F125          = true;
 	PARSE_F1TDC         = true;
 	PARSE_CAEN1290TDC   = true;
@@ -72,6 +87,7 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	PARSE_TRIGGER       = true;
 	PARSE_SSP           = true;
 	PARSE_GEMSRS        = true;
+	PARSE_HELICITY      = true;
         NSAMPLES_GEMSRS     = 9;
 	
 	LINK_TRIGGERTIME    = true;
@@ -105,31 +121,45 @@ void DEVIOWorkerThread::Run(void)
 		// condition by checking the in_use flag is really set.
 		if( !in_use ) continue;
 
+		
 		try {
 
-			if( jobtype & JOB_SWAP       ) swap_bank(buff, buff, swap32(buff[0])+1 );
+		        uint32_t swapresult = 1;   // 
+			
+			if( jobtype & JOB_SWAP ) swapresult = swap_bank(buff, buff, swap32(buff[0])+1 );
 
 			if( jobtype & JOB_FULL_PARSE ) MakeEvents();
+
+			if (!swapresult) { // something went wrong inside swap_bank, data format problem eg bank the wrong size
+			    for (auto pe: parsed_event_pool) {
+			        pe->NEW_DBadHit(0,0);    
+			        ClearBadDataFormatEventTriggers(pe);  
+			    }
+			}
 			
 			if( jobtype & JOB_ASSOCIATE  ) LinkAllAssociations();
 			
 			if( !current_parsed_events.empty() ) PublishEvents();
             
 		} catch( JExceptionDataFormat &e ){
-			for(auto pe : parsed_event_pool) delete pe; // delete all parsed events any any objects they hold
-			parsed_event_pool.clear();
-			current_parsed_events.clear(); // (these are also in parsed_event_pool so were already deleted)
+
+		        for(auto pe : parsed_event_pool) delete pe; // delete all parsed events any any objects they hold
+		        parsed_event_pool.clear();
+		        current_parsed_events.clear(); // (these are also in parsed_event_pool so were already deleted)
 			jerr << "Data format error exception caught" << endl;
-			jerr << "Stack trace follows:" << endl;
-			jerr << e.getStackTrace() << endl;
+			//jerr << "Stack trace follows:" << endl;
+			//jerr << e.GetStackTrace() << endl;
 			jerr << e.what() << endl;
-			japp->Quit(10);
+			japp->SetExitCode(10);
+			japp->Quit(true);
+
 		} catch (exception &e) {
 			jerr << e.what() << endl;
 			for(auto pe : parsed_event_pool) delete pe; // delete all parsed events any any objects they hold
 			parsed_event_pool.clear();
 			current_parsed_events.clear(); // (these are also in parsed_event_pool so were already deleted)
-			japp->Quit(-1);
+			japp->SetExitCode(-1);
+			japp->Quit(true);
 		}
 		
 		// Reset and mark us as available for use
@@ -207,7 +237,8 @@ void DEVIOWorkerThread::MakeEvents(void)
 	/// vector. These are then filled out later as the data is
 	/// parsed.
 	
-	if(!current_parsed_events.empty()) throw JException("Attempting call to DEVIOWorkerThread::MakeEvents when current_parsed_events not empty!!", __FILE__, __LINE__);
+	if(!current_parsed_events.empty()) throw JException("Attempting call to DEVIOWorkerThread::MakeEvents() when current_parsed_events not empty!!",
+							    __FILE__, __LINE__);
 	
 	uint32_t *iptr = buff;
 	
@@ -436,7 +467,11 @@ void DEVIOWorkerThread::ParseEPICSbank(uint32_t* &iptr, uint32_t *iend)
 			// Unknown tag. Bail
 			_DBG_ << "Unknown tag 0x" << hex << tag << dec << " in EPICS event!" <<endl;
 			DumpBinary(istart, iend_epics, 32, &iptr[-1]);
-			throw JExceptionDataFormat("Unknown tag in EPICS bank", __FILE__, __LINE__);
+			//throw JExceptionDataFormat("Unknown tag in EPICS bank in DEVIOWorkerThread::ParseEPICSbank() ", __FILE__, __LINE__);
+			if (pe) {
+	                  pe->NEW_DBadHit(0,3);
+                        }
+
 		}
 		
 		iptr = &iptr[bank_len];
@@ -479,18 +514,23 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	if(!PARSE_BOR){ iptr = &iptr[(*iptr) + 1]; return; }
 	if(VERBOSE>1) jout << "--- Parsing BOR Bank" << endl;
 
+	DParsedEvent *pe = current_parsed_events.front();
+	
 	// Make sure there is exactly 1 event in current_parsed_events
 	if(current_parsed_events.size() != 1){
-		stringstream ss;
-		ss << "DEVIOWorkerThread::ParseBORbank called for EVIO event with " << current_parsed_events.size() << " events in it. (Should be exactly 1!)";
+	        stringstream ss;
+		ss << "DEVIOWorkerThread::ParseBORbank() called for EVIO event with " << current_parsed_events.size() << " events in it. (Should be exactly 1!)";
 		jerr << ss.str() << endl;
 		jerr << "EVIO length=" << hex << iptr[0] << "  header=" << iptr[1] << endl;
-		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+		if (pe) {
+		  pe->NEW_DBadHit(0,3);
+		}
+	    //throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 	
 	// Create new DBORptrs object and set pointer to it in DParsedEvent
 	// (see JEventSource_EVIOpp::GetEvent)
-	DParsedEvent *pe = current_parsed_events.front();
+	//DParsedEvent *pe = current_parsed_events.front();
 	pe->event_status_bits |= (1<<kSTATUS_BOR_EVENT);
 	pe->borptrs = new DBORptrs();
 	DBORptrs* &borptrs = pe->borptrs;
@@ -500,8 +540,11 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	uint32_t bank_len = (uint32_t)((uint64_t)iend - (uint64_t)iptr)/sizeof(uint32_t);
 	if(borevent_len > bank_len){
 		stringstream ss;
-		ss << "BOR: Size of bank doesn't match amount of data given (" << borevent_len << " > " << bank_len << ")";
-		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+		ss << "from DEVIOWorkerThread::ParseBORbank(), BOR: Size of bank doesn't match amount of data given (" << borevent_len << " > " << bank_len << ")";
+		if (pe) {
+		  pe->NEW_DBadHit(0,4);
+		}
+		//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 	iend = &iptr[borevent_len]; // in case they give us too much data!
 	
@@ -515,10 +558,13 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 //	if( (bor_header!=0x700e01) && (bor_header!=0x700e34) ){
 	if( (bor_header>>8) != 0x700e ){
 		stringstream ss;
-		ss << "Bad BOR header: 0x" << hex << bor_header;
+		ss << "from DEVIOWorkerThread::ParseBORbank(), Bad BOR header: 0x" << hex << bor_header;
 		_DBG_<< ss.str() << endl;
 		DumpBinary(&iptr[-4], iend, 32, iptr);
-		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+		if (pe) {
+		  pe->NEW_DBadHit(0,4);
+		}		
+		//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 
 	// Loop over crates
@@ -531,9 +577,13 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 		// Make sure crate tag is right
 		if( (crate_header>>16) != 0x71 ){
 			stringstream ss;
-			ss << "Bad BOR crate header: 0x" << hex << (crate_header>>16);
+			ss << "from DEVIOWorkerThread::ParseBORbank(), Bad BOR crate header: 0x" << hex << (crate_header>>16);
 			_DBG_<< ss.str() << endl;
-			throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+			if (pe) {
+			  pe->NEW_DBadHit(0,4);
+			}
+		      
+			//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 		}
 
 		// Loop over modules
@@ -595,18 +645,27 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 				default:
 					{
 					stringstream ss;
-					ss << "Unknown BOR module type: " << modType << "  (module_header=0x"<<hex<<module_header<<")";
+					ss << "from DEVIOWorkerThread::ParseBORbank(), Unknown BOR module type: " << modType
+					   << "  (module_header=0x"<<hex<<module_header<<")";
 					jerr << ss.str() << endl;
-					throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+					if (pe) {
+					  pe->NEW_DBadHit(0,4);
+					}
+					
+					//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 					}
 			}
 
 			// Check that the bank size and data structure size match.
 			if( module_len > sizeof_dest ){
 				stringstream ss;
-				ss << "BOR module bank size does not match structure! " << module_len << " > " << sizeof_dest << " for modType " << modType;
+				ss << "from DEVIOWorkerThread::ParseBORbank(), BOR module bank size does not match structure! " << module_len
+				   << " > " << sizeof_dest << " for modType " << modType;
 				_DBG_<< ss.str() << endl;
-				throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+				if (pe) {
+				  pe->NEW_DBadHit(0,4);
+				}				
+				//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 			}
 
 			// Copy bank data, assuming format is the same
@@ -641,14 +700,21 @@ void DEVIOWorkerThread::ParseTSscalerBank(uint32_t* &iptr, uint32_t *iend)
 {
     uint32_t Nwords = ((uint64_t)iend - (uint64_t)iptr)/sizeof(uint32_t);
     uint32_t Nwords_expected = (6+32+16+32+16);
+
+    // n.b. Get the last event here since if this is a block
+    // of events, the last should be the actual sync event.
+    DParsedEvent *pe = current_parsed_events.back();
+
     if(Nwords != Nwords_expected){
         _DBG_ << "TS bank size does not match expected!!" << endl;
         _DBG_ << "Found " << Nwords << " words. Expected " << Nwords_expected << endl;
-        throw JExceptionDataFormat("TS bank size does not match expected", __FILE__, __LINE__);
+
+	if (pe) {
+	  pe->NEW_DBadHit(0,1);
+	}
+	
+	//        throw JExceptionDataFormat("DEVIOWorkerThread::ParseTSscalerBank(): TS bank size does not match expected", __FILE__, __LINE__);
     }else{
-	 	// n.b. Get the last event here since if this is a block
-		// of events, the last should be the actual sync event.
-		DParsedEvent *pe = current_parsed_events.back();
 		DL1Info *s = pe->NEW_DL1Info();
 		s->nsync = *iptr++;
 		s->trig_number = *iptr++;
@@ -672,15 +738,18 @@ void DEVIOWorkerThread::Parsef250scalerBank(uint32_t rocid, uint32_t* &iptr, uin
 {
   
   uint32_t Nwords = ((uint64_t)iend - (uint64_t)iptr)/sizeof(uint32_t);
-
+  DParsedEvent *pe = current_parsed_events.back();
+    
   if(Nwords < 4){
     _DBG_ << "250Scaler bank size does not match expected!!" << endl;
     _DBG_ << "Found " << Nwords << endl;
-    throw JExceptionDataFormat("250scaler bank size does not match expected", __FILE__, __LINE__);
-  } else {
 
-    DParsedEvent *pe = current_parsed_events.back();
-    
+    if (pe) {
+	  pe->NEW_DBadHit(0,2);
+    }  
+    //throw JExceptionDataFormat("DEVIOWorkerThread::Parsef250scalerBank(): 250scaler bank size does not match expected", __FILE__, __LINE__);
+  } else {
+  
     Df250Scaler  *sc = pe->NEW_Df250Scaler();
  
     sc->nsync        =   *iptr++; 
@@ -776,7 +845,7 @@ void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
 		iptr += 2;
 		try{
 			ParseBORbank(iptr, iend);
-		}catch(JException &e){
+		}catch(const JException &e){
 			cerr << e.what();
 		}
 		return;
@@ -813,23 +882,34 @@ void DEVIOWorkerThread::ParseBuiltTriggerBank(uint32_t* &iptr, uint32_t *iend)
 {
 	if(!PARSE_TRIGGER) return;
 
+	// attach early format errors to this event
+	DParsedEvent *pe = current_parsed_events.back();
+	
 	iptr++; // advance past length word
 	uint32_t mask = 0xFF202000;
 	if( ((*iptr) & mask) != mask ){
 		stringstream ss;
-		ss << "Bad header word in Built Trigger Bank: " << hex << *iptr;
-		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+		ss << "Bad header word in  DEVIOWorkerThread::ParseBuiltTriggerBank(): " << hex << *iptr;
+		if (pe) {
+		  pe->NEW_DBadHit(0,5);
+		}
+		return;
+		//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 	
 	uint32_t tag     = (*iptr)>>16; // 0xFF2X
 	uint32_t Nrocs   = (*iptr++) & 0xFF;
 	uint32_t Mevents = current_parsed_events.size();
 	
-    // sanity check: 
-    if(Mevents == 0) {
+	// sanity check: 
+	if(Mevents == 0) {
 		stringstream ss;
 		ss << "DEVIOWorkerThread::ParseBuiltTriggerBank() called with zero events! "<<endl;
-		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
+		if (pe) {
+		  pe->NEW_DBadHit(0,5);
+		}
+		return;
+		//throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 
 	
@@ -869,7 +949,7 @@ void DEVIOWorkerThread::ParseBuiltTriggerBank(uint32_t* &iptr, uint32_t *iend)
 	iptr = &iptr[common_header16_len];
 
 	vector<uint16_t> event_types;
-   for(uint32_t i=0; i<Mevents; i++) event_types.push_back(*iptr16++);
+	for(uint32_t i=0; i<Mevents; i++) event_types.push_back(*iptr16++);
 	
 	//-------- ROC data (32bit)
 	for(uint32_t iroc=0; iroc<Nrocs; iroc++){
@@ -890,7 +970,9 @@ void DEVIOWorkerThread::ParseBuiltTriggerBank(uint32_t* &iptr, uint32_t *iend)
 			for(uint32_t i=2; i<Nwords_per_event; i++) codarocinfo->misc.push_back(*iptr++);
 			
 			if(iptr > iend){
-				throw JExceptionDataFormat("Bad data format in ParseBuiltTriggerBank!", __FILE__, __LINE__);
+			        jerr << "Bad data format in  DEVIOWorkerThread::ParseBuiltTriggerBank()!" << endl;
+			        pe->NEW_DBadHit(0,5);
+				//throw JExceptionDataFormat("Bad data format in  DEVIOWorkerThread::ParseBuiltTriggerBank()!", __FILE__, __LINE__);
 			}
 		}
 	}
@@ -947,7 +1029,10 @@ void DEVIOWorkerThread::ParseRawTriggerBank(uint32_t rocid, uint32_t* &iptr, uin
 		for(uint32_t i=3; i<segment_len; i++) codarocinfo->misc.push_back(*iptr++);
 		
 		if( iptr != iend_segment){
-			throw JExceptionDataFormat("Bad raw trigger bank format", __FILE__, __LINE__);
+		        jerr << "Bad raw trigger bank format in DEVIOWorkerThread::ParseRawTriggerBank()" << endl;
+		        pe->NEW_DBadHit(0,5);
+			ClearBadDataFormatEventTriggers(pe);
+			//throw JExceptionDataFormat("Bad raw trigger bank format in DEVIOWorkerThread::ParseRawTriggerBank()", __FILE__, __LINE__);
 		}
 	}
 }
@@ -994,6 +1079,10 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 				ParseEventTagBank(iptr, iend_data_block_bank);
 				break;
 
+			case 0xDEC:  // Helicity decoder board, SD 2025-01-28
+				if(VERBOSE>3) jout <<" -- JLab Helicity Decoder  rocid="<< rocid << endl;
+                ParseHelicityDecoderBank(rocid, iptr, iend_data_block_bank);
+ 				break;
 			case 0:
 			case 1:
 			case 3:
@@ -1056,12 +1145,15 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 
 			default:
 				jerr<<"Unknown module type ("<<det_id<<" = 0x" << hex << det_id << dec << " ) encountered" << endl;
+				ParseUnknownBank(rocid,iptr,iend_data_block_bank);
 //				if(VERBOSE>5){
 					cout << "----- First few words to help with debugging -----" << endl;
 					cout.flush(); cerr.flush();
 					DumpBinary(&iptr[-2], iend, 32, &iptr[-1]);
 //				}
-				throw JExceptionDataFormat("Unknown bank type in EVIO", __FILE__, __LINE__);
+				jerr<<"Created BadHit and cleared physics triggers" << endl; 
+
+				 //throw JExceptionDataFormat("DEVIOWorkerThread::ParseDataBank(): Unknown bank type in EVIO", __FILE__, __LINE__);
 
 		}
 
@@ -1069,6 +1161,21 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 	}
 	
 }
+
+//----------------
+// ParseUnknownBank
+//----------------
+void DEVIOWorkerThread::ParseUnknownBank(uint32_t rocid, uint32_t* &iptr, uint32_t* iend)
+{
+    DParsedEvent *pe = current_parsed_events.back();
+    if (rocid <0) rocid=0;
+    if (rocid > 120) rocid = 0;
+    pe->NEW_DBadHit(0,0);    
+    ClearBadDataFormatEventTriggers(pe);  
+    iptr = iend;
+}
+
+
 
 //----------------
 // ParseTIBank
@@ -1110,10 +1217,10 @@ void DEVIOWorkerThread::ParseCAEN1190(uint32_t rocid, uint32_t* &iptr, uint32_t 
     // encounter them in so it is maintained in the
     // "events" container. The event_id order is kept
     // in the "event_id_order" vector.
-	map<uint32_t, DParsedEvent*> events_by_event_id;
+    map<uint32_t, DParsedEvent*> events_by_event_id;
 
-	auto pe_iter = current_parsed_events.begin();
-	DParsedEvent *pe = NULL;
+    auto pe_iter = current_parsed_events.begin();
+    DParsedEvent *pe = NULL;
 
     while(iptr<iend){
 
@@ -1155,7 +1262,8 @@ void DEVIOWorkerThread::ParseCAEN1190(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						_DBG_ << "CAEN1290TDC parser sees more events than CODA header! (>" << current_parsed_events.size() << ")" << endl;
 						for( auto p : events_by_event_id) cout << "id=" << p.first << endl;
 						iptr = iend;
-						throw JExceptionDataFormat("CAEN1290TDC parser sees more events than CODA header", __FILE__, __LINE__);
+						jerr << "DEVIOWorkerThread::ParseCAEN1190(): CAEN1290TDC parser sees more events than CODA header" << endl;
+						throw JExceptionDataFormat("DEVIOWorkerThread::ParseCAEN1190(): CAEN1290TDC parser sees more events than CODA header", __FILE__, __LINE__);
 					}
 					pe = *pe_iter++;
 					events_by_event_id[event_id] = pe;
@@ -1188,8 +1296,10 @@ void DEVIOWorkerThread::ParseCAEN1190(uint32_t rocid, uint32_t* &iptr, uint32_t 
                 if(VERBOSE>7) cout << "         CAEN TDC Filler Word" << endl;
                 break;
             default:
-                cout << "Unknown datatype: 0x" << hex << type << " full word: "<< *iptr << dec << endl;
-					 throw JExceptionDataFormat("Unknown data type for CAEN1190", __FILE__, __LINE__);
+                jerr << "CAEN TDC Unknown datatype: 0x" << hex << type << " full word: "<< *iptr << dec << endl;
+		if (pe) pe->NEW_DBadHit(rocid,slot);
+		if (pe) ClearBadDataFormatEventTriggers(pe);  
+		//throw JExceptionDataFormat("DEVIOWorkerThread::ParseCAEN1190(): Unknown data type for CAEN1190", __FILE__, __LINE__);
         }
 
         iptr++;
@@ -1226,7 +1336,7 @@ void DEVIOWorkerThread::ParseModuleConfiguration(uint32_t rocid, uint32_t* &iptr
 		// Events will be created in the first event (i.e. using its pool)
 		// but pointers are saved so we can use them to construct identical
 		// objects in all other event later
-		DParsedEvent *pe = current_parsed_events.front();
+        DParsedEvent *pe = current_parsed_events.front();
 
         Df250Config *f250config = NULL;
         Df125Config *f125config = NULL;
@@ -1237,7 +1347,9 @@ void DEVIOWorkerThread::ParseModuleConfiguration(uint32_t rocid, uint32_t* &iptr
         for(uint32_t i=0; i< Nvals; i++){
             if( iptr >= iend){
                 _DBG_ << "DAQ Configuration bank corrupt! slot_mask=0x" << hex << slot_mask << dec << " Nvals="<< Nvals << endl;
-                throw JExceptionDataFormat("Corrupt DAQ config. bank", __FILE__, __LINE__);
+		if (pe) pe->NEW_DBadHit(rocid,0);
+		return;
+                //throw JExceptionDataFormat("DEVIOWorkerThread::ParseModuleConfiguration(): Corrupt DAQ config. bank", __FILE__, __LINE__);
             }
 
             daq_param_type ptype = (daq_param_type)((*iptr)>>16);
@@ -1313,7 +1425,8 @@ void DEVIOWorkerThread::ParseModuleConfiguration(uint32_t rocid, uint32_t* &iptr
 
                 default:
                     _DBG_ << "Unknown module type: 0x" << hex << (ptype>>8) << endl;
-                    throw JExceptionDataFormat("Unknown module type in configuration bank", __FILE__, __LINE__);
+		    if (pe) pe->NEW_DBadHit(rocid,0);
+                    //throw JExceptionDataFormat("DEVIOWorkerThread::ParseModuleConfiguration(): Unknown module type in configuration bank", __FILE__, __LINE__);
             }
 
 
@@ -1338,54 +1451,285 @@ void DEVIOWorkerThread::ParseModuleConfiguration(uint32_t rocid, uint32_t* &iptr
 //----------------
 void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
-	
-	while(iptr<iend){
-	
-		// Get module type from next word (bits 18-21)
-		uint32_t mod_id = ((*iptr) >> 18) & 0x000F;
-		MODULE_TYPE type = (MODULE_TYPE)mod_id;
-		//cout << "      rocid=" << rocid << "  Encountered module type: " << type << " (=" << DModuleType::GetModule(type).GetName() << ")  word=" << hex << (*iptr) << dec << endl;
+  
+  while(iptr<iend){
+    
+    // Get module type from next word (bits 18-21)
+    uint32_t mod_id = ((*iptr) >> 18) & 0x000F;
+    MODULE_TYPE type = (MODULE_TYPE)mod_id;
+    //cout << "      rocid=" << rocid << "  Encountered module type: " << type << " (=" << DModuleType::GetModule(type).GetName() << ")  word=" << hex << (*iptr) << dec << endl;
+    
+    switch(type){
+    case DModuleType::FADC250:
+      Parsef250Bank(rocid, iptr, iend);
+      break;
+      
+    case DModuleType::FADC125:
+      Parsef125Bank(rocid, iptr, iend);
+      break;
+      
+    case DModuleType::F1TDC32:
+      ParseF1TDCBank(rocid, iptr, iend);
+      break;
+      
+    case DModuleType::F1TDC48:
+      ParseF1TDCBank(rocid, iptr, iend);
+      break;
+      
+    case DModuleType::TID:
+      ParseTIBank(rocid, iptr, iend);    
+      /*
+      // Ignore this data and skip over it
+      while(iptr<iend && ((*iptr) & 0xF8000000) != 0x88000000) iptr++; // Skip to JLab block trailer
+      iptr++; // advance past JLab block trailer
+      while(iptr<iend && *iptr == 0xF8000000) iptr++; // skip filler words after block trailer
+      break;
+      */
+      break;
+      
+    case DModuleType::UNKNOWN:
+    default:
+      jerr<<"Unknown JLab module type ("<<mod_id<<") iptr=0x" << hex << iptr << dec << endl;
+      ParseUnknownBank(rocid,iptr,iend);
+      
+      /*      while(iptr<iend && ((*iptr) & 0xF8000000) != 0x88000000) iptr++; // Skip to JLab block trailer
+      iptr++; // advance past JLab block trailer
+      while(iptr<iend && *iptr == 0xF8000000) iptr++; // skip filler words after block trailer
+      throw JExceptionDataFormat("DEVIOWorkerThread::ParseJLabModuleData(): Unknown JLab module type", __FILE__, __LINE__);*/
+      break;
+    }
+  }
+  
+}
 
-        switch(type){
-            case DModuleType::FADC250:
-                Parsef250Bank(rocid, iptr, iend);
-                break;
+//----------------
+// ParseHelicityDecoderBank
+//----------------
+void DEVIOWorkerThread::ParseHelicityDecoderBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
+{
 
-            case DModuleType::FADC125:
-                Parsef125Bank(rocid, iptr, iend);
-                break;
-
-            case DModuleType::F1TDC32:
-                ParseF1TDCBank(rocid, iptr, iend);
-                break;
-
-            case DModuleType::F1TDC48:
-                ParseF1TDCBank(rocid, iptr, iend);
-                break;
-
-           case DModuleType::TID:
-               ParseTIBank(rocid, iptr, iend);    
-               /*
-               // Ignore this data and skip over it
-               while(iptr<iend && ((*iptr) & 0xF8000000) != 0x88000000) iptr++; // Skip to JLab block trailer
-               iptr++; // advance past JLab block trailer
-               while(iptr<iend && *iptr == 0xF8000000) iptr++; // skip filler words after block trailer
-               break;
-               */
-               break;
-
-            case DModuleType::UNKNOWN:
-            default:
-                jerr<<"Unknown module type ("<<mod_id<<") iptr=0x" << hex << iptr << dec << endl;
-
-                while(iptr<iend && ((*iptr) & 0xF8000000) != 0x88000000) iptr++; // Skip to JLab block trailer
-                iptr++; // advance past JLab block trailer
-                while(iptr<iend && *iptr == 0xF8000000) iptr++; // skip filler words after block trailer
-                throw JExceptionDataFormat("Unknown JLab module type", __FILE__, __LINE__);
-                break;
-        }
+  if(!PARSE_HELICITY){ iptr = &iptr[(*iptr) + 1]; return; }
+  
+  auto pe_iter = current_parsed_events.begin();
+  DParsedEvent *pe = NULL;
+  
+  uint32_t slot = 0;
+  uint32_t itrigger = -1;
+  
+  uint32_t *istart_helicity_data = iptr;
+  uint32_t Nwords = ((uint64_t)iend - (uint64_t)iptr)/sizeof(uint32_t);
+  
+  // Loop over data words
+  for(; iptr<iend; iptr++){
+    // Skip all non-data-type-defining words at this
+    // level. When we do encounter one, the appropriate
+    // case block below should handle parsing all of
+    // the data continuation words and advance the iptr.
+    if(((*iptr>>31) & 0x1) == 0)continue;
+    
+    uint32_t data_type = (*iptr>>27) & 0x0F;
+    switch(data_type){
+    case 0: // Block Header
+      slot = (*iptr>>22) & 0x1F;
+      if(VERBOSE>7) cout << "      Helicity Decoder Block Header: slot="<<slot<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+      break;
+    case 1: // Block Trailer
+      pe_iter = current_parsed_events.begin();
+      pe = NULL;
+      if(VERBOSE>7) cout << "      Helicity Decoder Block Trailer"<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
+      break;
+      // 				// use this as a signal to stop parsing, since it seems like a better signal that this is actually
+      // 				// the end of the HD board data
+      // 				// at least, during the commissioning at the beginning of the 2025 run, the bank length was not always correct
+      //                 if(VERBOSE>3) cout << "      Moving to end of block..."<<endl;
+      //                 // usually there are multiple trailer words
+      //                 while(*iptr == 0xfcc000ed) iptr++;
+      // 
+      // 				// Chop off filler words
+      // 				for(; iptr<iend; iptr++){
+      // 					if(((*iptr)&0xf8000000) != 0xf8000000) break;
+      // 				}
+      // 				return;
+    case 2: // Event Header
+      itrigger = (*iptr>>0) & 0x3FFFFF;
+      pe = *pe_iter++;
+      if(VERBOSE>7) cout << "      Helicity Decoder Event Header: itrigger="<<itrigger<<", rocid="<<rocid<<", slot="<<slot<<")" <<" (0x"<<hex<<*iptr<<dec<<")" <<endl;
+      break;
+    case 3: // Trigger Time
+      {
+	uint64_t t = ((*iptr)&0xFFFFFF)<<0;
+	if(VERBOSE>7) cout << "      Helicity Decoder Trigger time low word="<<(((*iptr)&0xFFFFFF))<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+	iptr++;
+	if(((*iptr>>31) & 0x1) == 0){
+	  t += ((*iptr)&0xFFFFFF)<<24; // from word on the street: second trigger time word is optional!!??
+	  if(VERBOSE>7) cout << "      Helicity Decoder Trigger time high word="<<(((*iptr)&0xFFFFFF))<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
+	}else{
+	  iptr--;
 	}
+	if(VERBOSE>7) cout << "      Helicity Decoder Trigger Time: t="<<t<<endl;
+	if(pe) pe->NEW_DHelicityDataTriggerTime(rocid, slot, itrigger, t);
+      }
+      break;
+    case 8: // Decoder Data
+      {
+	// the first word is the header
+	uint32_t header_reserved        = (*iptr>>27);
+	uint32_t header_number_words    = (*iptr>>0 ) & 0x1F;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data Header (0x"<<hex<<*iptr<<dec<<") header reserved=" << header_reserved << " header number words="<<header_number_words <<endl;
+	
+	// sanity checks
+	if(header_reserved != 0x18)  { 
+	  jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="
+	       <<slot<<"  reserved field = 0x"<<hex<<header_reserved<<dec<<"  (expected=0x18)"<<endl;
+	  if(pe) pe->NEW_DBadHit(rocid,slot);
+	  iptr = iend;
+	  break;
+	  //throw JExceptionDataFormat("Bad helicity decoder header data in DEVIOWorkerThread::ParseHelicityDecoderBank()",
+	  //			     __FILE__, __LINE__);
+	}
+	if(header_number_words != 14)  { 
+	  jerr << "Bad helicity decoder header for rocid="<<rocid<<" slot="
+	       <<slot<<"  number words = "<<header_number_words<<"  (expected=14)"<<endl; 
+	  if (pe) pe->NEW_DBadHit(rocid,slot);
+	  iptr = iend;
+	  break;
+	  //	  throw JExceptionDataFormat("Bad helicity decoder header payload in DEVIOWorkerThread::ParseHelicityDecoderBank()",
+	  //			     __FILE__, __LINE__);
+	}
+	
+	iptr++;
+	
+	// Word 1 - Helicity seed
+	uint32_t helicity_seed    = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 1(0x"<<hex<<*iptr<<dec<<")  helicity_seed="<<helicity_seed<<endl;
+	iptr++;
+	
+	// Word 2 - Count of falling edge T_STABLE
+	uint32_t falling_edge_tstable_count = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 2(0x"<<hex<<*iptr<<dec<<")  falling_edge_tstable_count="<<falling_edge_tstable_count<<endl;
+	iptr++;
+	
+	// Word 3 - Count of rising edge T_STABLE
+	uint32_t rising_edge_tstable_count = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 3(0x"<<hex<<*iptr<<dec<<")  rising_edge_tstable_count="<<rising_edge_tstable_count<<endl;
+	iptr++;
+	
+	// Word 4 - Count of PATTERN_SYNC
+	uint32_t pattern_sync_count = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 4(0x"<<hex<<*iptr<<dec<<")  pattern_sync_count="<<pattern_sync_count<<endl;
+	iptr++;
+	
+	// Word 5 - Count of PAIR_SYNC
+	uint32_t pair_sync_count = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 5(0x"<<hex<<*iptr<<dec<<")  pair_sync_count="<<pair_sync_count<<endl;
+	iptr++;
+	
+	// Word 6 - Time of trigger from start of T_STABLE interval
+	uint32_t time_from_start_tstable = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 6(0x"<<hex<<*iptr<<dec<<")  time_from_start_tstable="<<time_from_start_tstable<<endl;
+	iptr++;
+	
+	// Word 7 - Time of trigger from end of T_STABLE interval
+	uint32_t time_from_end_tstable = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 7(0x"<<hex<<*iptr<<dec<<")  time_from_end_tstable="<<time_from_end_tstable<<endl;
+	iptr++;
+	
+	// Word 8 - Time duration of last complete T_STABLE interval
+	uint32_t duration_last_tstable = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 8(0x"<<hex<<*iptr<<dec<<")  duration_last_tstable="<<duration_last_tstable<<endl;
+	iptr++;
+	
+	// Word 9 - Time duration of last complete T_SETTLE interval
+	uint32_t duration_last_tsettle = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 9(0x"<<hex<<*iptr<<dec<<")  duration_last_tsettle="<<duration_last_tsettle<<endl;
+	iptr++;
+	
+	// Word 10 - Status at trigger time
+	bool trigger_tstable                       = (*iptr>>0 ) & 0x1;
+	bool trigger_pattern_sync                  = (*iptr>>1 ) & 0x1;
+	bool trigger_pair_sync                     = (*iptr>>2 ) & 0x1;
+	bool trigger_helicity_state                = (*iptr>>3 ) & 0x1;
+	bool trigger_helicity_state_pattern_start  = (*iptr>>4 ) & 0x1;
+	bool trigger_event_polarity                = (*iptr>>5 ) & 0x1;
+	uint32_t trigger_pattern_phase_count       = (*iptr>>8 ) & 0xFF;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 10(0x"<<hex<<*iptr<<dec<<")  trigger_tstable="<<trigger_tstable<<"  trigger_pattern_sync="<<trigger_pattern_sync<<"  trigger_pair_sync="<<trigger_pair_sync<<"  trigger_helicity_state="<<trigger_helicity_state<<endl;
+	iptr++;
+	
+	// Word 11 - Last 32 windows of PATTERN_SYNC
+	uint32_t last_pattern_sync = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 11(0x"<<hex<<*iptr<<dec<<")  last_pattern_sync="<<last_pattern_sync<<endl;
+	iptr++;
+	
+	// Word 12 - Last 32 windows of PAIR_SYNC
+	uint32_t last_pair_sync = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 12(0x"<<hex<<*iptr<<dec<<")  last_pair_sync="<<last_pair_sync<<endl;
+	iptr++;
+	
+	// Word 13 - Last 32 windows of HELICITY_STATE
+	uint32_t last_helicity_state = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 13(0x"<<hex<<*iptr<<dec<<")  last_helicity_state="<<last_helicity_state<<endl;
+	iptr++;
+	
+	// Word 14 - Last 32 values of HELICITY_STATE at PATTERN_SYNC
+	uint32_t last_helicity_state_pattern_sync = *iptr;
+	if(VERBOSE>7) cout << "      Helicity Decoder Data word 14(0x"<<hex<<*iptr<<dec<<")  last_helicity_state_pattern_sync="<<last_helicity_state_pattern_sync<<endl;
+	
+	if( pe ) {
+	  uint32_t channel=0;  // set this by hand for now?
+	  pe->NEW_DHelicityData(rocid, slot, channel, itrigger
+				, helicity_seed
+				, falling_edge_tstable_count
+				, rising_edge_tstable_count
+				, pattern_sync_count
+				, pair_sync_count
+				, time_from_start_tstable
+				, time_from_end_tstable
+				, duration_last_tstable
+				, duration_last_tsettle
+				, trigger_tstable
+				, trigger_pattern_sync
+				, trigger_pair_sync
+				, trigger_helicity_state
+				, trigger_helicity_state_pattern_start
+				, trigger_event_polarity
+				, trigger_pattern_phase_count
+				, last_pattern_sync
+				, last_pair_sync
+				, last_helicity_state
+				, last_helicity_state_pattern_sync);
+	}
+	
+      }
+      break;
+    case 14: // Data not valid (empty module)
+    case 15: // Filler (non-data) word
+      if(VERBOSE>7) cout << "      Helicity Decoder Event Trailer, Data not Valid, or Filler word ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+      break;
+    default:
+      if(VERBOSE>7) cout << "      Helicity Decoder unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+      jerr << "Helicity Decoder unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
+      cout.flush(); cerr.flush();
+      DumpBinary(istart_helicity_data, iend, Nwords, iptr);
+      if(pe) pe->NEW_DBadHit(rocid,slot);
+      iptr = iend;
+      break;
+      
+      // 				if (continue_on_format_error) {  // comment out for now??
+      // 					iptr = iend;
+      // 					return;
+      // 				}
+      // 				else
 
+      
+      //throw JExceptionDataFormat("Unexpected word type in Helicity Decoder block! DEVIOWorkerThread::ParseHelicityDecoderBank()",
+      //			 __FILE__, __LINE__);
+    }
+  }
+  
+  // Chop off filler words
+  for(; iptr<iend; iptr++){
+    if(((*iptr)&0xf8000000) != 0xf8000000) break;
+  }
 }
 
 //----------------
@@ -1393,291 +1737,318 @@ void DEVIOWorkerThread::ParseJLabModuleData(uint32_t rocid, uint32_t* &iptr, uin
 //----------------
 void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
-	if(!PARSE_F250){ iptr = &iptr[(*iptr) + 1]; return; }
-
-	int continue_on_format_error = SKIP_F250_FORMAT_ERROR;
-
-	auto pe_iter = current_parsed_events.begin();
-	DParsedEvent *pe = NULL;
+  if(!PARSE_F250){ iptr = &iptr[(*iptr) + 1]; return; }
+    
+  auto pe_iter = current_parsed_events.begin();
+  DParsedEvent *pe = NULL;
+  
+  uint32_t slot = 0;
+  uint32_t itrigger = -1;
+  
+  uint32_t *istart_pulse_data = iptr;
+  
+  // Loop over data words
+  for(; iptr<iend; iptr++){
+    
+    // Skip all non-data-type-defining words at this
+    // level. When we do encounter one, the appropriate
+    // case block below should handle parsing all of
+    // the data continuation words and advance the iptr.
+    if(((*iptr>>31) & 0x1) == 0)continue;
+    
+    uint32_t data_type = (*iptr>>27) & 0x0F;
+    switch(data_type){
+    case 0: // Block Header
+	  if(pe != NULL) {
+		  cout << "Warning in DEVIOWorkerThread::Parsef250Bank(): missing block trailer, recovering ..." << endl;
+	      pe_iter = current_parsed_events.begin();
+    	  pe = NULL;
+	  }
+      slot = (*iptr>>22) & 0x1F;
+      if(VERBOSE>7) cout << "      FADC250 Block Header: slot="<<slot<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+      break;
+    case 1: // Block Trailer
+      pe_iter = current_parsed_events.begin();
+      pe = NULL;
+      if(VERBOSE>7) cout << "      FADC250 Block Trailer"<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
+      break;
+    case 2: // Event Header
+      itrigger = (*iptr>>0) & 0x3FFFFF;
+      pe = *pe_iter++;
+      if(VERBOSE>7) cout << "      FADC250 Event Header: itrigger="<<itrigger<<", rocid="<<rocid<<", slot="<<slot<<")" <<" (0x"<<hex<<*iptr<<dec<<")" <<endl;
+      break;
+    case 3: // Trigger Time
+      {
+	uint64_t t = ((*iptr)&0xFFFFFF)<<0;
+	if(VERBOSE>7) cout << "      FADC250 Trigger time low word="<<(((*iptr)&0xFFFFFF))<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+	iptr++;
+	if(((*iptr>>31) & 0x1) == 0){
+	  t += ((*iptr)&0xFFFFFF)<<24; // from word on the street: second trigger time word is optional!!??
+	  if(VERBOSE>7) cout << "      FADC250 Trigger time high word="<<(((*iptr)&0xFFFFFF))<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
+	}else{
+	  iptr--;
+	}
+	if(VERBOSE>7) cout << "      FADC250 Trigger Time: t="<<t<<endl;
+	if(pe) pe->NEW_Df250TriggerTime(rocid, slot, itrigger, t);
+      }
+      break;
+    case 4: // Window Raw Data
+      // iptr passed by reference and so will be updated automatically
+      if(VERBOSE>7) cout << "      FADC250 Window Raw Data"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+      if(pe) MakeDf250WindowRawData(pe, rocid, slot, itrigger, iptr, iend);
+      break;
+    case 5: // Window Sum
+      {
+	uint32_t channel = (*iptr>>23) & 0x0F;
+	uint32_t sum = (*iptr>>0) & 0x3FFFFF;
+	uint32_t overflow = (*iptr>>22) & 0x1;
+	if(VERBOSE>7) cout << "      FADC250 Window Sum"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+	if(pe) pe->NEW_Df250WindowSum(rocid, slot, channel, itrigger, sum, overflow);
+      }
+      break;				
+    case 6: // Pulse Raw Data
+      //                MakeDf250PulseRawData(objs, rocid, slot, itrigger, iptr);
+      if(VERBOSE>7) cout << "      FADC250 Pulse Raw Data"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+      break;
+    case 7: // Pulse Integral
+      {
+	uint32_t channel = (*iptr>>23) & 0x0F;
+	uint32_t pulse_number = (*iptr>>21) & 0x03;
+	uint32_t quality_factor = (*iptr>>19) & 0x03;
+	uint32_t sum = (*iptr>>0) & 0x7FFFF;
+	uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
+	uint32_t nsamples_pedestal = 1;  // The firmware returns an already divided pedestal
+	uint32_t pedestal = 0;  // This will be replaced by the one from Df250PulsePedestal in GetObjects
+	if(VERBOSE>7) cout << "      FADC250 Pulse Integral: chan="<<channel<<" pulse_number="<<pulse_number<<" sum="<<sum<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+	if(pe) pe->NEW_Df250PulseIntegral(rocid, slot, channel, itrigger, pulse_number, quality_factor, sum, pedestal, nsamples_integral, nsamples_pedestal);
+      }
+      break;
+    case 8: // Pulse Time
+      {
+	uint32_t channel = (*iptr>>23) & 0x0F;
+	uint32_t pulse_number = (*iptr>>21) & 0x03;
+	uint32_t quality_factor = (*iptr>>19) & 0x03;
+	uint32_t pulse_time = (*iptr>>0) & 0x7FFFF;
+	if(VERBOSE>7) cout << "      FADC250 Pulse Time: chan="<<channel<<" pulse_number="<<pulse_number<<" pulse_time="<<pulse_time<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+	if(pe) pe->NEW_Df250PulseTime(rocid, slot, channel, itrigger, pulse_number, quality_factor, pulse_time);
+      }
+      break;
+    case 9: // Pulse Data (firmware instroduce in Fall 2016)
+      {
+	// from word 1
+	uint32_t event_number_within_block = (*iptr>>19) & 0xFF;
+	uint32_t channel                   = (*iptr>>15) & 0x0F;
+	bool     QF_pedestal               = (*iptr>>14) & 0x01;
+	uint32_t pedestal                  = (*iptr>>0 ) & 0x3FFF;
+	if(VERBOSE>7) cout << "      FADC250 Pulse Data (0x"<<hex<<*iptr<<dec<<") channel="
+			   << channel << " pedestal="<<pedestal << " event within block=" << event_number_within_block <<endl;
 	
-	uint32_t slot = 0;
-	uint32_t itrigger = -1;
+	// event_number_within_block=0 indicates error
+	if(event_number_within_block==0){
+	  _DBG_<<"event_number_within_block==0. This indicates a bug in firmware." << endl;
+	  //if (pe) pe->NEW_DBadHit(rocid,slot);
+	  exit(-1);
+	}
+	
+	// Event headers may be suppressed so determine event from hit data
+	if( (event_number_within_block > current_parsed_events.size()) ) {
+	  jerr << "Bad f250 event number for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;	        if (pe) {
+	    pe->NEW_DBadHit(rocid,slot);
+	    ClearBadDataFormatEventTriggers(pe);
+	    jerr << "Created new BadHit and cleared physics triggers" << endl;	    
+	  }
+	  break;
+	  //throw JException("Bad f250 event number in DEVIOWorkerThread::Parsef250Bank()", __FILE__, __LINE__);
+	}  
 
-	uint32_t *istart_pulse_data = iptr;
+	pe_iter = current_parsed_events.begin();
+	advance( pe_iter, event_number_within_block-1 );
+	pe = *pe_iter++;
+	
+	itrigger = event_number_within_block; // is this right?
+	uint32_t pulse_number = 0;
+	
+	while( (*++iptr>>31) == 0 ){
+	  
+	  if( (*iptr>>30) != 0x01) {
+	    jerr << "Bad f250 Pulse Data (word 1) for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
+	    if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, ((uint64_t)&iptr[3]-(uint64_t)istart_pulse_data)/4, iptr);
+            if (pe) {
+	      pe->NEW_DBadHit(rocid,slot);
+	      ClearBadDataFormatEventTriggers(pe);  
+	      jerr << "Created new BadHit and cleared physics triggers" << endl;
+	    }
+	    iptr = iend;
+	    return;
+	  }
+	  
+	  // from word 2
+	  uint32_t integral                  = (*iptr>>12) & 0x3FFFF;
+	  bool     QF_NSA_beyond_PTW         = (*iptr>>11) & 0x01;
+	  bool     QF_overflow               = (*iptr>>10) & 0x01;
+	  bool     QF_underflow              = (*iptr>>9 ) & 0x01;
+	  uint32_t nsamples_over_threshold   = (*iptr>>0 ) & 0x1FF;
+	  if(VERBOSE>7) cout << "      FADC250 Pulse Data word 2(0x"<<hex<<*iptr<<dec<<")  integral="<<integral<<endl;
+	  
+	  iptr++;
+	  if( (*iptr>>30) != 0x00){
+	    jerr << "Bad f250 Pulse Data (word 2) for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
+	    if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, 128, iptr);
+            if (pe) {
+	      pe->NEW_DBadHit(rocid,slot);
+	      ClearBadDataFormatEventTriggers(pe);  
+	      jerr << "Created new BadHit and cleared physics triggers" << endl;
+	    }
+            iptr = iend;
+	    return;
+	  }
+	  
+	  // from word 3
+	  uint32_t coarse_time               = (*iptr>>21) & 0x1FF;//< 4 ns/count
+	  uint32_t fine_time                 = (*iptr>>15) & 0x3F;//< 0.0625 ns/count
+	  uint32_t pulse_peak                = (*iptr>>3 ) & 0xFFF;
+	  bool     QF_vpeak_beyond_NSA       = (*iptr>>2 ) & 0x01;
+	  bool     QF_vpeak_not_found        = (*iptr>>1 ) & 0x01;
+	  bool     QF_bad_pedestal           = (*iptr>>0 ) & 0x01;
+	  if(VERBOSE>7) cout << "      FADC250 Pulse Data word 3(0x"<<hex<<*iptr<<dec<<")  coarse_time="<<coarse_time<<" fine_time="<<fine_time<<" pulse_peak="<<pulse_peak<<endl;
+	  
+	  // FIRMWARE BUG: If pulse integral was zero, this is an invalid bad pulse;
+	  // skip over bogus repeated pulse time repeats, and ignore it altogether.
+	  // March 18, 2020 -rtj-
+	  if (integral == 0 && *iptr == *(iptr + 1)) {
+	    jerr << "Bad f250 Pulse Data (word 3) for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
+	    while (*(iptr + 1) == *iptr) {
+	      ++iptr;
+	    }
+	    jerr << "Bug #1: bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
+	    break;
+	  }
+	  
+	  if( pe ) {
+	    pe->NEW_Df250PulseData(rocid, slot, channel, itrigger
+				   , event_number_within_block
+				   , QF_pedestal
+				   , pedestal
+				   , integral
+				   , QF_NSA_beyond_PTW
+				   , QF_overflow
+				   , QF_underflow
+				   , nsamples_over_threshold
+				   , coarse_time
+				   , fine_time
+				   , pulse_peak
+				   , QF_vpeak_beyond_NSA
+				   , QF_vpeak_not_found
+				   , QF_bad_pedestal
+				   , pulse_number++);
+	  }
+	}
+	iptr--; // backup so when outer loop advances, it points to next data defining word
+	
+      }
+      break;
+    case 10: // Pulse Pedestal
+      {
+	uint32_t channel = (*iptr>>23) & 0x0F;
+	uint32_t pulse_number = (*iptr>>21) & 0x03;
+	uint32_t pedestal = (*iptr>>12) & 0x1FF;
+	uint32_t pulse_peak = (*iptr>>0) & 0xFFF;
+	if(VERBOSE>7) cout << "      FADC250 Pulse Pedestal chan="<<channel<<" pulse_number="<<pulse_number<<" pedestal="<<pedestal<<" pulse_peak="<<pulse_peak<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+	if(pe) pe->NEW_Df250PulsePedestal(rocid, slot, channel, itrigger, pulse_number, pedestal, pulse_peak);
+      }
+      break;
+    case 13: // Event Trailer
+      // This is marked "suppressed for normal readout – debug mode only" in the
+      // current manual (v2). It does not contain any data so the most we could do here
+      // is return early. I'm hesitant to do that though since it would mean
+      // different behavior for debug mode data as regular data.
+    case 14: // Data not valid (empty module)
+    case 15: // Filler (non-data) word
+      if(VERBOSE>7) cout << "      FADC250 Event Trailer, Data not Valid, or Filler word ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+      break;
+    default:
+      if(VERBOSE>7) cout << "      FADC250 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+      jerr << "FADC250 unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
+      if (pe) {
+        pe->NEW_DBadHit(rocid,slot);
+        ClearBadDataFormatEventTriggers(pe);  
+        jerr << "Created new BadHit and cleared physics triggers" << endl;
+      }
 
-    // Loop over data words
-    for(; iptr<iend; iptr++){
-
-        // Skip all non-data-type-defining words at this
-        // level. When we do encounter one, the appropriate
-        // case block below should handle parsing all of
-        // the data continuation words and advance the iptr.
-        if(((*iptr>>31) & 0x1) == 0)continue;
-
-        uint32_t data_type = (*iptr>>27) & 0x0F;
-        switch(data_type){
-            case 0: // Block Header
-                slot = (*iptr>>22) & 0x1F;
-                if(VERBOSE>7) cout << "      FADC250 Block Header: slot="<<slot<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-                break;
-            case 1: // Block Trailer
-                pe_iter = current_parsed_events.begin();
-				pe = NULL;
-                if(VERBOSE>7) cout << "      FADC250 Block Trailer"<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
-                break;
-            case 2: // Event Header
-                itrigger = (*iptr>>0) & 0x3FFFFF;
-				pe = *pe_iter++;
-                if(VERBOSE>7) cout << "      FADC250 Event Header: itrigger="<<itrigger<<", rocid="<<rocid<<", slot="<<slot<<")" <<" (0x"<<hex<<*iptr<<dec<<")" <<endl;
-                break;
-            case 3: // Trigger Time
-				{
-					uint64_t t = ((*iptr)&0xFFFFFF)<<0;
-					if(VERBOSE>7) cout << "      FADC250 Trigger time low word="<<(((*iptr)&0xFFFFFF))<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-					iptr++;
-					if(((*iptr>>31) & 0x1) == 0){
-						t += ((*iptr)&0xFFFFFF)<<24; // from word on the street: second trigger time word is optional!!??
-						if(VERBOSE>7) cout << "      FADC250 Trigger time high word="<<(((*iptr)&0xFFFFFF))<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
-					}else{
-						iptr--;
-					}
-					if(VERBOSE>7) cout << "      FADC250 Trigger Time: t="<<t<<endl;
-					if(pe) pe->NEW_Df250TriggerTime(rocid, slot, itrigger, t);
-				}
-                break;
-            case 4: // Window Raw Data
-                // iptr passed by reference and so will be updated automatically
-                if(VERBOSE>7) cout << "      FADC250 Window Raw Data"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-                if(pe) MakeDf250WindowRawData(pe, rocid, slot, itrigger, iptr);
-                break;
-            case 5: // Window Sum
-				{
-					uint32_t channel = (*iptr>>23) & 0x0F;
-					uint32_t sum = (*iptr>>0) & 0x3FFFFF;
-					uint32_t overflow = (*iptr>>22) & 0x1;
-					if(VERBOSE>7) cout << "      FADC250 Window Sum"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-					if(pe) pe->NEW_Df250WindowSum(rocid, slot, channel, itrigger, sum, overflow);
-				}
-                break;				
-            case 6: // Pulse Raw Data
-//                MakeDf250PulseRawData(objs, rocid, slot, itrigger, iptr);
-                if(VERBOSE>7) cout << "      FADC250 Pulse Raw Data"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-                break;
-            case 7: // Pulse Integral
-				{
-					uint32_t channel = (*iptr>>23) & 0x0F;
-					uint32_t pulse_number = (*iptr>>21) & 0x03;
-					uint32_t quality_factor = (*iptr>>19) & 0x03;
-					uint32_t sum = (*iptr>>0) & 0x7FFFF;
-					uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
-					uint32_t nsamples_pedestal = 1;  // The firmware returns an already divided pedestal
-					uint32_t pedestal = 0;  // This will be replaced by the one from Df250PulsePedestal in GetObjects
-					if(VERBOSE>7) cout << "      FADC250 Pulse Integral: chan="<<channel<<" pulse_number="<<pulse_number<<" sum="<<sum<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-					if(pe) pe->NEW_Df250PulseIntegral(rocid, slot, channel, itrigger, pulse_number, quality_factor, sum, pedestal, nsamples_integral, nsamples_pedestal);
-				}
-                break;
-            case 8: // Pulse Time
-				{
-					uint32_t channel = (*iptr>>23) & 0x0F;
-					uint32_t pulse_number = (*iptr>>21) & 0x03;
-					uint32_t quality_factor = (*iptr>>19) & 0x03;
-					uint32_t pulse_time = (*iptr>>0) & 0x7FFFF;
-					if(VERBOSE>7) cout << "      FADC250 Pulse Time: chan="<<channel<<" pulse_number="<<pulse_number<<" pulse_time="<<pulse_time<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-					if(pe) pe->NEW_Df250PulseTime(rocid, slot, channel, itrigger, pulse_number, quality_factor, pulse_time);
-				}
-				break;
-            case 9: // Pulse Data (firmware instroduce in Fall 2016)
-				{
- 					// from word 1
-					uint32_t event_number_within_block = (*iptr>>19) & 0xFF;
-					uint32_t channel                   = (*iptr>>15) & 0x0F;
-					bool     QF_pedestal               = (*iptr>>14) & 0x01;
-					uint32_t pedestal                  = (*iptr>>0 ) & 0x3FFF;
-					if(VERBOSE>7) cout << "      FADC250 Pulse Data (0x"<<hex<<*iptr<<dec<<") channel=" << channel << " pedestal="<<pedestal << " event within block=" << event_number_within_block <<endl;
-					
-					// event_number_within_block=0 indicates error
-					if(event_number_within_block==0){
-						_DBG_<<"event_number_within_block==0. This indicates a bug in firmware." << endl;
-						exit(-1);
-					}
-
-					// Event headers may be supressed so determine event from hit data
-					if( (event_number_within_block > current_parsed_events.size()) ) { jerr << "Bad f250 event number for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl; throw JException("Bad f250 event number", __FILE__, __LINE__);}
-					pe_iter = current_parsed_events.begin();
-					advance( pe_iter, event_number_within_block-1 );
-					pe = *pe_iter++;
-					
-					itrigger = event_number_within_block; // is this right?
-					uint32_t pulse_number = 0;
-					
-					while( (*++iptr>>31) == 0 ){
-					
-						if( (*iptr>>30) != 0x01) {
-							jerr << "Bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
-							if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, ((uint64_t)&iptr[3]-(uint64_t)istart_pulse_data)/4, iptr);
-							if (continue_on_format_error) {
-								iptr = iend;
-								return;
-							}
-							else
-								throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
-						}
- 
-						// from word 2
-						uint32_t integral                  = (*iptr>>12) & 0x3FFFF;
-						bool     QF_NSA_beyond_PTW         = (*iptr>>11) & 0x01;
-						bool     QF_overflow               = (*iptr>>10) & 0x01;
-						bool     QF_underflow              = (*iptr>>9 ) & 0x01;
-						uint32_t nsamples_over_threshold   = (*iptr>>0 ) & 0x1FF;
-						if(VERBOSE>7) cout << "      FADC250 Pulse Data word 2(0x"<<hex<<*iptr<<dec<<")  integral="<<integral<<endl;
-
-						iptr++;
-						if( (*iptr>>30) != 0x00){
-							if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, 128, iptr);
-							if (continue_on_format_error) {
-								iptr = iend;
-								return;
-							}
-							else
-								throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
-						}
- 
-						// from word 3
-						uint32_t course_time               = (*iptr>>21) & 0x1FF;//< 4 ns/count
-						uint32_t fine_time                 = (*iptr>>15) & 0x3F;//< 0.0625 ns/count
-						uint32_t pulse_peak                = (*iptr>>3 ) & 0xFFF;
-						bool     QF_vpeak_beyond_NSA       = (*iptr>>2 ) & 0x01;
-						bool     QF_vpeak_not_found        = (*iptr>>1 ) & 0x01;
-						bool     QF_bad_pedestal           = (*iptr>>0 ) & 0x01;
-						if(VERBOSE>7) cout << "      FADC250 Pulse Data word 3(0x"<<hex<<*iptr<<dec<<")  course_time="<<course_time<<" fine_time="<<fine_time<<" pulse_peak="<<pulse_peak<<endl;
-
-						// FIRMWARE BUG: If pulse integral was zero, this is an invalid bad pulse;
-						// skip over bogus repeated pulse time repeats, and ignore it altogether.
-						// March 18, 2020 -rtj-
-						if (integral == 0 && *iptr == *(iptr + 1)) {
-							while (*(iptr + 1) == *iptr) {
-								++iptr;
-							}
-							jerr << "Bug #1: bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
-							continue_on_format_error = true;
-							break;
-						}
-
-						if( pe ) {
-							pe->NEW_Df250PulseData(rocid, slot, channel, itrigger
-							, event_number_within_block
-							, QF_pedestal
-							, pedestal
-							, integral
-							, QF_NSA_beyond_PTW
-							, QF_overflow
-							, QF_underflow
-							, nsamples_over_threshold
-							, course_time
-							, fine_time
-							, pulse_peak
-							, QF_vpeak_beyond_NSA
-							, QF_vpeak_not_found
-							, QF_bad_pedestal
-							, pulse_number++);
-						}
-					}
-					iptr--; // backup so when outer loop advances, it points to next data defining word
-
-				}
-                break;
-            case 10: // Pulse Pedestal
-				{
-					uint32_t channel = (*iptr>>23) & 0x0F;
-					uint32_t pulse_number = (*iptr>>21) & 0x03;
-					uint32_t pedestal = (*iptr>>12) & 0x1FF;
-					uint32_t pulse_peak = (*iptr>>0) & 0xFFF;
-					if(VERBOSE>7) cout << "      FADC250 Pulse Pedestal chan="<<channel<<" pulse_number="<<pulse_number<<" pedestal="<<pedestal<<" pulse_peak="<<pulse_peak<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-					if(pe) pe->NEW_Df250PulsePedestal(rocid, slot, channel, itrigger, pulse_number, pedestal, pulse_peak);
-				}
-                break;
-            case 13: // Event Trailer
-                // This is marked "suppressed for normal readout – debug mode only" in the
-                // current manual (v2). It does not contain any data so the most we could do here
-                // is return early. I'm hesitant to do that though since it would mean
-                // different behavior for debug mode data as regular data.
-            case 14: // Data not valid (empty module)
-            case 15: // Filler (non-data) word
-            	if(VERBOSE>7) cout << "      FADC250 Event Trailer, Data not Valid, or Filler word ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-				break;
-			default:
- 				if(VERBOSE>7) cout << "      FADC250 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-				jerr << "FADC250 unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
-                // make additional debugging output for special error types
-                if(data_type == 11) {
-                    cout << "          FADC slot mask = "<<" 0x"<<hex<<*(iptr+1)<<dec<<endl;
-                    cout << "          Token status = "<<" 0x"<<hex<<*(iptr+2)<<dec<<endl;
-                    cout << "          Bus error status = "<<" 0x"<<hex<<*(iptr+3)<<dec<<endl;
-                    if(pe) {
-                        cout << "          Associated with event number = "<<pe->event_number<<endl;
-                    }
-                }
-
-				if (continue_on_format_error) {
-					iptr = iend;
-					return;
-				}
-				else
-					throw JExceptionDataFormat("Unexpected word type in fADC250 block!", __FILE__, __LINE__);
-        }
+        // make additional debugging output for special error types
+      if(data_type == 11) {
+	cout << "          FADC slot mask = "<<" 0x"<<hex<<*(iptr+1)<<dec<<endl;
+	cout << "          Token status = "<<" 0x"<<hex<<*(iptr+2)<<dec<<endl;
+	cout << "          Bus error status = "<<" 0x"<<hex<<*(iptr+3)<<dec<<endl;
+	if(pe) {
+	  cout << "          Associated with event number = "<<pe->event_number<<endl;
+	}
+      }
+      iptr = iend;
+      return;
     }
-
-    // Chop off filler words
-    for(; iptr<iend; iptr++){
-        if(((*iptr)&0xf8000000) != 0xf8000000) break;
-    }
+  }
+  
+  // Chop off filler words
+  for(; iptr<iend; iptr++){
+    if(((*iptr)&0xf8000000) != 0xf8000000) break;
+  }
 }
 
 //----------------
 // MakeDf250WindowRawData
 //----------------
-void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr)
+void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr, uint32_t* &iend)
 {
-    uint32_t channel = (*iptr>>23) & 0x0F;
-    uint32_t window_width = (*iptr>>0) & 0x0FFF;
-
-    Df250WindowRawData *wrd = pe->NEW_Df250WindowRawData(rocid, slot, channel, itrigger);
-
-    for(uint32_t isample=0; isample<window_width; isample +=2){
-
-        // Advance to next word
-        iptr++;
-
-        // Make sure this is a data continuation word, if not, stop here
-        if(((*iptr>>31) & 0x1) != 0x0){
-            iptr--; // calling method expects us to point to last word in block
-            break;
-        }
-
-        bool invalid_1 = (*iptr>>29) & 0x1;
-        bool invalid_2 = (*iptr>>13) & 0x1;
-        uint16_t sample_1 = 0;
-        uint16_t sample_2 = 0;
-        if(!invalid_1)sample_1 = (*iptr>>16) & 0x1FFF;
-        if(!invalid_2)sample_2 = (*iptr>>0) & 0x1FFF;
-
-        // Sample 1
-        wrd->samples.push_back(sample_1);
-        wrd->invalid_samples |= invalid_1;
-        wrd->overflow |= (sample_1>>12) & 0x1;
-
-        if(((isample+2) == window_width) && invalid_2)break; // skip last sample if flagged as invalid
-
-        // Sample 2
-        wrd->samples.push_back(sample_2);
-        wrd->invalid_samples |= invalid_2;
-        wrd->overflow |= (sample_2>>12) & 0x1;
+  uint32_t channel = (*iptr>>23) & 0x0F;
+  uint32_t window_width = (*iptr>>0) & 0x0FFF;
+  
+  Df250WindowRawData *wrd = pe->NEW_Df250WindowRawData(rocid, slot, channel, itrigger);
+  
+  for(uint32_t isample=0; isample<window_width; isample +=2){
+    
+    // Advance to next word
+    iptr++;
+    
+    // Make sure this is a data continuation word, if not, stop here
+    if(((*iptr>>31) & 0x1) != 0x0){
+      iptr--; // calling method expects us to point to last word in block
+      break;
     }
-	 
-	 if(VERBOSE>7) cout << "      FADC250 Window Raw Data: size from header=" << window_width << " Nsamples found=" << wrd->samples.size() << endl;
-	 if( window_width != wrd->samples.size() ){
-	 	jerr <<" FADC250 Window Raw Data number of samples does not match header! (" <<wrd->samples.size() << " != " << window_width << ") for rocid=" << rocid << " slot=" << slot << " channel=" << channel << endl;
-	 }
+    
+    if (iptr >= iend) {
+      jerr << "fa250 window raw data are incomplete - the collection of samples has been truncated!" << endl;
+      if(pe) pe->NEW_DBadHit(rocid,slot);   
+      if(pe) jerr << "Created new BadHit to store rocid and slot" << endl;
+      break;
+    }
+
+    bool invalid_1 = (*iptr>>29) & 0x1;
+    bool invalid_2 = (*iptr>>13) & 0x1;
+    uint16_t sample_1 = 0;
+    uint16_t sample_2 = 0;
+    if(!invalid_1)sample_1 = (*iptr>>16) & 0x1FFF;
+    if(!invalid_2)sample_2 = (*iptr>>0) & 0x1FFF;
+    
+    // Sample 1
+    wrd->samples.push_back(sample_1);
+    wrd->invalid_samples |= invalid_1;
+    wrd->overflow |= (sample_1>>12) & 0x1;
+    
+    if(((isample+2) == window_width) && invalid_2)break; // skip last sample if flagged as invalid
+    
+    // Sample 2
+    wrd->samples.push_back(sample_2);
+    wrd->invalid_samples |= invalid_2;
+    wrd->overflow |= (sample_2>>12) & 0x1;
+  }
+  
+  if(VERBOSE>7) cout << "      FADC250 Window Raw Data: size from header=" << window_width << " Nsamples found=" << wrd->samples.size() << endl;
+  if( window_width != wrd->samples.size() ){
+    jerr <<" FADC250 Window Raw Data number of samples does not match header! (" <<wrd->samples.size() << " != " << window_width << ") for rocid=" << rocid << " slot=" << slot << " channel=" << channel << endl;
+    if(pe) pe->NEW_DBadHit(rocid,slot);   
+    if(pe) jerr << "Created new BadHit to store rocid and slot" << endl;
+  }
 }
 
 //----------------
@@ -1685,321 +2056,423 @@ void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid,
 //----------------
 void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
-	if(!PARSE_F125){ iptr = &iptr[(*iptr) + 1]; return; }
+  if(!PARSE_F125){ iptr = &iptr[(*iptr) + 1]; return; }
+  
+  auto pe_iter = current_parsed_events.begin();
+  DParsedEvent *pe = NULL;
+  
+  uint32_t slot=0;
+  uint32_t itrigger = -1;
 
-	auto pe_iter = current_parsed_events.begin();
-	DParsedEvent *pe = NULL;
+  uint32_t last_pulse_time_channel=0;  // old format
+  uint32_t last_slot = -1;   // old format
+  uint32_t last_channel = -1;     // old format
 
-    uint32_t slot=0;
-    uint32_t itrigger = -1;
-    uint32_t last_itrigger = -2;
-    uint32_t last_pulse_time_channel=0;
-    uint32_t last_slot = -1;
-    uint32_t last_channel = -1;    
+  bool new_format = false;   // flag any old format words as bugs, if they follow new format data.  Cannot catch this for the first event though.
+  
+  // Loop over data words
+  for(; iptr<iend; iptr++){
+    
+    // Skip all non-data-type-defining words at this
+    // level. When we do encounter one, the appropriate
+    // case block below should handle parsing all of
+    // the data continuation words and advance the iptr.
+    if(((*iptr>>31) & 0x1) == 0)continue;
+    
+    uint32_t data_type = (*iptr>>27) & 0x0F;
+    switch(data_type){
+    case 0: // Block Header
+	  if(pe != NULL) {
+		  cout << "Warning in DEVIOWorkerThread::Parsef125Bank(): missing block trailer, recovering ..." << endl;
+	      pe_iter = current_parsed_events.begin();
+    	  pe = NULL;
+	  }
+      slot = (*iptr>>22) & 0x1F;
+      if(VERBOSE>7) cout << "      FADC125 Block Header: slot="<<slot<<endl;
+      break;
+    case 1: // Block Trailer
+      pe_iter = current_parsed_events.begin();
+      pe = NULL;
+      if(VERBOSE>7) cout << "      FADC125 Block Trailer" << endl;      
+      break;
+    case 2: // Event Header
+      //slot_event_header = (*iptr>>22) & 0x1F;
+      itrigger = (*iptr>>0) & 0xFFFF;
+	  if(pe_iter == current_parsed_events.end()) {
+	  	jout << "GOING OFF THE DEEP END!" << endl;
+	  	break;
+	  }
+      pe = *pe_iter++;
+      if(VERBOSE>7) cout << "      FADC125 Event Header: itrigger="<<itrigger<<", rocid="<<rocid<<", slot="<<slot <<endl;
+      break;
+    case 3: // Trigger Time
+      {
+	uint64_t t = ((*iptr)&0xFFFFFF)<<24;
+	iptr++;
+	if(((*iptr>>31) & 0x1) == 0){
+	  t += ((*iptr)&0xFFFFFF)<<0;  
+	}else{
+	  iptr--;
+	}
+	if(VERBOSE>7) cout << "      FADC125 Trigger Time (t="<<t<<")"<<endl;
+	if(pe) pe->NEW_Df125TriggerTime(rocid, slot, itrigger, t);
+      }
+      break;
+    case 4: // Window Raw Data
+      // iptr passed by reference and so will be updated automatically
+      if(VERBOSE>7) cout << "      FADC125 Window Raw Data"<<endl;
+      if(pe) MakeDf125WindowRawData(pe, rocid, slot, itrigger, iptr, iend);
+      break;
+      
+    case 5: // CDC pulse data (new)  (GlueX-doc-2274-v8)
+      {
+        new_format = true;
+	// Word 1:
+	uint32_t word1          = *iptr;
+	uint32_t channel        = (*iptr>>20) & 0x7F;
+	uint32_t pulse_number   = (*iptr>>15) & 0x1F;
+	uint32_t pulse_time     = (*iptr>>4 ) & 0x7FF;
+	uint32_t quality_factor = (*iptr>>3 ) & 0x1; //time QF bit
+	uint32_t overflow_count = (*iptr>>0 ) & 0x7;
+	if(VERBOSE>7){
+	  cout << "      FADC125 CDC Pulse Data word1: " << hex << (*iptr) << dec << endl;
+	  cout << "      FADC125 CDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
+	}
+	
+	// Word 2:
+	++iptr;
+	if(iptr>=iend){
+	  if(pe) pe->NEW_DBadHit(rocid,slot);
+          if (pe) ClearBadDataFormatEventTriggers(pe);  
+	  
+	  PrintLimitCDC++;
+	  if (PrintLimitCDC<10) jerr << " Truncated f125 CDC hit (block ends before continuation word!). BadHit created." << endl;
+	  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
+	  break;
+	}
+	
+	if( ((*iptr>>31) & 0x1) != 0 ){
+	  if(pe) pe->NEW_DBadHit(rocid,slot);
+          if (pe) ClearBadDataFormatEventTriggers(pe);  	  
+	  PrintLimitCDC++;
+	  if (PrintLimitCDC<10) jerr << " Truncated f125 CDC hit (missing continuation word!). BadHit created." << endl;
+	  if (PrintLimitCDC == 10) jerr << "Truncated f125 CDC hit: further warnings suppressed"  << endl;	
+          --iptr;
+	  break;
+	}
+	
+	uint32_t word2      = *iptr;
+	uint32_t pedestal   = (*iptr>>23) & 0xFF;
+	uint32_t sum        = (*iptr>>9 ) & 0x3FFF;
+	uint32_t pulse_peak = (*iptr>>0 ) & 0x1FF;
+	if(VERBOSE>7){
+	  cout << "      FADC125 CDC Pulse Data word2: " << hex << (*iptr) << dec << endl;
+	  cout << "      FADC125 CDC Pulse Data (pedestal="<<pedestal<<" sum="<<sum<<" peak="<<pulse_peak<<")"<<endl;
+	}
+	
+	// Create hit objects
+	uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
+	uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
+	
+	if( pe ) {
+          //cout << " number of CDC pulses existing : " << pe->vDf125CDCPulse.size() << " event num " << pe->event_number << endl;
+	  
+	  pe->NEW_Df125CDCPulse(rocid, slot, channel, itrigger
+				, pulse_number        // NPK
+				, pulse_time          // le_time
+				, quality_factor      // time_quality_bit
+				, overflow_count      // overflow_count
+				, pedestal            // pedestal
+				, sum                 // integral
+				, pulse_peak          // first_max_amp
+				, word1               // word1
+				, word2               // word2
+				, nsamples_pedestal   // nsamples_pedestal
+				, nsamples_integral   // nsamples_integral
+				, false);             // emulated
+	}
 
-    // Loop over data words
-    for(; iptr<iend; iptr++){
+      }
+      break;
+      
+    case 6: // FDC pulse data-integral (new)  (GlueX-doc-2274-v8)
+      {
+	new_format = true;
 
-        // Skip all non-data-type-defining words at this
-        // level. When we do encounter one, the appropriate
-        // case block below should handle parsing all of
-        // the data continuation words and advance the iptr.
-        if(((*iptr>>31) & 0x1) == 0)continue;
+	// Word 1:
+	uint32_t word1          = *iptr;
+	uint32_t channel        = (*iptr>>20) & 0x7F;
+	uint32_t pulse_number   = (*iptr>>15) & 0x1F;
+	uint32_t pulse_time     = (*iptr>>4 ) & 0x7FF;
+	uint32_t quality_factor = (*iptr>>3 ) & 0x1; //time QF bit
+	uint32_t overflow_count = (*iptr>>0 ) & 0x7;
+	if(VERBOSE>7){
+	  cout << "      FADC125 FDC Pulse Data(integral) word1: " << hex << (*iptr) << dec << endl;
+	  cout << "      FADC125 FDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
+	}
+	
+	// Word 2 should be present for each peak found (a total of pulse_number times)				  
+	
+	for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
+	  // Word 2:
+	  ++iptr;
+	  
+	  if(iptr>=iend){  // no more words
+	    if(pe) pe->NEW_DBadHit(rocid,slot);   
+            if (pe) ClearBadDataFormatEventTriggers(pe);  
+	    break;
+	  }
+	  
+	  if( ((*iptr>>31) & 0x1) != 0 ){    // next word is not a continuation word
+	    // most of the FDC missing cont word errs are caused by the pulse number (1) mis-recorded as 7 or 15
+	    // only make a fuss about these if pulse_number=1
+	    if (pulse_number == 1) {
+              if (pe) pe->NEW_DBadHit(rocid,slot);
+              if (pe) ClearBadDataFormatEventTriggers(pe);  	      
+	    
+ 	      PrintLimitFDC++;
+	      if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
+	      if (PrintLimitFDC < 10) jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
+	    }
+	    
+	    --iptr; 
+	    break;
+	  }
+	  uint32_t word2      = *iptr;
+	  uint32_t pulse_peak = 0;
+	  uint32_t sum        = (*iptr>>19) & 0xFFF;
+	  uint32_t peak_time  = (*iptr>>11) & 0xFF;
+	  uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
+	  if(VERBOSE>7){
+	    cout << "      FADC125 FDC Pulse Data(integral) word2: " << hex << (*iptr) << dec << endl;
+	    cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
+	  }
+	  
+	  // Create hit objects
+	  uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
+	  uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
+	  
+	  if( pe ) {
+	    pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
+				  , nword - 1            // pulse number
+				  , pulse_time          // le_time
+				  , quality_factor      // time_quality_bit
+				  , overflow_count      // overflow_count
+				  , pedestal            // pedestal
+				  , sum                 // integral
+				  , pulse_peak          // peak_amp
+				  , peak_time           // peak_time
+				  , word1               // word1
+				  , word2               // word2
+				  , nsamples_pedestal   // nsamples_pedestal
+				  , nsamples_integral   // nsamples_integral
+				  , false);             // emulated
+	  }
+	} // end of collection of multiple peak data					
+      }
+      break;
+      
+    case 7: // Pulse Integral
+      {
+	if(VERBOSE>7) cout << "      FADC125 Pulse Integral"<<endl;
+	
+	if (new_format) { // if new format data were found earlier, data appearing to be old format are in fact buggy
+	    if (pe) pe->NEW_DBadHit(rocid,slot);
+	    jerr << "Found an apparent fa125 old format Pulse Integral word following earlier new format data.  Created a BadHit" << endl;
+            // the continuation word ill be skipped at the start of the parsing loop
+	    break;
+	}
+	
+	uint32_t channel = (*iptr>>20) & 0x7F;
+	uint32_t sum = (*iptr>>0) & 0xFFFFF;
+	uint32_t quality_factor = 0;
+	uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
+	uint32_t nsamples_pedestal = 1;  // The firmware returns an already divided pedestal
+	uint32_t pedestal = 0;  // This will be replaced by the one from Df250PulsePedestal in GetObjects
+	uint32_t pulse_number = 0;
+	if (last_slot == slot && last_channel == channel) pulse_number = 1;
+	last_slot = slot;
+	last_channel = channel;
+	if( pe ) pe->NEW_Df125PulseIntegral(rocid, slot, channel, itrigger, pulse_number, quality_factor, sum, pedestal, nsamples_integral, nsamples_pedestal);
+      }
+      break;
+      
+    case 8: // Pulse Time
+      {
+	if(VERBOSE>7) cout << "      FADC125 Pulse Time"<<endl;
+	if (new_format) { // if new format data were found earlier, data appearing to be old format are in fact buggy
+	    if (pe) pe->NEW_DBadHit(rocid,slot);
+	    jerr << "Found an apparent fa125 old format Pulse Time word following earlier new format data.  Created a BadHit" << endl;
+            // the continuation word ill be skipped at the start of the parsing loop
+	    break;
+	}
+		
+	uint32_t channel = (*iptr>>20) & 0x7F;
+	uint32_t pulse_number = (*iptr>>18) & 0x03;
+	uint32_t pulse_time = (*iptr>>0) & 0xFFFF;
+	uint32_t quality_factor = 0;
+	if( pe ) pe->NEW_Df125PulseTime(rocid, slot, channel, itrigger, pulse_number, quality_factor, pulse_time);
+	last_pulse_time_channel = channel;
+      }
+      break;
+      
+    case 9: // FDC pulse data-peak (new)  (GlueX-doc-2274-v8)
+      {
+	new_format = true;	
+	// Word 1:
+	uint32_t word1          = *iptr;
+	uint32_t channel        = (*iptr>>20) & 0x7F;
+	uint32_t pulse_number   = (*iptr>>15) & 0x1F;
+	uint32_t pulse_time     = (*iptr>>4 ) & 0x7FF;
+	uint32_t quality_factor = (*iptr>>3 ) & 0x1; //time QF bit
+	uint32_t overflow_count = (*iptr>>0 ) & 0x7;
+	if(VERBOSE>7){
+	  cout << "      FADC125 FDC Pulse Data(peak) word1: " << hex << (*iptr) << dec << endl;
+	  cout << "      FADC125 FDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
+	}
+	
+	// Word 2 should be present for each peak found (a total of pulse_number times)				  					
+	for (uint32_t nword = 2; nword < 2+pulse_number; nword++) {
+	  // Word 2:
+	  ++iptr;
+	  if(iptr>=iend){
+	    if(pe) pe->NEW_DBadHit(rocid,slot);   
+            if (pe) ClearBadDataFormatEventTriggers(pe);  
+	    break;
+	  }
 
-        uint32_t data_type = (*iptr>>27) & 0x0F;
-        switch(data_type){
-            case 0: // Block Header
-                slot = (*iptr>>22) & 0x1F;
-                if(VERBOSE>7) cout << "      FADC125 Block Header: slot="<<slot<<endl;
-                break;
-            case 1: // Block Trailer
-				pe_iter = current_parsed_events.begin();
-				pe = NULL;
-				break;
-            case 2: // Event Header
-                                //slot_event_header = (*iptr>>22) & 0x1F;
-                                itrigger = (*iptr>>0) & 0xFFFF;
-				pe = *pe_iter++;
-                                if(VERBOSE>7) cout << "      FADC125 Event Header: itrigger="<<itrigger<<" last_itrigger="<<last_itrigger<<", rocid="<<rocid<<", slot="<<slot <<endl;
-				break;
-            case 3: // Trigger Time
-				{
-					uint64_t t = ((*iptr)&0xFFFFFF)<<24;
-					iptr++;
-					if(((*iptr>>31) & 0x1) == 0){
-						t += ((*iptr)&0xFFFFFF)<<0;  
-					}else{
-						iptr--;
-					}
-					if(VERBOSE>7) cout << "      FADC125 Trigger Time (t="<<t<<")"<<endl;
-					if(pe) pe->NEW_Df125TriggerTime(rocid, slot, itrigger, t);
-				}
-                break;
-            case 4: // Window Raw Data
-					// iptr passed by reference and so will be updated automatically
-					if(VERBOSE>7) cout << "      FADC125 Window Raw Data"<<endl;
-					if(pe) MakeDf125WindowRawData(pe, rocid, slot, itrigger, iptr);
-					break;
+	  if( ((*iptr>>31) & 0x1) != 0 ){    // next word is not a continuation word
+	    // most of the FDC missing cont word errs are caused by the pulse number (1) mis-recorded as 7 or 15
+	    // only make a fuss about these if pulse_number=1
+	    if (pulse_number == 1) {
+              if (pe) pe->NEW_DBadHit(rocid,slot);   
+              if (pe) ClearBadDataFormatEventTriggers(pe);
+	      
+ 	      PrintLimitFDC++;
+	      if (PrintLimitFDC == 10) jerr << "Truncated f125 FDC hit: further warnings suppressed"  << endl;	
+	      if (PrintLimitFDC < 10) jerr << " Truncated f125 FDC hit (missing continuation word) from rocid=" << rocid << " slot=" << slot << " chan=" << channel << " pulse_number="<<pulse_number << endl;
+	    }
 
-            case 5: // CDC pulse data (new)  (GlueX-doc-2274-v8)
-				{
-					// Word 1:
-					uint32_t word1          = *iptr;
-					uint32_t channel        = (*iptr>>20) & 0x7F;
-					uint32_t pulse_number   = (*iptr>>15) & 0x1F;
-					uint32_t pulse_time     = (*iptr>>4 ) & 0x7FF;
-					uint32_t quality_factor = (*iptr>>3 ) & 0x1; //time QF bit
-					uint32_t overflow_count = (*iptr>>0 ) & 0x7;
-					if(VERBOSE>7){
-						cout << "      FADC125 CDC Pulse Data word1: " << hex << (*iptr) << dec << endl;
-						cout << "      FADC125 CDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
-					}
+	    --iptr;
+	    break;
+	  }
+	  uint32_t word2      = *iptr;
+	  uint32_t pulse_peak = (*iptr>>19) & 0xFFF;
+	  uint32_t sum        = 0;
+	  uint32_t peak_time  = (*iptr>>11) & 0xFF;
+	  uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
+	  if(VERBOSE>7){
+	    cout << "      FADC125 FDC Pulse Data(peak) word2: " << hex << (*iptr) << dec << endl;
+	    cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
+	  }
+	  
+	  // Create hit objects
+	  uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
+	  uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
+	  
+	  if( pe ) {
+	    
+	    // The following is a temporary fix. In late 2017 the CDC group started
+	    // using data type 9 (i.e. FDC pulse peak). This caused many conflicts
+	    // with plugins downstream that were built around there being a Df125CDCPulse
+	    // object associated with the DCDCDigiHit. In order to quickly solve
+	    // the issue as the run was starting, this fix was made to produce Df125CDCPulse
+	    // object from this data iff rocid<30 indicating the data came from the
+	    // CDC. 
+	    if( rocid<30 ){
+	      
+	      pe->NEW_Df125CDCPulse(rocid, slot, channel, itrigger
+				    , nword - 1            // pulse number
+				    , pulse_time          // le_time
+				    , quality_factor      // time_quality_bit
+				    , overflow_count      // overflow_count
+				    , pedestal            // pedestal
+				    , sum                 // integral
+				    , pulse_peak          // peak_amp
+				    , word1               // word1
+				    , word2               // word2
+				    , nsamples_pedestal   // nsamples_pedestal
+				    , nsamples_integral   // nsamples_integral
+				    , false);             // emulated
+	      
+	    }else{
+	      
+	      pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
+				    , nword - 1            // pulse number
+				    , pulse_time          // le_time
+				    , quality_factor      // time_quality_bit
+				    , overflow_count      // overflow_count
+				    , pedestal            // pedestal
+				    , sum                 // integral
+				    , pulse_peak          // peak_amp
+				    , peak_time           // peak_time
+				    , word1               // word1
+				    , word2               // word2
+				    , nsamples_pedestal   // nsamples_pedestal
+				    , nsamples_integral   // nsamples_integral
+				    , false);             // emulated
+	    }
+	  }
+	}  // end of collection of multiple peak data
+      }
+      break;
+      
+    case 10: // Pulse Pedestal (consistent with Beni's hand-edited version of Cody's document)
+      {
+	if(VERBOSE>7) cout << "      FADC125 Pulse Pedestal"<<endl;
+	if (new_format) { // if new format data were found earlier, data appearing to be old format are in fact buggy
+	    if (pe) pe->NEW_DBadHit(rocid,slot);
+	    jerr << "Found an apparent fa125 old format Pulse Pedestal word following earlier new format data.  Created a BadHit" << endl;	    
+            // the continuation word ill be skipped at the start of the parsing loop
+	    break;
+	}
+	//channel = (*iptr>>20) & 0x7F;
+	uint32_t channel = last_pulse_time_channel; // not enough bits to hold channel number so rely on proximity to Pulse Time in data stream (see "FADC125 dataformat 250 modes.docx")
+	uint32_t pulse_number = (*iptr>>21) & 0x03;
+	uint32_t pedestal = (*iptr>>12) & 0x1FF;
+	uint32_t pulse_peak = (*iptr>>0) & 0xFFF;
+	uint32_t nsamples_pedestal = 1;  // The firmware returns an already divided pedestal
+	if( pe ) pe->NEW_Df125PulsePedestal(rocid, slot, channel, itrigger, pulse_number, pedestal, pulse_peak, nsamples_pedestal);
+      }
+      break;
+      
+    case 13: // Event Trailer
+      break;
+    case 14: // Data not valid (empty module)
+      break;
+    case 15: // Filler (non-data) word
+      break;
 
-					// Word 2:
-					++iptr;
-					if(iptr>=iend){
-						jerr << " Truncated f125 CDC hit (block ends before continuation word!)" << endl;
-						continue;
-					}
-					if( ((*iptr>>31) & 0x1) != 0 ){
-						jerr << " Truncated f125 CDC hit (missing continuation word!)" << endl;
-						continue;
-					}
-					uint32_t word2      = *iptr;
-					uint32_t pedestal   = (*iptr>>23) & 0xFF;
-					uint32_t sum        = (*iptr>>9 ) & 0x3FFF;
-					uint32_t pulse_peak = (*iptr>>0 ) & 0x1FF;
-					if(VERBOSE>7){
-						cout << "      FADC125 CDC Pulse Data word2: " << hex << (*iptr) << dec << endl;
-						cout << "      FADC125 CDC Pulse Data (pedestal="<<pedestal<<" sum="<<sum<<" peak="<<pulse_peak<<")"<<endl;
-					}
+    default:     
+      if(VERBOSE>7) cout << "      FADC125 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+      if (pe) {
+	 pe->NEW_DBadHit(rocid,slot);
+	 jerr << "Event " <<  pe->event_number<<" contains fa125 unknown data type.  Created a BadHit" << endl;
+      	 ClearBadDataFormatEventTriggers(pe);
+      }
 
-					// Create hit objects
-					uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
-					uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
+	//throw JExceptionDataFormat("Unexpected word type in fADC125 block!", __FILE__, __LINE__);
 
-					if( pe ) {
-						pe->NEW_Df125CDCPulse(rocid, slot, channel, itrigger
-									, pulse_number        // NPK
-									, pulse_time          // le_time
-									, quality_factor      // time_quality_bit
-									, overflow_count      // overflow_count
-									, pedestal            // pedestal
-									, sum                 // integral
-									, pulse_peak          // first_max_amp
-									, word1               // word1
-									, word2               // word2
-									, nsamples_pedestal   // nsamples_pedestal
-									, nsamples_integral   // nsamples_integral
-									, false);             // emulated
-					}
-				}
-                break;
+      /*for(; iptr<iend; iptr++){
+        cout <<  "0x"<<hex<<*iptr<<dec;
+	cout <<" first bit: "<<hex << ((*iptr>>27) & 0x1) << dec;
+	cout << " first 4 bits: 0x"<<hex << ((*iptr>>27) & 0xF) <<dec<<endl;
+	}*/
 
-            case 6: // FDC pulse data-integral (new)  (GlueX-doc-2274-v8)
-				{
-					// Word 1:
-					uint32_t word1          = *iptr;
-					uint32_t channel        = (*iptr>>20) & 0x7F;
-					uint32_t pulse_number   = (*iptr>>15) & 0x1F;
-					uint32_t pulse_time     = (*iptr>>4 ) & 0x7FF;
-					uint32_t quality_factor = (*iptr>>3 ) & 0x1; //time QF bit
-					uint32_t overflow_count = (*iptr>>0 ) & 0x7;
-					if(VERBOSE>7){
-						cout << "      FADC125 FDC Pulse Data(integral) word1: " << hex << (*iptr) << dec << endl;
-						cout << "      FADC125 FDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
-					}
-
-					// Word 2:
-					++iptr;
-					if(iptr>=iend){
-						jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
-						continue;
-					}
-					if( ((*iptr>>31) & 0x1) != 0 ){
-						jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
-						continue;
-					}
-					uint32_t word2      = *iptr;
-					uint32_t pulse_peak = 0;
-					uint32_t sum        = (*iptr>>19) & 0xFFF;
-					uint32_t peak_time  = (*iptr>>11) & 0xFF;
-					uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
-					if(VERBOSE>7){
-						cout << "      FADC125 FDC Pulse Data(integral) word2: " << hex << (*iptr) << dec << endl;
-						cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
-					}
-
-					// Create hit objects
-					uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
-					uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
-
-					if( pe ) {
-						pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
-									, pulse_number        // NPK
-									, pulse_time          // le_time
-									, quality_factor      // time_quality_bit
-									, overflow_count      // overflow_count
-									, pedestal            // pedestal
-									, sum                 // integral
-									, pulse_peak          // peak_amp
-									, peak_time           // peak_time
-									, word1               // word1
-									, word2               // word2
-									, nsamples_pedestal   // nsamples_pedestal
-									, nsamples_integral   // nsamples_integral
-									, false);             // emulated
-					}
-				}
-                break;
-
-            case 7: // Pulse Integral
-				{
-					if(VERBOSE>7) cout << "      FADC125 Pulse Integral"<<endl;
-					uint32_t channel = (*iptr>>20) & 0x7F;
-					uint32_t sum = (*iptr>>0) & 0xFFFFF;
-					uint32_t quality_factor = 0;
-					uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
-					uint32_t nsamples_pedestal = 1;  // The firmware returns an already divided pedestal
-					uint32_t pedestal = 0;  // This will be replaced by the one from Df250PulsePedestal in GetObjects
-					uint32_t pulse_number = 0;
-					if (last_slot == slot && last_channel == channel) pulse_number = 1;
-					last_slot = slot;
-					last_channel = channel;
-					if( pe ) pe->NEW_Df125PulseIntegral(rocid, slot, channel, itrigger, pulse_number, quality_factor, sum, pedestal, nsamples_integral, nsamples_pedestal);
-				}
-                break;
-            case 8: // Pulse Time
-				{
-					if(VERBOSE>7) cout << "      FADC125 Pulse Time"<<endl;
-					uint32_t channel = (*iptr>>20) & 0x7F;
-					uint32_t pulse_number = (*iptr>>18) & 0x03;
-					uint32_t pulse_time = (*iptr>>0) & 0xFFFF;
-					uint32_t quality_factor = 0;
-					if( pe ) pe->NEW_Df125PulseTime(rocid, slot, channel, itrigger, pulse_number, quality_factor, pulse_time);
-					last_pulse_time_channel = channel;
-				}
-                break;
-
-            case 9: // FDC pulse data-peak (new)  (GlueX-doc-2274-v8)
-				{
-					// Word 1:
-					uint32_t word1          = *iptr;
-					uint32_t channel        = (*iptr>>20) & 0x7F;
-					uint32_t pulse_number   = (*iptr>>15) & 0x1F;
-					uint32_t pulse_time     = (*iptr>>4 ) & 0x7FF;
-					uint32_t quality_factor = (*iptr>>3 ) & 0x1; //time QF bit
-					uint32_t overflow_count = (*iptr>>0 ) & 0x7;
-					if(VERBOSE>7){
-						cout << "      FADC125 FDC Pulse Data(peak) word1: " << hex << (*iptr) << dec << endl;
-						cout << "      FADC125 FDC Pulse Data (chan="<<channel<<" pulse="<<pulse_number<<" time="<<pulse_time<<" QF="<<quality_factor<<" OC="<<overflow_count<<")"<<endl;
-					}
-
-					// Word 2:
-					++iptr;
-					if(iptr>=iend){
-						jerr << " Truncated f125 FDC hit (block ends before continuation word!)" << endl;
-						continue;
-					}
-					if( ((*iptr>>31) & 0x1) != 0 ){
-						jerr << " Truncated f125 FDC hit (missing continuation word!)" << endl;
-						continue;
-					}
-					uint32_t word2      = *iptr;
-					uint32_t pulse_peak = (*iptr>>19) & 0xFFF;
-					uint32_t sum        = 0;
-					uint32_t peak_time  = (*iptr>>11) & 0xFF;
-					uint32_t pedestal   = (*iptr>>0 ) & 0x7FF;
-					if(VERBOSE>7){
-						cout << "      FADC125 FDC Pulse Data(peak) word2: " << hex << (*iptr) << dec << endl;
-						cout << "      FADC125 FDC Pulse Data (integral="<<sum<<" time="<<peak_time<<" pedestal="<<pedestal<<")"<<endl;
-					}
-
-					// Create hit objects
-					uint32_t nsamples_integral = 0;  // must be overwritten later in GetObjects with value from Df125Config value
-					uint32_t nsamples_pedestal = 1;  // The firmware pedestal divided by 2^PBIT where PBIT is a config. parameter
-
-					if( pe ) {
-					
-						// The following is a temporary fix. In late 2017 the CDC group started
-						// using data type 9 (i.e. FDC pulse peak). This caused many conflicts
-						// with plugins downstream that were built around there being a Df125CDCPulse
-						// object associated with the DCDCDigiHit. In order to quickly solve
-						// the issue as the run was starting, this fix was made to produce Df125CDCPulse
-						// object from this data iff rocid<30 indicating the data came from the
-						// CDC. 
-						if( rocid<30 ){
-
-							pe->NEW_Df125CDCPulse(rocid, slot, channel, itrigger
-										, pulse_number        // NPK
-										, pulse_time          // le_time
-										, quality_factor      // time_quality_bit
-										, overflow_count      // overflow_count
-										, pedestal            // pedestal
-										, sum                 // integral
-										, pulse_peak          // peak_amp
-										, word1               // word1
-										, word2               // word2
-										, nsamples_pedestal   // nsamples_pedestal
-										, nsamples_integral   // nsamples_integral
-										, false);             // emulated
-						
-						}else{
-					
-							pe->NEW_Df125FDCPulse(rocid, slot, channel, itrigger
-										, pulse_number        // NPK
-										, pulse_time          // le_time
-										, quality_factor      // time_quality_bit
-										, overflow_count      // overflow_count
-										, pedestal            // pedestal
-										, sum                 // integral
-										, pulse_peak          // peak_amp
-										, peak_time           // peak_time
-										, word1               // word1
-										, word2               // word2
-										, nsamples_pedestal   // nsamples_pedestal
-										, nsamples_integral   // nsamples_integral
-										, false);             // emulated
-						}
-					}
-				}
-                break;
-
-            case 10: // Pulse Pedestal (consistent with Beni's hand-edited version of Cody's document)
-				{
-					if(VERBOSE>7) cout << "      FADC125 Pulse Pedestal"<<endl;
-					//channel = (*iptr>>20) & 0x7F;
-					uint32_t channel = last_pulse_time_channel; // not enough bits to hold channel number so rely on proximity to Pulse Time in data stream (see "FADC125 dataformat 250 modes.docx")
-					uint32_t pulse_number = (*iptr>>21) & 0x03;
-					uint32_t pedestal = (*iptr>>12) & 0x1FF;
-					uint32_t pulse_peak = (*iptr>>0) & 0xFFF;
-					uint32_t nsamples_pedestal = 1;  // The firmware returns an already divided pedestal
-					if( pe ) pe->NEW_Df125PulsePedestal(rocid, slot, channel, itrigger, pulse_number, pedestal, pulse_peak, nsamples_pedestal);
-				}
-                break;
-
-            case 13: // Event Trailer
-            case 14: // Data not valid (empty module)
-            case 15: // Filler (non-data) word
-                if(VERBOSE>7) cout << "      FADC125 ignored data type: " << data_type <<endl;
-                break;
-				default:
- 					if(VERBOSE>7) cout << "      FADC125 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-					throw JExceptionDataFormat("Unexpected word type in fADC125 block!", __FILE__, __LINE__);
-
-        }
     }
 
-    // Chop off filler words
-    for(; iptr<iend; iptr++){
-        if(((*iptr)&0xf8000000) != 0xf8000000) break;
-    }
+  }
+  
+  // Chop off filler words
+  for(; iptr<iend; iptr++){
+    if(((*iptr)&0xf8000000) != 0xf8000000) break;
+  }
 }
 
 //----------------
 // MakeDf125WindowRawData
 //----------------
-void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr)
+void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr, uint32_t* &iend)
 {
     uint32_t channel = (*iptr>>20) & 0x7F;
     uint32_t window_width = (*iptr>>0) & 0x0FFF;
@@ -2007,31 +2480,36 @@ void DEVIOWorkerThread::MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid,
     Df125WindowRawData *wrd = pe->NEW_Df125WindowRawData(rocid, slot, channel, itrigger);
 
     for(uint32_t isample=0; isample<window_width; isample +=2){
-
+      
         // Advance to next word
         iptr++;
 
         // Make sure this is a data continuation word, if not, stop here
         if(((*iptr>>31) & 0x1) != 0x0)break;
 
-        bool invalid_1 = (*iptr>>29) & 0x1;
-        bool invalid_2 = (*iptr>>13) & 0x1;
-        uint16_t sample_1 = 0;
+        if (iptr >= iend) {
+	  jerr << "fa125 window raw data are incomplete - the collection of samples has been truncated!" << endl;
+          if(pe) pe->NEW_DBadHit(rocid,slot);   
+          if(pe) jerr << "Created new BadHit to store rocid and slot" << endl;	
+          break;
+	}
+	
+        uint16_t sample_1 = (*iptr>>16) & 0xFFF;
         uint16_t sample_2 = 0;
-        if(!invalid_1)sample_1 = (*iptr>>16) & 0x1FFF;
-        if(!invalid_2)sample_2 = (*iptr>>0) & 0x1FFF;
+        bool invalid_2 = (*iptr>>13) & 0x1;
+	if(!invalid_2)sample_2 = (*iptr>>0) & 0xFFF;
 
         // Sample 1
         wrd->samples.push_back(sample_1);
-        wrd->invalid_samples |= invalid_1;
-        wrd->overflow |= (sample_1>>12) & 0x1;
+        wrd->invalid_samples = 0;
+        wrd->overflow = 0;
 
         if((isample+2) == window_width && invalid_2)break; // skip last sample if flagged as invalid
 
         // Sample 2
         wrd->samples.push_back(sample_2);
         wrd->invalid_samples |= invalid_2;
-        wrd->overflow |= (sample_2>>12) & 0x1;
+        wrd->overflow = 0;
     }
 }
 
@@ -2119,12 +2597,19 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 					uint32_t chan_on_chip = (*iptr>>16) & 0x07;
 					uint32_t time         = (*iptr>> 0) & 0xFFFF;
 					uint32_t channel      = F1TDC_channel(chip, chan_on_chip, modtype);
+					bool res_status       = (*iptr>>26) & 0x1;
+					
 					if(VERBOSE>7) cout << "      Found F1 data  : chip=" << chip << " chan=" << chan_on_chip  << " time=" << time << endl;
+				   
 					if(pe){
-						auto hit = pe->NEW_DF1TDCHit(rocid, slot, channel, itrigger, trig_time_f1header, time, *iptr, MODULE_TYPE(modtype));
-						if(hit->res_status==0){
+					        // don't make the hit if the TDC was unlocked
+					        if (res_status) {
+						        pe->NEW_DF1TDCHit(rocid, slot, channel, itrigger, trig_time_f1header, time, *iptr, MODULE_TYPE(modtype));
+						} else { 
+
 							static uint32_t Nwarnings=0;
-							if(Nwarnings<10) jerr << "ERROR: F1 TDC chip \"unlocked\" flag set!" << ((++Nwarnings == 10) ? " -- last warning":"") << endl;
+							if(Nwarnings<10) jerr << "ERROR: F1 TDC chip \"unlocked\" flag set! BadHit created." << ((++Nwarnings == 10) ? " -- last warning":"") << endl;
+                                                        pe->NEW_DBadHit(rocid,slot);   
 						}
 					}
 				}
@@ -2156,7 +2641,14 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 					cerr<<endl;
 					if(iiptr > (iptr+4)) break;
 				}
-				throw JExceptionDataFormat("Unexpected word type in F1TDC block!", __FILE__, __LINE__);
+
+				if (pe) {
+				  pe->NEW_DBadHit(rocid,slot);
+				  jerr << "Event " <<  pe->event_number<<"  Unexpected word type in F1TDC block!" << endl;
+				  ClearBadDataFormatEventTriggers(pe);
+				}
+
+				//throw JExceptionDataFormat("Unexpected word type in F1TDC block!", __FILE__, __LINE__);
 				break;
 		}
 	}	
@@ -2171,7 +2663,7 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
 	if(!PARSE_SSP){ iptr = &iptr[(*iptr) + 1]; return; }
-	
+
 	auto pe_iter = current_parsed_events.begin();
 	DParsedEvent *pe = NULL;
 
@@ -2203,11 +2695,27 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 				slot       = ((*iptr)>>22) & 0x1F;
 				itrigger   = ((*iptr)>> 0) & 0x3FFFFF;
 				pe = *pe_iter++;
+
 				//if(itrigger != last_itrigger) pe = *pe_iter++;
 				//last_itrigger = itrigger;
 				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
 				if( slot != slot_bh ){
+				  
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;
+				        jerr << "Attempting to create a new BadHit to store rocid " << rocid << " and slot " << slot_bh << endl;
+					
+					if (pe) {
+					  if(VERBOSE>7) jerr << "original pe : " << pe << endl;
+					  
+					  pe = *(current_parsed_events.begin())++;    // use the first available, in case a block was truncated
+
+					  if (pe) pe->NEW_DBadHit(rocid,slot_bh);   // assume block header was correct
+					  if (pe) jerr << "Created new BadHit" << endl;
+
+					}
+					
+					iptr = iend;
+					return;
 				}
 				break;
 			case 3:  // Trigger Time
@@ -2274,7 +2782,9 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 							adc_upper >>= 4;
 							break;
 						default:
-							jerr << "Bad value for adc_max_bits (" << adc_max_bits << ") from SSP/DIRC with rocid=" << rocid << " slot=" << slot << "channel=" << channel_lower << "," << channel_upper << endl;
+							jerr << "Bad value for adc_max_bits (" << adc_max_bits << ") from SSP/DIRC with rocid="
+							     << rocid << " slot=" << slot << "channel=" << channel_lower << "," << channel_upper << endl;
+							if(pe) pe->NEW_DBadHit(rocid,slot);  
 							break;
 					}
 					if( pe ) {
@@ -2672,3 +3182,28 @@ void DEVIOWorkerThread::DumpBinary(const uint32_t *iptr, const uint32_t *iend, u
 }
 
 
+//----------------
+// ResetTrigger
+//----------------
+void DEVIOWorkerThread::ClearBadDataFormatEventTriggers(DParsedEvent *pe)
+{
+
+  /// Clear the physics trigger bit, so that the event will not be used for analysis,
+  /// but any BadHits generated for debugging will reach the plugins
+  // See https://github.com/JeffersonLab/halld_recon/blob/09d3b99d2c7dd359c551fd4505536712fc7d3e94/src/libraries/TRIGGER/DL1Trigger_factory.cc#L29
+
+    if(pe->vDBadHit.size() == 0) return;
+
+
+    for (auto cri : pe->vDCODAROCInfo )  {
+      
+	// Only interested in Trigger Supervisor 
+	if(cri->rocid != 1) continue;
+	
+        cri->misc[0] = 0;  	// Global Trigger Processor latch word
+	cri->misc[1] = 0;      // Front Panel latch word
+    }
+
+    if(VERBOSE>7) cout << "      Cleared physics trigger bits for badly formatted event, number " << pe->event_number << endl;
+		
+ }

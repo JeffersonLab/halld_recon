@@ -2,11 +2,8 @@
 #define _DBCALTruthShower_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
-
-class DBCALTruthShower:public JObject{
+class DBCALTruthShower: public JObject {
 	public:
 		JOBJECT_PUBLIC(DBCALTruthShower);
 
@@ -23,17 +20,17 @@ class DBCALTruthShower:public JObject{
 		float py;
 		float pz;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "ptype", "%d", ptype);
-			AddString(items, "track", "%d", track);
-			AddString(items, "itrack", "%d", itrack);
-			AddString(items, "primary", "%d", primary);
-			AddString(items, "phi", "%1.3f", phi);
-			AddString(items, "r", "%4.3f", r);
-			AddString(items, "z", "%4.1f", z);
-			AddString(items, "t", "%4.3f", t);
-			AddString(items, "p", "%4.3f", sqrt(px*px + py*py + pz*pz));
-			AddString(items, "E", "%4.3f", E);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(ptype, "ptype", "%d");
+			summary.add(track, "track", "%d");
+			summary.add(itrack, "itrack", "%d");
+			summary.add(primary, "primary", "%d");
+			summary.add(phi, "phi", "%1.3f");
+			summary.add(r, "r", "%4.3f");
+			summary.add(z, "z", "%4.1f");
+			summary.add(t, "t", "%4.3f");
+			summary.add(sqrt(px*px + py*py + pz*pz), "p", "%4.3f");
+			summary.add(E, "E", "%4.3f");
 		}
 };
 

@@ -11,9 +11,7 @@
 #include <vector>
 using std::vector;
 
-#include <JANA/jerror.h>
 #include <JANA/JObject.h>
-using namespace jana;
 
 #include <TH2.h>
 
@@ -21,12 +19,11 @@ using namespace jana;
 
 class DHoughFind:public JObject{
 	public:
+		JOBJECT_PUBLIC(DHoughFind);
 		DHoughFind();
 		DHoughFind(double xmin, double xmax, double ymin, double ymax, unsigned int Nbinsx, unsigned int Nbinsy);
 		virtual ~DHoughFind();
-		virtual const char* className(void) const {return static_className();}
-		static const char* static_className(void){return "DHoughFind";}
-		
+
 		inline double signof(double a){return a<0.0 ? -1.0:1.0;}
 		
 		void SetLimits(double xmin, double xmax, double ymin, double ymax, unsigned int Nbinsx, unsigned int Nbinsy);

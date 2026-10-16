@@ -11,28 +11,27 @@
 using namespace std;
 
 #include "DECALTruthShower_factory.h"
-using namespace jana;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DECALTruthShower_factory::init(void)
+void DECALTruthShower_factory::Init(void)
 {
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DECALTruthShower_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DECALTruthShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DECALTruthShower_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DECALTruthShower_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 	// Code to generate factory data goes here. Add it like:
@@ -46,22 +45,22 @@ jerror_t DECALTruthShower_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	// Note that the objects you create here will be deleted later
 	// by the system and the _data vector will be cleared automatically.
 
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DECALTruthShower_factory::erun(void)
+void DECALTruthShower_factory::EndRun(void)
 {
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DECALTruthShower_factory::fini(void)
+void DECALTruthShower_factory::Finish(void)
 {
-	return NOERROR;
+	return; //NOERROR;
 }
 

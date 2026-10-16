@@ -15,7 +15,6 @@ using namespace std;
 
 #include <pthread.h>
 
-using namespace jana;
 
 static pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cond;
@@ -27,7 +26,7 @@ static queue<string> commands;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_janaded());
+	app->Add(new JEventProcessor_janaded());
 }
 } // "C"
 
@@ -48,6 +47,8 @@ static inline void Tokenize(string str, vector<string> &tokens, const char delim
 //-----------------------------------------
 JEventProcessor_janaded::JEventProcessor_janaded()
 {
+	SetTypeName("JEventProcessor_janaded");
+
 	string myName = "JEventProcessor_janaded";
   	string myDescription = "janaded";
   	string UDL = "cMsg:cMsg://localhost/cMsg/test";
@@ -62,29 +63,27 @@ JEventProcessor_janaded::JEventProcessor_janaded()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_janaded::init(void)
+void JEventProcessor_janaded::Init()
 {
+	auto app = GetApplication();
+
 	JANADED_VERBOSE=0;
 	app->GetJParameterManager()->SetDefaultParameter("JANADED_VERBOSE", JANADED_VERBOSE);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_janaded::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_janaded::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_janaded::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_janaded::Process(const std::shared_ptr<const JEvent>& event)
 {
 	while(true) {
 		pthread_mutex_lock(&mutex1);
@@ -93,7 +92,7 @@ jerror_t JEventProcessor_janaded::evnt(JEventLoop *loop, uint64_t eventnumber)
 		commands.pop();
 		if(command=="NEXT_EVENT") {
 			cout << "Next Event Command" <<endl;
-			return NOERROR;
+			return;
 		}
 		else if (command=="Whatever") {
 			//do whatever
@@ -108,20 +107,20 @@ jerror_t JEventProcessor_janaded::evnt(JEventLoop *loop, uint64_t eventnumber)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_janaded::erun(void)
+void JEventProcessor_janaded::EndRun()
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_janaded::fini(void)
+void JEventProcessor_janaded::Finish()
 {
 
-	return NOERROR;
+	return;
 }
 
 void JEventProcessor_janaded::callback(cMsgMessage *msg, void *arg) {  

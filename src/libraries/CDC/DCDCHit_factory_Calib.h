@@ -11,7 +11,9 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
-#include <JANA/JFactory.h>
+using namespace std;
+
+#include <JANA/JFactoryT.h>
 #include <HDGEOMETRY/DGeometry.h>
 #include <TTAB/DTranslationTable.h>
 #include <DAQ/Df125PulseIntegral.h>
@@ -22,19 +24,24 @@
 #include "CDC/DCDCHit.h"
 
 using namespace std;
-using namespace jana;
 
 // store constants indexed by ring/straw number
 typedef  vector< vector<double> >  cdc_digi_constants_t;
 
-class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
+class DCDCHit_factory_Calib:public JFactoryT<DCDCHit>{
  public:
-  DCDCHit_factory_Calib(){};
-  ~DCDCHit_factory_Calib(){};
+  DCDCHit_factory_Calib(){
+  	SetTag("Calib");
+  };
+  ~DCDCHit_factory_Calib() override = default;
   const char* Tag(void){return "Calib";}
 
   int CDC_HIT_THRESHOLD;
 
+  unsigned int ECHO_OPT; // 0: switch afterpulse clean-up off; 1: clean-up is on (default)
+  unsigned int ECHO_MAX_T;  // if ECHO_OPT=1, search for afterpulses up to ECHO_MAX_T samples after the main pulse
+  unsigned int ECHO_MAX_A; // if ECHO_OPT=1, suppress possible afterpulses with amplitude <= ECHO_MAX_A (adc range 0-4095)
+  
   // overall scale factors.
   double a_scale, amp_a_scale;
   double t_scale;
@@ -56,16 +63,18 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
   //			 const int in_rocid, const int in_slot, const int in_channel) const;
   
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
   
-  void CalcNstraws(jana::JEventLoop *eventLoop, int32_t runnumber, vector<unsigned int> &Nstraws);
+  void CalcNstraws(const std::shared_ptr<const JEvent>& event, int32_t runnumber, vector<unsigned int> &Nstraws);
   void FillCalibTable(vector< vector<double> > &table, vector<double> &raw_table, 
 		      vector<unsigned int> &Nstraws);
   
+  void FindRogueHits(const std::shared_ptr<const JEvent>& event, vector<unsigned int> &RogueHits);
+
   // Geometry information
   unsigned int maxChannels;
   unsigned int Nrings; // number of rings (layers)

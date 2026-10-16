@@ -8,6 +8,7 @@
 #include "DRootGeom.h"
 #include "hddsroot.h"
 
+#include <JANA/Calibrations/JCalibrationManager.h>
 using namespace std;
 
 
@@ -23,7 +24,7 @@ DRootGeom::DRootGeom(JApplication *japp, unsigned int run_number)
 	table_initialized = false;
 	DRGeom = NULL;
 
-	jcalib = japp->GetJCalibration(run_number);
+	jcalib = japp->GetService<JCalibrationManager>()->GetJCalibration(run_number);
 	if(!jcalib){
 		_DBG_<<"Unable to get JCalibration object!"<<endl;
 		exit(-1);

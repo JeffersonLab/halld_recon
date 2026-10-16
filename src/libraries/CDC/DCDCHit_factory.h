@@ -1,4 +1,4 @@
-// $Id$
+
 //
 //    File: DCDCHit_factory.h
 // Created: Tue Aug  6 11:29:56 EDT 2013
@@ -8,19 +8,19 @@
 #ifndef _DCDCHit_factory_
 #define _DCDCHit_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <DAQ/Df125CDCPulse.h>
 #include <TTAB/DTranslationTable.h>
 
 #include "DCDCHit.h"
 
 using namespace std;
-using namespace jana;
 
-class DCDCHit_factory: public jana::JFactory<DCDCHit>{
+
+class DCDCHit_factory: public JFactoryT<DCDCHit>{
  public:
-  DCDCHit_factory(){};
-  ~DCDCHit_factory(){};
+  DCDCHit_factory() = default;
+  ~DCDCHit_factory() override = default;
   
   // we need to store information on the hits with respect to their readout channels in order to look for correlated hits
   struct cdchit_info_t{
@@ -47,12 +47,12 @@ class DCDCHit_factory: public jana::JFactory<DCDCHit>{
   double HighTCut;
   
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
-
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
+  
 	bool USE_CDC;  
   vector<const DTranslationTable *> ttab;
 };

@@ -1,7 +1,7 @@
 // -----------------------------------------
 // DEventProcessor_lut_dirc.h
 // created on: 29.11.2017
-// initial athor: r.dzhygadlo at gsi.de
+// Initial athor: r.dzhygadlo at gsi.de
 // -----------------------------------------
 
 #ifndef DEVENTPROCESSOR_LUT_DIRC_H_
@@ -11,11 +11,10 @@
 #include <vector>
 using namespace std;
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 #include <JANA/JApplication.h>
-using namespace jana;
 
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DMCTrackHit.h>
@@ -49,10 +48,10 @@ public:
   pthread_mutex_t mutex;
 
 private:
-  jerror_t init(void);
-  jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);
-  jerror_t erun(void);
-  jerror_t fini(void); // called after last event
+  void Init() override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun(void);
+  void Finish() override;
 
 };
 

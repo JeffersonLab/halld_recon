@@ -13,10 +13,9 @@
 #include <TH2.h>
 #include <TH3.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 class DEventProcessor_mcthrown_hists:public JEventProcessor{
 
@@ -37,10 +36,10 @@ class DEventProcessor_mcthrown_hists:public JEventProcessor{
 		TH3F *vertex;
 		
 	private:
-		jerror_t init(void);	///< Invoked via DEventProcessor virtual method
-		jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via DEventProcessor virtual method
-		jerror_t erun(void);					///< Invoked via DEventProcessor virtual method
-		jerror_t fini(void);					///< Invoked via DEventProcessor virtual method
+		void Init() override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 };
 

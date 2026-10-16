@@ -29,18 +29,19 @@
 #include <TTimer.h>
 #include <TG3DLine.h>
 
-
 //class hdv_mainframe;
 #include "hdv_mainframe.h"
 
 class DKinematicData;
 class DTrackWireBased;
 class DTrackTimeBased;
+class DTrackCandidate;
 
 #if !(defined(__CINT__) || defined(__CLING__))
 #include <PID/DKinematicData.h>
 #include <TRACKING/DTrackWireBased.h>
 #include <TRACKING/DTrackTimeBased.h>
+#include <TRACKING/DTrackCandidate.h>
 #endif
 
 #define MaxWireTracks 21
@@ -74,7 +75,7 @@ class hdv_debugerframe:public TGMainFrame {
   void SetNTrCand(Int_t d) { NTrCand = d;}
   void SetNTrTimeBased(Int_t d) { NTrTimeBased = d;}
   void SetNTrWireBased(Int_t d) { NTrWireBased = d;}
-  void SetTrackCandidates(std::vector<const DKinematicData*> d) {TrackCandidates=d;}
+  void SetTrackCandidates(std::vector<const DTrackCandidate*> d) {TrackCandidates=d;}
   void SetTrackWireBased(std::vector<const DTrackWireBased*> d) {subTrackWireBased=d;}
   void SetTrackTimeBased(std::vector<const DTrackTimeBased*> d) {subTrackTimeBased=d;}
   void SetUpMid1Frame();
@@ -87,7 +88,7 @@ class hdv_debugerframe:public TGMainFrame {
   Int_t NTrCand;
   Int_t NTrTimeBased;
   Int_t NTrWireBased;
-  std::vector<const DKinematicData*> TrackCandidates;
+  std::vector<const DTrackCandidate*> TrackCandidates;
   std::vector<const DTrackWireBased*> subTrackWireBased;
   std::vector<const DTrackTimeBased*> subTrackTimeBased;
 

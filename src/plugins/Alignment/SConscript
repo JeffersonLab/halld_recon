@@ -2,11 +2,17 @@ import sbms
 Import('*')
 
 subdirs = [
-'FDC_InternalAlignment',
 'MilleFieldOff',
-'MilleFieldOn',
+'MilleFieldOn'
+]
+
+SConscript(dirs=subdirs, exports='env osname', duplicate=0)
+
+# Optional targets
+optdirs = [
+'FDC_InternalAlignment',
 'MilleKs',
 'FDCProjectionResiduals'
 ]
 
-SConscript(dirs=subdirs, exports='env osname', duplicate=0)
+sbms.OptionallyBuild(env, optdirs)

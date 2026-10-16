@@ -16,10 +16,11 @@
 //---------------------------------
 // DTrackHitSelectorTHROWN    (Constructor)
 //---------------------------------
-DTrackHitSelectorTHROWN::DTrackHitSelectorTHROWN(jana::JEventLoop *loop):DTrackHitSelector(loop)
+DTrackHitSelectorTHROWN::DTrackHitSelectorTHROWN(const std::shared_ptr<const JEvent>& event) : DTrackHitSelector(event)
 {
+	auto app = event->GetJApplication();
 	HS_DEBUG_LEVEL = 0;
-	gPARMS->SetDefaultParameter("TRKFIT:HS_DEBUG_LEVEL", HS_DEBUG_LEVEL);
+	app->SetDefaultParameter("TRKFIT:HS_DEBUG_LEVEL", HS_DEBUG_LEVEL);
 }
 
 //---------------------------------
@@ -50,7 +51,7 @@ void DTrackHitSelectorTHROWN::GetCDCHits(fit_type_t fit_type, const DReferenceTr
 	
 	// Get the DMCTrackHit objects
 	vector<const DMCTrackHit*> mctrackhits;
-	loop->Get(mctrackhits);
+	event->Get(mctrackhits);
 
 	// Here is the hard part. We need to match the hits in cdchits_in with hits
 	// in DMCTrackHit objects. We do this by checking on the distance the truth
@@ -83,7 +84,7 @@ void DTrackHitSelectorTHROWN::GetFDCHits(fit_type_t fit_type, const DReferenceTr
 	
 	// Get the DMCTrackHit objects
 	vector<const DMCTrackHit*> mctrackhits;
-	loop->Get(mctrackhits);
+	event->Get(mctrackhits);
 
 	// Here is the hard part. We need to match the hits in cdchits_in with hits
 	// in DMCTrackHit objects. We do this by checking on the distance the truth
@@ -105,7 +106,7 @@ int DTrackHitSelectorTHROWN::FindTrackNumber(const DReferenceTrajectory *rt) con
 	DVector3 &mom = rt->swim_steps[0].mom;
 	
 	vector<const DMCThrown*> throwns;
-	loop->Get(throwns);
+	event->Get(throwns);
 	
 	int myid = 0;
 	double min_chisq=1.0E8;

@@ -14,14 +14,18 @@ DTTabUtilities::DTTabUtilities(void)
 
 double DTTabUtilities::Convert_DigiTimeToNs_F1TDC(const JObject* locTDCDigiHit) const
 {
+   	// immediately fail if locTDCDigiHit is null
+	if (locTDCDigiHit == nullptr) {
+		return std::numeric_limits<double>::quiet_NaN();
+	}
+	
 	//See if the input object is an DF1TDCHit. If so, convert it
 	const DF1TDCHit* locF1TDCHit = dynamic_cast<const DF1TDCHit*>(locTDCDigiHit);
-	if(locF1TDCHit != NULL) //it's an F1TDCHit
+	if(locF1TDCHit != nullptr) //it's an F1TDCHit
 		return Convert_DigiTimeToNs_F1TDC(locF1TDCHit);
 
 	//Get the DF1TDCHit associated object
-	vector<const DF1TDCHit*> locF1TDCHits;
-	locTDCDigiHit->Get(locF1TDCHits);
+	auto locF1TDCHits = locTDCDigiHit->Get<DF1TDCHit>();
 	if(locF1TDCHits.empty())
 	{
 		cout << "ERROR: INCORRECT INPUT OBJECT TO DTTabUtilities::Convert_DigiTimeToNs_F1TDC(). RETURNING NaN." << endl;
@@ -37,8 +41,7 @@ double DTTabUtilities::Convert_DigiTimeToNs_F1TDC(const DF1TDCHit* locF1TDCHit) 
     uint32_t locROCID = locF1TDCHit->rocid;
 
     // Get DF1TDCConfig for this ROC
-    vector<const DF1TDCConfig*> locF1TDCConfigs;
-    locF1TDCHit->Get(locF1TDCConfigs);
+    auto locF1TDCConfigs = locF1TDCHit->Get<DF1TDCConfig>();
 
     // Get DCODAROCInfo for this ROC
     map<uint32_t, const DCODAROCInfo*>::const_iterator locROCInfoIterator = dCODAROCInfoMap.find(locROCID);
@@ -154,14 +157,19 @@ double DTTabUtilities::Convert_TriggerReferenceSignal(void) const
 
 double DTTabUtilities::Convert_DigiTimeToNs_CAEN1290TDC(const JObject* locTDCDigiHit) const
 {
-	//See if the input object is an DCAEN1290TDCHit. If so, convert it
+	// immediately fail if locTDCDigiHit is null
+	if (locTDCDigiHit == nullptr) {
+		return std::numeric_limits<double>::quiet_NaN();
+	}
+	
+    //See if the input object is an DCAEN1290TDCHit. If so, convert it
 	const DCAEN1290TDCHit* locCAEN1290TDCHit = dynamic_cast<const DCAEN1290TDCHit*>(locTDCDigiHit);
-	if(locCAEN1290TDCHit != NULL) //it's an DCAEN1290TDCHit
+	if(locCAEN1290TDCHit != nullptr) //it's an DCAEN1290TDCHit
 		return Convert_DigiTimeToNs_CAEN1290TDC(locCAEN1290TDCHit);
 
 	//Get the DF1TDCHit associated object
 	vector<const DCAEN1290TDCHit*> locCAEN1290TDCHits;
-	locTDCDigiHit->Get(locCAEN1290TDCHits);
+	locCAEN1290TDCHits = locTDCDigiHit->Get<DCAEN1290TDCHit>();
 	if(locCAEN1290TDCHits.empty())
 	{
 		cout << "ERROR: INCORRECT INPUT OBJECT TO DTTabUtilities::Convert_DigiTimeToNs_CAEN1290TDC(). RETURNING NaN." << endl;
@@ -188,9 +196,9 @@ double DTTabUtilities::Convert_DigiTimeToNs_CAEN1290TDC(const DCAEN1290TDCHit* l
 
 	// The number of TI-counter (4 ns) blocks to shift the CAEN time to line-up with the TI time
     int locNum4NsBlocksToShift = dCAENTIPhaseDifference - locSystemClockBinRemainder;
-    if(locNum4NsBlocksToShift <= 0)
-    	locNum4NsBlocksToShift += 6;
-
+	if(locNum4NsBlocksToShift <= 0)
+		locNum4NsBlocksToShift += 6;
+	
 	return dTScale_CAEN*double(locCAEN1290TDCHit->time) + 4.0*double(locNum4NsBlocksToShift);
 }
 

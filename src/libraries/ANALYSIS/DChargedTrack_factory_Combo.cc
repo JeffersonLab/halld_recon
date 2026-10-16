@@ -1,50 +1,48 @@
 #include "DChargedTrack_factory_Combo.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DChargedTrack_factory_Combo::init(void)
+void DChargedTrack_factory_Combo::Init()
 {
+	auto app = GetApplication();
 	dTrackSelectionTag = "PreSelect";
-	gPARMS->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", dTrackSelectionTag);
-
-	return NOERROR;
+	app->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", dTrackSelectionTag);
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DChargedTrack_factory_Combo::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DChargedTrack_factory_Combo::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 {
 	vector<const DChargedTrackHypothesis*> locChargedTrackHypotheses;
-	locEventLoop->Get(locChargedTrackHypotheses); //make sure that brun() is called for the default factory!!!
-	dChargedTrackHypothesisFactory = static_cast<DChargedTrackHypothesis_factory*>(locEventLoop->GetFactory("DChargedTrackHypothesis"));
-
-	return NOERROR;
+	locEvent->Get(locChargedTrackHypotheses); //make sure that brun() is called for the default factory!!!   // TODO: Why wouldn't it be?
+	dChargedTrackHypothesisFactory = dynamic_cast<DChargedTrackHypothesis_factory*>(locEvent->GetFactory<DChargedTrackHypothesis>());  // TODO: Bad!
+	// This breaks factory swappability. What do you need this for, anyway? You can probably use JMetadata<DCharedTrackHypothesis> instead.
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DChargedTrack_factory_Combo::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DChargedTrack_factory_Combo::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 	dChargedTrackHypothesisFactory->Recycle_Hypotheses(dCreatedHypotheses);
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks, dTrackSelectionTag.c_str());
+	locEvent->Get(locChargedTracks, dTrackSelectionTag.c_str());
 
-	map<JObject::oid_t, const DChargedTrack*> locTrackToCandidateID;
+	map<oid_t, const DChargedTrack*> locTrackToCandidateID;
 	for(auto locChargedTrack : locChargedTracks)
 		locTrackToCandidateID.emplace(locChargedTrack->candidateid, locChargedTrack);
 
 	vector<const DTrackTimeBased*> locTimeBasedTracks;
-	locEventLoop->Get(locTimeBasedTracks, "Combo");
+	locEvent->Get(locTimeBasedTracks, "Combo");
 
 	const DEventRFBunch* locEventRFBunch = nullptr;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 
 	const DDetectorMatches* locDetectorMatches = nullptr;
-	locEventLoop->GetSingle(locDetectorMatches, "Combo");
+	locEvent->GetSingle(locDetectorMatches, "Combo");
 
 	//Sort new time-based tracks by charged track
 	unordered_map<const DChargedTrack*, vector<const DTrackTimeBased*>> locTimeBasedByChargedTrack;
@@ -61,14 +59,12 @@ jerror_t DChargedTrack_factory_Combo::evnt(jana::JEventLoop *locEventLoop, uint6
 		for(auto& locTimeBasedTrack : locTimeBasedByChargedTrack[locChargedTrack])
 		{
 			//create new DChargedTrackHypothesis object
-			auto locNewChargedTrackHypothesis = dChargedTrackHypothesisFactory->Create_ChargedTrackHypothesis(locEventLoop, locTimeBasedTrack, locDetectorMatches, locEventRFBunch);
+			auto locNewChargedTrackHypothesis = dChargedTrackHypothesisFactory->Create_ChargedTrackHypothesis(locEvent, locTimeBasedTrack, locDetectorMatches, locEventRFBunch);
 			locNewChargedTrackHypothesis->AddAssociatedObject(locNewChargedTrack);
 			dCreatedHypotheses.push_back(locNewChargedTrackHypothesis);
 			locNewChargedTrack->dChargedTrackHypotheses.push_back(locNewChargedTrackHypothesis);
 		}
 		locNewChargedTrack->AddAssociatedObject(locChargedTrack);
-		_data.push_back(locNewChargedTrack);
+		Insert(locNewChargedTrack);
 	}
-
-	return NOERROR;
 }

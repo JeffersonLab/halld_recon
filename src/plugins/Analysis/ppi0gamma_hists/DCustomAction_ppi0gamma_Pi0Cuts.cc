@@ -7,12 +7,12 @@
 
 #include "DCustomAction_ppi0gamma_Pi0Cuts.h"
 
-void DCustomAction_ppi0gamma_Pi0Cuts::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_ppi0gamma_Pi0Cuts::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	
 }
 
-bool DCustomAction_ppi0gamma_Pi0Cuts::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_ppi0gamma_Pi0Cuts::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locReactionStep = Get_Reaction()->Get_ReactionStep(2);
 	const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(2);

@@ -8,8 +8,6 @@
 #ifndef _DMagneticFieldMapNoField_
 #define _DMagneticFieldMapNoField_
 
-#include <JANA/jerror.h>
-
 #include "DMagneticFieldMap.h"
 
 #include <vector>
@@ -18,8 +16,7 @@ using std::vector;
 using std::string;
 
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-using namespace jana;
+#include <JANA/Calibrations/JCalibration.h>
 
 class DMagneticFieldMapNoField:public DMagneticFieldMap{
 	public:
@@ -84,6 +81,14 @@ class DMagneticFieldMapNoField:public DMagneticFieldMap{
     Bx=0.;
     By=0.;
     Bz=0.;
+  };
+  void GetFieldAndGradient(double x,double y,double z,
+			   DBfieldCartesian_t &Bdata) const {
+    Bdata.Bmag=0.;
+    GetFieldAndGradient(x,y,z, Bdata.Bx,Bdata.By,Bdata.Bz,
+			Bdata.dBxdx, Bdata.dBxdy,Bdata.dBxdz,
+			Bdata.dBydx, Bdata.dBydy,Bdata.dBydz,
+			Bdata.dBzdx, Bdata.dBzdy,Bdata.dBzdz);
   };
 };
 

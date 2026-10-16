@@ -9,10 +9,10 @@
 
 #include <string>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <TAGGER/DTAGHGeometry.h>
 
-class DTAGHGeometry_factory : public JFactory<DTAGHGeometry> {
+class DTAGHGeometry_factory : public JFactoryT<DTAGHGeometry> {
 	public:
 		DTAGHGeometry_factory(){}
 		~DTAGHGeometry_factory(){}
@@ -20,9 +20,9 @@ class DTAGHGeometry_factory : public JFactory<DTAGHGeometry> {
 		DTAGHGeometry *taghgeometry=nullptr;
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& loop)
 		{
 			// The NOT_OBJECT_OWNER flag tells JANA not to automatically
 			// delete the objects in _data. This allows the same geometry
@@ -42,30 +42,24 @@ class DTAGHGeometry_factory : public JFactory<DTAGHGeometry> {
 			if( taghgeometry ) delete taghgeometry;
 
 			taghgeometry = new DTAGHGeometry(loop);
-
-			return NOERROR;
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 void Process(const std::shared_ptr<const JEvent>& loop)
 		 {
 			// Reuse existing DBCALGeometry object.
-			if( taghgeometry ) _data.push_back( taghgeometry );
-			 
-			 return NOERROR;
+			if( taghgeometry ) Insert( taghgeometry );
 		 }
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun()
 		{
 			if( taghgeometry ) delete taghgeometry;
 			taghgeometry = NULL;
-			
-			return NOERROR;
 		}
 };
 

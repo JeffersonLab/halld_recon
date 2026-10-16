@@ -8,18 +8,22 @@
 #ifndef _DBeamPhoton_factory_TAGGEDMCGEN_
 #define _DBeamPhoton_factory_TAGGEDMCGEN_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <PID/DBeamPhoton.h>
 #include "PID/DMCReaction.h"
 #include "DANA/DStatusBits.h"
+#include "TAGGER/DTAGHHit.h"
+#include "TAGGER/DTAGMHit.h"
 
-class DBeamPhoton_factory_TAGGEDMCGEN:public jana::JFactory<DBeamPhoton>{
+class DBeamPhoton_factory_TAGGEDMCGEN:public JFactoryT<DBeamPhoton>{
 	public:
-		const char* Tag(void){return "TAGGEDMCGEN";}
+		DBeamPhoton_factory_TAGGEDMCGEN() {
+			SetTag("TAGGEDMCGEN");
+		}
 
 	private:
 
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
+		void Process(const std::shared_ptr<const JEvent>& event) override;
 };
 
 #endif // _DBeamPhoton_factory_TAGGEDMCGEN_

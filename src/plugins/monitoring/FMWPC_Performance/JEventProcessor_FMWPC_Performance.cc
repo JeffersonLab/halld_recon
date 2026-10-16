@@ -6,12 +6,15 @@
 //
 
 #include "JEventProcessor_FMWPC_Performance.h"
-using namespace jana;
+#include <DANA/DEvent.h>
+#include <vector>
 
 #include "FMWPC/DFMWPCCluster.h"
 #include "FMWPC/DCPPEpEm.h"
 #include "PID/DChargedTrack.h"
 #include "TRACKING/DTrackTimeBased.h"
+#include "TDirectory.h"
+
 
 #include <TH1.h>
 #include <TH2.h>
@@ -85,7 +88,7 @@ static TH1D *hpipep_ML_classifier;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_FMWPC_Performance());
+	app->Add(new JEventProcessor_FMWPC_Performance());
 }
 } // "C"
 
@@ -107,9 +110,9 @@ JEventProcessor_FMWPC_Performance::~JEventProcessor_FMWPC_Performance()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FMWPC_Performance::init(void)
+void JEventProcessor_FMWPC_Performance::Init()
 {
   // This is called once at program startup. 
 
@@ -219,22 +222,21 @@ jerror_t JEventProcessor_FMWPC_Performance::init(void)
    
   main->cd();
   
-  return NOERROR;
+  return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FMWPC_Performance::brun(JEventLoop *eventLoop, int32_t runnumber)
-{
+void JEventProcessor_FMWPC_Performance::BeginRun(const std::shared_ptr<const JEvent>& event){
 	// This is called whenever the run number changes
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_FMWPC_Performance::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
@@ -243,12 +245,12 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	// since multiple threads may call this method at the same time.
 
   // get kinematic fit values + pi/mu classification
-  vector<const DCPPEpEm*> locCPPEpEms;
-  loop->Get(locCPPEpEms);
+  std::vector<const DCPPEpEm*> locCPPEpEms;
+  event->Get(locCPPEpEms);
 	
   // get fmwpc clusters
-  vector<const DFMWPCCluster*> locFMWPCClusters;
-  loop->Get(locFMWPCClusters);
+  std::vector<const DFMWPCCluster*> locFMWPCClusters;
+  event->Get(locFMWPCClusters);
   
   // pre-sort clusters to save time
   // only need to search within the given layer
@@ -263,11 +265,11 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
   
   // get charged tracks
   vector <const DChargedTrack *> chargedTrackVector;
-  loop->Get(chargedTrackVector);
+  event->Get(chargedTrackVector);
   
   // get detector matches
   const DDetectorMatches *detMatches = nullptr;
-  loop->GetSingle(detMatches);
+  event->GetSingle(detMatches);
 
   for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
     
@@ -275,13 +277,13 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
     
     // Cut very loosely on the track quality
     auto thisTimeBasedTrack = bestHypothesis->Get_TrackTimeBased();
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     htrack_mom->Fill(thisTimeBasedTrack->pmag());
     htrack_chi2->Fill(thisTimeBasedTrack->FOM);
     htrack_theta->Fill(thisTimeBasedTrack->momentum().Theta()*TMath::RadToDeg());
     htrack_phi->Fill(thisTimeBasedTrack->momentum().Phi()*TMath::RadToDeg());
     htrack_layer->Fill(nLayerHit);
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
     // At least one match either to the Time-Of-Flight OR the FCAL
     if ( !detMatches->Get_IsMatchedToDetector(thisTimeBasedTrack, SYS_TOF) && !detMatches->Get_IsMatchedToDetector(thisTimeBasedTrack, SYS_FCAL))
@@ -299,13 +301,13 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
     if(nLayerHit < 3 )//|| layerHit[5] == 0)
       continue;
 
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     htrack_mom_ok->Fill(thisTimeBasedTrack->pmag());
     htrack_chi2_ok->Fill(thisTimeBasedTrack->FOM);
     htrack_theta_ok->Fill(thisTimeBasedTrack->momentum().Theta()*TMath::RadToDeg());
     htrack_phi_ok->Fill(thisTimeBasedTrack->momentum().Phi()*TMath::RadToDeg());
     htrack_layer_ok->Fill(nLayerHit);
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 
     // Get all extrapolations and loop over layers
@@ -319,9 +321,9 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	continue;
 
       // FILL HISTOGRAMS
-      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       hfmwpc_expected[layer-1]->Fill(proj.position.x(), proj.position.y());
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
       set<const DFMWPCCluster*>& locLayerClusters = locSortedFMWPCClusters[layer-1];
       // loop over the FMWPC Clusters in that layer
@@ -330,7 +332,7 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	  const DFMWPCCluster * locCluster = * locIterator;
 	  if (locCluster == NULL) continue;
 
-	  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	  DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	  hcluster_q->Fill(locCluster->q);
 	  hcluster_t->Fill(locCluster->t);
 
@@ -354,10 +356,10 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	    hcluster_q_ok->Fill(locCluster->q);
 	    hcluster_t_ok->Fill(locCluster->t);
 	    hfmwpc_measured[layer-1]->Fill(proj.position.x(), proj.position.y());
-	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	    DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	    break;
 	  }
-	  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	  DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 		  
 	}
     }
@@ -440,7 +442,7 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
         double Jphi = atan2(JTy, JTx)*180/acos(-1);
 	double MLPClassifierMinus=cppepem->pimem_ML_classifier;
   	double MLPClassifierPlus=cppepem->pipep_ML_classifier;
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	hpimem_ML_classifier->Fill(MLPClassifierMinus);
 	hpipep_ML_classifier->Fill(MLPClassifierPlus);
 	if(MLPClassifierPlus > 0.8 && MLPClassifierMinus > 0.8){
@@ -484,30 +486,30 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	    hCosTheta_mumu->Fill(CosTheta,weight);
 	    hCosTheta_vs_psi_mumu->Fill(psi*TMath::RadToDeg(), CosTheta);
 	  }
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   }
   
   
-  return NOERROR;
+  return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FMWPC_Performance::erun(void)
+void JEventProcessor_FMWPC_Performance::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FMWPC_Performance::fini(void)
+void JEventProcessor_FMWPC_Performance::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
+	return;
 }
 

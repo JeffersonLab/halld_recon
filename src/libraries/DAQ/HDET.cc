@@ -11,7 +11,6 @@
 using namespace std;
 
 #include <JANA/JException.h>
-using namespace jana;
 
 #include "HDET.h"
 #include "swap_bank.h"

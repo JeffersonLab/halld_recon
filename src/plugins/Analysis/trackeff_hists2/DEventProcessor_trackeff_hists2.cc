@@ -6,6 +6,7 @@
 //
 
 #include "DEventProcessor_trackeff_hists2.h"
+#include <DANA/DEvent.h>
 
 using namespace std;
 
@@ -13,7 +14,7 @@ using namespace std;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_trackeff_hists2());
+	app->Add(new DEventProcessor_trackeff_hists2());
 }
 } // "C"
 
@@ -40,9 +41,9 @@ DEventProcessor_trackeff_hists2::~DEventProcessor_trackeff_hists2()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_trackeff_hists2::init(void)
+void DEventProcessor_trackeff_hists2::Init()
 {
 	// Create TRACKING directory
 	TDirectory *dir = (TDirectory*)gROOT->FindObject("TRACKING");
@@ -55,24 +56,21 @@ jerror_t DEventProcessor_trackeff_hists2::init(void)
 
 	dir->cd("../");
 	
-	JParameterManager *parms = app->GetJParameterManager();
+	JParameterManager *parms = GetApplication()->GetJParameterManager();
 
 	DEBUG = 1;
 	
 	parms->SetDefaultParameter("TRKEFF:DEBUG", DEBUG);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_trackeff_hists2::brun(JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_trackeff_hists2::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	const DGeometry *dgeom = dapp->GetDGeometry(runnumber);
+	const DGeometry *dgeom = DEvent::GetDGeometry(event);
 	
-	rt_thrown = new DReferenceTrajectory(dgeom->GetBfield(runnumber));
+	rt_thrown = new DReferenceTrajectory(DEvent::GetBfield(event));
 	
 	double dz, rmin, rmax;
 	dgeom->GetCDCEndplate(CDCZmax, dz, rmin, rmax);
@@ -82,38 +80,36 @@ jerror_t DEventProcessor_trackeff_hists2::brun(JEventLoop *loop, int32_t runnumb
 	CDCZmin = CDCZmax-cdc_axial_length;
 
 	use_rt_thrown = true; //mctrajpoints.size()<20;
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_trackeff_hists2::erun(void)
+void DEventProcessor_trackeff_hists2::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_trackeff_hists2::fini(void)
+void DEventProcessor_trackeff_hists2::Finish()
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_trackeff_hists2::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_trackeff_hists2::Process(const std::shared_ptr<const JEvent>& event)
 {
+
+    auto eventnumber = event->GetEventNumber();
 	
   // Get the particle ID algorithms
 	vector<const DParticleID *> locPIDAlgorithms;
-	loop->Get(locPIDAlgorithms);
+	event->Get(locPIDAlgorithms);
 	if(locPIDAlgorithms.size() < 1){
 		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-		return RESOURCE_UNAVAILABLE;
+		return;
 	}
 	// Drop the const qualifier from the DParticleID pointer (I'm surely going to hell for this!)
 	locPIDAlgorithm = const_cast<DParticleID*>(locPIDAlgorithms[0]);
@@ -121,26 +117,26 @@ jerror_t DEventProcessor_trackeff_hists2::evnt(JEventLoop *loop, uint64_t eventn
 	// Warn user if something happened that caused us NOT to get a locPIDAlgorithm object pointer
 	if(!locPIDAlgorithm){
 		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-		return RESOURCE_UNAVAILABLE;
+		return;
 	}
 
 	// Bail quick on events with too many or too few CDC hits
 	vector<const DCDCTrackHit*> cdctrackhits;
-	loop->Get(cdctrackhits);
-	//if(cdctrackhits.size()>30 || cdctrackhits.size()<6)return NOERROR;
+	event->Get(cdctrackhits);
+	//if(cdctrackhits.size()>30 || cdctrackhits.size()<6)return;
 
 	// Bail quick on events with too many FDC hits
 	vector<const DFDCHit*> fdchits;
-	loop->Get(fdchits);
-	//if(fdchits.size()>30)return NOERROR;
+	event->Get(fdchits);
+	//if(fdchits.size()>30)return;
 
 	vector<const DMCThrown*> mcthrowns;
 	vector<const DMCTrajectoryPoint*> mctrajpoints;
-	loop->Get(mctrajpoints);
-	loop->Get(mcthrowns);
+	event->Get(mctrajpoints);
+	event->Get(mcthrowns);
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	
 	// Get hit list for all throwns
 	for(unsigned int i=0; i<mcthrowns.size(); i++){
@@ -211,36 +207,34 @@ jerror_t DEventProcessor_trackeff_hists2::evnt(JEventLoop *loop, uint64_t eventn
 		}
 */
 
-		locFoundFlag = Search_ChargedTrackHypotheses(loop, eventnumber, mcthrown);
+		locFoundFlag = Search_ChargedTrackHypotheses(event, eventnumber, mcthrown);
 		if(locFoundFlag == false)
 			trk.dTrackReconstructedFlag_Candidate = false;
 
-		locFoundFlag = Search_WireBasedTracks(loop, eventnumber, mcthrown);
+		locFoundFlag = Search_WireBasedTracks(event, eventnumber, mcthrown);
 		if(locFoundFlag == false)
 			trk.dTrackReconstructedFlag_WireBased = false;
 
-		locFoundFlag = Search_TrackCandidates(loop, eventnumber, mcthrown);
+		locFoundFlag = Search_TrackCandidates(event, eventnumber, mcthrown);
 		if(locFoundFlag == false)
 			trk.dTrackReconstructedFlag_Candidate = false;
 
 		trkeff->Fill();
 	}
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-	
-	return NOERROR;
+	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
-bool DEventProcessor_trackeff_hists2::Search_ChargedTrackHypotheses(JEventLoop *loop, uint64_t eventnumber, const DMCThrown *mcthrown){
+bool DEventProcessor_trackeff_hists2::Search_ChargedTrackHypotheses(const std::shared_ptr<const JEvent>& event, uint64_t eventnumber, const DMCThrown *mcthrown){
 	vector<const DChargedTrackHypothesis*> locChargedTrackHypotheses;
 	vector<const DMCTrajectoryPoint*> mctrajpoints;
 	vector<const DCDCTrackHit*> cdctrackhits;
 	vector<const DFDCHit*> fdchits;
 
-	loop->Get(cdctrackhits);
-	loop->Get(fdchits);
-	loop->Get(locChargedTrackHypotheses);
-	loop->Get(mctrajpoints);
+	event->Get(cdctrackhits);
+	event->Get(fdchits);
+	event->Get(locChargedTrackHypotheses);
+	event->Get(mctrajpoints);
 
 	DVector3 pthrown = trk.pthrown;
 
@@ -337,16 +331,16 @@ bool DEventProcessor_trackeff_hists2::Search_ChargedTrackHypotheses(JEventLoop *
 	return locFoundFlag;	
 }
 
-bool DEventProcessor_trackeff_hists2::Search_WireBasedTracks(JEventLoop *loop, uint64_t eventnumber, const DMCThrown *mcthrown){
+bool DEventProcessor_trackeff_hists2::Search_WireBasedTracks(const std::shared_ptr<const JEvent>& event, uint64_t eventnumber, const DMCThrown *mcthrown){
 	vector<const DMCTrajectoryPoint*> mctrajpoints;
 	vector<const DCDCTrackHit*> cdctrackhits;
 	vector<const DFDCHit*> fdchits;
 	vector<const DTrackWireBased*> tracks;
 
-	loop->Get(cdctrackhits);
-	loop->Get(fdchits);
-	loop->Get(tracks);
-	loop->Get(mctrajpoints);
+	event->Get(cdctrackhits);
+	event->Get(fdchits);
+	event->Get(tracks);
+	event->Get(mctrajpoints);
 
 	DVector3 pthrown = trk.pthrown;
 	double fom_best = 1.0E8;
@@ -430,16 +424,16 @@ bool DEventProcessor_trackeff_hists2::Search_WireBasedTracks(JEventLoop *loop, u
 	return locFoundFlag;	
 }
 
-bool DEventProcessor_trackeff_hists2::Search_TrackCandidates(JEventLoop *loop, uint64_t eventnumber, const DMCThrown *mcthrown){
+bool DEventProcessor_trackeff_hists2::Search_TrackCandidates(const std::shared_ptr<const JEvent>& event, uint64_t eventnumber, const DMCThrown *mcthrown){
 	vector<const DMCTrajectoryPoint*> mctrajpoints;
 	vector<const DCDCTrackHit*> cdctrackhits;
 	vector<const DFDCHit*> fdchits;
 	vector<const DTrackCandidate*> trackcandidates;
 
-	loop->Get(cdctrackhits);
-	loop->Get(fdchits);
-	loop->Get(mctrajpoints);
-	loop->Get(trackcandidates);
+	event->Get(cdctrackhits);
+	event->Get(fdchits);
+	event->Get(mctrajpoints);
+	event->Get(trackcandidates);
 
 	DVector3 pthrown = trk.pthrown;
 	double fom_best = 1.0E8;

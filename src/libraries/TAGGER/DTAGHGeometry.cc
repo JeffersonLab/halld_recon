@@ -18,8 +18,12 @@
 #include <stdlib.h>
 #include <iostream>
 #include <map>
+#include <set>
 
 #include "DTAGHGeometry.h"
+
+using std::string;
+using std::set;
 
 const unsigned int DTAGHGeometry::kCounterCount = 274;
 
@@ -31,10 +35,10 @@ static set<int> runs_announced;
 //---------------------------------
 // DTAGHGeometry    (Constructor)
 //---------------------------------
-DTAGHGeometry::DTAGHGeometry(JEventLoop *loop)
+DTAGHGeometry::DTAGHGeometry(const std::shared_ptr<const JEvent>& event)
 {
 	// keep track of which runs we print out messages for
-	int32_t runnumber = loop->GetJEvent().GetRunNumber();
+	auto runnumber = event->GetRunNumber();
 	pthread_mutex_lock(&print_mutex);
 	bool print_messages = false;
 	if(runs_announced.find(runnumber) == runs_announced.end()){
@@ -43,9 +47,7 @@ DTAGHGeometry::DTAGHGeometry(JEventLoop *loop)
 	}
 	pthread_mutex_unlock(&print_mutex);
 
-	JEvent &event = loop->GetJEvent();
-	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	JCalibrationCCDB *jcalib =  dynamic_cast<JCalibrationCCDB*>( dapp->GetJCalibration(event.GetRunNumber()) );
+	JCalibrationCCDB *jcalib =  dynamic_cast<JCalibrationCCDB*>( DEvent::GetJCalibration(event) );
 
 	Initialize(jcalib, print_messages);
 }
@@ -147,7 +149,7 @@ void DTAGHGeometry::Initialize(JCalibration *jcalib, bool print_messages)
    if (result2.size() != kCounterCount) {
       jerr << "Error in DTAGHGeometry constructor: "
            << "failed to read photon beam scaled_energy_range table "
-           << "from calibdb at /PHOTON_BEAM/hodoscope/scaled_energy_range" << std::endl;
+           << "from calibdb at /PHOTON_BEAM/hodoscope/scaled_energy_range" << jendl;
       for (unsigned int i=0; i <= TAGH_MAX_COUNTER; ++i) {
          m_counter_xlow[i] = 0;
          m_counter_xhigh[i] = 0;
@@ -165,7 +167,7 @@ void DTAGHGeometry::Initialize(JCalibration *jcalib, bool print_messages)
    m_endpoint_energy_calib_GeV = 0.;
    
    std::map<string,double> result3;
-   status = loop->GetCalib("/PHOTON_BEAM/hodoscope/endpoint_calib",result3);
+   status = calibration->Get("/PHOTON_BEAM/hodoscope/endpoint_calib",result3);
    
    
    if(!status){

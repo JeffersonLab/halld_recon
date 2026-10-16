@@ -62,6 +62,8 @@ class trk_mainframe:public TGMainFrame{
 		void FillFactoryTagComboBox(TGComboBox* cb, TGComboBox* datanamecb, const std::string &def);
 		void FillTrackNumberComboBox(TGComboBox* cb, TGComboBox* datanamecb, TGComboBox* tagcb, bool add_best_match_option);
 		
+		void EnableControls(bool enabled=true);
+		
 	protected:
 	
 	
@@ -76,6 +78,7 @@ class trk_mainframe:public TGMainFrame{
 		std::vector<TGComboBox*> factorytag;
 		std::vector<TGComboBox*> trackno;
 		TGCheckButton *slock;
+        TGTextButton *next = nullptr;
 
 		double slo, shi, resilo, resihi;
 		

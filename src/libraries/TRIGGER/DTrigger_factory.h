@@ -1,7 +1,7 @@
 #ifndef _DTrigger_factory_
 #define _DTrigger_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DTrigger.h"
 #include "DL1Trigger.h"
 #include "DL3Trigger.h"
@@ -10,17 +10,18 @@
 #include "DANA/DStatusBits.h"
 
 using namespace std;
-using namespace jana;
 
-class DTrigger_factory : public jana::JFactory<DTrigger>
+
+class DTrigger_factory : public JFactoryT<DTrigger>
 {
 	public:
 		DTrigger_factory(){};
 		virtual ~DTrigger_factory(){};
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t evnt(JEventLoop* locEventLoop, uint64_t locEventNumber);
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override; 
+		void Process(const std::shared_ptr<const JEvent>& event) override;
 		
 		bool EMULATE_BCAL_LED_TRIGGER;
 		bool EMULATE_FCAL_LED_TRIGGER;
@@ -29,6 +30,9 @@ class DTrigger_factory : public jana::JFactory<DTrigger>
 		
 		unsigned int BCAL_LED_NHITS_THRESHOLD;
 		unsigned int FCAL_LED_NHITS_THRESHOLD;
+		
+		string MC_TRIGGER_TAG = "";
+		string DATA_SIM_TRIGGER_TAG = "DATA";
 };
 
 #endif // _DTrigger_factory_

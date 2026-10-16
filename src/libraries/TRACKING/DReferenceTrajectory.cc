@@ -15,14 +15,12 @@ using namespace std;
 #include <algorithm>
 
 #include "DReferenceTrajectory.h"
-#include "DTrackCandidate.h"
 #include "DMagneticFieldStepper.h"
 #include <TMatrix.h>
-#include "HDGEOMETRY/DRootGeom.h"
 #define ONE_THIRD 0.33333333333333333
 #define TWO_THIRD 0.66666666666666667
 #define EPS 1e-8
-#define QuietNaN std::numeric_limits<double>::quiet_NaN()
+#define Quiet_NaN std::numeric_limits<double>::quiet_NaN()
 
 struct StepStruct {DReferenceTrajectory::swim_step_t steps[256];};
 
@@ -30,10 +28,11 @@ struct StepStruct {DReferenceTrajectory::swim_step_t steps[256];};
 // DReferenceTrajectory    (Constructor)
 //---------------------------------
 DReferenceTrajectory::DReferenceTrajectory(const DMagneticFieldMap *bfield
+														, JApplication* app
 														, double q
 														, swim_step_t *swim_steps
 														, int max_swim_steps
-														, double step_size)
+														, double step_size )
 {
 	// Copy some values into data members
 	this->q = q;
@@ -44,7 +43,6 @@ DReferenceTrajectory::DReferenceTrajectory(const DMagneticFieldMap *bfield
 	this->mass = 0.13957; // assume pion mass until otherwise specified
 	this->mass_sq=this->mass*this->mass;
 	this->hit_cdc_endplate = false;
-	this->RootGeom=NULL;
 	this->geom = NULL;
 	this->ploss_direction = kForward;
 	this->check_material_boundaries = true;
@@ -65,13 +63,16 @@ DReferenceTrajectory::DReferenceTrajectory(const DMagneticFieldMap *bfield
 	MIN_STEP_SIZE = 0.1;	// cm
 	MAX_STEP_SIZE = 3.0;		// cm
 	int MAX_SWIM_STEPS = 2500;
-	
-	gPARMS->SetDefaultParameter("TRK:BOUNDARY_STEP_FRACTION" , BOUNDARY_STEP_FRACTION, "Fraction of estimated distance to boundary to use as step size");
-	gPARMS->SetDefaultParameter("TRK:MIN_STEP_SIZE" , MIN_STEP_SIZE, "Minimum step size in cm to take when swimming a track with adaptive step sizes");
-	gPARMS->SetDefaultParameter("TRK:MAX_STEP_SIZE" , MAX_STEP_SIZE, "Maximum step size in cm to take when swimming a track with adaptive step sizes");
-	gPARMS->SetDefaultParameter("TRK:MAX_SWIM_STEPS" , MAX_SWIM_STEPS, "Number of swim steps for DReferenceTrajectory to allocate memory for (when not using external buffer)");
-	gPARMS->SetDefaultParameter("TRK:DEBUG_LEVEL" , this->debug_level);
-	
+
+	this->app = app;
+	if (app != nullptr) {
+		app->SetDefaultParameter("TRK:BOUNDARY_STEP_FRACTION" , BOUNDARY_STEP_FRACTION, "Fraction of estimated distance to boundary to use as step size");
+		app->SetDefaultParameter("TRK:MIN_STEP_SIZE" , MIN_STEP_SIZE, "Minimum step size in cm to take when swimming a track with adaptive step sizes");
+		app->SetDefaultParameter("TRK:MAX_STEP_SIZE" , MAX_STEP_SIZE, "Maximum step size in cm to take when swimming a track with adaptive step sizes");
+		app->SetDefaultParameter("TRK:MAX_SWIM_STEPS" , MAX_SWIM_STEPS, "Number of swim steps for DReferenceTrajectory to allocate memory for (when not using external buffer)");
+		app->SetDefaultParameter("TRK:DEBUG_LEVEL" , this->debug_level);
+	}
+
 	// It turns out that the greatest bottleneck in speed here comes from
 	// allocating/deallocating the large block of memory required to hold
 	// all of the trajectory info. The preferred way of calling this is 
@@ -106,7 +107,6 @@ DReferenceTrajectory::DReferenceTrajectory(const DReferenceTrajectory& rt)
 	this->last_phi = rt.last_phi;
 	this->last_dist_along_wire = rt.last_dist_along_wire;
 	this->last_dz_dphi = rt.last_dz_dphi;
-	this->RootGeom = rt.RootGeom;
 	this->geom = rt.geom;
 	this->dist_to_rt_depth = 0;
 	this->mass = rt.GetMass();
@@ -169,7 +169,6 @@ DReferenceTrajectory& DReferenceTrajectory::operator=(const DReferenceTrajectory
 	this->last_phi = rt.last_phi;
 	this->last_dist_along_wire = rt.last_dist_along_wire;
 	this->last_dz_dphi = rt.last_dz_dphi;
-	this->RootGeom = rt.RootGeom;
 	this->geom = rt.geom;
 	this->dist_to_rt_depth = rt.dist_to_rt_depth;
 	this->mass = rt.GetMass();
@@ -334,7 +333,7 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
        
     if(Nswim_steps>=this->max_swim_steps){
       if (debug_level>0){
-	jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<endl;
+	jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<jendl;
       }
       break;
     }
@@ -465,7 +464,7 @@ void DReferenceTrajectory::FastSwim(const DVector3 &pos, const DVector3 &mom, do
        
     if(Nswim_steps>=this->max_swim_steps){
       if (debug_level>0){
-	jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<endl;
+	jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<jendl;
       }
       break;
     }
@@ -481,27 +480,15 @@ void DReferenceTrajectory::FastSwim(const DVector3 &pos, const DVector3 &mom, do
     double p_sq=swim_step->mom.Mag2();
     double one_over_beta_sq=1.+mass_sq/p_sq;
 
-    // Add material if geom or RootGeom is not NULL
-    // If both are non-NULL, then use RootGeom
+    // Add material if geom is not NULL
     double dP = 0.0;
     double dP_dx=0.0;
-    if(RootGeom || geom){
+    if(geom){
       double KrhoZ_overA=0.0;
       double rhoZ_overA=0.0;
       double LogI=0.0;
       double X0=0.0;
-      jerror_t err;
-      if(RootGeom){
-	double rhoZ_overA,rhoZ_overA_logI;
-	err = RootGeom->FindMatLL(swim_step->origin,
-				  rhoZ_overA, 
-				  rhoZ_overA_logI, 
-				  X0);
-	KrhoZ_overA=0.1535e-3*rhoZ_overA;
-	LogI=rhoZ_overA_logI/rhoZ_overA;
-      }else{
-	err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0);
-      }
+      jerror_t err= geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0);
       if(err == NOERROR){
 	if(X0>0.0){
 	  double p=sqrt(p_sq);
@@ -682,7 +669,7 @@ void DReferenceTrajectory::Swim(const DVector3 &pos, const DVector3 &mom, double
 	
 		if(Nswim_steps>=this->max_swim_steps){
 		  if (debug_level>0){
-			jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<endl;
+			jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<jendl;
 		  }
 			break;
 		}
@@ -697,42 +684,22 @@ void DReferenceTrajectory::Swim(const DVector3 &pos, const DVector3 &mom, double
 		double p_sq=swim_step->mom.Mag2();
 		double one_over_beta_sq=1.+mass_sq/p_sq;
 
-		// Add material if geom or RootGeom is not NULL
-		// If both are non-NULL, then use RootGeom
+		// Add material if geom is not NULL
 		double dP = 0.0;
 		double dP_dx=0.0;
 		double s_to_boundary=1.0E6; // initialize to "infinity" in case we don't set this below
-		if(RootGeom || geom){
+		if(geom){
 			double KrhoZ_overA=0.0;
 			double rhoZ_overA=0.0;
 			double LogI=0.0;
 			double X0=0.0;
 			jerror_t err;
-			if(RootGeom){
-			  double rhoZ_overA,rhoZ_overA_logI;
-			  err = RootGeom->FindMatLL(swim_step->origin,
-						    rhoZ_overA, 
-						    rhoZ_overA_logI, 
-						    X0);
-			  KrhoZ_overA=0.1535e-3*rhoZ_overA;
-			  LogI=rhoZ_overA_logI/rhoZ_overA;
+			if(check_material_boundaries){
+			  err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0, &s_to_boundary);
 			}else{
-				if(check_material_boundaries){
-					err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0, &s_to_boundary);
-				}else{
-					err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0);
-				}
-				
-				// Check if we hit the CDC endplate
-				//double z = swim_step->origin.Z();
-				//if(z>=cdc_endplate_zmin && z<=cdc_endplate_zmax){
-				// double r = swim_step->origin.Perp();
-				// if(r>=cdc_endplate_rmin && r<=cdc_endplate_rmax){
-				// hit_cdc_endplate = true;
-				//}
-				//}
+			  err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0);
 			}
-
+				
 			if(err == NOERROR){
 			  if(X0>0.0){
 			    double p=sqrt(p_sq);
@@ -895,9 +862,9 @@ jerror_t DReferenceTrajectory::GetIntersectionWithRadius(double R,
 							 double *s,
 							 double *t,
 							 DVector3 *p_at_intersection) const{
-  mypos.SetXYZ(QuietNaN,QuietNaN,QuietNaN);
+  mypos.SetXYZ(Quiet_NaN,Quiet_NaN,Quiet_NaN);
   if(p_at_intersection)
-    p_at_intersection->SetXYZ(QuietNaN,QuietNaN,QuietNaN);
+    p_at_intersection->SetXYZ(Quiet_NaN,Quiet_NaN,Quiet_NaN);
 
   if(Nswim_steps<1){
     _DBG_<<"No swim steps! You must \"Swim\" the track before calling GetIntersectionWithRadius(...)"<<endl;
@@ -1192,7 +1159,7 @@ int DReferenceTrajectory::InsertSteps(const swim_step_t *start_step, double delt
 	// is it can't handle arrays so it has to be wrapped in a struct.
 	auto_ptr<StepStruct> steps_aptr(new StepStruct);
 	DReferenceTrajectory::swim_step_t *steps = steps_aptr->steps;
-	DReferenceTrajectory rt(bfield , my_q , steps , 256);
+	DReferenceTrajectory rt(bfield , app , my_q , steps , 256);
 	rt.SetStepSize(step_size);
 	rt.Swim(pos, mom, my_q,NULL,fabs(delta_s));
 	if(rt.Nswim_steps==0)return 1;
@@ -2288,8 +2255,8 @@ void DReferenceTrajectory::GetLastDOCAPoint(DVector3 &pos, DVector3 &mom) const
 			last_swim_step = &swim_steps[0];
 			last_phi = 0.0;
 		}else{
-			pos.SetXYZ(QuietNaN,QuietNaN,QuietNaN);
-			mom.SetXYZ(QuietNaN,QuietNaN,QuietNaN);
+			pos.SetXYZ(Quiet_NaN,Quiet_NaN,Quiet_NaN);
+			mom.SetXYZ(Quiet_NaN,Quiet_NaN,Quiet_NaN);
 			return;
 		}
 	}
@@ -2324,7 +2291,7 @@ DVector3 DReferenceTrajectory::GetLastDOCAPoint(void) const
 			last_swim_step = &swim_steps[0];
 			last_phi = 0.0;
 		}else{
-			return DVector3(QuietNaN,QuietNaN,QuietNaN);
+			return DVector3(Quiet_NaN,Quiet_NaN,Quiet_NaN);
 		}
 	}
 	const DVector3 &xdir = last_swim_step->sdir;

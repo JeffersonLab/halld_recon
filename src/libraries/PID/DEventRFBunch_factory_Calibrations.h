@@ -17,7 +17,7 @@
 
 #include <TMath.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 #include <DVector3.h>
 #include <DMatrix.h>
@@ -31,27 +31,27 @@
 #include <START_COUNTER/DSCHit.h>
 
 #include <HDGEOMETRY/DGeometry.h>
-#include <DANA/DApplication.h>
 
 #include <ANALYSIS/DCutActions.h>
 
 using namespace std;
-using namespace jana;
 
-class DEventRFBunch_factory_Calibrations : public jana::JFactory<DEventRFBunch>
+
+class DEventRFBunch_factory_Calibrations : public JFactoryT<DEventRFBunch>
 {
 	public:
-		DEventRFBunch_factory_Calibrations(){};
+		DEventRFBunch_factory_Calibrations(){
+			SetTag("Calibrations");
+		};
 		~DEventRFBunch_factory_Calibrations(){};
-		const char* Tag(void){return "Calibrations";}
 
 	private:
 
-		void Select_GoodTracks(JEventLoop* locEventLoop, vector<const DTrackWireBased*>& locSelectedWireBasedTracks) const;
-		jerror_t Select_RFBunch(JEventLoop* locEventLoop, vector<const DTrackWireBased*>& locTrackWireBasedVector, double locRFTime);
+		void Select_GoodTracks(const std::shared_ptr<const JEvent>& event, vector<const DTrackWireBased*>& locSelectedWireBasedTracks) const;
+		jerror_t Select_RFBunch(const std::shared_ptr<const JEvent>& event, vector<const DTrackWireBased*>& locTrackWireBasedVector, double locRFTime);
 
 		bool Find_TrackTimes_SC(const DDetectorMatches* locDetectorMatches, const vector<const DTrackWireBased*>& locTrackWireBasedVector, vector<pair<double, const JObject*> >& locTimes) const;
-		int Conduct_Vote(JEventLoop* locEventLoop, double locRFTime, vector<pair<double, const JObject*> >& locTimes, int& locHighestNumVotes);
+		int Conduct_Vote(const std::shared_ptr<const JEvent>& event, double locRFTime, vector<pair<double, const JObject*> >& locTimes, int& locHighestNumVotes);
 
 		int Find_BestRFBunchShifts(double locRFHitTime, const vector<pair<double, const JObject*> >& locTimes, map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts);
 		int Break_TieVote_Tracks(map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts);
@@ -70,11 +70,11 @@ class DEventRFBunch_factory_Calibrations : public jana::JFactory<DEventRFBunch>
 
 		DCutAction_TrackHitPattern *dCutAction_TrackHitPattern;
 
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 };
 
 #endif // _DEventRFBunch_factory_Calibrations_

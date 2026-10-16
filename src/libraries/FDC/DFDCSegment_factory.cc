@@ -3,7 +3,11 @@
 //************************************************************************
 
 #include "DFDCSegment_factory.h"
-#include "DANA/DApplication.h"
+
+#include <JANA/JEvent.h>
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
+
 //#include "HDGEOMETRY/DLorentzMapCalibDB.h"
 #include <math.h>
 #include <cmath>
@@ -47,57 +51,53 @@ bool DFDCSegment_package_cmp(const DFDCPseudo* a, const DFDCPseudo* b) {
 
 
 DFDCSegment_factory::DFDCSegment_factory() {
-        _log = new JStreamLog(std::cout, "FDCSEGMENT >>");
-        *_log << "File initialized." << endMsg;
 }
 
 
 ///
 /// DFDCSegment_factory::~DFDCSegment_factory():
-/// default destructor -- closes log file
+/// default destructor
 ///
 DFDCSegment_factory::~DFDCSegment_factory() {
-        delete _log;	
 }
+
 ///
 /// DFDCSegment_factory::brun():
 /// Initialization: read in deflection map, get magnetic field map
 ///
-jerror_t DFDCSegment_factory::brun(JEventLoop* eventLoop, int32_t runnumber) { 
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DMagneticFieldMap *bfield = dapp->GetBfield(runnumber);
+void DFDCSegment_factory::BeginRun(const std::shared_ptr<const JEvent>& event) {
+
+  auto run_number = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto geom = geo_manager->GetDGeometry(run_number);
+  const DMagneticFieldMap *bfield = geo_manager->GetBfield(run_number);
+
   double Bz=bfield->GetBz(0.,0.,65.);
   RotationSenseToCharge=(Bz>0.)?-1.:1.;
-
-  // get the geometry
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
-
   geom->GetTargetZ(TARGET_Z);
   /*    
   bfield = dapp->GetBfield();
   lorentz_def=dapp->GetLorentzDeflections();
 
-  *_log << "Table of Lorentz deflections initialized." << endMsg;
+  GetLogger() << "Table of Lorentz deflections initialized.";
   */
   DEBUG_LEVEL=0;
-  gPARMS->SetDefaultParameter("FDC:DEBUG_LEVEL", DEBUG_LEVEL);
+  app->SetDefaultParameter("FDC:DEBUG_LEVEL", DEBUG_LEVEL);
   
   BEAM_VARIANCE=1.0;
-  gPARMS->SetDefaultParameter("FDC:BEAM_VARIANCE",BEAM_VARIANCE);
-  
-
-  return NOERROR;
+  app->SetDefaultParameter("FDC:BEAM_VARIANCE",BEAM_VARIANCE);
 }
 
 ///
-/// DFDCSegment_factory::evnt():
+/// DFDCSegment_factory::Process
 /// Routine where pseudopoints are combined into track segments
 ///
-jerror_t DFDCSegment_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
-  myeventno=eventNo;
+void DFDCSegment_factory::Process(const std::shared_ptr<const JEvent>& event) {
+  myeventno=event->GetEventNumber();
 
   vector<const DFDCPseudo*>pseudopoints;
-  eventLoop->Get(pseudopoints);  
+  event->Get(pseudopoints);  
  
   // Skip segment finding if there aren't enough points to form a sensible 
   // segment 
@@ -117,8 +117,6 @@ jerror_t DFDCSegment_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
       if (package[j].size()>2) FindSegments(package[j]);
     } 
   } // pseudopoints>2
-  
-  return NOERROR;
 }
 
 // Riemann Line fit: linear regression of s on z to determine the tangent of 
@@ -760,7 +758,7 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 	  segment->package=(neighbors[0]->wire->layer-1)/6;
 	  FillSegmentData(segment);
 
-	  _data.push_back(segment);
+	  Insert(segment);
 	}
 	else {
 	  // Fit assuming particle came from (x,y)=(0,0)
@@ -776,7 +774,7 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 	  segment->package=(neighbors[0]->wire->layer-1)/6;
 	  FillSegmentData(segment);
 
-	  _data.push_back(segment);
+	  Insert(segment);
 	}
 
       }
@@ -789,9 +787,9 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
   // Use fitted segment results to look for additional stray hits to add to 
   // segments.  
   if (total_num_used<used.size()){
-    for (unsigned int k=0;k<_data.size();k++){
+    for (unsigned int k=0;k<mData.size();k++){
       if (total_num_used==used.size()) break;
-      DFDCSegment *segment=_data[k];
+      DFDCSegment *segment=mData[k];
       bool added_hits=false;
       for (unsigned int i=0;i<used.size();i++){
 	if (total_num_used==used.size()) break;
@@ -1012,104 +1010,3 @@ void DFDCSegment_factory::FillSegmentData(DFDCSegment *segment){
   segment->chisq=chisq;
   segment->Ndof=Ndof;  
 }
-
-
-//----------------------------------------------------------------------------
-// The following routine is no longer in use: 
-// Correct avalanche position along wire and incorporate drift data for 
-// coordinate away from the wire using results of preliminary hit-based fit
-//
-//#define R_START 7.6
-//#define Z_TOF 617.4
-//#include "HDGEOMETRY/DLorentzMapCalibDB.h
-//#define SC_V_EFF 15.
-//#define SC_LIGHT_GUIDE     140.
-//#define SC_CENTER          38.75   
-//#define TOF_BAR_LENGTH      252.0 
-//#define TOF_V_EFF 15.
-//#define FDC_X_RESOLUTION 0.028
-//#define FDC_Y_RESOLUTION 0.02 //cm
-/*
-jerror_t DFDCSegment_factory::CorrectPoints(vector<DFDCPseudo*>points,
-					    DMatrix XYZ){
-  // dip angle
-  double lambda=atan(tanl);  
-  double alpha=M_PI/2.-lambda;
-  
-  if (alpha == 0. || rc==0.) return VALUE_OUT_OF_RANGE;
-
-  // Get Bfield, needed to guess particle momentum
-  double Bx,By,Bz,B;
-  double x=XYZ(ref_plane,0);
-  double y=XYZ(ref_plane,1);
-  double z=XYZ(ref_plane,2);
-  
-  bfield->GetField(x,y,z,Bx,By,Bz);
-  B=sqrt(Bx*Bx+By*By+Bz*Bz);
-
-  // Momentum and beta
-  double p=0.002998*B*rc/cos(lambda);
-  double beta=p/sqrt(p*p+0.140*0.140);
-
-  // Correct start time for propagation from (0,0)
-  double my_start_time=0.;
-  if (use_tof){
-    //my_start_time=ref_time-(Z_TOF-TARGET_Z)/sin(lambda)/beta/29.98;
-    // If we need to use the tof, the angle relative to the beam line is 
-    // small enough that sin(lambda) ~ 1.
-    my_start_time=ref_time-(Z_TOF-TARGET_Z)/beta/29.98;
-    //my_start_time=0;
-  }
-  else{
-    double ratio=R_START/2./rc;
-    if (ratio<=1.)
-      my_start_time=ref_time
-	-2.*rc*asin(R_START/2./rc)*(1./cos(lambda)/beta/29.98);
-    else
-      my_start_time=ref_time
-	-rc*M_PI*(1./cos(lambda)/beta/29.98);
-    
-  }
-  //my_start_time=0.;
-
-  for (unsigned int m=0;m<points.size();m++){
-    DFDCPseudo *point=points[m];
-
-    double cosangle=point->wire->udir(1);
-    double sinangle=point->wire->udir(0);
-    x=XYZ(m,0);
-    y=XYZ(m,1);
-    z=point->wire->origin.z();
-    double delta_x=0,delta_y=0;   
-    // Variances based on expected resolution
-    double sigx2=FDC_X_RESOLUTION*FDC_X_RESOLUTION;
-   
-    // Find difference between point on helical path and wire
-    double w=x*cosangle-y*sinangle-point->w;
-     // .. and use it to determine which sign to use for the drift time data
-    double sign=(w>0?1.:-1.);
-
-    // Correct the drift time for the flight path and convert to distance units
-    // assuming the particle is a pion
-    delta_x=sign*(point->time-fdc_track[m].s/beta/29.98-my_start_time)*55E-4;
-
-    // Variance for position along wire. Includes angle dependence from PHENIX
-    // and transverse diffusion
-    double sigy2=fdc_y_variance(alpha,delta_x);
-    
-    // Next find correction to y from table of deflections
-    delta_y=lorentz_def->GetLorentzCorrection(x,y,z,alpha,delta_x);
-
-    // Fill x and y elements with corrected values
-    point->ds =-delta_y;     
-    point->dw =delta_x;
-    point->x=(point->w+point->dw)*cosangle+(point->s+point->ds)*sinangle;
-    point->y=-(point->w+point->dw)*sinangle+(point->s+point->ds)*cosangle;
-    point->covxx=sigx2*cosangle*cosangle+sigy2*sinangle*sinangle;
-    point->covyy=sigx2*sinangle*sinangle+sigy2*cosangle*cosangle;
-    point->covxy=(sigy2-sigx2)*sinangle*cosangle;
-    point->status|=CORRECTED;
-  }
-  return NOERROR;
-}
-*/

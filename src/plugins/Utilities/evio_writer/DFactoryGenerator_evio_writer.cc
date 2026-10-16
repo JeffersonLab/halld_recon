@@ -6,7 +6,7 @@ extern "C"
 	void InitPlugin(JApplication *app)
 	{
 		InitJANAPlugin(app);
-		app->AddFactoryGenerator(new DFactoryGenerator_evio_writer());
+		app->Add(new DFactoryGenerator_evio_writer());
 	}
 } // "C"
 

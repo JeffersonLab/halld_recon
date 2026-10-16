@@ -18,9 +18,8 @@
 #define _DTPOLHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DTPOLHit:public jana::JObject{
+class DTPOLHit:public JObject{
  public:
   JOBJECT_PUBLIC(DTPOLHit);
   
@@ -39,23 +38,23 @@ class DTPOLHit:public jana::JObject{
   double dE;             ///< ?
   double t;              ///< ?
   
-  /// \fn   void toStrings(vector<pair<string,string> > &items)const
+  /// \fn   void Summarize(JObjectSummary& summary)const
   /// used by hd_dump to print all TPOL Sector Hit object data for an event.
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "sector", "%d", sector);
-    AddString(items, "phi", "%3.3f", phi);
-    AddString(items, "ring", "%d", ring);
-    AddString(items, "theta", "%3.3f", theta);
-    AddString(items, "nsamples", "%d", nsamples);
-    AddString(items, "w_samp1", "%d", w_samp1);
-    AddString(items, "w_min", "%d", w_min);
-    AddString(items, "w_max", "%d", w_max);
-    AddString(items, "integral", "%d", integral);
-    AddString(items, "pulse_peak", "%3.3f", pulse_peak);
-    AddString(items, "dE_proxy", "%3.3f", dE_proxy);
-    AddString(items, "t_proxy", "%3.3f", t_proxy);
-    AddString(items, "dE", "%3.3f", dE);
-    AddString(items, "t", "%3.3f", t);
+  void Summarize(JObjectSummary& summary)const{
+    summary.add(sector, "sector", "%d");
+    summary.add(phi, "phi", "%3.3f");
+    summary.add(ring, "ring", "%d");
+    summary.add(theta, "theta", "%3.3f");
+    summary.add(nsamples, "nsamples", "%d");
+    summary.add(w_samp1, "w_samp1", "%d");
+    summary.add(w_min, "w_min", "%d");
+    summary.add(w_max, "w_max", "%d");
+    summary.add(integral, "integral", "%d");
+    summary.add(pulse_peak, "pulse_peak", "%3.3f");
+    summary.add(dE_proxy, "dE_proxy", "%3.3f");
+    summary.add(t_proxy, "t_proxy", "%3.3f");
+    summary.add(dE, "dE", "%3.3f");
+    summary.add(t, "t", "%3.3f");
   }
 };
 

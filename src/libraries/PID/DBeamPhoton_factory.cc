@@ -11,7 +11,11 @@
 using namespace std;
 
 #include "DBeamPhoton_factory.h"
-using namespace jana;
+
+#include <JANA/JEvent.h>
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
+
 
 inline bool DBeamPhoton_SortByTime(const DBeamPhoton* locBeamPhoton1, const DBeamPhoton* locBeamPhoton2)
 {
@@ -29,77 +33,71 @@ inline bool DBeamPhoton_SortByTime(const DBeamPhoton* locBeamPhoton1, const DBea
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DBeamPhoton_factory::init(void)
+void DBeamPhoton_factory::Init()
 {
+    auto app = GetApplication();
     DELTA_T_DOUBLES_MAX = 1.5; // ns
-    gPARMS->SetDefaultParameter("BeamPhoton:DELTA_T_DOUBLES_MAX", DELTA_T_DOUBLES_MAX,
+    app->SetDefaultParameter("BeamPhoton:DELTA_T_DOUBLES_MAX", DELTA_T_DOUBLES_MAX,
     "Maximum time difference in ns between a TAGM-TAGH pair of beam photons"
     " for them to be merged into a single photon");
     DELTA_E_DOUBLES_MAX = 0.05; // GeV
-    gPARMS->SetDefaultParameter("BeamPhoton:DELTA_E_DOUBLES_MAX", DELTA_E_DOUBLES_MAX,
+    app->SetDefaultParameter("BeamPhoton:DELTA_E_DOUBLES_MAX", DELTA_E_DOUBLES_MAX,
     "Maximum energy difference in GeV between a TAGM-TAGH pair of beam photons"
     " for them to be merged into a single photon");
 
-	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory.
-	SetFactoryFlag(NOT_OBJECT_OWNER);
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBeamPhoton_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DBeamPhoton_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-    DApplication* dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-    DGeometry* locGeometry = dapp->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+    auto runnumber = event->GetRunNumber();
+    auto app = event->GetJApplication();
+    auto geo_manager = app->GetService<DGeometryManager>();
+    auto locGeometry = geo_manager->GetDGeometry(runnumber);
+
     dTargetCenterZ = 0.0;
     locGeometry->GetTargetZ(dTargetCenterZ);
-
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBeamPhoton_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locEventNumber)
+void DBeamPhoton_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
-	dResourcePool_BeamPhotons->Recycle(dCreated);
-	dCreated.clear();
-	_data.clear();
+	auto locEventNumber = event->GetEventNumber();
 
     vector<const DTAGMHit*> tagm_hits;
-    locEventLoop->Get(tagm_hits);
+    event->Get(tagm_hits);
 
     for (unsigned int ih=0; ih < tagm_hits.size(); ++ih)
     {
         if (!tagm_hits[ih]->has_fADC) continue; // Skip TDC-only hits (i.e. hits with no ADC info.)
         if (tagm_hits[ih]->row > 0) continue; // Skip individual fiber readouts
-        DBeamPhoton* gamma = Get_Resource();
+		DBeamPhoton* gamma = new DBeamPhoton();
 
         Set_BeamPhoton(gamma, tagm_hits[ih], locEventNumber);
-        _data.push_back(gamma);
+        Insert(gamma);
     }
 
     vector<const DTAGHHit*> tagh_hits;
-    locEventLoop->Get(tagh_hits);
+    event->Get(tagh_hits);
 
     for (unsigned int ih=0; ih < tagh_hits.size(); ++ih)
     {
         if (!tagh_hits[ih]->has_fADC) continue; // Skip TDC-only hits (i.e. hits with no ADC info.)
         if (!tagh_hits[ih]->has_TDC) continue;  // Skip fADC-only hits (i.e. hits with no TDC info.)
-        DBeamPhoton* gamma = Get_Resource();
+		DBeamPhoton* gamma = new DBeamPhoton();
 
 	Set_BeamPhoton(gamma, tagh_hits[ih], locEventNumber);
-        _data.push_back(gamma);
+        Insert(gamma);
 	   
     }
 
-	sort(_data.begin(), _data.end(), DBeamPhoton_SortByTime);
-	dCreated = _data;
-
-    return NOERROR;
+	sort(mData.begin(), mData.end(), DBeamPhoton_SortByTime);
 }
 
 void DBeamPhoton_factory::Set_BeamPhoton(DBeamPhoton* gamma, const DTAGMHit* hit, uint64_t locEventNumber)

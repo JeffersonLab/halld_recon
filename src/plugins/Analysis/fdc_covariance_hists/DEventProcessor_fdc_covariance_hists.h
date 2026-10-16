@@ -18,14 +18,14 @@ using std::map;
 #include <TH2.h>
 #include <TProfile2D.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
 #include <TRACKING/DReferenceTrajectory.h>
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 
-class DEventProcessor_fdc_covariance_hists:public jana::JEventProcessor{
+class DEventProcessor_fdc_covariance_hists:public JEventProcessor{
 
 	public:
 		DEventProcessor_fdc_covariance_hists();
@@ -37,11 +37,11 @@ class DEventProcessor_fdc_covariance_hists:public jana::JEventProcessor{
 		const DMagneticFieldMap *bfield;
 		
 	private:
-		jerror_t init(void);	///< Invoked via DEventProcessor virtual method
-		jerror_t brun(jana::JEventLoop *loop, int32_t runnumber);
-		jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber);	///< Invoked via DEventProcessor virtual method
-		jerror_t erun(void);					///< Invoked via DEventProcessor virtual method
-		jerror_t fini(void);					///< Invoked via DEventProcessor virtual method
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 			
 		pthread_mutex_t mutex;
 		

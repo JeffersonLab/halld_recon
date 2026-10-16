@@ -10,11 +10,17 @@
 using namespace std;
 
 #include "DCDCTrackHit_factory.h"
-#include "DCDCHit.h"
+
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
+#include <DANA/DGeometryManager.h>
 #include <HDGEOMETRY/DGeometry.h>
 #include <TRACKING/DTrackHitSelectorTHROWN.h>
 #include <TRACKING/DMCTrackHit.h>
- 
+
+#include "DCDCHit.h"
+
 DCDCTrackHit_factory::~DCDCTrackHit_factory(){
   if (cdcwires.size()){
     for (unsigned int i=0;i<cdcwires.size();i++){
@@ -26,26 +32,29 @@ DCDCTrackHit_factory::~DCDCTrackHit_factory(){
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DCDCTrackHit_factory::init(void)
+void DCDCTrackHit_factory::Init()
 {
+   auto app = GetApplication();
+
    MATCH_TRUTH_HITS=false;
   
-   gPARMS->SetDefaultParameter("CDC:MATCH_TRUTH_HITS",MATCH_TRUTH_HITS,"Match truth hits to CDC hits (DEF=false)");
-
-	return NOERROR;
+   app->SetDefaultParameter("CDC:MATCH_TRUTH_HITS",MATCH_TRUTH_HITS,"Match truth hits to CDC hits (DEF=false)");
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DCDCTrackHit_factory::brun(JEventLoop *loop, int32_t runnumber)
+void DCDCTrackHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // Get pointer to DGeometry object
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  dgeom  = dapp->GetDGeometry(runnumber);
-  
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+  auto geo_manager = app->GetService<DGeometryManager>();
+  dgeom = geo_manager->GetDGeometry(runnumber);
+
   // Get the CDC wire table from the XML
   //jout<< "Getting map of cdc wires from the XML" <<endl;
   dgeom->GetCDCWires(cdcwires);
@@ -56,7 +65,6 @@ jerror_t DCDCTrackHit_factory::brun(JEventLoop *loop, int32_t runnumber)
   }
 
 	// Get drift time parameters
-	JCalibration *jcalib = dapp->GetJCalibration((loop->GetJEvent()).GetRunNumber());
 	map<string, double> cdc_drift_parms;
 	jcalib->Get("CDC/cdc_drift_parms", cdc_drift_parms);
 	CDC_DRIFT_BSCALE_PAR1 = cdc_drift_parms["bscale_par1"];
@@ -83,10 +91,10 @@ jerror_t DCDCTrackHit_factory::brun(JEventLoop *loop, int32_t runnumber)
 	cdc_drift_table_min = cdc_drift_table[0];
 	cdc_drift_table_max = cdc_drift_table[cdc_drift_table.size()-1];
 
-  return NOERROR;
+  return;
 }
 
-jerror_t DCDCTrackHit_factory::erun(void){
+void DCDCTrackHit_factory::EndRun(){
   if (cdcwires.size()){
     for (unsigned int i=0;i<cdcwires.size();i++){
       for (unsigned int j=0;j<cdcwires[i].size();j++){
@@ -95,19 +103,18 @@ jerror_t DCDCTrackHit_factory::erun(void){
     }    
   }
   cdcwires.clear();
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DCDCTrackHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DCDCTrackHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	/// Convert from ring/straw indexing to x/y position
 	/// of wire center and stereo angle.
 	vector<const DCDCHit*> cdchits;
-	loop->Get(cdchits);
-	if (cdchits.size()==0) return NOERROR;
+	event->Get(cdchits);
+	if (cdchits.size()==0) return;
 	
 	// If this is simulated data then we want to match up the truth hit
 	// with this "real" hit. Ideally, this would be done at the
@@ -115,7 +122,7 @@ jerror_t DCDCTrackHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	// makes that difficult. Here we have the full wire definition so
 	// we make the connection here.
 	vector<const DMCTrackHit*> mctrackhits;
-	if (MATCH_TRUTH_HITS)loop->Get(mctrackhits);
+	if (MATCH_TRUTH_HITS)event->Get(mctrackhits);
 	
 	for(unsigned int i=0; i<cdchits.size(); i++){
 		const DCDCHit* cdchit = cdchits[i];
@@ -177,10 +184,8 @@ jerror_t DCDCTrackHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		  if(mctrackhit)hit->AddAssociatedObject(mctrackhit);
 		}
 
-		_data.push_back(hit);
+		Insert(hit);
 	}
-	
-	return NOERROR;
 }
 
 //------------------

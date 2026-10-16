@@ -6,7 +6,6 @@
 #define DFDCSEGMENT_H
 
 #include <JANA/JObject.h>
-using namespace jana;
 
 #include "DFDCHit.h"
 #include "DFDCWire.h"
@@ -75,15 +74,15 @@ class DFDCSegment : public JObject {
 		// List of pseudopoints belonging to this track segment
 		vector<const DFDCPseudo *>hits;	
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "xc", "%3.2f", xc);
-			AddString(items, "yc", "%3.2f", yc);
-			AddString(items, "rc", "%3.2f", rc);
-			AddString(items, "phi0(deg)","%3.2f",57.296*phi0);
-			AddString(items, "Phi1(rad)", "%3.2f", Phi1);
-			AddString(items, "D","%3.2f",D);
-			AddString(items, "q","%3.1f",q);
-			AddString(items, "Nhits", "%d", hits.size());
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(xc, "xc", "%3.2f");
+			summary.add(yc, "yc", "%3.2f");
+			summary.add(rc, "rc", "%3.2f");
+			summary.add(57.296*phi0, "phi0(deg)", "%3.2f");
+			summary.add(Phi1, "Phi1(rad)", "%3.2f");
+			summary.add(D, "D", "%3.2f");
+			summary.add(q, "q", "%3.1f");
+			summary.add(hits.size(), "Nhits", "%d");
 		}
 };
 

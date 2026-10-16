@@ -14,8 +14,7 @@ using namespace std;
 #include <TLorentzVector.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 #include <TRACKING/DMCThrown.h>
 #include <PID/DKinematicData.h>
@@ -39,15 +38,15 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_rho_p_hists());
+	app->Add(new DEventProcessor_rho_p_hists());
 }
 }
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_rho_p_hists::init(void)
+void DEventProcessor_rho_p_hists::Init()
 {
 	// Create histograms
 	mm_gp_to_pX = new TH1D("mm_gp_to_pX","Missing mass from #gamma p -> p X",4001, 0.0, 4.0);
@@ -66,23 +65,21 @@ jerror_t DEventProcessor_rho_p_hists::init(void)
 	tree->Branch("E",&evt);
 	
 	pthread_mutex_init(&mutex, NULL);
-	
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_rho_p_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_rho_p_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Get reconstructed objects
 	vector<const DBeamPhoton*> beam_photons;
 	vector<const DParticle*> particles;
 	vector<const DParticle*> particles_thrown;
 
-	loop->Get(beam_photons);	// from truth info
-	loop->Get(particles);		// all reconstructed charged (CDC and FDC)
-	loop->Get(particles_thrown, "THROWN");		// all thrown charged (CDC and FDC)
+	event->Get(beam_photons);	// from truth info
+	event->Get(particles);		// all reconstructed charged (CDC and FDC)
+	event->Get(particles_thrown, "THROWN");		// all thrown charged (CDC and FDC)
 
 	// Target is proton at rest in lab frame
 	TLorentzVector target(0.0, 0.0, 0.0, 0.93827);
@@ -116,7 +113,7 @@ jerror_t DEventProcessor_rho_p_hists::evnt(JEventLoop *loop, uint64_t eventnumbe
 	// Fill histograms below here using values in the rec_XXX containers.
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	
 	evt->Clear();
 	evt->event = eventnumber;
@@ -154,13 +151,13 @@ jerror_t DEventProcessor_rho_p_hists::evnt(JEventLoop *loop, uint64_t eventnumbe
 	// are not exactly one thrown pi+ and one thrown pi-
 	if(thrown_piplus.size()!=1)
 	{
-		japp->RootUnLock(); //RELEASE ROOT LOCK
-		return NOERROR;
+		GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
+		return;
 	}
 	if(thrown_piminus.size()!=1)
 	{
-		japp->RootUnLock(); //RELEASE ROOT LOCK
-		return NOERROR;
+		GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
+		return;
 	}
 
 	// Determine whether both thrown pions are fiducial
@@ -194,9 +191,7 @@ jerror_t DEventProcessor_rho_p_hists::evnt(JEventLoop *loop, uint64_t eventnumbe
 	evt->rho->Sort(); // sort by closeness of invariant mass to 770MeV/c^2 (uses rho_t::Compare );
 	tree->Fill();
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
@@ -214,7 +209,7 @@ void DEventProcessor_rho_p_hists::SortChargedParticles(vector<const DParticle*> 
 		// associated with it that we can use to get the particle type since
 		// we currently don't have that info in reconstruction. If it is not there,
 		// then assume it's a pion.
-		int type = part->charge()<0.0 ? 9:8; // initialize to pi-(=9) or pi+(=8)
+		int type = part->charge()<0.0 ? 9:8; // Initialize to pi-(=9) or pi+(=8)
 
 		// Here we try and get the "truth" object DMCThrown. The access mechanism
 		// forces us to get it as a list, but there should be at most 1.
@@ -266,20 +261,17 @@ bool DEventProcessor_rho_p_hists::IsFiducial(TLorentzVector &pion)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_rho_p_hists::erun(void)
+void DEventProcessor_rho_p_hists::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_rho_p_hists::fini(void)
+void DEventProcessor_rho_p_hists::Finish()
 {
 	// Histograms are automatically written to file by hd_root program (or equivalent)
 	// so we don't need to do anything here.
-
-	return NOERROR;
 }

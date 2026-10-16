@@ -1,5 +1,7 @@
 #include "DKinFitUtils_GlueX.h"
 
+#include <DANA/DEvent.h>
+
 /******************************************************************** INITIALIZE *******************************************************************/
 
 DKinFitUtils_GlueX::DKinFitUtils_GlueX(const DMagneticFieldMap* locMagneticFieldMap, const DAnalysisUtilities* locAnalysisUtilities) : 
@@ -8,25 +10,22 @@ dMagneticFieldMap(locMagneticFieldMap), dAnalysisUtilities(locAnalysisUtilities)
 	dIncludeBeamlineInVertexFitFlag = false;
 	dWillBeamHaveErrorsFlag = false; //Until fixed!
 
-	dApplication = dynamic_cast<DApplication*>(japp);
-	gPARMS->SetDefaultParameter("KINFIT:LINKVERTICES", dLinkVerticesFlag);
+	japp->SetDefaultParameter("KINFIT:LINKVERTICES", dLinkVerticesFlag);
 }
 
-DKinFitUtils_GlueX::DKinFitUtils_GlueX(JEventLoop* locEventLoop)
+DKinFitUtils_GlueX::DKinFitUtils_GlueX(const std::shared_ptr<const JEvent>& locEvent)
 {
-	Set_RunDependent_Data(locEventLoop);
-
-	gPARMS->SetDefaultParameter("KINFIT:LINKVERTICES", dLinkVerticesFlag);
+	Set_RunDependent_Data(locEvent);
+	auto app = locEvent->GetJApplication();
+	app->SetDefaultParameter("KINFIT:LINKVERTICES", dLinkVerticesFlag);
 	dWillBeamHaveErrorsFlag = false; //Until fixed!
 	dIncludeBeamlineInVertexFitFlag = false;
 }
 
-void DKinFitUtils_GlueX::Set_RunDependent_Data(JEventLoop *locEventLoop)
+void DKinFitUtils_GlueX::Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
-
-	dApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	dMagneticFieldMap = dApplication->GetBfield(locEventLoop->GetJEvent().GetRunNumber());
+	locEvent->GetSingle(dAnalysisUtilities);
+	dMagneticFieldMap = DEvent::GetBfield(locEvent);
 }
 
 
@@ -196,9 +195,10 @@ shared_ptr<const DKinFitChain> DKinFitUtils_GlueX::Make_KinFitChain(const DReact
 {
 	//locKinFitType input in case want to do a different fit
 	if(dDebugLevel > 10)
-		cout << "DKinFitUtils_GlueX: Create DKinFitChain." << endl;
+		Get_DebugStream() << "DKinFitUtils_GlueX: Create DKinFitChain." << endl;
 
 	auto locKinFitChain = dResourcePool_KinFitChain->Get_SharedResource();
+	locKinFitChain->Set_DebugStream(dDebugStream);
 	locKinFitChain->Set_DefinedParticleStepIndex(-1); //unless changed below
 
 	//Make chain, excluding decaying particles
@@ -320,7 +320,7 @@ shared_ptr<const DKinFitChain> DKinFitUtils_GlueX::Make_KinFitChain(const DReact
 
 	if(dDebugLevel > 10)
 	{
-		cout << "DKinFitUtils_GlueX: DKinFitChain Created. Printing:" << endl;
+		Get_DebugStream() << "DKinFitUtils_GlueX: DKinFitChain Created. Printing:" << endl;
 		locKinFitChain->Print_InfoToScreen();
 	}
 
@@ -369,16 +369,16 @@ pair<set<shared_ptr<DKinFitParticle>>, set<shared_ptr<DKinFitParticle>>> DKinFit
 
 	if(dDebugLevel >= 10)
 	{
-		cout << "DKinFitUtils_GlueX::Get_StepParticles_NonNull:" << endl;
-		cout << "reaction, step-index, non-fixed-mass particle index: " << locReaction->Get_ReactionName() << ", " << locStepIndex << ", " << locNonFixedMassParticleIndex << endl;
-		cout << "Chain: " << endl;
+		Get_DebugStream() << "DKinFitUtils_GlueX::Get_StepParticles_NonNull:" << endl;
+		Get_DebugStream() << "reaction, step-index, non-fixed-mass particle index: " << locReaction->Get_ReactionName() << ", " << locStepIndex << ", " << locNonFixedMassParticleIndex << endl;
+		Get_DebugStream() << "Chain: " << endl;
 		locKinFitChain->Print_InfoToScreen();
-		cout << "Init-particles:" << endl;
+		Get_DebugStream() << "Init-particles:" << endl;
 		for(auto& locParticle : locInitialParticles)
-			cout << locParticle->Get_PID() << ", " << locParticle << endl;
-		cout << "Final-particles:" << endl;
+			Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
+		Get_DebugStream() << "Final-particles:" << endl;
 		for(auto& locParticle : locFinalParticles)
-			cout << locParticle->Get_PID() << ", " << locParticle << endl;
+			Get_DebugStream() << locParticle->Get_PID() << ", " << locParticle << endl;
 	}
 	return std::make_pair(locInitialParticles, locFinalParticles);
 }
@@ -387,6 +387,7 @@ shared_ptr<DKinFitChainStep> DKinFitUtils_GlueX::Make_KinFitChainStep(const DRea
 {
 	//Start and register new step
 	auto locKinFitChainStep = dResourcePool_KinFitChainStep->Get_SharedResource();
+	locKinFitChainStep->Set_DebugStream(dDebugStream);
 	locKinFitChainStep->Set_ConstrainDecayingMassFlag(false); //unless changed later
 
 	//get the steps
@@ -422,7 +423,7 @@ shared_ptr<DKinFitChainStep> DKinFitUtils_GlueX::Make_KinFitChainStep(const DRea
 
 	//target particle
 	Particle_t locTargetPID = locReactionStep->Get_TargetPID();
-	if(locTargetPID != Unknown)
+	if(locTargetPID != UnknownParticle)
 	{
 		size_t locTargetInstance = 0;
 		for(size_t loc_i = 0; loc_i < locStepIndex; ++loc_i)
@@ -490,7 +491,7 @@ shared_ptr<DKinFitChainStep> DKinFitUtils_GlueX::Make_KinFitChainStep(const DRea
 set<shared_ptr<DKinFitConstraint>> DKinFitUtils_GlueX::Create_Constraints(const DReactionVertexInfo* locReactionVertexInfo, const DReaction* locReaction, const DParticleCombo* locParticleCombo, const shared_ptr<const DKinFitChain>& locKinFitChain, DKinFitType locKinFitType, vector<shared_ptr<DKinFitConstraint_Vertex>>& locSortedVertexConstraints)
 {
 	if(dDebugLevel > 10)
-		cout << "DKinFitUtils_GlueX: Create constraints." << endl;
+		Get_DebugStream() << "DKinFitUtils_GlueX: Create constraints." << endl;
 
 	//All constraints
 	set<shared_ptr<DKinFitConstraint>> locAllConstraints;
@@ -631,7 +632,7 @@ set<shared_ptr<DKinFitConstraint>> DKinFitUtils_GlueX::Create_Constraints(const 
 	locAllConstraints.insert(locSortedVertexConstraints.begin(), locSortedVertexConstraints.end());
 
 	if(dDebugLevel > 10)
-		cout << "DKinFitUtils_GlueX: All Constraints Created." << endl;
+		Get_DebugStream() << "DKinFitUtils_GlueX: All Constraints Created." << endl;
 
 	return locAllConstraints;
 }
@@ -720,7 +721,7 @@ string DKinFitUtils_GlueX::Get_ConstraintInfo(const DReactionVertexInfo* locReac
 			set<size_t> locP4ConstrainedParticleSteps;
 
 			//check if initial & final states if have non-zero cov errors:
-			if((locP4StepIndex == 0) && (locReactionStep->Get_TargetPID() != Unknown) && dWillBeamHaveErrorsFlag)
+			if((locP4StepIndex == 0) && (locReactionStep->Get_TargetPID() != UnknownParticle) && dWillBeamHaveErrorsFlag)
 				locNonZeroErrorFlag = true; //beam: we're good
 			else if((locP4StepIndex != 0) && (locMassConstraintStrings.find(locP4StepIndex) == locMassConstraintStrings.end()))
 				locNonZeroErrorFlag = true; //decaying particle, but mass not constrained: we're good (unless it's e.g. an omega. ugh.)
@@ -915,4 +916,3 @@ bool DKinFitUtils_GlueX::Propagate_TrackInfoToCommonVertex(DKinematicData* locKi
 	locKinematicData->setErrorMatrix(locCovarianceMatrix);
 	return true;
 }
-

@@ -21,10 +21,10 @@ using namespace std;
 #include <TH3.h>
 #include <TMath.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
-#include <JANA/JCalibration.h>
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibration.h>
 
 #include <HDGEOMETRY/DGeometry.h>
 #include <TRACKING/DTrackCandidate_factory_StraightLine.h>
@@ -35,18 +35,20 @@ using namespace std;
 #include <PID/DDetectorMatches.h>
 #include <CDC/DCDCTrackHit.h>
 
-class JEventProcessor_FDCProjectionResiduals:public jana::JEventProcessor{
+// Convenience methods for GlueX services
+#include <DANA/DEvent.h>
+
+class JEventProcessor_FDCProjectionResiduals:public JEventProcessor{
 	public:
 		JEventProcessor_FDCProjectionResiduals();
 		~JEventProcessor_FDCProjectionResiduals();
-		const char* className(void){return "JEventProcessor_FDCProjectionResiduals";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
       DGeometry * dgeom;
       bool dIsNoFieldFlag;
@@ -56,6 +58,8 @@ class JEventProcessor_FDCProjectionResiduals:public jana::JEventProcessor{
       double MAX_DRIFT_TIME;
       int PLANE_TO_SKIP;
       double dMinTrackingFOM;
+
+		std::shared_ptr<JLockService> lockService;
 
       vector< vector< DCDCWire * > > cdcwires; // CDC Wires Referenced by [ring][straw]
       vector<vector<double> >max_sag;
@@ -70,6 +74,15 @@ class JEventProcessor_FDCProjectionResiduals:public jana::JEventProcessor{
       double CDCDriftDistance(double delta, double t);
       unsigned int Locate(vector<double>&xx,double x);
       double GetDOCA(DVector3, DVector3, DVector3, DVector3, DVector3&, DVector3&);
+  
+  	  TH2F *hDistanceVsTime;
+  	  TH2F *hResidualsVsTime;
+  	  TH1F *hCathodeResiduals;
+  	  TH1F *hTrackingFOM;
+  
+  	  vector<TH2F*> hResidualVsStrawNumber;
+  	  vector<TH2F*> hResidualVsPhi;
+  	  vector<TH2F*> hDistanceVsTimeRing1;
       
 };
 

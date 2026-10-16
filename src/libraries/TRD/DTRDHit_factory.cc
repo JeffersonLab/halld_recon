@@ -7,129 +7,180 @@
 #include <iomanip>
 using namespace std;
 
+#include "DANA/DEvent.h"
+#include <DAQ/Df125Config.h>
+#include <DAQ/Df125FDCPulse.h>
 #include "TRD/DTRDHit_factory.h"
-using namespace jana;
+
+static bool DTRDHit_cmp(const DTRDHit* a, const DTRDHit* b) {
+  if (a->plane==b->plane){
+    return a->t < b->t;
+  }
+  return a->plane < b->plane;
+}
+
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTRDHit_factory::init(void)
+void DTRDHit_factory::Init()
 {
-	// initialize calibration tables
+	// Initialize calibration tables
 	//vector<double> new_t0s(TRD_MAX_CHANNELS);	
 	//time_offsets.push_back(new_t0s); time_offsets.push_back(new_t0s);
 
-	return NOERROR;
+	auto app = GetApplication();
+
+	IS_XY_TIME_DIFF_CUT = true;
+	app->SetDefaultParameter("TRD:IS_XY_TIME_DIFF_CUT", IS_XY_TIME_DIFF_CUT, 
+			      "Apply time difference cut between X and Y hits (default: true)");
+
+	XY_TIME_DIFF = 25.;
+	app->SetDefaultParameter("TRD:XY_TIME_DIFF", XY_TIME_DIFF, 
+			      "Time difference in ns between hits in X and Y planes to be considered a coincidence (default: 25.)");
+	
+	HIT_SIZE_MAX = 100000.;
+    app->SetDefaultParameter("TRD:HIT_SIZE_MAX", HIT_SIZE_MAX, 
+                  "Maximum number of hits on a strip in either X or Y in an event, for noise cleaning (default: 100000.)");
+	
+	CDIFF_MIN = 17;
+    app->SetDefaultParameter("TRD:CDIFF_MIN", CDIFF_MIN, 
+                  "Maximum circular difference between phases for X or Y hits (default: 17)");
+	
+	FREQ_COUNT = 10;
+    app->SetDefaultParameter("TRD:FREQ_COUNT", FREQ_COUNT,
+                  "Maximum counts of a frequency occurring for a hit in either X or Y (default: 10)");
+	
+	// Setting this flag makes it so that JANA does not delete the objects in _data.
+	// This factory will manage this memory.
+	SetFactoryFlag(NOT_OBJECT_OWNER);  // TODO: Make sure we don't need PERSISTENT as well
+  	
+  	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTRDHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	// Only print messages for one thread whenever run number change
-	static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
-	static set<int> runs_announced;
-	pthread_mutex_lock(&print_mutex);
-	bool print_messages = false;
-	if(runs_announced.find(runnumber) == runs_announced.end()){
-		print_messages = true;
-		runs_announced.insert(runnumber);
-	}
-	pthread_mutex_unlock(&print_mutex);
-	
-	if(print_messages) jout << "In DTRDHit_factory, loading constants..." << endl;
 
-	/*	
-	// load base time offset
-	map<string,double> base_time_offset;
-	if (eventLoop->GetCalib("/TRD/base_time_offset",base_time_offset))
-		jout << "Error loading /TRD/base_time_offset !" << endl;
-	else if (base_time_offset.find("t0_wire") != base_time_offset.end() && base_time_offset.find("t0_gem") != base_time_offset.end()) {
-		t_base[0] = base_time_offset["t0_wire"];
-		t_base[1] = base_time_offset["t0_gem"];
-	}
-	else
-		jerr << "Unable to get t0s from /TRD/base_time_offset !" << endl;
-	
-	// load constant tables
-	if (eventLoop->GetCalib("/TRD/Wire/timing_offsets", time_offsets[0]))
-	jout << "Error loading /TRD/Wire/timing_offsets !" << endl;
-	*/
-	for (unsigned int i=0;i<7;i++){
-	  t_base[i]=-900.;
-	}
-
-	pulse_peak_threshold = 200;
-
-    return NOERROR;
+    return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTRDHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
-    /// Generate DTRDHit object for each DTRDDigiHit object.
-    /// This is where the first set of calibration constants
-    /// is applied to convert from digitzed units into natural
-    /// units.
-    ///
-    /// Note that this code does NOT get called for simulated
-    /// data in HDDM format. The HDDM event source will copy
-    /// the precalibrated values directly into the _data vector.
-
-    vector<const DTRDDigiHit*> digihits;
-    loop->Get(digihits);
+    vector<const DTRDHit*> hits;
+    event->Get(hits, "Calib");
     
-    // loop over leading edges
-    for (unsigned int i=0; i < digihits.size(); i++) {
-	    const DTRDDigiHit *digihit = digihits[i];
-	    
-	    // subtract pedestal
-	    double pulse_height = digihit->pulse_peak - digihit->pedestal;
-
-	    // mask noisy wires for now
-	    if(digihit->plane == 4)
-		    if(digihit->strip == 0 || digihit->strip == 11 || digihit->strip == 12 || digihit->strip == 23) continue;
-
-	    // separate theresholds for Wire and GEM TRD
-	    if((digihit->plane == 4 || digihit->plane == 5 || digihit->plane == 0 || digihit->plane == 1) && pulse_height < 200) continue;
-	    if((digihit->plane == 2 || digihit->plane == 6) && pulse_height < 350) continue;
-
-	    // Time cut now
-	    double T = (double)digihit->pulse_time * 0.8;
-	    if(T < 145.) continue;
-
-	    // Build hit object
-	    DTRDHit *hit = new DTRDHit;
-	    hit->pulse_height = pulse_height;
-	    hit->plane = digihit->plane;
-	    hit->strip = digihit->strip;
- 
-	    // Apply calibration constants
-	    hit->t = T+t_base[digihit->plane];
-	    //hit->t = hit->t + t_base[plane] - time_offsets[plane][strip];
-
-	    hit->AddAssociatedObject(digihit);
-	    _data.push_back(hit);
+    if(!IS_XY_TIME_DIFF_CUT) {
+    	for(auto &hit : hits)
+    		Insert(const_cast<DTRDHit*>(hit));
+    	return;
     }
+
+	vector<const DTRDHit*> hits_plane[2]; // one for each plane
+	vector<const DTRDHit*> hits_pamp[2][10]; // one for each pre-amp board
+    
+	// Sort hits by layer number and by time
+	sort(hits.begin(),hits.end(),DTRDHit_cmp);
+	
+	// Sift through all hits and select out X and Y hits.
+	for (vector<const DTRDHit*>::iterator i = hits.begin(); i != hits.end(); ++i) {
+		// sort hits
+		int stripPlane = (*i)->plane-1;
+		if( (stripPlane<0) || (stripPlane>=2) ) { // only two planes
+			static int Nwarn = 0;
+			if( Nwarn<10 ){
+				jerr << " stripPlane is outside of array bounds!! stripPlane="<< stripPlane << std::endl;
+				if( ++Nwarn==10 )jerr << " LAST WARNING!" << std::endl;
+			}
+			continue;
+		}
+		hits_plane[stripPlane].push_back(*i);
+	}
+	
+	int nfreq=17; //Noise band frequency
+	
+	// loops to check the time coincidence of hits in the two planes and add them to the _data vector
+	if (IS_XY_TIME_DIFF_CUT) {
+		float phase[2][10][20]={0};
+		for (unsigned int i=0; i < hits_plane[0].size(); i++) {
+			for (unsigned int j=0; j < hits_plane[1].size(); j++) {
+				if (abs(hits_plane[0][i]->t - hits_plane[1][j]->t) < XY_TIME_DIFF) {
+					if (hits_plane[0].size()>HIT_SIZE_MAX) continue;
+					//Determine which pre-amp the hit is in
+					int pamp=(hits_plane[0][i]->strip)/120; //120 strips per pre-amp
+					hits_pamp[0][pamp].push_back(hits_plane[0][i]);
+					int ph=((int)hits_plane[0][i]->t/8)%nfreq; //signal phase
+					phase[0][pamp][ph]+=1;
+					//Insert(const_cast<DTRDHit*>(hits_plane[0][i]));
+					break;
+				}
+			}
+		}
+		
+		for (unsigned int i=0; i < hits_plane[1].size(); i++) {
+			for (unsigned int j=0; j < hits_plane[0].size(); j++) {
+				if (abs(hits_plane[1][i]->t - hits_plane[0][j]->t) < XY_TIME_DIFF) {
+					if (hits_plane[1].size()>HIT_SIZE_MAX) continue;
+					//Determine which pre-amp the hit is in
+                    int pamp=(hits_plane[1][i]->strip)/120; //120 strips per pre-amp
+                    hits_pamp[1][pamp].push_back(hits_plane[1][i]);
+                    int ph=((int)hits_plane[1][i]->t/8)%nfreq; //signal phase
+                    phase[1][pamp][ph]+=1;
+					//Insert(const_cast<DTRDHit*>(hits_plane[1][i]));
+					break;
+				}
+			}
+		}
+		
+		int fmax[2][10]={-1}; //freq max
+		int amax[2][10]={0}; //amplitude max
+		
+		for (int iplane=0; iplane<2; iplane++) {
+			for (int ipamp=0; ipamp<10; ipamp++) {
+				for (int i=0; i<nfreq; i++) {
+					int fp=phase[iplane][ipamp][i]; //frequency of the phase...?
+					if (fp>amax[iplane][ipamp]) {
+						amax[iplane][ipamp]=fp;
+						fmax[iplane][ipamp]=i;
+					}
+				}
+			}
+		}
+		
+		for (int iplane=0; iplane<2; iplane++) {
+            for (int ipamp=0; ipamp<10; ipamp++) {
+				for (unsigned int i=0; i<hits_pamp[iplane][ipamp].size(); i++) {
+					int ph=((int)hits_pamp[iplane][ipamp][i]->t/8)%nfreq; //signal phase
+					int diff=abs(ph-fmax[iplane][ipamp]);
+					int cdiff=std::min(diff,nfreq-diff); //circular difference
+					if (amax[iplane][ipamp]<FREQ_COUNT || cdiff>CDIFF_MIN) {
+						Insert(const_cast<DTRDHit*>(hits_pamp[iplane][ipamp][i]));
+					}
+				}
+            }
+        }
+		
+	} //End IS_XY_TIME_DIFF_CUT condition
 		    
-    return NOERROR;
+    return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTRDHit_factory::erun(void)
+void DTRDHit_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTRDHit_factory::fini(void)
+void DTRDHit_factory::Finish()
 {
-    return NOERROR;
 }

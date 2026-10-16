@@ -8,10 +8,7 @@
  *
  */
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
-
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
 #include "BCAL/DBCALHit.h"
 #include "BCAL/DBCALCluster.h"
@@ -21,7 +18,7 @@ using namespace jana;
 
 #include "TF1.h"
 
-class DBCALCluster_factory : public JFactory< DBCALCluster > {
+class DBCALCluster_factory : public JFactoryT< DBCALCluster > {
   
 public:
  
@@ -30,8 +27,8 @@ public:
   
 private:
 
-  jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	
-  jerror_t brun(JEventLoop *loop, int32_t runnumber);
+  void Process(const std::shared_ptr<const JEvent>& event) override;	
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
   
   void clearPoints();
   
@@ -79,8 +76,8 @@ private:
   TF1* C1_parm;
   TF1* C2_parm;
   */
-  jerror_t init();
-  jerror_t fini();
+  void Init() override;
+  void Finish() override;
   
 };
 

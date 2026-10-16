@@ -11,7 +11,7 @@
 #include <vector>
 using namespace std;
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "TTAB/DTranslationTable.h"
 
 #include "DCCALDigiHit.h"
@@ -19,9 +19,9 @@ using namespace std;
 
 typedef  vector< vector<double> >  ccal_constants_t;
 
-class DCCALHit_factory:public jana::JFactory<DCCALHit>{
+class DCCALHit_factory:public JFactoryT<DCCALHit>{
 	public:
-		DCCALHit_factory();
+		 DCCALHit_factory();
 		~DCCALHit_factory(){};
 		
 		ccal_constants_t  gains;
@@ -33,18 +33,20 @@ class DCCALHit_factory:public jana::JFactory<DCCALHit>{
 		double adc_time_scale;
 		
 		double base_time;
-		
-	private:
-		jerror_t init(void);
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-		jerror_t erun(void);
-		jerror_t fini(void);
-		
+
+        private:
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+
 		void LoadCCALConst( ccal_constants_t &table, 
 			const vector<double> &ccal_const_ch, 
 			const DCCALGeometry  &ccalGeom);    
 		
+  		bool INSTALLED;
+
 		unsigned int DB_PEDESTAL;
 		unsigned int HIT_DEBUG;
 		

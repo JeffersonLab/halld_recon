@@ -5,11 +5,10 @@
 // Creator: zihlmann (on Linux ifarm1901.jlab.org 3.10.0-1062.4.1.el7.x86_64 x86_64)
 //
 
-#ifndef _JEventProcessor_cppFMWPC_ana_
-#define _JEventProcessor_cppFMWPC_ana_
+#ifndef _JEventProcessor_fcal_charged_
+#define _JEventProcessor_fcal_charged_
 
 #include <JANA/JEventProcessor.h>
-using namespace jana;
 
 #include <FMWPC/DFMWPCHit.h>
 #include <FDC/DFDCHit.h>
@@ -17,21 +16,19 @@ using namespace jana;
 #include <TH1D.h>
 #include <TH2D.h>
 
-class JEventProcessor_fcal_charged:public jana::JEventProcessor{
+class JEventProcessor_fcal_charged:public JEventProcessor{
  public:
   JEventProcessor_fcal_charged();
   ~JEventProcessor_fcal_charged();
-  const char* className(void){return "JEventProcessor_fcal_charged";}
-
 
   TH1D *h1_events;
 
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
 };
 
 #endif // _JEventProcessor_fcal_charged_

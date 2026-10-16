@@ -8,8 +8,8 @@
 #include <iostream>
 #include <algorithm>
 #include "JEventProcessor_DAQTree.h"
-#include <JANA/JFactory.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
+#include <DANA/DEvent.h>
 
 #include <stdint.h>
 #include <DAQ/Df125WindowRawData.h>
@@ -130,7 +130,7 @@ bool Df250TriggerTime_cmp(const Df250TriggerTime *a,const Df250TriggerTime *b){
 extern "C"{
 	void InitPlugin(JApplication *app){
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_DAQTree());
+		app->Add(new JEventProcessor_DAQTree());
 	}
 } // "C"
 
@@ -140,7 +140,7 @@ extern "C"{
 //------------------
 JEventProcessor_DAQTree::JEventProcessor_DAQTree()
 {
-
+	SetTypeName("JEventProcessor_DAQTree");
 }
 
 //------------------
@@ -152,17 +152,17 @@ JEventProcessor_DAQTree::~JEventProcessor_DAQTree()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_DAQTree::init(void)
+void JEventProcessor_DAQTree::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	//
 
 	printf("JEventProcessor_DAQTree::init()\n");
@@ -182,91 +182,89 @@ jerror_t JEventProcessor_DAQTree::init(void)
 	f250PTtree_exists = 0;
 	f250PPtree_exists = 0;
 	f250TTtree_exists = 0;
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_DAQTree::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_DAQTree::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_DAQTree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_DAQTree::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
+	auto eventnumber = event->GetEventNumber();
 
 	vector<const Df125WindowRawData*> f125WindowRawData_vec;
-	loop->Get(f125WindowRawData_vec);
+	event->Get(f125WindowRawData_vec);
 	sort(f125WindowRawData_vec.begin(), f125WindowRawData_vec.end(), Df125WindowRawData_cmp);
 
 	vector<const Df125PulseRawData*> f125PulseRawData_vec;
-	loop->Get(f125PulseRawData_vec);
+	event->Get(f125PulseRawData_vec);
 	sort(f125PulseRawData_vec.begin(), f125PulseRawData_vec.end(), Df125PulseRawData_cmp);
 
 	vector<const Df125PulseIntegral*> f125PulseIntegral_vec;
-	loop->Get(f125PulseIntegral_vec);
+	event->Get(f125PulseIntegral_vec);
 	sort(f125PulseIntegral_vec.begin(), f125PulseIntegral_vec.end(), Df125PulseIntegral_cmp);
 
 	vector<const Df125PulseTime*> f125PulseTime_vec;
-	loop->Get(f125PulseTime_vec);
+	event->Get(f125PulseTime_vec);
 	sort(f125PulseTime_vec.begin(), f125PulseTime_vec.end(), Df125PulseTime_cmp);
 
 	vector<const Df125PulsePedestal*> f125PulsePedestal_vec;
-	loop->Get(f125PulsePedestal_vec);
+	event->Get(f125PulsePedestal_vec);
 	sort(f125PulsePedestal_vec.begin(), f125PulsePedestal_vec.end(), Df125PulsePedestal_cmp);
 
 	vector<const Df125TriggerTime*> f125TriggerTime_vec;
-	loop->Get(f125TriggerTime_vec);
+	event->Get(f125TriggerTime_vec);
 	sort(f125TriggerTime_vec.begin(), f125TriggerTime_vec.end(), Df125TriggerTime_cmp);
 
 	vector<const DF1TDCHit*> F1TDCHit_vec;
-	loop->Get(F1TDCHit_vec);
+	event->Get(F1TDCHit_vec);
 	sort(F1TDCHit_vec.begin(), F1TDCHit_vec.end(), DF1TDCHit_cmp);
 
 	vector<const DF1TDCTriggerTime*> F1TDCTriggerTime_vec;
-	loop->Get(F1TDCTriggerTime_vec);
+	event->Get(F1TDCTriggerTime_vec);
 	sort(F1TDCTriggerTime_vec.begin(), F1TDCTriggerTime_vec.end(), DF1TDCTriggerTime_cmp);
 
 	vector<const Df250WindowRawData*> f250WindowRawData_vec;
-	loop->Get(f250WindowRawData_vec);
+	event->Get(f250WindowRawData_vec);
 	sort(f250WindowRawData_vec.begin(), f250WindowRawData_vec.end(), Df250WindowRawData_cmp);
 
 	vector<const Df250PulseRawData*> f250PulseRawData_vec;
-	loop->Get(f250PulseRawData_vec);
+	event->Get(f250PulseRawData_vec);
 	sort(f250PulseRawData_vec.begin(), f250PulseRawData_vec.end(), Df250PulseRawData_cmp);
 
 	vector<const Df250PulseIntegral*> f250PulseIntegral_vec;
-	loop->Get(f250PulseIntegral_vec);
+	event->Get(f250PulseIntegral_vec);
 	sort(f250PulseIntegral_vec.begin(), f250PulseIntegral_vec.end(), Df250PulseIntegral_cmp);
 
 	vector<const Df250PulseTime*> f250PulseTime_vec;
-	loop->Get(f250PulseTime_vec);
+	event->Get(f250PulseTime_vec);
 	sort(f250PulseTime_vec.begin(), f250PulseTime_vec.end(), Df250PulseTime_cmp);
 
 	vector<const Df250PulsePedestal*> f250PulsePedestal_vec;
-	loop->Get(f250PulsePedestal_vec);
+	event->Get(f250PulsePedestal_vec);
 	sort(f250PulsePedestal_vec.begin(), f250PulsePedestal_vec.end(), Df250PulsePedestal_cmp);
 
 	vector<const Df250TriggerTime*> f250TriggerTime_vec;
-	loop->Get(f250TriggerTime_vec);
+	event->Get(f250TriggerTime_vec);
 	sort(f250TriggerTime_vec.begin(), f250TriggerTime_vec.end(), Df250TriggerTime_cmp);
 
 	// Trees are filled with data
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	/// Df125WindowRawData
 	const uint32_t numDf125WRDpedsamps = 10;
@@ -962,29 +960,25 @@ jerror_t JEventProcessor_DAQTree::evnt(JEventLoop *loop, uint64_t eventnumber)
 		Df250TriggerTime_tree->Fill();
 	}
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-	
-	return NOERROR;
+	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_DAQTree::erun(void)
+void JEventProcessor_DAQTree::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_DAQTree::fini(void)
+void JEventProcessor_DAQTree::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 
 

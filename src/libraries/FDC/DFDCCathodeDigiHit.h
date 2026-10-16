@@ -9,9 +9,8 @@
 #define _DFDCCathodeDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DFDCCathodeDigiHit:public jana::JObject{
+class DFDCCathodeDigiHit:public JObject{
 	public:
 		JOBJECT_PUBLIC(DFDCCathodeDigiHit);
 
@@ -26,23 +25,21 @@ class DFDCCathodeDigiHit:public jana::JObject{
 		uint32_t QF;                   ///< Quality Factor from FPGA algorithms
 		uint32_t nsamples_integral;    ///< number of samples used in integral 
 		uint32_t nsamples_pedestal;    ///< number of samples used in pedestal
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "package", "%d", package);
-			AddString(items, "chamber", "%d", chamber);
-			AddString(items, "view", "%d", view);
-			AddString(items, "strip", "%d", strip);
-			AddString(items, "strip_type", "%d", strip_type);
-			AddString(items, "pulse_integral", "%d", pulse_integral);
-			AddString(items, "pulse_time", "%d", pulse_time);
-			AddString(items, "pedestal", "%d", pedestal);
-			AddString(items, "QF", "%d", QF);
-			AddString(items, "nsamples_integral", "%d", nsamples_integral);
-			AddString(items, "nsamples_pedestal", "%d", nsamples_pedestal);
+
+
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(package, NAME_OF(package), "%d");
+			summary.add(chamber, NAME_OF(chamber), "%d");
+			summary.add(view, NAME_OF(view), "%d");
+			summary.add(strip, NAME_OF(strip), "%d");
+			summary.add(strip_type, NAME_OF(strip_type), "%d");
+			summary.add(pulse_integral, NAME_OF(pulse_integral), "%d");
+			summary.add(pulse_time, NAME_OF(pulse_time), "%d");
+			summary.add(pedestal, NAME_OF(pedestal), "%d");
+			summary.add(QF, NAME_OF(QF), "%d");
+			summary.add(nsamples_integral, NAME_OF(nsamples_integral), "%d");
+			summary.add(nsamples_pedestal, NAME_OF(nsamples_pedestal), "%d");
 		}
-		
 };
 
 #endif // _DFDCCathodeDigiHit_

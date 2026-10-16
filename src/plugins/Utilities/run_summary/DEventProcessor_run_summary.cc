@@ -21,48 +21,49 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_run_summary()); //register this plugin
+		locApplication->Add(new DEventProcessor_run_summary()); //register this plugin
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_run_summary::init(void)
+void DEventProcessor_run_summary::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... create historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 	//
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
 	current_run_number = -1;
 	conditions_tree = NULL;
 	epics_info = NULL;
 	
 	// deal with command line parameters
-	gPARMS->SetDefaultParameter("SUMMARY:VERBOSE", VERBOSE,
+	app->SetDefaultParameter("SUMMARY:VERBOSE", VERBOSE,
 				    "Verbosity level for creating summary values.  0=no messages, 10=all messages");
 	if(VERBOSE)
 		cout << "Run summary verbosity level = " << VERBOSE << endl;
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_run_summary::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void DEventProcessor_run_summary::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
 	// keep track of current run number for use in our end run function
-	current_run_number = locRunNumber;
+	current_run_number = event->GetRunNumber();
 
 	// make tree if it doesn't exist
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 
 	//Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this plugin
 	//If another thread has already created the folder, it just changes to it. 
@@ -81,39 +82,37 @@ jerror_t DEventProcessor_run_summary::brun(jana::JEventLoop* locEventLoop, int l
 
 	main_dir->cd();
 
-	japp->RootUnLock();
+	lockService->RootUnLock();
 
 	// reset EPICS summary info each run
 	if(epics_info)
 		delete epics_info;
 	epics_info = new DEPICSstore;
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_run_summary::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_run_summary::Process(const std::shared_ptr<const JEvent> &event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 
 	// read in whatever epics values are in this event
 	vector<const DEPICSvalue*> epicsvalues;
-	locEventLoop->Get(epicsvalues);	
+	event->Get(epicsvalues);
 
 	// save their values
 	for(vector<const DEPICSvalue*>::const_iterator val_itr = epicsvalues.begin();
@@ -127,14 +126,12 @@ jerror_t DEventProcessor_run_summary::evnt(jana::JEventLoop* locEventLoop, uint6
 		else 
 			jerr << "EPICS store object not loaded!" << endl;
 	}
-	
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_run_summary::erun(void)
+void DEventProcessor_run_summary::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
@@ -142,10 +139,10 @@ jerror_t DEventProcessor_run_summary::erun(void)
 	
 	// if we couldn't create the tree earlier, then throw it away
 	if(conditions_tree == NULL)
-		return NOERROR;
+		return;
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	// make a branch for the run number
 	TBranch *run_branch = conditions_tree->FindBranch("run_number");
@@ -179,21 +176,17 @@ jerror_t DEventProcessor_run_summary::erun(void)
 	// save the values for this run
 	conditions_tree->Fill();
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_run_summary::fini(void)
+void DEventProcessor_run_summary::Finish()
 {
 	// Called before program exit after event processing is finished.
 	//cout << "=================================================" << endl;
 	//cout << "Summary of processed runs:" << endl;
 	//cout << "=================================================" << endl;
-
-	return NOERROR;
 }
 

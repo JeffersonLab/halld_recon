@@ -3,8 +3,6 @@
 
 #include <vector>
 
-#include <JANA/JFactory.h>
-#include <JANA/JGeometry.h>
 #include <TRACKING/DTrackFitter.h>
 #include <DVector3.h>
 #include <DVector2.h>
@@ -22,7 +20,7 @@ typedef struct{
 
 class DTrackFitterRiemann:public DTrackFitter{
  public:
-  DTrackFitterRiemann(JEventLoop *loop);
+  DTrackFitterRiemann(const std::shared_ptr<const JEvent>& event);
   ~DTrackFitterRiemann(){};
   
   // Virtual methods from TrackFitter base class

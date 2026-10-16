@@ -11,6 +11,8 @@
 
 #include "MyProcessor.h"
 #include "DANA/DApplication.h"
+#include <JANA/CLI/JMain.h>
+
 using namespace std;
 
 typedef void SetTFilePtrAddress_t(TFile **);
@@ -20,8 +22,9 @@ string COMMAND_LINE_OUTPUT_FILENAME = "";
 bool filename_from_command_line = false;
 
 void ParseCommandLineArguments(int &narg, char *argv[]);
-void DecideOutputFilename(void);
-void Usage(void);
+void DecideOutputFilename(JApplication* app);
+void Usage();
+void printNoPluginsBanner();
 
 
 //-----------
@@ -30,25 +33,39 @@ void Usage(void);
 int main(int narg, char *argv[])
 {
 	// Parse the command line
-	ParseCommandLineArguments(narg, argv);
+	ParseCommandLineArguments(narg, argv); // May exit early
 
-	// Instantiate our event processor
-	MyProcessor *myproc = new MyProcessor;
+	// Ensure that halld-specific parameters, factories, and sources have been set
+	DApplication dapp(narg, argv);
+	JApplication* app = dapp.GetJApp();
 
-	// Instantiate an event loop object
-	DApplication app(narg, argv);
-	
-	// Decide on the output filename
-	DecideOutputFilename();
-	
-	// Run though all events, calling our event processor's methods
-	app.monitor_heartbeat = 0;
-	app.Run(myproc);
-	
-	delete myproc;
-	
-	if( app.GetExitCode() ) cerr << "Exit code: " << app.GetExitCode() << endl;
-	return app.GetExitCode();
+
+	// Terminating on no plugins
+	bool plugin_check = true;
+	std::string plugins;
+	app->SetDefaultParameter("PLUGIN_CHECK", plugin_check, "Check if plugins are set (default: true)");
+	app->GetParameter("PLUGINS", plugins);
+	if(plugins.empty() && plugin_check == true) {
+		printNoPluginsBanner();
+		return -1; // Exit early if no plugins are specified
+	}
+
+
+	// Ensure that the command-line flag overrides the OUTPUT_FILENAME parameter
+	DecideOutputFilename(app);
+
+	app->SetTimeoutEnabled(false);
+
+	// Add the hd_root EventProcessor
+	app->Add(new MyProcessor);
+
+	// Run JANA
+	auto exitCode = jana::Execute(app, dapp.GetUserOptions());
+
+    delete app;
+
+	if( exitCode ) cerr << "Exit code: " << exitCode << endl;
+	return exitCode;
 }
 
 
@@ -92,13 +109,21 @@ void ParseCommandLineArguments(int &narg, char *argv[])
         int nfound=0;
 	for(int i=1;i<narg;i++){
 	  if(argv[i][0] == '-')continue; 
+
+	  // If the argument starts with "ET:" then count it as found,
+	  // without checking if it's an existing file.
+	  if (strncmp(argv[i], "ET:", 3) == 0) {
+	  	nfound++;
+	  	continue;
+	  }else{
+		  // Check if file exists
           if (gSystem->AccessPathName(argv[i])) {
 	      cerr << "File not found: " << argv[i] << endl;
           } else {
 	      nfound++;
           }             
         }
-
+	  }
         if (!nfound) exit(-1); 
 
 }
@@ -106,7 +131,7 @@ void ParseCommandLineArguments(int &narg, char *argv[])
 //-----------
 // DecideOutputFilename
 //-----------
-void DecideOutputFilename(void)
+void DecideOutputFilename(JApplication* app)
 {
 	/// Decide on the output filename to use based on the command line
 	/// input and configuration parameter input. The command line takes
@@ -114,15 +139,15 @@ void DecideOutputFilename(void)
 	/// being used into the configuration parameter.
 
 	// Set the default output filename (avoids later warnings from JANA)
-	gPARMS->SetDefaultParameter("OUTPUT_FILENAME", OUTPUT_FILENAME,"Output filename used by hd_root");
+	app->SetDefaultParameter("OUTPUT_FILENAME", OUTPUT_FILENAME, "Output filename used by hd_root");
 	
 	// If the user specified an output filename on the command line,
 	// use it to overwrite the config. parameter/default one
 	if(filename_from_command_line){
 		OUTPUT_FILENAME = COMMAND_LINE_OUTPUT_FILENAME;
-	
+
 		// Set the actual output filename in config. param.
-		gPARMS->SetParameter("OUTPUT_FILENAME", OUTPUT_FILENAME);
+		app->SetParameterValue("OUTPUT_FILENAME", OUTPUT_FILENAME);
 	}
 
 	jout<<"OUTPUT_FILENAME: "<<OUTPUT_FILENAME<<endl;
@@ -134,10 +159,6 @@ void DecideOutputFilename(void)
 //-----------
 void Usage(void)
 {
-	// Make sure a JApplication object exists so we can call Usage()
-	JApplication *app = japp;
-	if(app == NULL) app = new DApplication(0, NULL);
-
 	cout<<"Usage:"<<endl;
 	cout<<"       hd_root [options] source1 source2 ..."<<endl;
 	cout<<endl;
@@ -147,7 +168,7 @@ void Usage(void)
 	cout<<endl;
 	cout<<"Options:"<<endl;
 	cout<<endl;
-	app->Usage();
+	jana::PrintUsage();
 	cout<<endl;
 	cout<<"   -h        Print this message"<<endl;
 	cout<<"   -Dname    Activate factory for data of type \"name\" (can be used multiple times)"<<endl;
@@ -156,4 +177,37 @@ void Usage(void)
 	cout<<endl;
 
 	exit(0);
+}
+
+
+//-----------
+// printNoPluginsBanner
+//-----------
+void printNoPluginsBanner() {
+    const std::vector<std::string> banner = {
+		"                                                                              ",
+        "                                                                              ",
+        "                                                                              ",
+        "███    ██  ██████      ██████  ██      ██    ██  ██████  ██ ███    ██ ███████ ",
+        "████   ██ ██    ██     ██   ██ ██      ██    ██ ██       ██ ████   ██ ██      ",
+        "██ ██  ██ ██    ██     ██████  ██      ██    ██ ██   ███ ██ ██ ██  ██ ███████ ",
+        "██  ██ ██ ██    ██     ██      ██      ██    ██ ██    ██ ██ ██  ██ ██      ██ ",
+        "██   ████  ██████      ██      ███████  ██████   ██████  ██ ██   ████ ███████ ",
+        "                                                                              ",
+        "                                                                              ",
+        "                                                                              ",
+        "                                                                              "
+    };
+
+    const std::string RED = "\033[1;31m";
+    const std::string RESET  = "\033[0m";
+
+    std::cout << RED;
+    for (const auto& line : banner) {
+        std::cout << line << std::endl;
+    }
+    std::cout << "ERROR: No plugins specified." << std::endl;
+    std::cout << "         Use the -Pplugins=plugin1,plugin2,... command line option to specify plugins." << std::endl;
+	std::cout << "Terminating....." <<std::endl;
+    std::cout << RESET << std::flush;
 }

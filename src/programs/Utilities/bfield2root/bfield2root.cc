@@ -13,7 +13,6 @@ using namespace std;
 
 #include <DANA/DApplication.h>
 #include <HDGEOMETRY/DMagneticFieldMap.h>
-#include <JANA/JParameterManager.h>
 
 #include <TFile.h>
 #include <TTree.h>
@@ -58,7 +57,7 @@ int main(int narg, char *argv[])
 	}
 
 	DApplication *dapp = new DApplication(unused_args.size(), unused_args.empty() ? NULL:&unused_args[0]);
-	dapp->Init();
+	dapp->GetJApp()->Initialize();
 
 	// open ROOT file
 	float val[100];

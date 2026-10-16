@@ -9,10 +9,9 @@
 #define _DPSDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 #include "DPSGeometry.h"
 
-class DPSDigiHit:public jana::JObject{
+class DPSDigiHit: public JObject{
  public:
   JOBJECT_PUBLIC(DPSDigiHit);
   
@@ -25,19 +24,19 @@ class DPSDigiHit:public jana::JObject{
   uint32_t nsamples_integral;    ///< number of samples used in integral 
   uint32_t nsamples_pedestal;    ///< number of samples used in pedestal
   uint32_t pulse_peak;           ///<  maximum sample in pulse
-		
   uint32_t datasource;           ///<  0=window raw data, 1=old(pre-Fall16) firmware, 2=Df250PulseData
-  
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "arm", "%d", arm);
-    AddString(items, "column", "%d", column);
-    AddString(items, "pulse_integral", "%d", pulse_integral);
-    AddString(items, "pulse_peak", "%d", pulse_peak);
-    AddString(items, "pulse_time", "%d", pulse_time);
-    AddString(items, "pedestal", "%d", pedestal);
-    AddString(items, "QF", "%d", QF);
-    AddString(items, "nsamples_integral", "%d", nsamples_integral);
-    AddString(items, "nsamples_pedestal", "%d", nsamples_pedestal);
+
+
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(arm, NAME_OF(arm), "%d");
+    summary.add(column, NAME_OF(column), "%d");
+    summary.add(pulse_integral, NAME_OF(pulse_integral), "%d");
+    summary.add(pulse_peak, NAME_OF(pulse_peak), "%d");
+    summary.add(pulse_time, NAME_OF(pulse_time), "%d");
+    summary.add(pedestal, NAME_OF(pedestal), "%d");
+    summary.add(QF, NAME_OF(QF), "%d");
+    summary.add(nsamples_integral, NAME_OF(nsamples_integral), "%d");
+    summary.add(nsamples_pedestal, NAME_OF(nsamples_pedestal), "%d");
   }
 };
 

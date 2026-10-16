@@ -9,12 +9,7 @@
 #define _DEPICSSTORE_H_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
-#include <JANA/JCalibration.h>
-#include <JANA/JException.h>
-//using namespace jana;
-
+//
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -35,7 +30,7 @@ DEPICSvalue_data():value(NULL),first_time(0),cumulative_average(0.) {}
 typedef struct DEPICSvalue_data DEPICSvalue_data_t;
 
 
-class DEPICSstore : public jana::JObject {
+class DEPICSstore : public JObject {
 public:
 	JOBJECT_PUBLIC(DEPICSstore);
 	//DEPICSstore() {}

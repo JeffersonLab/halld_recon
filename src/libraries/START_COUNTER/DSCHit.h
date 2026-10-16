@@ -19,9 +19,8 @@
 #define _DSCHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DSCHit:public jana::JObject{
+class DSCHit:public JObject{
  public:
   JOBJECT_PUBLIC(DSCHit);
   
@@ -33,16 +32,17 @@ class DSCHit:public jana::JObject{
   float pulse_height; ///< signal amplitude in ADC pulses (used in time-walk corrections)
   bool has_fADC;  ///< boolbean 
   bool has_TDC;   ///< booblean
+
   /// \vn   void toStrings(vector<pair<string,string> > &items)const
   /// method used by hd_dump to print this Start Counter hit data.  
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "sector", "%d", sector);
-    AddString(items, "dE", "%3.3f", dE);
-    AddString(items, "t", "%3.3f", t);
-    AddString(items, "t_TDC","%3.3f", t_TDC);
-    AddString(items, "t_fADC", "%3.3f", t_fADC);
-    AddString(items, "has_fADC", "%d", (int)has_fADC);
-    AddString(items, "has_TDC", "%d", (int)has_TDC);
+  void Summarize(JObjectSummary& summary) const {
+    summary.add(sector, "sector", "%d");
+    summary.add(dE, "dE", "%3.3f");
+    summary.add(t, "t", "%3.3f");
+    summary.add(t_TDC, "t_TDC","%3.3f");
+    summary.add(t_fADC, "t_fADC", "%3.3f");
+    summary.add((int)has_fADC, "has_fADC", "%d");
+    summary.add((int)has_TDC, "has_TDC", "%d");
   }
 };
 

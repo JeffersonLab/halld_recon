@@ -11,8 +11,7 @@ using namespace std;
 
 #include "fmwpc_mainframe.h"
 #include "hdv_mainframe.h"
-#include "hdview2.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 #include "DReferenceTrajectoryHDV.h"
 
 #include <CDC/DCDCWire.h>
@@ -35,10 +34,6 @@ using namespace std;
 #include <TROOT.h>
 #include <TF1.h>
 #include <TSpline.h>
-
-// Declared in hdview2.cc
-extern JEventLoop *eventloop;
-extern MyProcessor *myproc;
 
 // Defined in hdv_mainframe.cc
 extern float FCAL_Zlen;
@@ -133,14 +128,13 @@ fmwpc_mainframe::fmwpc_mainframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt_t
 				TGGroupFrame *prevnextframe = new TGGroupFrame(eventinfoframe, "Event", kHorizontalFrame);
 				eventinfoframe->AddFrame(prevnextframe, thints);
 					TGTextButton *prev	= new TGTextButton(prevnextframe,	"<-- Prev");
-					TGTextButton *next	= new TGTextButton(prevnextframe,	"Next -->");
+					next = new TGTextButton(prevnextframe,	"Next -->");
 					prevnextframe->AddFrame(prev, lhints);
 					prevnextframe->AddFrame(next, lhints);
 				
 					next->Connect("Clicked()","hdv_mainframe", hdvmf, "DoNext()");
 					prev->Connect("Clicked()","hdv_mainframe", hdvmf, "DoPrev()");
-					next->Connect("Clicked()","fmwpc_mainframe", this, "DoNewEvent()");
-					prev->Connect("Clicked()","fmwpc_mainframe", this, "DoNewEvent()");
+                    prev->SetEnabled(false);
 					
 			    //-------- Info
                 TGGroupFrame *infoframe = new TGGroupFrame(eventinfoframe, "Info", kHorizontalFrame);
@@ -245,20 +239,20 @@ void fmwpc_mainframe::DoNewEvent(void)
 	DoUpdateMenus();
 	DoMyRedraw();
 
+    const auto& current_jevent = gMYPROC->GetCurrentEvent();
+
     // Update run, event info
-    if( eventloop ) {
-        auto jevent = eventloop->GetJEvent();
-        std::stringstream ss;
-        ss << jevent.GetRunNumber();
-        run->SetTitle(ss.str().c_str());
-        run->Draw();
+    std::stringstream ss;
+    ss << current_jevent.GetRunNumber();
+    run->SetTitle(ss.str().c_str());
+    run->Draw();
 
-        ss.str("");
-        ss << jevent.GetEventNumber();
-        event->SetTitle(ss.str().c_str());
-        event->Draw();
+    ss.str("");
+    ss << current_jevent.GetEventNumber();
+    event->SetTitle(ss.str().c_str());
+    event->Draw();
 
-    }
+    next->SetEnabled(true);
 }
 
 //---------------------------------
@@ -438,6 +432,7 @@ void fmwpc_mainframe::DrawAxes(TCanvas *c, vector<TObject*> &graphics, const cha
 //-------------------
 void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std::string view)
 {
+    const auto& event = gMYPROC->GetCurrentEvent();
 
     // Draw chambers
     int wires_into_screen = view=="top"; // true=wires into screen ; false=wires parallel to screen
@@ -515,18 +510,16 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
     vector<const DCTOFTDCDigiHit*> ctoftdcdigihits;
     vector<const DCTOFHit*> ctofhits;
     vector<const DCTOFPoint*> ctofpoints;
-    if( eventloop != NULL ) {
-        eventloop->Get(tbts);
-        eventloop->Get(fcalhits);
-        eventloop->Get(fmwpcdigihits);
-        eventloop->Get(fmwpchits);
-        eventloop->Get(fmwpcclusters);
-        eventloop->Get(fmwpcmatchedtracks);
-        eventloop->Get(ctofdigihits);
-        eventloop->Get(ctoftdcdigihits);
-        eventloop->Get(ctofhits);
-        eventloop->Get(ctofpoints);
-    }
+    event.Get(tbts);
+    event.Get(fcalhits);
+    event.Get(fmwpcdigihits);
+    event.Get(fmwpchits);
+    event.Get(fmwpcclusters);
+    event.Get(fmwpcmatchedtracks);
+    event.Get(ctofdigihits);
+    event.Get(ctoftdcdigihits);
+    event.Get(ctofhits);
+    event.Get(ctofpoints);
 
     // Draw FCALHits
     if( checkbuttons["Draw FCALHits"]->GetState() == kButtonDown) {
@@ -914,6 +907,12 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
                 }
             }
         }
+    }
+}
+
+void fmwpc_mainframe::EnableControls(bool enabled) {
+    if (next != nullptr) {
+        next->SetEnabled(enabled);
     }
 }
 

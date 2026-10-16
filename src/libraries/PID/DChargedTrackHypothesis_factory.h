@@ -11,7 +11,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <PID/DChargedTrackHypothesis.h>
 #include <PID/DDetectorMatches.h>
 #include <TRACKING/DTrackTimeBased.h>
@@ -22,12 +22,12 @@
 #include "DResourcePool.h"
 
 using namespace std;
-using namespace jana;
 
-class DChargedTrackHypothesis_factory:public jana::JFactory<DChargedTrackHypothesis>
+
+class DChargedTrackHypothesis_factory:public JFactoryT<DChargedTrackHypothesis>
 {
 	public:
-		DChargedTrackHypothesis* Create_ChargedTrackHypothesis(JEventLoop* locEventLoop, const DTrackTimeBased* locTrackTimeBased, const DDetectorMatches* locDetectorMatches, const DEventRFBunch* locEventRFBunch);
+		DChargedTrackHypothesis* Create_ChargedTrackHypothesis(const std::shared_ptr<const JEvent>& event, const DTrackTimeBased* locTrackTimeBased, const DDetectorMatches* locDetectorMatches, const DEventRFBunch* locEventRFBunch);
 		void Add_TimeToTrackingMatrix(DChargedTrackHypothesis* locChargedTrackHypothesis, TMatrixFSym* locCovarianceMatrix, double locFlightTimeVariance, double locHitTimeVariance, double locFlightTimePCorrelation) const;
 
 		void Recycle_Hypotheses(vector<const DChargedTrackHypothesis*>& locHypos){dResourcePool_ChargedTrackHypothesis->Recycle(locHypos);}
@@ -51,16 +51,15 @@ class DChargedTrackHypothesis_factory:public jana::JFactory<DChargedTrackHypothe
 		DResourcePool<DChargedTrackHypothesis>* dResourcePool_ChargedTrackHypothesis = nullptr;
 		shared_ptr<DResourcePool<TMatrixFSym>> dResourcePool_TMatrixFSym;
 
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t fini(void)
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void Finish() override
 		{
-			for(auto locHypo : _data)
+			for(auto locHypo : mData)
 				Recycle_Hypothesis(locHypo);
-			_data.clear();
+			mData.clear();
 			delete dResourcePool_ChargedTrackHypothesis;
-			return NOERROR;
 		}
 
                 bool CDC_CORRECT_DEDX_THETA;   // use the correction for dE/dx with theta

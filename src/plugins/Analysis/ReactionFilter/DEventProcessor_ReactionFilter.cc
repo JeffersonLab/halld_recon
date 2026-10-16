@@ -6,6 +6,7 @@
 //
 
 #include "DEventProcessor_ReactionFilter.h"
+#include <JANA/JEventSource.h>
 
 // Routine used to create our DEventProcessor
 
@@ -14,15 +15,15 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_ReactionFilter()); //register this plugin
-		locApplication->AddFactoryGenerator(new DFactoryGenerator_ReactionFilter()); //register the factory generator
+		locApplication->Add(new DEventProcessor_ReactionFilter()); //register this plugin
+		locApplication->Add(new DFactoryGenerator_ReactionFilter()); //register the factory generator
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_ReactionFilter::init(void)
+void DEventProcessor_ReactionFilter::Init()
 {
 	// This is called once at program startup.
 
@@ -32,28 +33,24 @@ jerror_t DEventProcessor_ReactionFilter::init(void)
 	dEventStoreSkimStream.open(locSkimFileName.c_str());
 	dEventStoreSkimStream << "IDXA" << endl;
 	*/
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_ReactionFilter::brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber)
+void DEventProcessor_ReactionFilter::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_ReactionFilter::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_ReactionFilter::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 
@@ -71,8 +68,8 @@ jerror_t DEventProcessor_ReactionFilter::evnt(jana::JEventLoop* locEventLoop, ui
 	// string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
   
 	const DEventWriterROOT* locEventWriterROOT = NULL;
-	locEventLoop->GetSingle(locEventWriterROOT);
-	locEventWriterROOT->Fill_DataTrees(locEventLoop, "ReactionFilter");
+	locEvent->GetSingle(locEventWriterROOT);
+	locEventWriterROOT->Fill_DataTrees(locEvent, "ReactionFilter");
   
 	/******************************************************** OPTIONAL: SKIMS *******************************************************/
 
@@ -81,10 +78,10 @@ jerror_t DEventProcessor_ReactionFilter::evnt(jana::JEventLoop* locEventLoop, ui
 
 	// See whether this is MC data or real data
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
-	unsigned int locRunNumber = locEventLoop->GetJEvent().GetRunNumber();
-	unsigned int locUniqueID = locMCThrowns.empty() ? 1 : Get_FileNumber(locEventLoop);
+	unsigned int locRunNumber = locEvent->GetJEvent().GetRunNumber();
+	unsigned int locUniqueID = locMCThrowns.empty() ? 1 : Get_FileNumber(locEvent);
 
 	// If a particle combo passed the cuts, save the event info in the output file
 	for(size_t loc_i = 0; loc_i < locAnalysisResultsVector.size(); ++loc_i)
@@ -103,23 +100,21 @@ jerror_t DEventProcessor_ReactionFilter::evnt(jana::JEventLoop* locEventLoop, ui
 		japp->Unlock("ReactionFilter.idxa");
 	}
 	*/
-
-	return NOERROR;
 }
 
-int DEventProcessor_ReactionFilter::Get_FileNumber(JEventLoop* locEventLoop) const
+int DEventProcessor_ReactionFilter::Get_FileNumber(const std::shared_ptr<const JEvent>& locEvent) const
 {
 	//Assume that the file name is in the format: *_X.ext, where:
 		//X is the file number (a string of numbers of any length)
 		//ext is the file extension (probably .evio or .hddm)
 
 	//get the event source
-	JEventSource* locEventSource = locEventLoop->GetJEvent().GetJEventSource();
+	JEventSource* locEventSource = locEvent->GetJEventSource();
 	if(locEventSource == NULL)
 		return -1;
 
 	//get the source file name (strip the path)
-	string locSourceFileName = locEventSource->GetSourceName();
+	string locSourceFileName = locEventSource->GetResourceName();
 
 	//find the last "_" & "." indices
 	size_t locUnderscoreIndex = locSourceFileName.rfind("_");
@@ -138,24 +133,22 @@ int DEventProcessor_ReactionFilter::Get_FileNumber(JEventLoop* locEventLoop) con
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_ReactionFilter::erun(void)
+void DEventProcessor_ReactionFilter::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_ReactionFilter::fini(void)
+void DEventProcessor_ReactionFilter::Finish()
 {
 	// Called before program exit after event processing is finished.
 	if(dEventStoreSkimStream.is_open())
 		dEventStoreSkimStream.close();
-	return NOERROR;
 }
 

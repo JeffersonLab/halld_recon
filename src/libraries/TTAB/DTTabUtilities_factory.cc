@@ -4,11 +4,13 @@
 // Created: Mon Apr  6 09:41:29 EDT 2015
 // Creator: pmatt (on Linux pmattdesktop.jlab.org 2.6.32-504.12.2.el6.x86_64 x86_64)
 //
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 
 #include "DTTabUtilities_factory.h"
 #include "TOF/DTOFGeometry.h"
 
-jerror_t DTTabUtilities_factory::brun(jana::JEventLoop* locEventLoop, int32_t runnumber)
+void DTTabUtilities_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 	//Early Commissioning Data: Code & CCDB constants
 	//BCAL, RF: none
@@ -16,10 +18,15 @@ jerror_t DTTabUtilities_factory::brun(jana::JEventLoop* locEventLoop, int32_t ru
 	//FDC: is bad (tdc_scale fixed at 0.115, no ref time or tframe). Use F1TDC rollover x 2
 	//PSC: Uses F1TDC rollover; if run = 0 change run = 2012 (same as old hardcoded)
 
+	auto event_number = event->GetEventNumber();
+	auto run_number = event->GetRunNumber();
+	auto calibration_manager = event->GetJApplication()->GetService<JCalibrationManager>();
+	auto calibration = calibration_manager->GetJCalibration(run_number);
+
 	// F1TDC tframe(ns) and rollover count
 	map<string, int> tdc_parms;
-	if(locEventLoop->GetCalib("/F1TDC/rollover", tdc_parms))
-		jout << "Error loading /F1TDC/rollover !" << endl;
+	if(calibration->Get("/F1TDC/rollover", tdc_parms, event_number))
+		jout << "Error loading /F1TDC/rollover !" << jendl;
 
 	map<string, int>::const_iterator locMapIterator = tdc_parms.find("tframe");
 	dRolloverTimeWindowLength = (locMapIterator != tdc_parms.end()) ? uint64_t(tdc_parms["tframe"]) : 0;
@@ -27,7 +34,7 @@ jerror_t DTTabUtilities_factory::brun(jana::JEventLoop* locEventLoop, int32_t ru
 	locMapIterator = tdc_parms.find("count");
 	dNumTDCTicksInRolloverTimeWindow = (locMapIterator != tdc_parms.end()) ? uint64_t(tdc_parms["count"]) : 0;
 
-	if(locEventLoop->GetJEvent().GetRunNumber() == 0) //PSC data with bad run number. Use hard-coded values from run 2012
+	if(event->GetRunNumber() == 0) //PSC data with bad run number. Use hard-coded values from run 2012
 	{
 		dRolloverTimeWindowLength = 3744;
 		dNumTDCTicksInRolloverTimeWindow = 64466;
@@ -36,29 +43,26 @@ jerror_t DTTabUtilities_factory::brun(jana::JEventLoop* locEventLoop, int32_t ru
 	//CAEN1290/TI Phase Difference
 	dCAENTIPhaseDifference = 1;
 	map<string, double> tof_tdc_shift;
-	const DTOFGeometry *locTOFGeometry = nullptr;
-	locEventLoop->GetSingle(locTOFGeometry);
+	const DTOFGeometry *locTOFGeometry = event->GetSingle<DTOFGeometry>();
+
 	string locTOFTDCShiftTable = locTOFGeometry->Get_CCDB_DirectoryName() + "/tdc_shift";
-	if(!eventLoop->GetCalib(locTOFTDCShiftTable.c_str(), tof_tdc_shift))
+	if(!calibration->Get(locTOFTDCShiftTable, tof_tdc_shift, event_number))
 		dCAENTIPhaseDifference = tof_tdc_shift["TOF_TDC_SHIFT"];
 
-	return NOERROR;
 }
 
-jerror_t DTTabUtilities_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DTTabUtilities_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
-	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	vector<const DMCThrown*> locMCThrowns = event->Get<DMCThrown>();
 
 	DTTabUtilities* locTTabUtilities = new DTTabUtilities();
 	locTTabUtilities->dRolloverTimeWindowLength = dRolloverTimeWindowLength;
 	locTTabUtilities->dNumTDCTicksInRolloverTimeWindow = dNumTDCTicksInRolloverTimeWindow;
-	locTTabUtilities->dHasBadOrNoF1TDCConfigInfoFlag = ((locEventLoop->GetJEvent().GetRunNumber() <= 2965) || (!locMCThrowns.empty()));
+	locTTabUtilities->dHasBadOrNoF1TDCConfigInfoFlag = ((event->GetRunNumber() <= 2965) || (!locMCThrowns.empty()));
 	locTTabUtilities->dCAENTIPhaseDifference = dCAENTIPhaseDifference;
 
 	// Get DCODAROCInfo's, put into map
-	vector<const DCODAROCInfo*> locCODAROCInfos;
-	locEventLoop->Get(locCODAROCInfos);
+	vector<const DCODAROCInfo*> locCODAROCInfos = event->Get<DCODAROCInfo>();
 
 	map<uint32_t, const DCODAROCInfo*> locCODAROCInfoMap;
 	for(size_t loc_i = 0; loc_i < locCODAROCInfos.size(); ++loc_i)
@@ -68,8 +72,7 @@ jerror_t DTTabUtilities_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
 	//get the trigger reference signal ("Beni-cable")
 		//hard-coded crate/slot/channel, but whatever. This isn't intended to be long-term-code anyway.
 
-	vector<const DF1TDCHit*> locF1TDCHits;
-	locEventLoop->Get(locF1TDCHits);
+	vector<const DF1TDCHit*> locF1TDCHits = event->Get<DF1TDCHit>();
 
 	bool locFoundFlag = false;
 	for(size_t loc_i = 0; loc_i < locF1TDCHits.size(); ++loc_i)
@@ -84,6 +87,5 @@ jerror_t DTTabUtilities_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
 	if(!locFoundFlag)
 		locTTabUtilities->dTriggerReferenceSignal = 0;
 
-	_data.push_back(locTTabUtilities);
-	return NOERROR;
+	Insert(locTTabUtilities);
 }

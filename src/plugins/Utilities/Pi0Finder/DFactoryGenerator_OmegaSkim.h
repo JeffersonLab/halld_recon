@@ -8,21 +8,19 @@
 #ifndef _DFactoryGenerator_OmegaSkim_
 #define _DFactoryGenerator_OmegaSkim_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_OmegaSkim.h"
 
-class DFactoryGenerator_OmegaSkim : public jana::JFactoryGenerator
+class DFactoryGenerator_OmegaSkim : public JFactoryGenerator
 {
  public:
   virtual const char* className(void){return static_className();}
   static const char* static_className(void){return "DFactoryGenerator_OmegaSkim";}
 		
-  jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
+  void GenerateFactories(JFactorySet* fs)
   {
-    locEventLoop->AddFactory(new DReaction_factory_OmegaSkim());
-    return NOERROR;
+    fs->Add(new DReaction_factory_OmegaSkim());
   }
 };
 

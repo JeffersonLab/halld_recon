@@ -9,13 +9,14 @@
 #define _JEventProcessor_CCAL_online_
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Services/JLockService.h>
 
 #include <stdint.h>
 #include <vector>
 #include <iostream>
 
 #include <JANA/JApplication.h>
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <DANA/DStatusBits.h>
 
 #include <CCAL/DCCALDigiHit.h>
@@ -49,25 +50,25 @@
 #include "TProfile2D.h"
 
 using namespace std;
-using namespace jana;
 
 
-class JEventProcessor_CCAL_online:public jana::JEventProcessor
+class JEventProcessor_CCAL_online:public JEventProcessor
 {
 	
 	public:
   		JEventProcessor_CCAL_online();
   		~JEventProcessor_CCAL_online() {};
-  		const char* className(void) { return "JEventProcessor_CCAL_online"; }
-	
+
  	private:
-		
-		jerror_t init(void);
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-		jerror_t erun(void);
-		jerror_t fini(void);
-		
+
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::shared_ptr<JLockService> lockService;
+
 		int ccalLayer( int, int );
 		
 		double BEAM_RF_MAIN_PEAK;

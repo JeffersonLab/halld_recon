@@ -9,7 +9,6 @@
 
 #include <TLorentzVector.h>
 
-#include "DANA/DApplication.h"
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALTruthShower.h"
 #include "BCAL/DHDDMBCALHit.h"
@@ -24,7 +23,7 @@ extern TFile *ROOTfile;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_bcal_hists());
+	app->Add(new DEventProcessor_bcal_hists());
 }
 } // "C"
 
@@ -32,9 +31,9 @@ void InitPlugin(JApplication *app){
 #define FCAL_Z_OFFSET 640.0-65.0 // I don't know what this value is ???
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_bcal_hists::init(void)
+void DEventProcessor_bcal_hists::Init()
 {
 	// Create THROWN directory
 	TDirectory *dir = new TDirectoryFile("BCAL","BCAL");
@@ -61,33 +60,30 @@ jerror_t DEventProcessor_bcal_hists::init(void)
 
 	// Go back up to the parent directory
 	dir->cd("../");
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_bcal_hists::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_bcal_hists::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_bcal_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_bcal_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DBCALShower*> showers;
 	vector<const DFCALCluster*> fcal_showers;
 	vector<const DBCALTruthShower*> truthshowers;	
 	vector<const DMCThrown*> mcthrowns;
 	vector<const DHDDMBCALHit*> bcalhits;
-	loop->Get(showers, "KLOE" );
-	//loop->Get(fcal_showers);
-	loop->Get(truthshowers);
-	loop->Get(mcthrowns);
-	loop->Get(bcalhits);
+	event->Get(showers, "KLOE" );
+	//event->Get(fcal_showers);
+	event->Get(truthshowers);
+	event->Get(mcthrowns);
+	event->Get(bcalhits);
 	
 	LockState();
 	
@@ -196,25 +192,21 @@ jerror_t DEventProcessor_bcal_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 	}
 
 	UnlockState();	
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_bcal_hists::erun(void)
+void DEventProcessor_bcal_hists::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_bcal_hists::fini(void)
+void DEventProcessor_bcal_hists::Finish()
 {
-	return NOERROR;
 }
 

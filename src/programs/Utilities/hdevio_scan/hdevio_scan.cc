@@ -290,6 +290,8 @@ void MapEVIOWords(void)
 
 		// Close EVIO file
 		delete hdevio;
+		// deallocate the buffer
+		delete[] buff;
 	}
 	
 	// Allow some histograms to be scaled.
@@ -300,6 +302,3 @@ void MapEVIOWords(void)
 	rootfile->Close();
 	delete rootfile;
 }
-
-
-

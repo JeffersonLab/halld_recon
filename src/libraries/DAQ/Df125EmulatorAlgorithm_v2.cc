@@ -119,35 +119,33 @@ Df125EmulatorAlgorithm_v2::Df125EmulatorAlgorithm_v2(){
     // Set verbosity
     VERBOSE = 0;
 
-    if(gPARMS){
-        gPARMS->SetDefaultParameter("EMULATION125:FORCE_DEFAULT_CDC", FORCE_DEFAULT_CDC,"Set to >0 to force use of CDC default values");
-        gPARMS->SetDefaultParameter("EMULATION125:FORCE_DEFAULT_FDC", FORCE_DEFAULT_FDC,"Set to >0 to force use of FDC default values");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_WS",  CDC_WS,  "Set CDC_WS for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_WE",  CDC_WE,  "Set CDC_WE for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_IE",  CDC_IE,  "Set CDC_IE for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_P1",  CDC_P1,  "Set CDC_P1 for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_P2",  CDC_P2, "Set CDC_P2 for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_PG",  CDC_PG,  "Set CDC_PG for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_H",   CDC_H,   "Set CDC_H (hit threshold) for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_TH",  CDC_TH,  "Set CDC_TH for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_TL",  CDC_TL,  "Set CDC_TL for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_IBIT",CDC_IBIT,"Set CDC_IBIT for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_ABIT",CDC_ABIT,"Set CDC_ABIT for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:CDC_PBIT",CDC_PBIT,"Set CDC_PBIT for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_WS",  FDC_WS,  "Set FDC_WS for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_WE",  FDC_WE,  "Set FDC_WE for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_IE",  FDC_IE,  "Set FDC_IE for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_P1",  FDC_P1,  "Set FDC_P1 for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_P2",  FDC_P2,  "Set FDC_P2 for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_PG",  FDC_PG,  "Set FDC_PG for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_H",   FDC_H,   "Set FDC_H (hit threshold) for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_TH",  FDC_TH,  "Set FDC_TH for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_TL",  FDC_TL,  "Set FDC_TL for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_IBIT",FDC_IBIT,"Set FDC_IBIT for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_ABIT",FDC_ABIT,"Set FDC_ABIT for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:FDC_PBIT",FDC_PBIT,"Set FDC_PBIT for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION125:VERBOSE", VERBOSE,"Set verbosity for f125 emulation");
-    }
+    japp->SetDefaultParameter("EMULATION125:FORCE_DEFAULT_CDC", FORCE_DEFAULT_CDC,"Set to >0 to force use of CDC default values");
+    japp->SetDefaultParameter("EMULATION125:FORCE_DEFAULT_FDC", FORCE_DEFAULT_FDC,"Set to >0 to force use of FDC default values");
+    japp->SetDefaultParameter("EMULATION125:CDC_WS",  CDC_WS,  "Set CDC_WS for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_WE",  CDC_WE,  "Set CDC_WE for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_IE",  CDC_IE,  "Set CDC_IE for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_P1",  CDC_P1,  "Set CDC_P1 for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_P2",  CDC_P2, "Set CDC_P2 for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_PG",  CDC_PG,  "Set CDC_PG for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_H",   CDC_H,   "Set CDC_H (hit threshold) for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_TH",  CDC_TH,  "Set CDC_TH for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_TL",  CDC_TL,  "Set CDC_TL for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_IBIT",CDC_IBIT,"Set CDC_IBIT for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_ABIT",CDC_ABIT,"Set CDC_ABIT for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:CDC_PBIT",CDC_PBIT,"Set CDC_PBIT for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_WS",  FDC_WS,  "Set FDC_WS for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_WE",  FDC_WE,  "Set FDC_WE for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_IE",  FDC_IE,  "Set FDC_IE for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_P1",  FDC_P1,  "Set FDC_P1 for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_P2",  FDC_P2,  "Set FDC_P2 for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_PG",  FDC_PG,  "Set FDC_PG for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_H",   FDC_H,   "Set FDC_H (hit threshold) for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_TH",  FDC_TH,  "Set FDC_TH for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_TL",  FDC_TL,  "Set FDC_TL for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_IBIT",FDC_IBIT,"Set FDC_IBIT for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_ABIT",FDC_ABIT,"Set FDC_ABIT for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:FDC_PBIT",FDC_PBIT,"Set FDC_PBIT for firmware emulation, will be overwritten by BORConfig if present");
+    japp->SetDefaultParameter("EMULATION125:VERBOSE", VERBOSE,"Set verbosity for f125 emulation");
 }
 
 void Df125EmulatorAlgorithm_v2::EmulateFirmware(const Df125WindowRawData *rawData, Df125CDCPulse *cdcPulse, Df125FDCPulse *fdcPulse){

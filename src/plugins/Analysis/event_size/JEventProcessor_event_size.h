@@ -19,12 +19,11 @@
 #include "FCAL.h"
 #include "TOF.h"
 
-class JEventProcessor_event_size:public jana::JEventProcessor{
+class JEventProcessor_event_size:public JEventProcessor{
 	public:
 		JEventProcessor_event_size();
 		~JEventProcessor_event_size();
-		const char* className(void){return "JEventProcessor_event_size";}
-		
+
 		// Time windows for various detectors. For each detector
 		// an offset time and a window time is used. The offset
 		// represents the time *before* the trigger time that hits
@@ -71,11 +70,11 @@ class JEventProcessor_event_size:public jana::JEventProcessor{
 		pthread_mutex_t tof_mutex;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		double tmin_bcal, tmax_bcal;
 		double tmin_fcal, tmax_fcal;

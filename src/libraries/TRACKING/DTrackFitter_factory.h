@@ -8,29 +8,27 @@
 #ifndef _DTrackFitter_factory_
 #define _DTrackFitter_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <TRACKING/DTrackFitter.h>
 
-class DTrackFitter_factory:public jana::JFactory<DTrackFitter>{
+class DTrackFitter_factory:public JFactoryT<DTrackFitter>{
 	public:
-		DTrackFitter_factory(){};
-		~DTrackFitter_factory(){};
+		DTrackFitter_factory() = default;
+		~DTrackFitter_factory() override = default;
 
 	private:
-		jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
+		void Process(const std::shared_ptr<const JEvent>& event) override {
 
 			// This is a trivial class that simply implements the
 			// ALT1 tagged factory as the default. It is here so 
 			// that the default can be changed easily by simply
 			// changing the tag here or on the command line.
 			vector<const DTrackFitter*> fitters;
-			loop->Get(fitters, "KalmanSIMD");
+			event->Get(fitters, "KalmanSIMD");
 			for(unsigned int i=0; i< fitters.size(); i++){
-				_data.push_back(const_cast<DTrackFitter*>(fitters[i]));
+				Insert(const_cast<DTrackFitter*>(fitters[i]));
 			}
 			SetFactoryFlag(NOT_OBJECT_OWNER);
-
-			return NOERROR;
 		}
 };
 

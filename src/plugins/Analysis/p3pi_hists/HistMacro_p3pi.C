@@ -14,9 +14,9 @@
 
 
 {	TDirectory *locInitDirectory = gDirectory;
-	TDirectory *locReactionDirectory_2FCAL = (TDirectory*)locInitDirectory->FindObjectAny("p3pi_preco_2FCAL");
+	TDirectory *locReactionDirectory_2FCAL = (TDirectory*)locInitDirectory->FindObjectAny("p3pi_preco_2FCAL2");
 	TDirectory *locReactionDirectory_2BCAL = (TDirectory*)locInitDirectory->FindObjectAny("p3pi_preco_2BCAL");
-	TDirectory *locReactionDirectory_Both = (TDirectory*)locInitDirectory->FindObjectAny("p3pi_preco_FCAL-BCAL");
+	TDirectory *locReactionDirectory_Both = (TDirectory*)locInitDirectory->FindObjectAny("p3pi_preco_FCAL2-BCAL");
 	TDirectory *locReactionDirectory_Any = (TDirectory*)locInitDirectory->FindObjectAny("p3pi_preco_any");
 	TDirectory *locReactionDirectory_KinFit = (TDirectory*)locInitDirectory->FindObjectAny("p3pi_preco_any_kinfit");
 	if((locReactionDirectory_2FCAL == NULL) || (locReactionDirectory_2BCAL == NULL) || (locReactionDirectory_Both == NULL))
@@ -111,7 +111,7 @@
 
 		TLegend *locLegend = new TLegend(0.14, 0.70, 0.39, 0.86); //botleft x/y, topright x/y
 		locLegend->SetHeader("Legend");
-		locLegend->AddEntry(locHist_Pi0_2FCAL, "2#gamma in FCAL", "F");
+		locLegend->AddEntry(locHist_Pi0_2FCAL, "2#gamma in FCAL(2)", "F");
 		locLegend->AddEntry(locHist_Pi0_2BCAL, "2#gamma in BCAL", "F");
 		locLegend->AddEntry(locHist_Pi0_Both, "1 #gamma in Each", "F");
 		locLegend->Draw();
@@ -294,7 +294,7 @@
 
 		TLegend *locLegend = new TLegend(0.14, 0.70, 0.39, 0.86); //botleft x/y, topright x/y
 		locLegend->SetHeader("Legend");
-		locLegend->AddEntry(locHist_Omega_2FCAL, "2#gamma in FCAL", "F");
+		locLegend->AddEntry(locHist_Omega_2FCAL, "2#gamma in FCAL(2)", "F");
 		locLegend->AddEntry(locHist_Omega_2BCAL, "2#gamma in BCAL", "F");
 		locLegend->AddEntry(locHist_Omega_Both, "1 #gamma in Each", "F");
 		locLegend->Draw();

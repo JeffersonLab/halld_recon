@@ -1,27 +1,23 @@
 // $Id$
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
-
 #include "DFCALCluster_factory.h"
-#include "DFCALCluster_factory_Island.h"
 #include "DFCALGeometry_factory.h"
 #include "DFCALShower_factory.h"
 #include "DFCALTruthShower.h"
 #include "DFCALDigiHit.h"
 #include "DFCALHit_factory.h"
 
-jerror_t FCAL_init(JEventLoop *loop)
+#include <JANA/JFactorySet.h>
+#include <JANA/JFactoryT.h>
+
+void FCAL_init(JFactorySet* factorySet)
 {
 	/// Create and register FCAL data factories
-	loop->AddFactory(new JFactory<DFCALDigiHit>());
-	loop->AddFactory(new DFCALHit_factory());
-	loop->AddFactory(new JFactory<DFCALHit>("TRUTH"));
-	loop->AddFactory(new DFCALCluster_factory());
-	loop->AddFactory(new DFCALCluster_factory_Island());
-	loop->AddFactory(new DFCALShower_factory());
-	loop->AddFactory(new DFCALGeometry_factory());
-	loop->AddFactory(new JFactory<DFCALTruthShower>());
-
-	return NOERROR;
+	factorySet->Add(new JFactoryT<DFCALDigiHit>());
+	factorySet->Add(new DFCALHit_factory());
+	factorySet->Add(new JFactoryT<DFCALHit>("TRUTH"));
+	factorySet->Add(new DFCALCluster_factory());
+	factorySet->Add(new DFCALShower_factory());
+	factorySet->Add(new DFCALGeometry_factory());
+	factorySet->Add(new JFactoryT<DFCALTruthShower>());
 }

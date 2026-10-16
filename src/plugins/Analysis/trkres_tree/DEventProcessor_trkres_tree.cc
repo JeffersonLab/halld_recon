@@ -17,9 +17,9 @@ using namespace std;
 #include <TROOT.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DMCTrajectoryPoint.h>
 #include <CDC/DCDCTrackHit.h>
@@ -31,7 +31,7 @@ using namespace std;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_trkres_tree());
+	app->Add(new DEventProcessor_trkres_tree());
 }
 } // "C"
 
@@ -41,8 +41,8 @@ void InitPlugin(JApplication *app){
 //------------------
 DEventProcessor_trkres_tree::DEventProcessor_trkres_tree()
 {
+	SetTypeName("DEventProcessor_trackres_tree");
 	trkres_ptr = &trkres;
-
 	pthread_mutex_init(&mutex, NULL);
 }
 
@@ -55,9 +55,9 @@ DEventProcessor_trkres_tree::~DEventProcessor_trkres_tree()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_trkres_tree::init(void)
+void DEventProcessor_trkres_tree::Init()
 {
 	// Create TRACKING directory
 	TDirectory *dir = (TDirectory*)gROOT->FindObject("TRACKING");
@@ -68,53 +68,47 @@ jerror_t DEventProcessor_trkres_tree::init(void)
 	ttrkres->Branch("E","trackres",&trkres_ptr);
 
 	dir->cd("../");
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_trkres_tree::brun(JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_trkres_tree::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// These are copied from DTrackFitterALT1.cc
 	double locSIGMA_CDC = 0.0150;
 	double locSIGMA_FDC_ANODE = 0.0200;
 	double locSIGMA_FDC_CATHODE = 0.0200;
 
-	gPARMS->SetDefaultParameter("TRKFIT:SIGMA_CDC",						locSIGMA_CDC);
-	gPARMS->SetDefaultParameter("TRKFIT:SIGMA_FDC_ANODE",				locSIGMA_FDC_ANODE);
-	gPARMS->SetDefaultParameter("TRKFIT:SIGMA_FDC_CATHODE",			locSIGMA_FDC_CATHODE);
-
-	DApplication *dapp =  dynamic_cast<DApplication*>(loop->GetJApplication());
+	app->SetDefaultParameter("TRKFIT:SIGMA_CDC",						locSIGMA_CDC);
+	app->SetDefaultParameter("TRKFIT:SIGMA_FDC_ANODE",				locSIGMA_FDC_ANODE);
+	app->SetDefaultParameter("TRKFIT:SIGMA_FDC_CATHODE",			locSIGMA_FDC_CATHODE);
 
 	pthread_mutex_lock(&mutex);
 
-	bfield = dapp->GetBfield(runnumber);
+	bfield = GetBfield(event);
 	
 	SIGMA_CDC = locSIGMA_CDC;
 	SIGMA_FDC_ANODE = locSIGMA_FDC_ANODE;
 	SIGMA_FDC_CATHODE = locSIGMA_FDC_CATHODE;
 
 	pthread_mutex_unlock(&mutex);
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_trkres_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_trkres_tree::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DMCTrajectoryPoint*> trajpoints;
 	vector<const DCDCTrackHit*> cdchits;
 	vector<const DFDCPseudo*> fdchits;
 	const DMCThrown *mcthrown;
 
-	loop->Get(trajpoints);
-	loop->Get(cdchits);
-	loop->Get(fdchits);
-	loop->GetSingle(mcthrown);
+	event->Get(trajpoints);
+	event->Get(cdchits);
+	event->Get(fdchits);
+	event->GetSingle(mcthrown);
 
 	// Assume all hits belong to this one thrown track
 	// (this should only be used on data procuded with
@@ -155,7 +149,7 @@ jerror_t DEventProcessor_trkres_tree::evnt(JEventLoop *loop, uint64_t eventnumbe
 		meas.push_back(m);
 	}
 
-	if(meas.size()<5)return NOERROR;
+	if(meas.size()<5)return;
 
 	double deltak, pt_res;
 	GetPtRes(meas, deltak, pt_res);
@@ -171,7 +165,7 @@ jerror_t DEventProcessor_trkres_tree::evnt(JEventLoop *loop, uint64_t eventnumbe
 	DVector3 dthrown = mcthrown->momentum();
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	
 	trkres.event = eventnumber;
 	trkres.recon.SetXYZ(meas[0].traj->px, meas[0].traj->py, meas[0].traj->pz);
@@ -184,9 +178,7 @@ jerror_t DEventProcessor_trkres_tree::evnt(JEventLoop *loop, uint64_t eventnumbe
 
 	ttrkres->Fill();
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
@@ -329,20 +321,16 @@ void DEventProcessor_trkres_tree::GetThetaRes(vector<meas_t> &meas, double &thet
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_trkres_tree::erun(void)
+void DEventProcessor_trkres_tree::EndRun()
 {
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_trkres_tree::fini(void)
+void DEventProcessor_trkres_tree::Finish()
 {
-
-	return NOERROR;
 }
 

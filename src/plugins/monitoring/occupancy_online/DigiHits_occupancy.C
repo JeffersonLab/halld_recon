@@ -276,7 +276,7 @@
 #endif
 	}
 
-#ifdef ROOTSPY_MACROS
+#if 0 // ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------
 	if( rs_GetFlag("Is_RSAI")==1 ){
 		auto min_events = 10*rs_GetFlag("MIN_EVENTS_RSAI");

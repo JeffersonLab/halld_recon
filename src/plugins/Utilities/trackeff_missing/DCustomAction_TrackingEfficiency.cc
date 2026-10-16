@@ -8,7 +8,7 @@
 #include "DCustomAction_TrackingEfficiency.h"
 #include "TObjString.h"
 
-void DCustomAction_TrackingEfficiency::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_TrackingEfficiency::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Optional: Create histograms and/or modify member variables.
 	//Create any histograms/trees/etc. within a ROOT lock. 
@@ -17,11 +17,11 @@ void DCustomAction_TrackingEfficiency::Initialize(JEventLoop* locEventLoop)
 	const DReaction* locReaction = Get_Reaction();
 
 	auto locMissingPIDs = Get_Reaction()->Get_MissingPIDs();
-	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : Unknown;
+	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : UnknownParticle;
 	if(locMissingPIDs.size() != 1)
 		return; //invalid reaction setup
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//CREATE TTREE, TFILE
 	dTreeInterface = DTreeInterface::Create_DTreeInterface(locReaction->Get_ReactionName(), "tree_trackeff.root");
@@ -42,7 +42,7 @@ void DCustomAction_TrackingEfficiency::Initialize(JEventLoop* locEventLoop)
 	locMiscInfoMap->Add(new TObjString("MissingPID_PDG"), new TObjString(locOStream.str().c_str()));
 	//set run#
 	locOStream.str("");
-	locOStream << locEventLoop->GetJEvent().GetRunNumber();
+	locOStream << locEvent->GetRunNumber();
 	locMiscInfoMap->Add(new TObjString("RunNumber"), new TObjString(locOStream.str().c_str()));
 
 	//CHANNEL INFO
@@ -89,27 +89,27 @@ void DCustomAction_TrackingEfficiency::Initialize(JEventLoop* locEventLoop)
 	dTreeInterface->Create_Branches(locBranchRegister);
 }
 
-bool DCustomAction_TrackingEfficiency::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_TrackingEfficiency::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//Write custom code to perform an action on the INPUT DParticleCombo (DParticleCombo)
 	//NEVER: Grab DParticleCombo or DAnalysisResults objects (of any tag!) from the JEventLoop within this function
 	//NEVER: Grab objects that are created post-kinfit (e.g. DKinFitResults, etc.) from the JEventLoop if Get_UseKinFitResultsFlag() == false: CAN CAUSE INFINITE DEPENDENCY LOOP
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	vector<const DBCALShower*> locBCALShowers;
-	locEventLoop->Get(locBCALShowers);
+	locEvent->Get(locBCALShowers);
 
 	vector<const DChargedTrack*> locUnusedChargedTracks;
-	dAnalysisUtilities->Get_UnusedChargedTracks(locEventLoop, locParticleCombo, locUnusedChargedTracks);
+	dAnalysisUtilities->Get_UnusedChargedTracks(locEvent, locParticleCombo, locUnusedChargedTracks);
 
 	const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
 	const DKinFitResults* locKinFitResults = locParticleCombo->Get_KinFitResults();
 
 	/*********************************************** MISSING PARTICLE INFO ***********************************************/
 
-	if(dMissingPID == Unknown)
+	if(dMissingPID == UnknownParticle)
 		return true; //invalid reaction setup
 	if(ParticleCharge(dMissingPID) == 0)
 		return true; //NOT SUPPORTED
@@ -160,7 +160,7 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(JEventLoop* locEventLoop, 
 	//kinfit results are unique for each DParticleCombo: no need to check for duplicates
 
 	//FILL CHANNEL INFO
-	dTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEventLoop->GetJEvent().GetEventNumber());
+	dTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEvent->GetEventNumber());
 	dTreeFillData.Fill_Single<Float_t>("BeamEnergy", locBeamParticle->energy());
 	dTreeFillData.Fill_Single<Float_t>("BeamRFDeltaT", locBeamRFDeltaT);
 	dTreeFillData.Fill_Single<UChar_t>("NumExtraTracks", (UChar_t)locNumExtraTracks);
@@ -189,11 +189,11 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(JEventLoop* locEventLoop, 
 
 	/************************************************* WIRE-BASED TRACKS *************************************************/
 
-	if(!locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST))
+	if(!GetStatusBit(locEvent, kSTATUS_REST))
 	{
 		//Get unused tracks
 		vector<const DTrackWireBased*> locUnusedWireBasedTracks;
-		dAnalysisUtilities->Get_UnusedWireBasedTracks(locEventLoop, locParticleCombo, locUnusedWireBasedTracks);
+		dAnalysisUtilities->Get_UnusedWireBasedTracks(locEvent, locParticleCombo, locUnusedWireBasedTracks);
 
 		//loop over unused tracks
 		size_t locNumWireBasedTracks = 0;
@@ -241,7 +241,7 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(JEventLoop* locEventLoop, 
 
 	//Get unused tracks
 	vector<const DTrackTimeBased*> locUnusedTimeBasedTracks;
-	dAnalysisUtilities->Get_UnusedTimeBasedTracks(locEventLoop, locParticleCombo, locUnusedTimeBasedTracks);
+	dAnalysisUtilities->Get_UnusedTimeBasedTracks(locEvent, locParticleCombo, locUnusedTimeBasedTracks);
 
 	//loop over unused tracks
 	size_t locNumTimeBasedTracks = 0;

@@ -16,16 +16,17 @@ using namespace std;
 #include "DCTOFDigiHit.h"
 #include "DCTOFTDCDigiHit.h"
 #include <TTAB/DTTabUtilities.h>
+#include <DANA/DEvent.h>
 
-using namespace jana;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DCTOFHit_factory::init(void)
+void DCTOFHit_factory::Init()
 {
+  auto app = GetApplication();
   DELTA_T_ADC_TDC_MAX = 20.0; // ns
-  gPARMS->SetDefaultParameter("CTOF:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX, 
+  app->SetDefaultParameter("CTOF:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX, 
 			      "Maximum difference in ns between a (calibrated) fADC time and CAEN TDC time for them to be matched in a single hit");
 
   /// Set basic conversion constants
@@ -33,45 +34,55 @@ jerror_t DCTOFHit_factory::init(void)
   t_base_adc = 0.;       // ns
   t_base_tdc = 0.; // ns
 
-  return NOERROR;
+  INSTALLED = false;
+    
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DCTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DCTOFHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	map<string,string> installed;
+	DEvent::GetCalib(event, "/CTOF/install_status", installed);
+	if(atoi(installed["status"].data()) == 0)
+		INSTALLED = false;
+	else
+		INSTALLED = true;
+		
+	if(!INSTALLED) return;
+
   // load base time offset
   map<string,double> base_time_offset;
-  if ((eventLoop->GetCalib("/CTOF/adc_base_time_offset",base_time_offset))==false){
+  if ((GetCalib(event,"/CTOF/adc_base_time_offset",base_time_offset))==false){
     t_base_adc = base_time_offset["t0"];
   }
-  if ((eventLoop->GetCalib("/CTOF/tdc_base_time_offset",base_time_offset))==false){
+  if ((GetCalib(event,"/CTOF/tdc_base_time_offset",base_time_offset))==false){
     t_base_tdc = base_time_offset["t0"];
   }
 
   // Channel-by-channel timing offsets
-  eventLoop->GetCalib("/CTOF/adc_timing_offsets", adc_time_offsets);  
-  eventLoop->GetCalib("/CTOF/tdc_timing_offsets", tdc_time_offsets);
-  eventLoop->GetCalib("/CTOF/adc2E", adc2E);
-
-  return NOERROR;
+  GetCalib(event, "/CTOF/adc_timing_offsets", adc_time_offsets);  
+  GetCalib(event, "/CTOF/tdc_timing_offsets", tdc_time_offsets);
+  GetCalib(event, "/CTOF/adc2E", adc2E);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DCTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DCTOFHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {   
+  if(!INSTALLED) return;
+
   const DTTabUtilities* locTTabUtilities = NULL;
-  loop->GetSingle(locTTabUtilities);
+  event->GetSingle(locTTabUtilities);
   
   // Get FADC hits
   vector<const DCTOFDigiHit*> digihits;
-  loop->Get(digihits);
+  event->Get(digihits);
    //Get the TDC hits
   vector<const DCTOFTDCDigiHit*> tdcdigihits;
-  loop->Get(tdcdigihits);
+  event->Get(tdcdigihits);
   
   for(unsigned int i=0;i<digihits.size(); i++){
     const DCTOFDigiHit *digihit = digihits[i];
@@ -119,28 +130,22 @@ jerror_t DCTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       hit->AddAssociatedObject(digihit);
       hit->AddAssociatedObject(tdcdigihit);
 
-      _data.push_back(hit);
+      Insert(hit);
     }
-    
-
   }
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DCTOFHit_factory::erun(void)
+void DCTOFHit_factory::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DCTOFHit_factory::fini(void)
+void DCTOFHit_factory::Finish()
 {
-  return NOERROR;
 }
 

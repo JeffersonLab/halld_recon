@@ -9,58 +9,58 @@
 #include "BCAL/DBCALShower.h"
 #include "FCAL/DFCALShower.h"
 #include "CCAL/DCCALShower.h"
+#include "ECAL/DECALShower.h"
+#include "DANA/DEvent.h"
+#include "DANA/DObjectID.h"
 
-using namespace jana;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventRFBunch_factory::init(void)
+void DEventRFBunch_factory::Init()
 {
 	dMinTrackingFOM = 0.0;
 	OVERRIDE_TAG = "";
-	
-	gPARMS->SetDefaultParameter("EVENTRFBUNCH:USE_TAG", OVERRIDE_TAG, "Use a particular tag for the general RF bunch calculation instead of the default calculation.");
-	return NOERROR;
+
+	auto app = GetApplication();
+	app->SetDefaultParameter("EVENTRFBUNCH:USE_TAG", OVERRIDE_TAG, "Use a particular tag for the general RF bunch calculation instead of the default calculation.");
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventRFBunch_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DEventRFBunch_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(runnumber);
+	DGeometry* locGeometry = DEvent::GetDGeometry(event);
+	JCalibration* calibration = DEvent::GetJCalibration(event);
 
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	calibration->Get("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 
 	double locTargetCenterZ;
 	locGeometry->GetTargetZ(locTargetCenterZ);
 	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
 
-	locEventLoop->GetSingle(dParticleID);
-
-	return NOERROR;
+	event->GetSingle(dParticleID);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventRFBunch_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
+void DEventRFBunch_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	//There should ALWAYS be one and only one DEventRFBunch created.
-		//If there is not enough information, time is set to NaN
+	//If there is not enough information, time is set to NaN
 
 	if(OVERRIDE_TAG != "") {
 		vector<const DEventRFBunch *> rfBunchVec;
-		locEventLoop->Get(rfBunchVec, OVERRIDE_TAG.c_str());
+		event->Get(rfBunchVec, OVERRIDE_TAG.c_str());
 		
 		if(rfBunchVec.size() > 0) {
 			DEventRFBunch *rfBunchCopy = new DEventRFBunch(*rfBunchVec[0]);
-			_data.push_back(rfBunchCopy);
-			return NOERROR;
+			Insert(rfBunchCopy);
+			return;
 		} else {
 			jerr << "Could not find DEventRFBunch objects with tag " << OVERRIDE_TAG
 				 << ", falling back to default calculation ..." << endl;
@@ -70,18 +70,19 @@ jerror_t DEventRFBunch_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnum
 
 	//Select Good Tracks
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	Select_GoodTracks(locEventLoop, locTrackTimeBasedVector);
+	Select_GoodTracks(event, locTrackTimeBasedVector);
 
 	//Select RF Bunch:
 	vector<const DRFTime*> locRFTimes;
-	locEventLoop->Get(locRFTimes);
+	event->Get(locRFTimes);
 	if(!locRFTimes.empty())
-		return Select_RFBunch(locEventLoop, locTrackTimeBasedVector, locRFTimes[0]);
+		Select_RFBunch(event, locTrackTimeBasedVector, locRFTimes[0]);
 	else
-		return Select_RFBunch_NoRFTime(locEventLoop, locTrackTimeBasedVector);
+		Select_RFBunch_NoRFTime(event, locTrackTimeBasedVector);
+	// TODO: Verify return value thing
 }
 
-void DEventRFBunch_factory::Select_GoodTracks(JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locSelectedTimeBasedTracks) const
+void DEventRFBunch_factory::Select_GoodTracks(const std::shared_ptr<const JEvent>& event, vector<const DTrackTimeBased*>& locSelectedTimeBasedTracks) const
 {
 	//Select tracks:
   //For each particle (DTrackTimeBased::candidateid), use the DTrackTimeBased with the best tracking FOM
@@ -90,13 +91,13 @@ void DEventRFBunch_factory::Select_GoodTracks(JEventLoop* locEventLoop, vector<c
 	locSelectedTimeBasedTracks.clear();
 
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	locEventLoop->Get(locTrackTimeBasedVector);
+	event->Get(locTrackTimeBasedVector);
 
 	//select the best DTrackTimeBased for each track: use best tracking FOM
-	map<JObject::oid_t, const DTrackTimeBased*> locBestTrackTimeBasedMap; //lowest tracking chisq/ndf for each candidate id
+	map<oid_t, const DTrackTimeBased*> locBestTrackTimeBasedMap; //lowest tracking chisq/ndf for each candidate id
 	for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
 	{
-		JObject::oid_t locCandidateID = locTrackTimeBasedVector[loc_i]->candidateid;
+		oid_t locCandidateID = locTrackTimeBasedVector[loc_i]->candidateid;
 		if(locBestTrackTimeBasedMap.find(locCandidateID) == locBestTrackTimeBasedMap.end())
 			locBestTrackTimeBasedMap[locCandidateID] = locTrackTimeBasedVector[loc_i];
 		else if(locTrackTimeBasedVector[loc_i]->FOM > locBestTrackTimeBasedMap[locCandidateID]->FOM)
@@ -104,7 +105,7 @@ void DEventRFBunch_factory::Select_GoodTracks(JEventLoop* locEventLoop, vector<c
 	}
 
 	//Select tracks with good tracking FOM
-	map<JObject::oid_t, const DTrackTimeBased*>::iterator locIterator;
+	map<oid_t, const DTrackTimeBased*>::iterator locIterator;
 	for(locIterator = locBestTrackTimeBasedMap.begin(); locIterator != locBestTrackTimeBasedMap.end(); ++locIterator)
 	{
 		const DTrackTimeBased* locTrackTimeBased = locIterator->second;
@@ -113,7 +114,7 @@ void DEventRFBunch_factory::Select_GoodTracks(JEventLoop* locEventLoop, vector<c
 	}
 }
 
-jerror_t DEventRFBunch_factory::Select_RFBunch(JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locTrackTimeBasedVector, const DRFTime* locRFTime)
+jerror_t DEventRFBunch_factory::Select_RFBunch(const std::shared_ptr<const JEvent>& event, vector<const DTrackTimeBased*>& locTrackTimeBasedVector, const DRFTime* locRFTime)
 {
   //If RF Time present:
   // Use track matches in the following order: SC, TOF, BCAL, FCAL. 
@@ -132,15 +133,15 @@ jerror_t DEventRFBunch_factory::Select_RFBunch(JEventLoop* locEventLoop, vector<
   //Select the bunch with the highest total shower energy
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	event->GetSingle(locDetectorMatches);
 
 	vector<pair<double, const JObject*> > locTimes;
 	int locBestRFBunchShift = 0, locHighestNumVotes = 0;
 
 	if(Find_TrackTimes_All(locDetectorMatches, locTrackTimeBasedVector, locTimes))
-		locBestRFBunchShift = Conduct_Vote(locEventLoop, locRFTime->dTime, locTimes, true, locHighestNumVotes);
-	else if(Find_NeutralTimes(locEventLoop, locTimes))
-		locBestRFBunchShift = Conduct_Vote(locEventLoop, locRFTime->dTime, locTimes, false, locHighestNumVotes);
+		locBestRFBunchShift = Conduct_Vote(event, locRFTime->dTime, locTimes, true, locHighestNumVotes);
+	else if(Find_NeutralTimes(event, locTimes))
+		locBestRFBunchShift = Conduct_Vote(event, locRFTime->dTime, locTimes, false, locHighestNumVotes);
 	else //PASS-THROUGH, WILL HAVE TO RESOLVE WHEN COMBOING
 		locBestRFBunchShift = 0;
 
@@ -149,12 +150,12 @@ jerror_t DEventRFBunch_factory::Select_RFBunch(JEventLoop* locEventLoop, vector<
 	locEventRFBunch->dTimeVariance = locRFTime->dTimeVariance;
 	locEventRFBunch->dNumParticleVotes = locHighestNumVotes;
 	locEventRFBunch->dTimeSource = SYS_RF;
-	_data.push_back(locEventRFBunch);
+	Insert(locEventRFBunch);
 
 	return NOERROR;
 }
 
-int DEventRFBunch_factory::Conduct_Vote(JEventLoop* locEventLoop, double locRFTime, vector<pair<double, const JObject*> >& locTimes, bool locUsedTracksFlag, int& locHighestNumVotes)
+int DEventRFBunch_factory::Conduct_Vote(const std::shared_ptr<const JEvent>& event, double locRFTime, vector<pair<double, const JObject*> >& locTimes, bool locUsedTracksFlag, int& locHighestNumVotes)
 {
 	map<int, vector<const JObject*> > locNumBeamBucketsShiftedMap;
 	set<int> locBestRFBunchShifts;
@@ -165,7 +166,7 @@ int DEventRFBunch_factory::Conduct_Vote(JEventLoop* locEventLoop, double locRFTi
 
 	//tied: break with beam photons
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons);
+	event->Get(locBeamPhotons);
 	if(Break_TieVote_BeamPhotons(locBeamPhotons, locRFTime, locNumBeamBucketsShiftedMap, locBestRFBunchShifts, locHighestNumVotes))
 		return *locBestRFBunchShifts.begin();
 
@@ -223,113 +224,137 @@ bool DEventRFBunch_factory::Find_TrackTimes_All(const DDetectorMatches* locDetec
 		//max can be off = rf-frequency/2 ns (if off by more, will pick wrong beam bunch)
 	for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
 	{
-	  const DTrackTimeBased* locTrackTimeBased = locTrackTimeBasedVector[loc_i];
+		const DTrackTimeBased* locTrackTimeBased = locTrackTimeBasedVector[loc_i];
 
-	  // start with SC: closest to target, minimal dependence on particle type
-	  shared_ptr<const DSCHitMatchParams> locSCHitMatchParams;
-	  if(dParticleID->Get_BestSCMatchParams(locTrackTimeBased, locDetectorMatches, locSCHitMatchParams))
-	    {
-	      double locPropagatedTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
-	      locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
-	      continue;
-	      
-	    }
-	  
-	  // Next use the TOF (best timing resolution for outer detectors
-	  //TOF resolution = 80ps, 3sigma = 240ps
-	  //max PID delta-t = 762ps (assuming 499 MHz and no buffer)
-	  //for pion-proton: delta-t is ~750ps at ~170 MeV/c or lower: cannot have proton this slow anyway
-	  //for pion-kaon delta-t is ~750ps at ~80 MeV/c or lower: won't reconstruct these anyway, and not likely to be forward-going anyway
-	  shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
-	  if(dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams))
-	    {
-	      double locPropagatedTime = locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
-	      locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
-	      continue;
-	    }
-	  
-	  // Else match to BCAL if fast enough (low time resolution for slow particles)
-	  double locP = locTrackTimeBased->momentum().Mag();
-	  //at 250 MeV/c, BCAL t-resolution is ~310ps (3sigma = 920ps), BCAL delta-t error is ~40ps: ~960 ps < 1 ns: OK!!
-	  //at 225 MeV/c, BCAL t-resolution is ~333ps (3sigma = 999ps), BCAL delta-t error is ~40ps: ~1040ps: bad at 499 MHz
-	  if((locP < 0.25) && (dBeamBunchPeriod < 2.005))
-	    continue; //too slow for the BCAL to distinguish RF bunch
-	  
-	  shared_ptr<const DBCALShowerMatchParams> locBCALShowerMatchParams;
-	  if(dParticleID->Get_BestBCALMatchParams(locTrackTimeBased, locDetectorMatches, locBCALShowerMatchParams))
-	    {
-	      const DBCALShower* locBCALShower = locBCALShowerMatchParams->dBCALShower;
-	      double locPropagatedTime = locBCALShower->t - locBCALShowerMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
-	      locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
-	      continue;
-	    }
+		// start with SC: closest to target, minimal dependence on particle type
+		shared_ptr<const DSCHitMatchParams> locSCHitMatchParams;
+		if(dParticleID->Get_BestSCMatchParams(locTrackTimeBased, locDetectorMatches, locSCHitMatchParams))
+		{
+			double locPropagatedTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
+			locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
+			continue;
+		}
 
-	  // If all else fails, use FCAL 
-	  shared_ptr<const DFCALShowerMatchParams> locFCALShowerMatchParams;
-	  if(dParticleID->Get_BestFCALMatchParams(locTrackTimeBased, locDetectorMatches, locFCALShowerMatchParams))
-	    {
-	      const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
-	      double locPropagatedTime = locFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
-	      locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
-	      continue;
-	    }
+		// Next use the TOF (best timing resolution for outer detectors
+		//TOF resolution = 80ps, 3sigma = 240ps
+		//max PID delta-t = 762ps (assuming 499 MHz and no buffer)
+		//for pion-proton: delta-t is ~750ps at ~170 MeV/c or lower: cannot have proton this slow anyway
+		//for pion-kaon delta-t is ~750ps at ~80 MeV/c or lower: won't reconstruct these anyway, and not likely to be forward-going anyway
+		shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
+		if(dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams))
+		{
+			double locPropagatedTime = locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
+			locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
+			continue;
+		}
 
-	  
+		// Else match to BCAL if fast enough (low time resolution for slow particles)
+		double locP = locTrackTimeBased->momentum().Mag();
+		//at 250 MeV/c, BCAL t-resolution is ~310ps (3sigma = 920ps), BCAL delta-t error is ~40ps: ~960 ps < 1 ns: OK!!
+		//at 225 MeV/c, BCAL t-resolution is ~333ps (3sigma = 999ps), BCAL delta-t error is ~40ps: ~1040ps: bad at 499 MHz
+		if((locP < 0.25) && (dBeamBunchPeriod < 2.005))
+			continue; //too slow for the BCAL to distinguish RF bunch
+
+		shared_ptr<const DBCALShowerMatchParams> locBCALShowerMatchParams;
+		if(dParticleID->Get_BestBCALMatchParams(locTrackTimeBased, locDetectorMatches, locBCALShowerMatchParams))
+		{
+			const DBCALShower* locBCALShower = locBCALShowerMatchParams->dBCALShower;
+			double locPropagatedTime = locBCALShower->t - locBCALShowerMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
+			locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
+			continue;
+		}
+		
+		// Else, match to ECAL:
+		shared_ptr<const DECALShowerMatchParams> locECALShowerMatchParams;
+		if(dParticleID->Get_BestECALMatchParams(locTrackTimeBased, locDetectorMatches, locECALShowerMatchParams))
+		{
+			const DECALShower* locECALShower = locECALShowerMatchParams->dECALShower;
+			double locPropagatedTime = locECALShower->t - locECALShowerMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
+			locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
+			continue;
+		}
+
+		// If all else fails, use FCAL 
+		shared_ptr<const DFCALShowerMatchParams> locFCALShowerMatchParams;
+		if(dParticleID->Get_BestFCALMatchParams(locTrackTimeBased, locDetectorMatches, locFCALShowerMatchParams))
+		{
+			const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
+			double locPropagatedTime = locFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
+			locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
+			continue;
+		}
+
 	}
 
 	return (!locTimes.empty());
 }
 
-bool DEventRFBunch_factory::Find_NeutralTimes(JEventLoop* locEventLoop, vector<pair<double, const JObject*> >& locTimes)
+bool DEventRFBunch_factory::Find_NeutralTimes(const std::shared_ptr<const JEvent>& event, vector<pair<double, const JObject*> >& locTimes)
 {
 	locTimes.clear();
 
 	vector< const DFCALShower* > fcalShowers;
-	locEventLoop->Get( fcalShowers );
+	event->Get( fcalShowers );
 
 	for( size_t i = 0; i < fcalShowers.size(); ++i ){
 
-	  DVector3 locHitPoint = fcalShowers[i]->getPosition();
-	  DVector3 locPath = locHitPoint - dTargetCenter;
-	  double locPathLength = locPath.Mag();
-	  if(!(locPathLength > 0.0))
-	    continue;
-	  
-	  double locFlightTime = locPathLength/29.9792458;
-	  double locHitTime = fcalShowers[i]->getTime();
-	  locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, fcalShowers[i] ) );
+		DVector3 locHitPoint = fcalShowers[i]->getPosition();
+		DVector3 locPath = locHitPoint - dTargetCenter;
+		double locPathLength = locPath.Mag();
+		if(!(locPathLength > 0.0))
+			continue;
+
+		double locFlightTime = locPathLength/29.9792458;
+		double locHitTime = fcalShowers[i]->getTime();
+		locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, fcalShowers[i] ) );
+	}
+
+	vector< const DECALShower* > ecalShowers;
+	event->Get( ecalShowers );
+
+	for( size_t i = 0; i < ecalShowers.size(); ++i ){
+
+		DVector3 locHitPoint = ecalShowers[i]->pos;
+		DVector3 locPath = locHitPoint - dTargetCenter;
+		double locPathLength = locPath.Mag();
+		if(!(locPathLength > 0.0))
+			continue;
+
+		double locFlightTime = locPathLength/29.9792458;
+		double locHitTime = ecalShowers[i]->t;
+		locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, ecalShowers[i] ) );
 	}
 
 	vector< const DBCALShower* > bcalShowers;
-	locEventLoop->Get( bcalShowers );
+	event->Get( bcalShowers );
 
 	for( size_t i = 0; i < bcalShowers.size(); ++i ){
 
-	  DVector3 locHitPoint( bcalShowers[i]->x, bcalShowers[i]->y, bcalShowers[i]->z );
-	  DVector3 locPath = locHitPoint - dTargetCenter;
-	  double locPathLength = locPath.Mag();
-	  if(!(locPathLength > 0.0))
-	    continue;
-	  
-	  double locFlightTime = locPathLength/29.9792458;
-	  double locHitTime = bcalShowers[i]->t;
-	  locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, bcalShowers[i] ) );
+		DVector3 locHitPoint( bcalShowers[i]->x, bcalShowers[i]->y, bcalShowers[i]->z );
+		DVector3 locPath = locHitPoint - dTargetCenter;
+		double locPathLength = locPath.Mag();
+		if(!(locPathLength > 0.0))
+		continue;
+
+		double locFlightTime = locPathLength/29.9792458;
+		double locHitTime = bcalShowers[i]->t;
+		locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, bcalShowers[i] ) );
 	}
 	/*
 	vector< const DCCALShower* > ccalShowers;
-	locEventLoop->Get( ccalShowers );
+	event->Get( ccalShowers );
 
 	for( size_t i = 0; i < ccalShowers.size(); ++i ){
 
-	  DVector3 locHitPoint( ccalShowers[i]->x, ccalShowers[i]->y, ccalShowers[i]->z );
-	  DVector3 locPath = locHitPoint - dTargetCenter;
-	  double locPathLength = locPath.Mag();
-	  if(!(locPathLength > 0.0))
-	    continue;
-	  
-	  double locFlightTime = locPathLength/29.9792458;
-	  double locHitTime = ccalShowers[i]->time;
-	  locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, ccalShowers[i] ) );
+		DVector3 locHitPoint( ccalShowers[i]->x, ccalShowers[i]->y, ccalShowers[i]->z );
+		DVector3 locPath = locHitPoint - dTargetCenter;
+		double locPathLength = locPath.Mag();
+		if(!(locPathLength > 0.0))
+			continue;
+
+		double locFlightTime = locPathLength/29.9792458;
+		double locHitTime = ccalShowers[i]->time;
+		locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, ccalShowers[i] ) );
 	}
 	*/  
 	return (locTimes.size() > 1);
@@ -434,58 +459,59 @@ int DEventRFBunch_factory::Break_TieVote_Tracks(map<int, vector<const JObject*> 
 
 int DEventRFBunch_factory::Break_TieVote_Neutrals(map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts)
 {
-  //Break tie with highest total shower energy
+	//Break tie with highest total shower energy
 
-  int locBestRFBunchShift = 0;
-  double locHighestTotalEnergy = 0.0;
+	int locBestRFBunchShift = 0;
+	double locHighestTotalEnergy = 0.0;
 
-  set<int>::const_iterator locSetIterator = locBestRFBunchShifts.begin();
-  for(; locSetIterator != locBestRFBunchShifts.end(); ++locSetIterator)
-    {
-      int locRFBunchShift = *locSetIterator;
-      double locTotalEnergy = 0.0;
-
-      const vector<const JObject*>& locVoters = locNumBeamBucketsShiftedMap[locRFBunchShift];
-      for(size_t loc_i = 0; loc_i < locVoters.size(); ++loc_i)
+	set<int>::const_iterator locSetIterator = locBestRFBunchShifts.begin();
+	for(; locSetIterator != locBestRFBunchShifts.end(); ++locSetIterator)
 	{
-	  // the pointers in locVoters that we care about will either be those to DBCALShower
-	  // or DFCALShower objects -- figure out which and record the energy
-	  
-	  const DFCALShower* fcalShower = dynamic_cast< const DFCALShower* >( locVoters[loc_i] );
-	  
-	  if( fcalShower != NULL ){
+		int locRFBunchShift = *locSetIterator;
+		double locTotalEnergy = 0.0;
 
-	    locTotalEnergy += fcalShower->getEnergy();
-	  }
-	  else{
-	    
-	    const DBCALShower* bcalShower = dynamic_cast< const DBCALShower* >( locVoters[loc_i] );
-	    if( bcalShower != NULL ){
-	      
-	      locTotalEnergy += bcalShower->E;
-	    }
-	    else{
-	      const DCCALShower* ccalShower = dynamic_cast< const DCCALShower* >( locVoters[loc_i] );
-	      if( ccalShower != NULL ){
-		
-		locTotalEnergy += ccalShower->E;
-	      }
-	    }
-	  }
+		const vector<const JObject*>& locVoters = locNumBeamBucketsShiftedMap[locRFBunchShift];
+		for(size_t loc_i = 0; loc_i < locVoters.size(); ++loc_i)
+		{
+			// the pointers in locVoters that we care about will either be those to DBCALShower,
+			// DFCALShower, or DECALShower objects -- figure out which and record the energy
+
+			const DFCALShower* fcalShower = dynamic_cast< const DFCALShower* >( locVoters[loc_i] );
+			if( fcalShower != NULL ){
+				locTotalEnergy += fcalShower->getEnergy();
+			}
+			else{
+				const DBCALShower* bcalShower = dynamic_cast< const DBCALShower* >( locVoters[loc_i] );
+				if( bcalShower != NULL ){
+					locTotalEnergy += bcalShower->E;
+				}
+				else{
+					const DECALShower* ecalShower = dynamic_cast< const DECALShower* >( locVoters[loc_i] );
+					if( ecalShower != NULL ){
+						locTotalEnergy += ecalShower->E;
+					}
+					else {
+						const DCCALShower* ccalShower = dynamic_cast< const DCCALShower* >( locVoters[loc_i] );
+						if( ccalShower != NULL ){
+							locTotalEnergy += ccalShower->E;
+						}
+					}
+				}
+			}
+		}
+
+		if(locTotalEnergy > locHighestTotalEnergy)
+		{
+			locHighestTotalEnergy = locTotalEnergy;
+			locBestRFBunchShift = locRFBunchShift;
+		}
 	}
-      
-      if(locTotalEnergy > locHighestTotalEnergy)
-	{
-	  locHighestTotalEnergy = locTotalEnergy;
-	  locBestRFBunchShift = locRFBunchShift;
-	}
-    }
-  
-  return locBestRFBunchShift;
+
+	return locBestRFBunchShift;
 }
 
 
-jerror_t DEventRFBunch_factory::Select_RFBunch_NoRFTime(JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locTrackTimeBasedVector)
+jerror_t DEventRFBunch_factory::Select_RFBunch_NoRFTime(const std::shared_ptr<const JEvent>& event, vector<const DTrackTimeBased*>& locTrackTimeBasedVector)
 {
 	//If no RF time:
 		//Use SC hits that have a track match to compute RF time guess, if any
@@ -495,7 +521,7 @@ jerror_t DEventRFBunch_factory::Select_RFBunch_NoRFTime(JEventLoop* locEventLoop
 			//Set RF time as NaN
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	event->GetSingle(locDetectorMatches);
 
 	vector<pair<double, const JObject*> > locTimes;
 	if(!Find_TrackTimes_SCTOF(locDetectorMatches, locTrackTimeBasedVector, locTimes))
@@ -507,19 +533,19 @@ jerror_t DEventRFBunch_factory::Select_RFBunch_NoRFTime(JEventLoop* locEventLoop
 
 	//OK, now have RF time guess: vote
 	int locHighestNumVotes = 0;
-	int locBestRFBunchShift = Conduct_Vote(locEventLoop, locRFTimeGuess, locTimes, true, locHighestNumVotes);
+	int locBestRFBunchShift = Conduct_Vote(event, locRFTimeGuess, locTimes, true, locHighestNumVotes);
 
 	DEventRFBunch *locEventRFBunch = new DEventRFBunch;
 	locEventRFBunch->dTime = locRFTimeGuess + dBeamBunchPeriod*double(locBestRFBunchShift);
 	locEventRFBunch->dTimeVariance = locTimeVariance;
 	locEventRFBunch->dNumParticleVotes = locHighestNumVotes;
 	locEventRFBunch->dTimeSource = locTimeSource;
-	_data.push_back(locEventRFBunch);
+	Insert(locEventRFBunch);
 
 	return NOERROR;
 }
 
-bool DEventRFBunch_factory::Get_RFTimeGuess(JEventLoop* locEventLoop, double& locRFTimeGuess, double& locRFVariance, DetectorSystem_t& locTimeSource) const
+bool DEventRFBunch_factory::Get_RFTimeGuess(const std::shared_ptr<const JEvent>& event, double& locRFTimeGuess, double& locRFVariance, DetectorSystem_t& locTimeSource) const
 {
 	//Meant to be called externally
 
@@ -528,10 +554,10 @@ bool DEventRFBunch_factory::Get_RFTimeGuess(JEventLoop* locEventLoop, double& lo
 			//Times could be modulo the rf-frequency still: line them up
 
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	Select_GoodTracks(locEventLoop, locTrackTimeBasedVector);
+	Select_GoodTracks(event, locTrackTimeBasedVector);
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	event->GetSingle(locDetectorMatches);
 
 	locTimeSource = SYS_NULL;
 	vector<pair<double, const JObject*> > locTimes;
@@ -568,24 +594,22 @@ jerror_t DEventRFBunch_factory::Create_NaNRFBunch(void)
 	locEventRFBunch->dTimeVariance = numeric_limits<double>::quiet_NaN();
 	locEventRFBunch->dNumParticleVotes = 0;
 	locEventRFBunch->dTimeSource = SYS_NULL;
-	_data.push_back(locEventRFBunch);
+	Insert(locEventRFBunch);
 
 	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventRFBunch_factory::erun(void)
+void DEventRFBunch_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventRFBunch_factory::fini(void)
+void DEventRFBunch_factory::Finish()
 {
-	return NOERROR;
 }
 

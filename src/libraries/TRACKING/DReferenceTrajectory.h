@@ -14,10 +14,12 @@ using std::vector;
 #include <TMatrixFSym.h>
 #include <TMatrix.h>
 
+#include <DANA/jerror.h>
+#include <JANA/JApplication.h>
+
 #include <HDGEOMETRY/DGeometry.h>
 #include <DVector3.h>
 #include <DVector2.h>
-#include <JANA/jerror.h>
 #include <DMatrixDSym.h>
 #include <DMatrix.h>
 #include <PID/DKinematicData.h>
@@ -27,7 +29,6 @@ using std::vector;
 
 class DMagneticFieldMap;
 class DTrackCandidate;
-class DRootGeom;
 
 class DReferenceTrajectory{
 	
@@ -75,10 +76,11 @@ class DReferenceTrajectory{
 		};
 
 		DReferenceTrajectory(const DMagneticFieldMap *
+									, JApplication *app = nullptr
 									, double q=1.0
 									, swim_step_t *swim_steps=NULL
 									, int max_swim_steps=0
-									, double step_size=-1.0);
+									, double step_size=-1.0 );
 		DReferenceTrajectory(const DReferenceTrajectory& rt);
 		DReferenceTrajectory& operator=(const DReferenceTrajectory& rt);
 		virtual ~DReferenceTrajectory();
@@ -136,9 +138,7 @@ class DReferenceTrajectory{
 
 		double GetLastDistAlongWire(void) const {return last_dist_along_wire;}
 		void SetStepSize(double step_size){this->step_size=step_size;}
-		void SetDRootGeom(const DRootGeom *RootGeom){this->RootGeom = RootGeom;}
 		void SetDGeometry(const DGeometry *geom){this->geom = geom;}
-		const DRootGeom* GetDRootGeom(void) const {return RootGeom;}
 		const DGeometry* GetDGeometry(void) const {return geom;}
 		const DMagneticFieldMap* GetBfield(void) const {return bfield;}
 		double GetMass(void) const {return mass;}
@@ -207,7 +207,6 @@ class DReferenceTrajectory{
 		int dist_to_rt_depth;
 		double step_size;
 		const DMagneticFieldMap *bfield;
-		const DRootGeom *RootGeom;
 		const DGeometry *geom;
 		direction_t ploss_direction;
 		bool check_material_boundaries;
@@ -227,6 +226,7 @@ class DReferenceTrajectory{
 		double MAX_STEP_SIZE;
 	
 	    static thread_local shared_ptr<DResourcePool<TMatrixFSym>> dResourcePool_TMatrixFSym;
+	    JApplication* app = nullptr;  // Need this in order to retrieve parameter values
 
 	private:
 		DReferenceTrajectory(){} // force use of constructor with arguments.

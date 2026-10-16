@@ -18,32 +18,35 @@ using namespace std;
 #include <DAQ/Df125PulsePedestal.h>
 #include <DAQ/Df125Config.h>
 #include <DAQ/Df125FDCPulse.h>
-using namespace jana;
+#include <DANA/DEvent.h>
+
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DFDCHit_factory::init(void)
-{ 
+void DFDCHit_factory::Init()
+{
+  auto app = GetApplication();
   USE_FDC=true; 
-  gPARMS->SetDefaultParameter("FDC:ENABLE",USE_FDC);
+  app->SetDefaultParameter("FDC:ENABLE",USE_FDC);
   
    /// set the base conversion scales
    a_scale      = 2.4E4/1.3E5;  // cathodes
    t_scale      = 8.0/10.0;     // 8 ns/count and integer time is in 1/10th of sample
    t_base       = 0.;           // ns
    fadc_t_base  = 0.;           // ns
-
-   return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DFDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DFDCHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  if (USE_FDC==false) return RESOURCE_UNAVAILABLE;
+  if (USE_FDC==false) return; // RESOURCE_UNAVAILABLE;
+
+   auto runnumber = event->GetRunNumber();
+   JCalibration* calibration = DEvent::GetJCalibration(event);
 
    // Only print messages for one thread whenever run number change
    static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -66,7 +69,7 @@ jerror_t DFDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
    // load scale factors
    map<string,double> scale_factors;
-   if(eventLoop->GetCalib("/FDC/digi_scales", scale_factors))
+   if(calibration->Get("/FDC/digi_scales", scale_factors))
       jout << "Error loading /FDC/digi_scales !" << endl;
    if( scale_factors.find("FDC_ADC_ASCALE") != scale_factors.end() ) {
       a_scale = scale_factors["FDC_ADC_ASCALE"];
@@ -81,7 +84,7 @@ jerror_t DFDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
    // load base time offset
    map<string,double> base_time_offset;
-   if (eventLoop->GetCalib("/FDC/base_time_offset",base_time_offset))
+   if (calibration->Get("/FDC/base_time_offset",base_time_offset))
       jout << "Error loading /FDC/base_time_offset !" << endl;
    if (base_time_offset.find("FDC_BASE_TIME_OFFSET") != base_time_offset.end())
       fadc_t_base = base_time_offset["FDC_BASE_TIME_OFFSET"];
@@ -94,10 +97,10 @@ jerror_t DFDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
 
    // each FDC package has the same set of constants
-   LoadPackageCalibTables(eventLoop,"/FDC/package1");
-   LoadPackageCalibTables(eventLoop,"/FDC/package2");
-   LoadPackageCalibTables(eventLoop,"/FDC/package3");
-   LoadPackageCalibTables(eventLoop,"/FDC/package4");
+   LoadPackageCalibTables(event,"/FDC/package1");
+   LoadPackageCalibTables(event,"/FDC/package2");
+   LoadPackageCalibTables(event,"/FDC/package3");
+   LoadPackageCalibTables(event,"/FDC/package4");
 
    // Verify that the right number of layers were loaded
    char str[256];
@@ -119,16 +122,14 @@ jerror_t DFDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
       cerr << str << endl;
       throw JException(str);
    }
-
-   return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DFDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DFDCHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
-  if (USE_FDC==false) return RESOURCE_UNAVAILABLE;
+  if (USE_FDC==false) return; // RESOURCE_UNAVAILABLE;
 
    /// Generate DFDCHit object for each DFDCCathodeDigiHit and
    /// each DFDCWireDigiHit object.
@@ -142,11 +143,11 @@ jerror_t DFDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
    char str[256];
 
    const DTTabUtilities* locTTabUtilities = NULL;
-   loop->GetSingle(locTTabUtilities);
+   event->GetSingle(locTTabUtilities);
 
    // Make hits out of all DFDCCathodeDigiHit hits
    vector<const DFDCCathodeDigiHit*> cathodedigihits;
-   loop->Get(cathodedigihits);
+   event->Get(cathodedigihits);
    for(unsigned int i=0; i<cathodedigihits.size(); i++){
       const DFDCCathodeDigiHit *digihit = cathodedigihits[i];
 
@@ -292,12 +293,12 @@ jerror_t DFDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       hit->AddAssociatedObject(digihit);
 
-      _data.push_back(hit);
+      Insert(hit);
    }
 
    // Make hits out of all DFDCWireDigiHit hits
    vector<const DFDCWireDigiHit*> wiredigihits;
-   loop->Get(wiredigihits);
+   event->Get(wiredigihits);
    for(unsigned int i=0; i<wiredigihits.size(); i++){
       const DFDCWireDigiHit *digihit = wiredigihits[i];
 
@@ -350,44 +351,42 @@ jerror_t DFDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       hit->AddAssociatedObject(digihit);
 
-      _data.push_back(hit);
+      Insert(hit);
    }
-
-   return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DFDCHit_factory::erun(void)
+void DFDCHit_factory::EndRun()
 {
-   return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DFDCHit_factory::fini(void)
+void DFDCHit_factory::Finish()
 {
-   return NOERROR;
 }
 
 
 //------------------
 // LoadPackageCalibTables
 //------------------
-void DFDCHit_factory::LoadPackageCalibTables(jana::JEventLoop *eventLoop, string ccdb_prefix)
+void DFDCHit_factory::LoadPackageCalibTables(const std::shared_ptr<const JEvent>& event, string ccdb_prefix)
 {
    vector< vector<double> >  new_gains, new_pedestals, new_strip_t0s, new_wire_t0s;
    char str[256];
 
-   if(eventLoop->GetCalib(ccdb_prefix+"/strip_gains_v2", new_gains))
+   JCalibration* calibration = DEvent::GetJCalibration(event);
+
+   if(calibration->Get(ccdb_prefix+"/strip_gains_v2", new_gains))
       cout << "Error loading "+ccdb_prefix+"/strip_gains_v2 !" << endl;
-   if(eventLoop->GetCalib(ccdb_prefix+"/strip_pedestals", new_pedestals))
+   if(calibration->Get(ccdb_prefix+"/strip_pedestals", new_pedestals))
       cout << "Error loading "+ccdb_prefix+"/strip_pedestals !" << endl;
-   if(eventLoop->GetCalib(ccdb_prefix+"/strip_timing_offsets", new_strip_t0s))
+   if(calibration->Get(ccdb_prefix+"/strip_timing_offsets", new_strip_t0s))
       cout << "Error loading "+ccdb_prefix+"/strip_timing_offsets!" << endl;
-   if(eventLoop->GetCalib(ccdb_prefix+"/wire_timing_offsets", new_wire_t0s))
+   if(calibration->Get(ccdb_prefix+"/wire_timing_offsets", new_wire_t0s))
       cout << "Error loading "+ccdb_prefix+"/wire_timing_offsets!" << endl;
 
    for(int nchamber=0; nchamber<6; nchamber++) {

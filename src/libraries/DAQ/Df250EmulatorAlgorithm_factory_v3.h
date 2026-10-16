@@ -8,55 +8,48 @@
 #ifndef _Df250EmulatorAlgorithm_factory_v3_
 #define _Df250EmulatorAlgorithm_factory_v3_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <DAQ/Df250EmulatorAlgorithm_v3.h>
 
-class Df250EmulatorAlgorithm_factory_v3:public jana::JFactory<Df250EmulatorAlgorithm>{
+class Df250EmulatorAlgorithm_factory_v3:public JFactoryT<Df250EmulatorAlgorithm>{
 	public:
-		Df250EmulatorAlgorithm_factory_v3(){};
-		~Df250EmulatorAlgorithm_factory_v3(){};
-		const char* Tag(void){return "v3";}
+		Df250EmulatorAlgorithm_factory_v3() {
+			SetTag("v3");
+		};
+		~Df250EmulatorAlgorithm_factory_v3() override = default;
 
 		Df250EmulatorAlgorithm *emulator = nullptr;
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override
 		{
 			// (See DTAGHGeometry_factory.h)
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			
-			if( emulator ) delete emulator;
-
-			emulator = new Df250EmulatorAlgorithm_v3(loop);
-
-			return NOERROR;
+			delete emulator;
+			emulator = new Df250EmulatorAlgorithm_v3(event->GetJApplication());
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 void Process(const std::shared_ptr<const JEvent>& event) override
 		 {
 			// Reuse existing DBCALGeometry object.
-			if( emulator ) _data.push_back( emulator );
-			 
-			 return NOERROR;
+			if( emulator ) Insert( emulator );
 		 }
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun() override
 		{
-			if( emulator ) delete emulator;
-			emulator = NULL;
-			
-			return NOERROR;
+			delete emulator;
+			emulator = nullptr;
 		}
-	
 };
 
 #endif // _Df250EmulatorAlgorithm_factory_v3_

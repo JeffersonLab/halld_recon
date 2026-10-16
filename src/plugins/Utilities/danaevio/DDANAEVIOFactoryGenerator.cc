@@ -8,9 +8,8 @@
 #include "JEventProcessor_danaevio.h"
 
 
-jerror_t DDANAEVIOFactoryGenerator::GenerateFactories(JEventLoop *loop) {
-  loop->AddFactory(new DDANAEVIO_factory());
-  return NOERROR;
+void DDANAEVIOFactoryGenerator::GenerateFactories(JFactorySet* fs) {
+  fs->Add(new DDANAEVIO_factory());
 }
 
 
@@ -23,21 +22,21 @@ extern "C" {
 
   void InitPlugin(JApplication *app) {
 
-    // initialize plugin system
+    // Initialize plugin system
     InitJANAPlugin(app);
 
 
     // add DANAEVIO factory
-    app->AddFactoryGenerator(new DDANAEVIOFactoryGenerator());
+    app->Add(new DDANAEVIOFactoryGenerator());
 
 
     // Add DANAEVIO event processor to write out events
     // default for writing is true, the normal case if factory is included
     // to turn off specify -PEVIO::WRITEOUT=0
     bool evioWriteOut =true;
-    gPARMS->SetDefaultParameter("EVIO:WRITEOUT",evioWriteOut);
+    app->SetDefaultParameter("EVIO:WRITEOUT",evioWriteOut);
     if(evioWriteOut) {
-      app->AddProcessor(new JEventProcessor_danaevio(),true);
+      app->Add(new JEventProcessor_danaevio());
     } else {
       jout << endl << endl << "    *** No EVIO output file will be generated ***" << endl << endl << endl;
     }

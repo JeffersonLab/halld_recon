@@ -7,7 +7,7 @@ using namespace std;
 
 #include "DEventProcessor_fcal_led.h"
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <FCAL/DFCALDigiHit.h>
 
 #include <DAQ/Df250PulseIntegral.h>
@@ -22,15 +22,15 @@ using namespace std;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_fcal_led());
+	app->Add(new DEventProcessor_fcal_led());
 }
 } // "C"
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_fcal_led::init(void)
+void DEventProcessor_fcal_led::Init()
 {
          
   TDirectory *dir = new TDirectoryFile("FCAL","FCAL");
@@ -80,31 +80,31 @@ jerror_t DEventProcessor_fcal_led::init(void)
   dir->cd("../");
 
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_fcal_led::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_fcal_led::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_fcal_led::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_fcal_led::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 
 	
 	vector<const DFCALDigiHit*> fcal_digihits;
 
-	loop->Get(fcal_digihits);
+	event->Get(fcal_digihits);
 
-	cout << " Event number = " << eventnumber  <<  endl;
+	cout << " Event number = " << event->GetEventNumber()  <<  endl;
 	cout << " Number of hits = " << fcal_digihits.size() <<  endl;
 
 	nhit = 0;
@@ -120,7 +120,7 @@ jerror_t DEventProcessor_fcal_led::evnt(JEventLoop *loop, uint64_t eventnumber)
 	nsamples_pedestal = 0;
 
 
-	japp->RootWriteLock(); 
+	DEvent::GetLockService(event)->RootWriteLock();
 
 
         for(unsigned int ii = 0; ii < fcal_digihits.size(); ii++){
@@ -187,26 +187,22 @@ jerror_t DEventProcessor_fcal_led::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  tree1->Fill();
 	}
 
-	japp->RootUnLock();
-
-	return NOERROR;
+	DEvent::GetLockService(event)->RootUnLock();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_fcal_led::erun(void)
+void DEventProcessor_fcal_led::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_fcal_led::fini(void)
+void DEventProcessor_fcal_led::Finish()
 {
-	return NOERROR;
 }
 

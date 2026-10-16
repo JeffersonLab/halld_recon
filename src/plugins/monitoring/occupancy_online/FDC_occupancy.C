@@ -18,16 +18,13 @@
 	// change them and not change them back.
 
 	TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("occupancy");
-	if(!dir) {
-		cout << "No 'occupancy' directory!" << endl;
-		return;
-	}
+	if(dir) dir->cd();
 
-	TH2I *fdc_cathode_occ = (TH2I*)dir->FindObjectAny("fdc_cathode_occ");
-	TH2I *fdc_wire_occ = (TH2I*)dir->FindObjectAny("fdc_wire_occ");
+	TH2I *fdc_cathode_occ = (TH2I*)gDirectory->FindObjectAny("fdc_cathode_occ");
+	TH2I *fdc_wire_occ = (TH2I*)gDirectory->FindObjectAny("fdc_wire_occ");
 
 	double Nevents = 1.0;
-	TH1I *fdc_num_events = (TH1I*)dir->FindObjectAny("fdc_num_events");
+	TH1I *fdc_num_events = (TH1I*)gDirectory->FindObjectAny("fdc_num_events");
 	if(fdc_num_events) Nevents = (double)fdc_num_events->GetBinContent(1);
 
 	// Just for testing

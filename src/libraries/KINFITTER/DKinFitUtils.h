@@ -10,7 +10,7 @@
 #include "TLorentzVector.h"
 #include "TMatrixFSym.h"
 
-#include "JANA/JEventLoop.h"
+#include "JANA/JEvent.h"
 
 #include "DResourcePool.h"
 
@@ -24,7 +24,6 @@
 #include "DKinFitConstraint_Spacetime.h"
 
 using namespace std;
-using namespace jana;
 
 class DKinFitUtils //contains pure-virtual functions: cannot directly instantiate class, can only inherit from it
 {
@@ -35,14 +34,14 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 		/***************************************************************** INITIALIZE ***************************************************************/
 
 		//STRUCTORS
-		DKinFitUtils(void);
+		DKinFitUtils(ostream* out_stream = &cout);
 		virtual ~DKinFitUtils(void){};
 		
 		//RESET: IF YOU OVERRIDE THESE IN THE DERIVED CLASS, BE SURE TO CALL THE BASE CLASS FUNCTIONS!
 		virtual void Reset_NewEvent(void);
 		virtual void Reset_NewFit(void){};
 		
-		virtual void Set_RunDependent_Data(JEventLoop *locEventLoop) {}
+		virtual void Set_RunDependent_Data(const std::shared_ptr<const JEvent>& event) {}
 
 		/************************************************************ CONTROL AND MAPPING ***********************************************************/
 
@@ -50,11 +49,13 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 		bool Get_LinkVerticesFlag(void) const{return dLinkVerticesFlag;}
 		bool Get_DebugLevel(void) const{return dDebugLevel;}
 		bool Get_UpdateCovarianceMatricesFlag(void) const{return dUpdateCovarianceMatricesFlag;}
+		ostream& Get_DebugStream(void) const { return *dDebugStream; }
 
 		//SET CONTROL
 		void Set_LinkVerticesFlag(bool locLinkVerticesFlag){dLinkVerticesFlag = locLinkVerticesFlag;}
 		void Set_DebugLevel(int locDebugLevel){dDebugLevel = locDebugLevel;}
 		void Set_UpdateCovarianceMatricesFlag(bool locUpdateCovarianceMatricesFlag){dUpdateCovarianceMatricesFlag = locUpdateCovarianceMatricesFlag;}
+		void Set_DebugStream(ostream* out_stream) { if (out_stream) { dDebugStream = out_stream; } }
 
 		//GET INPUT FROM OUTPUT
 		shared_ptr<DKinFitParticle> Get_InputKinFitParticle(const shared_ptr<DKinFitParticle>& locKinFitParticle) const;
@@ -145,6 +146,7 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 		bool dLinkVerticesFlag;
 		int dDebugLevel;
 		bool dUpdateCovarianceMatricesFlag;
+		ostream* dDebugStream; // set by ctor, defaults to std::cout
 
 		shared_ptr<DResourcePool<DKinFitChainStep>> dResourcePool_KinFitChainStep;
 		shared_ptr<DResourcePool<DKinFitChain>> dResourcePool_KinFitChain;

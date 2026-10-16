@@ -21,7 +21,7 @@ DMaterial::DMaterial(string &name, double A, double Z, double density, double ra
 	this->kdensity = density;
 	this->kXo = radlen;
 	
-	last_ptype = Unknown;
+	last_ptype = UnknownParticle;
 	last_p = -1.0;
 	last_dEdx = -1.0;
 }

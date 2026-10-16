@@ -7,13 +7,13 @@ namespace DAnalysis
 
 int DReactionStep::Prepare_InfoArguments(vector<Particle_t>& locFinalPIDs, Particle_t locMissingFinalPID, bool locInclusiveFlag, bool locBeamMissingFlag, bool locSecondBeamMissingFlag) const
 {
-	if((locInclusiveFlag || locBeamMissingFlag) && (locMissingFinalPID != Unknown))
+	if((locInclusiveFlag || locBeamMissingFlag) && (locMissingFinalPID != UnknownParticle))
 	{
 		cout << "ERROR: CANNOT HAVE MISSING PID + MISSING BEAM OR INCLUSIVE. ABORTING." << endl;
 		abort();
 	}
 
-	if(locMissingFinalPID != Unknown)
+	if(locMissingFinalPID != UnknownParticle)
 	{
 		locFinalPIDs.push_back(locMissingFinalPID);
 		return locFinalPIDs.size() - 1;
@@ -34,7 +34,7 @@ void DReactionStep::Add_FinalParticleID(Particle_t locPID, bool locIsMissingFlag
 
 	if(!locIsMissingFlag)
 	{
-		if(locPID == Unknown)
+		if(locPID == UnknownParticle)
 		{
 			cout << "ERROR: CANNOT SET UNKNOWN PID AS NON-MISSING FINAL PARTICLE. ABORTING." << endl;
 			abort();
@@ -51,7 +51,7 @@ void DReactionStep::Add_FinalParticleID(Particle_t locPID, bool locIsMissingFlag
 	}
 
 	//if unknown, instead set as inclusive
-	if(locPID == Unknown)
+	if(locPID == UnknownParticle)
 		dReactionStepInfo->dMissingParticleIndex = DReactionStep::Get_ParticleIndex_Inclusive();
 	else
 	{
@@ -87,8 +87,8 @@ string Get_InitialParticlesName(const DReactionStep* locStep, bool locTLatexFlag
 
 	Particle_t locSecondBeamPID = locStep->Get_SecondBeamPID();
 	Particle_t locTargetPID = locStep->Get_TargetPID();
-	Particle_t locSecondPID = (locTargetPID != Unknown) ? locTargetPID : locSecondBeamPID;
-	if(locSecondPID != Unknown)
+	Particle_t locSecondPID = (locTargetPID != UnknownParticle) ? locTargetPID : locSecondBeamPID;
+	if(locSecondPID != UnknownParticle)
 	{
 		if(!locTLatexFlag)
 			locStepName += "_";
@@ -117,7 +117,7 @@ vector<string> Get_FinalParticleNames(const DReactionStep* locStep, bool locIncl
 	}
 
 	Particle_t locMissingPID = locStep->Get_MissingPID();
-	if(locMissingPID != Unknown)
+	if(locMissingPID != UnknownParticle)
 		locParticleNames.push_back(string("(") + locGetNameFunc(locMissingPID) + string(")"));
 
 	return locParticleNames;

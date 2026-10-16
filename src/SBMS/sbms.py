@@ -601,12 +601,17 @@ def AddHDDS(env):
 	hdds_home = os.getenv('HDDS_HOME', 'hdds')
 	env.AppendUnique(CPPPATH = ["%s/%s/src" % (hdds_home, env['OSNAME'])])
 	env.AppendUnique(LIBPATH = ["%s/%s/lib" % (hdds_home, env['OSNAME'])])
+	env.AppendUnique(RPATH   = ["%s/%s/lib" % (hdds_home, env['OSNAME'])])
 
 
 ##################################
 # HDDM
 ##################################
 def AddHDDM(env):
+	hddm_dir = os.getenv('HDDM_DIR', 'hddm')
+	env.AppendUnique(CPPPATH = ["%s/include" % (hddm_dir)])
+	env.AppendUnique(CPPPATH = ["%s/include/xrootd" % (hddm_dir)])
+	env.AppendUnique(LIBPATH = ["%s/lib" % (hddm_dir)])
 	env.AppendUnique(LIBS = 'HDDM')
 	env.PrependUnique(OPTIONAL_PLUGIN_LIBS = 'HDDM')
 	Add_xstream(env)
@@ -646,6 +651,7 @@ def AddDANA(env):
 	DANA_LIBS += " expat gfortran" 
 	env.PrependUnique(LIBS = DANA_LIBS.split())
 	env.Append(LIBS = 'DANA')
+	env.Append(LIBS = 'ECAL')
 	env.PrependUnique(OPTIONAL_PLUGIN_LIBS = DANA_LIBS.split())
 
 ##################################
@@ -668,8 +674,10 @@ def Add_HDF5(env):
 		env.AppendUnique(CPPPATH = HDF5_CPPPATH)
 		HDF5_LIBPATH = ["%s/lib" % (hdf5_root)]
 		env.AppendUnique(LIBPATH = HDF5_LIBPATH)
-		env.AppendUnique(LIBS=['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
-		env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
+		#env.AppendUnique(LIBS=['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
+		env.AppendUnique(LIBS=['hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
+		#env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
+		env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
 		env.AppendUnique(CXXFLAGS = ['-DHDF5_SUPPORT'])
 
 ##################################
@@ -684,6 +692,7 @@ def AddCCDB(env):
 		CCDB_LIBS = "ccdb"
 		env.AppendUnique(CPPPATH = CCDB_CPPPATH)
 		env.AppendUnique(LIBPATH = CCDB_LIBPATH)
+		env.AppendUnique(RPATH   = CCDB_LIBPATH)
 		env.AppendUnique(LIBS    = CCDB_LIBS)
 
 ##################################
@@ -702,6 +711,7 @@ def AddSQLite(env):
 	else:
 		SQLITECPP_LIBPATH = ["%s/lib" % (sqlitecpp_home)]
 	env.AppendUnique(LIBPATH = SQLITECPP_LIBPATH)
+	env.AppendUnique(RPATH   = SQLITECPP_LIBPATH)
 	env.AppendUnique(LIBS    = 'SQLiteCpp')
 	sqlite_home = os.getenv('SQLITE_HOME')
 	if(sqlite_home != None) :
@@ -709,6 +719,7 @@ def AddSQLite(env):
 		env.AppendUnique(CPPPATH = SQLITE_CPPPATH)
 		SQLITE_LIBPATH = ["%s/lib" % (sqlite_home)]
 		env.AppendUnique(LIBPATH = SQLITE_LIBPATH)
+		env.AppendUnique(RPATH   = SQLITE_LIBPATH)
 		AddSQLite.SQLITE_LINKFLAGS = "-Wl,-rpath=%s/lib" % (sqlite_home)
 		AddLinkFlags(env, AddSQLite.SQLITE_LINKFLAGS)
 	env.AppendUnique(LIBS = 'sqlite3')
@@ -742,6 +753,7 @@ def AddEVIO(env):
 		env.AppendUnique(CXXFLAGS = ['-DHAVE_EVIO'])
 		env.AppendUnique(CPPPATH = ['%s/include' % evioroot])
 		env.AppendUnique(LIBPATH = ['%s/lib' % evioroot])
+		env.AppendUnique(RPATH   = ['%s/lib' % evioroot])
 		env.AppendUnique(LIBS=['evioxx', 'evio', 'expat'])
 		env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['evioxx', 'evio', 'expat'])
 		AddET(env)
@@ -758,6 +770,7 @@ def AddET(env):
 		env.AppendUnique(CXXFLAGS = ['-DHAVE_ET'])
 		env.AppendUnique(CPPPATH = ['%s/include' % etroot])
 		env.AppendUnique(LIBPATH = ['%s/lib' % etroot])
+		env.AppendUnique(RPATH   = ['%s/lib' % etroot])
 		env.AppendUnique(LIBS=['et_remote', 'et'])
 		env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['et_remote', 'et'])
 
@@ -778,6 +791,7 @@ def AddCODAChannels(env):
 	env.AppendUnique(CXXFLAGS = ['-DHAVE_CODACHANNELS'])
 	env.AppendUnique(CPPPATH = ['%s/%s/include' % (coda,arch)])
 	env.AppendUnique(LIBPATH = ['%s/%s/lib' % (coda,arch)])
+	env.AppendUnique(RPATH   = ['%s/%s/lib' % (coda,arch)])
 	env.AppendUnique(LIBS=['codaChannels'])
 
 
@@ -793,6 +807,7 @@ def AddCODAObjects(env):
 		env.AppendUnique(CXXFLAGS = ['-DHAVE_CODAOBJECTS'])
 		env.AppendUnique(CPPPATH = ['%s/%s/include' % (coda,arch)])
 		env.AppendUnique(LIBPATH = ['%s/%s/lib' % (coda,arch)])
+		env.AppendUnique(RPATH   = ['%s/%s/lib' % (coda,arch)])
 		env.AppendUnique(LIBS=['codaObject'])
 
 
@@ -807,6 +822,7 @@ def AddCMSG(env):
 		env.AppendUnique(CXXFLAGS = ['-DHAVE_CMSG'])
 		env.AppendUnique(CPPPATH = ['%s/include' % cmsgroot])
 		env.AppendUnique(LIBPATH = ['%s/lib' % cmsgroot])
+		env.AppendUnique(RPATH   = ['%s/lib' % cmsgroot])
 		env.AppendUnique(LIBS=['cmsgxx', 'cmsg', 'cmsgRegex'])
 
 
@@ -820,6 +836,7 @@ def AddXERCES(env):
 	XERCES_LIBS = "xerces-c"
 	env.AppendUnique(CPPPATH = XERCES_CPPPATH)
 	env.AppendUnique(LIBPATH = XERCES_LIBPATH)
+	env.AppendUnique(RPATH   = XERCES_LIBPATH)
 	env.AppendUnique(LIBS    = XERCES_LIBS)
 
 ##################################
@@ -872,7 +889,9 @@ def AddROOT(env):
 			AddROOT.ROOT_CFLAGS    += ' -DHAVE_TMVA=1'
 			AddROOT.ROOT_LINKFLAGS += ' -lTMVA'
 
-	AddCompileFlags(env, AddROOT.ROOT_CFLAGS)
+	# AddCompileFlags(env, AddROOT.ROOT_CFLAGS)
+	# ROOT CFLAGS are actually C++ flags : apply only to CXXFLAGS
+	env.AppendUnique(CXXFLAGS = AddROOT.ROOT_CFLAGS.split())
 	AddLinkFlags(env, AddROOT.ROOT_LINKFLAGS)
 
 	if env['OSNAME'].startswith("Darwin_macosx"):
@@ -961,6 +980,7 @@ def AddROOTSpy(env):
 		env.AppendUnique(CXXFLAGS = ['-DHAVE_ROOTSPY'])
 		env.AppendUnique(CPPPATH = ['%s/include' % rootspy, '%s/include/libRootSpy' % rootspy])
 		env.AppendUnique(LIBPATH = ['%s/lib' % rootspy])
+		env.AppendUnique(RPATH   = ['%s/lib' % rootspy])
 		env.AppendUnique(LIBS=['RootSpy'])
 		AddROOT(env)
 
@@ -1164,6 +1184,7 @@ def AddTensorflowLite(env):
 		env.AppendUnique(CXXFLAGS = ['-DHAVE_TENSORFLOWLITE'])
 		env.AppendUnique(CPPPATH = ['%s' % tensorflowliteroot])
 		env.AppendUnique(LIBPATH = ['%s/lib' % tensorflowliteroot])
+		env.AppendUnique(RPATH   = ['%s/lib' % tensorflowliteroot])
 		env.AppendUnique(LIBS=['tflite'])
 
 
@@ -1176,6 +1197,7 @@ def AddTensorflow(env):
 		env.AppendUnique(CXXFLAGS = ['-DHAVE_TENSORFLOW'])
 		env.AppendUnique(CPPPATH = ['%s/include' % tensorflowroot])
 		env.AppendUnique(LIBPATH = ['%s/lib' % tensorflowroot])
+		env.AppendUnique(RPATH   = ['%s/lib' % tensorflowroot])
 		env.AppendUnique(LIBS=['tensorflow'])
 
 

@@ -14,8 +14,7 @@ using namespace std;
 #include <TLorentzVector.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 #include <TRACKING/DMCThrown.h>
 #include <PID/DKinematicData.h>
@@ -39,15 +38,15 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_invariant_mass_hists());
+	app->Add(new DEventProcessor_invariant_mass_hists());
 }
 }
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_invariant_mass_hists::init(void)
+void DEventProcessor_invariant_mass_hists::Init()
 {
 	// Create INV_MASS directory
 	TDirectory *dir = new TDirectoryFile("INV_MASS","INV_MASS");
@@ -76,23 +75,21 @@ jerror_t DEventProcessor_invariant_mass_hists::init(void)
 	dir->cd("../");
 	
 	pthread_mutex_init(&mutex, NULL);
-	
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_invariant_mass_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_invariant_mass_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Get reconstructed objects
 	vector<const DBeamPhoton*> beam_photons;
 	vector<const DPhoton*> photons;
 	vector<const DChargedTrack*> chargedtracks;
 
-	loop->Get(beam_photons);	// from truth info
-	loop->Get(photons);			// all reconstructed photons (BCAL and FCAL)
-	loop->Get(chargedtracks);		// all reconstructed charged (CDC and FDC)
+	event->Get(beam_photons);	// from truth info
+	event->Get(photons);			// all reconstructed photons (BCAL and FCAL)
+	event->Get(chargedtracks);		// all reconstructed charged (CDC and FDC)
 
 	// Target is proton at rest in lab frame
 	TLorentzVector target(0.0, 0.0, 0.0, 0.93827);
@@ -115,7 +112,7 @@ jerror_t DEventProcessor_invariant_mass_hists::evnt(JEventLoop *loop, uint64_t e
 		// Use particle mass to decide the type
 		int type = 0;
 		if(fabs(trk->mass()-0.13957)<0.01){
-			type = trk->charge()<0.0 ? 9:8; // initialize to pi-(=9) or pi+(=8)
+			type = trk->charge()<0.0 ? 9:8; // Initialize to pi-(=9) or pi+(=8)
 		}else if(fabs(trk->mass()-0.93827)<0.01 && trk->charge()==1.0){
 			type=14;
 		}
@@ -209,7 +206,7 @@ jerror_t DEventProcessor_invariant_mass_hists::evnt(JEventLoop *loop, uint64_t e
 
 	pthread_mutex_unlock(&mutex);
 
-	return NOERROR;
+	return;
 }
 
 //------------------
@@ -234,20 +231,20 @@ TLorentzVector DEventProcessor_invariant_mass_hists::MakeTLorentz(const DKinemat
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_invariant_mass_hists::erun(void)
+void DEventProcessor_invariant_mass_hists::EndRun()
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_invariant_mass_hists::fini(void)
+void DEventProcessor_invariant_mass_hists::Finish()
 {
 	// Histograms are automatically written to file by hd_root program (or equivalent)
 	// so we don't need to do anything here.
 
-	return NOERROR;
+	return;
 }

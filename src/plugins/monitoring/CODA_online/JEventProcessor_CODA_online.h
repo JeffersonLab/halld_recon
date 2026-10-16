@@ -23,19 +23,18 @@
 
 
 using namespace std;
-using namespace jana;
 using namespace codaObject;
 
 
 /**
  * Plugin extends RunObject to interface between coda object and JANA event processor for farm management.
  *
- * Uses gPARMS flags CODAOBJECT:UDL, NAME, DESCR, and SESSION.
+ * Uses app flags CODAOBJECT:UDL, NAME, DESCR, and SESSION.
  */
 class JEventProcessor_CODA_online : public JEventProcessor, public RunObject {
 
  public:
-  const char* className(void){return "JEventProcessor_CODA_online";}
+  SetTypeName("JEventProcessor_CODA_online");
 
   JEventProcessor_CODA_online(void) = delete;
   JEventProcessor_CODA_online(const JEventProcessor_CODA_online&) = delete;
@@ -46,7 +45,7 @@ class JEventProcessor_CODA_online : public JEventProcessor, public RunObject {
 
   // for JANA
  private:
-  jerror_t fini(void);	/**<Called after last event of last event source has been processed.*/
+  void Finish() override;
 
 
  public:

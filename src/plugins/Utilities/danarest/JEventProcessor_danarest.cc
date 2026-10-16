@@ -13,62 +13,55 @@
 extern "C" {
    void InitPlugin(JApplication *app) {
       InitJANAPlugin(app);
-      app->AddProcessor(new JEventProcessor_danarest(), true);
+      app->Add(new JEventProcessor_danarest());
    }
 } // "extern C"
 
 //-------------------------------
-// init
+// Init
 //-------------------------------
-jerror_t JEventProcessor_danarest::init(void)
+void JEventProcessor_danarest::Init()
 {
-  return NOERROR;
 }
 
 //-------------------------------
-// brun
+// BeginRun
 //-------------------------------
-jerror_t JEventProcessor_danarest::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void JEventProcessor_danarest::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  
-   return NOERROR;
 }
 
 //-------------------------------
-// evnt
+// Process
 //-------------------------------
-jerror_t JEventProcessor_danarest::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void JEventProcessor_danarest::Process(const std::shared_ptr<const JEvent>& event)
 {
   // Check if we have thrown events (therefore MC)
   vector<const DMCThrown *>throwns;
-  locEventLoop->Get(throwns);
+  event->Get(throwns);
 
 	//CHECK TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
-	locEventLoop->GetSingle(locTrigger);
+	event->GetSingle(locTrigger);
 	if(throwns.size()==0 && (!locTrigger->Get_IsPhysicsEvent()))
-		return NOERROR;
+		return;
 
 	// Write this event to the rest output stream.
 	vector<const DEventWriterREST*> locEventWriterRESTVector;
-	locEventLoop->Get(locEventWriterRESTVector);
-	locEventWriterRESTVector[0]->Write_RESTEvent(locEventLoop, "");
-
-   return NOERROR;
+	event->Get(locEventWriterRESTVector);
+	locEventWriterRESTVector[0]->Write_RESTEvent(event, "");
 }
 
 //-------------------------------
-// erun
+// EndRun
 //-------------------------------
-jerror_t JEventProcessor_danarest::erun(void)
+void JEventProcessor_danarest::EndRun()
 {
-   return NOERROR;
 }
 
 //-------------------------------
-// fini
+// Finish
 //-------------------------------
-jerror_t JEventProcessor_danarest::fini(void)
+void JEventProcessor_danarest::Finish()
 {
-   return NOERROR;
 }

@@ -45,7 +45,7 @@ inline double cdc_variance(double x){
   return sigma_d*sigma_d;
 }
 
-DTrackFitterRiemann::DTrackFitterRiemann(JEventLoop *loop):DTrackFitter(loop){
+DTrackFitterRiemann::DTrackFitterRiemann(const std::shared_ptr<const JEvent>& event):DTrackFitter(event){
 
 }
 

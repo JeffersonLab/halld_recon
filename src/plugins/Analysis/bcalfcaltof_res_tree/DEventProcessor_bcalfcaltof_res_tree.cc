@@ -15,15 +15,15 @@ extern TFile *ROOTfile;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_bcalfcaltof_res_tree());
+	app->Add(new DEventProcessor_bcalfcaltof_res_tree());
 }
 } // "C"
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_bcalfcaltof_res_tree::init(void)
+void DEventProcessor_bcalfcaltof_res_tree::Init()
 {
 
 	dBCALStudyFlag = true;
@@ -41,26 +41,19 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::init(void)
 	dTOFMCComparison = new TOFMCComparison();
 	dPluginTree_TOFMCComparison = new TTree("dPluginTree_TOFMCComparison", "TOF MC Comparison");
 	dPluginTree_TOFMCComparison->Branch("dPluginBranch_TOFMCComparison", "TOFMCComparison", &dTOFMCComparison);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_bcalfcaltof_res_tree::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_bcalfcaltof_res_tree::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-	if(!locApplication){
-		_DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl;
-		return RESOURCE_UNAVAILABLE;
-	}
-	dRootGeom = locApplication->GetRootGeom();
+	dRootGeom = GetRootGeom(event);
 
 
 	// Get pointer to TrackFitter object that actually fits a track
 	vector<const DTrackFitter *> locTrackFitters;
-	eventLoop->Get(locTrackFitters);
+	event->Get(locTrackFitters);
 	if(locTrackFitters.size()<1){
 		_DBG_<<"Unable to get a DTrackFitter object! NO Charged track fitting will be done!"<<endl;
 		return RESOURCE_UNAVAILABLE;
@@ -78,21 +71,19 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::brun(JEventLoop *eventLoop, int32
 	dRootGeom->FindMat("Scintillator",dRhoZoverA,rho_Z_over_A_LnI, radlen); //defined both in hddsroot.C and hdgeant.C in the programs/Analysis/hdEventViewer/ folder
 	dKRhoZoverA = 0.1535*dRhoZoverA/1000.0;
 	dLnI = rho_Z_over_A_LnI/dRhoZoverA;
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_bcalfcaltof_res_tree::Process(const std::shared_ptr<const JEvent>& event)
 {
 	unsigned int loc_i, loc_j;
 	DVector3 locLabHitPosition, locLabHitPosition_Truth, locGeneratedVertex;
 //	locGeneratedVertex.SetXYZ(0.0, 0.0, 65.0); //should be grabbed (whatev)
 	vector<const DMCThrown*> locDMCThrownVector;
 	const DMCThrown *locDMCThrown;
-	loop->Get(locDMCThrownVector);
+	event->Get(locDMCThrownVector);
 
 	if(dBCALStudyFlag == true){
 
@@ -104,7 +95,7 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t e
 		float locActualPathLength, locActualTheta, locActualPathLengthCorrection;
 		DVector3 locActualPathVector;
 
-		loop->Get(locBCALShowerVector, "KLOE");
+		event->Get(locBCALShowerVector, "KLOE");
 
 //can't use truth hits!:
   //project along track path until a designated distance.
@@ -113,7 +104,7 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t e
 
 		//if more than 1 bcal hit, clustering didn't work, skip event!!
 		if(locBCALShowerVector.size() > 1)
-			return NOERROR;
+			return;
 
 		for(loc_i = 0; loc_i < locBCALShowerVector.size(); loc_i++){
 			locBCALShower = locBCALShowerVector[loc_i];
@@ -161,7 +152,7 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t e
 			locDeltaT = locBCALShower->t - locTrueT;
 
 			// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-			japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+			GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 			dBCALMCComparison->dTrueR = locTrueR;
 			dBCALMCComparison->dTruePhi = locTruePhi;
@@ -183,7 +174,7 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t e
 
 			dPluginTree_BCALMCComparison->Fill();
 
-			japp->RootUnLock(); //RELEASE ROOT LOCK
+			GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 		} //end DBCALShower loop
 
 	} //end BCAL
@@ -199,12 +190,12 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t e
 		float locActualPathLength, locActualTheta, locActualPathLengthCorrection;
 		DVector3 locActualPathVector, locShowerHitPositionUncertainty;
 
-		loop->Get(locFCALShowerVector);
+		event->Get(locFCALShowerVector);
 		float locSurfaceZ = 625.0; //560 from target center, + 65 target center
 
 		//if more than 1 fcal hit, clustering didn't work, skip event!!
 		if(locFCALShowerVector.size() > 1)
-			return NOERROR;
+			return;
 
 		for(loc_i = 0; loc_i < locFCALShowerVector.size(); loc_i++){
 			locFCALShower = locFCALShowerVector[loc_i];
@@ -244,7 +235,7 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t e
 			locDeltaT = locFCALShower->getTime() - locTrueT;
 
 			// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-			japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+			GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 			dFCALMCComparison->dTrueX = locTrueX;
 			dFCALMCComparison->dTrueY = locTrueY;
@@ -267,7 +258,7 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t e
 
 			dPluginTree_FCALMCComparison->Fill();
 
-			japp->RootUnLock(); //RELEASE ROOT LOCK
+			GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 		} //end DFCALShower loop
 
 	} //end FCAL
@@ -290,8 +281,8 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t e
 		DVector3 locTrueMomentum;
 		bool locVerticalPlaneFlag, locHorizontalPlaneFlag;
 
-		loop->Get(locTOFPointVector);
-		loop->Get(locTOFTruthVector);
+		event->Get(locTOFPointVector);
+		event->Get(locTOFTruthVector);
 
 		if((locTOFTruthVector.size() == 1) && (locTOFPointVector.size() == 1)){
 			locTOFTruth = locTOFTruthVector[0];
@@ -339,7 +330,7 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t e
 			}
 
 			// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-			japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+			GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 			dTOFMCComparison->dTrueX = locTrueX;
 			dTOFMCComparison->dTrueY = locTrueY;
@@ -356,30 +347,26 @@ jerror_t DEventProcessor_bcalfcaltof_res_tree::evnt(JEventLoop *loop, uint64_t e
 			dTOFMCComparison->dTrueBetaGamma = locTrueBetaGamma;
 			dPluginTree_TOFMCComparison->Fill();
 
-			japp->RootUnLock(); //RELEASE ROOT LOCK
+			GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 		} //end DTOFPoint loop
 
 	} //end TOF
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_bcalfcaltof_res_tree::erun(void)
+void DEventProcessor_bcalfcaltof_res_tree::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_bcalfcaltof_res_tree::fini(void)
+void DEventProcessor_bcalfcaltof_res_tree::Finish()
 {
-	return NOERROR;
 }
 
 void DEventProcessor_bcalfcaltof_res_tree::Convert_Coordinates_BCALToLab(float locBCALR, float locBCALPhi, float locBCALZ, DVector3& locLabVertex){

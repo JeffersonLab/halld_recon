@@ -26,11 +26,10 @@
 #include <TH1I.h>
 #include <TH2F.h>
 
-using namespace jana;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 //FCAL has only 2800 active channels but and a bunch of inactive blocks. Redundancy in number of channels is to make sure there are enough histograms available to fill all active channels.
 const int nChan = 2800;
@@ -41,7 +40,7 @@ static TH1I* pedestal[nChan];
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_FCALpedestals());
+    app->Add(new JEventProcessor_FCALpedestals());
   }
 } // "C"
 
@@ -51,7 +50,7 @@ extern "C"{
 //------------------
 JEventProcessor_FCALpedestals::JEventProcessor_FCALpedestals()
 {
-
+	SetTypeName("JEventProcessor_FCALpedestals");
 }
 
 //------------------
@@ -63,9 +62,9 @@ JEventProcessor_FCALpedestals::~JEventProcessor_FCALpedestals()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FCALpedestals::init(void)
+void JEventProcessor_FCALpedestals::Init()
 {
   // This is called once at program startup. If you are creating
   // and filling historgrams in this plugin, you should lock the
@@ -80,73 +79,58 @@ jerror_t JEventProcessor_FCALpedestals::init(void)
   }
 
   main->cd();
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FCALpedestals::brun(JEventLoop *eventLoop, 
-					     int32_t runnumber)
+void JEventProcessor_FCALpedestals::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 
   // get the FCAL z position from the global geometry interface
-  DApplication *dapp = 
-    dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  const DGeometry *geom = GetDGeometry(event);
   if( geom ) {
 
     geom->GetFCALZ( m_FCALfront );
   }
   else{
-      
     cerr << "No geometry accessbile." << endl;
-    return RESOURCE_UNAVAILABLE;
+    throw JException("No FCAL geometry accessible");
   }
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FCALpedestals::evnt(JEventLoop *eventLoop, 
-					     uint64_t eventnumber)
+void JEventProcessor_FCALpedestals::Process(const std::shared_ptr<const JEvent> &event)
 {
   // select events with physics events, i.e., not LED and other front panel triggers
   const DTrigger* locTrigger = NULL; 
-  eventLoop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
-    return NOERROR;
-  
- 
+    return;
+
+  auto lockService = GetLockService(event);
+
 
   // we need an FCAL Geometry object
   //vector< const DFCALGeometry* > geomVec;
-  //eventLoop->Get( geomVec );
+  //event->Get( geomVec );
     
   vector<const DFCALGeometry*> fcalGeomVect;
-  eventLoop->Get( fcalGeomVect );
-  if (fcalGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
-  const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
-  
+  event->Get( fcalGeomVect );
+  if (fcalGeomVect.size() < 1) throw JException("FCAL geometry object not available");
 
-  if( fcalGeomVect.size() != 1 ){
-    
-    cerr << "No geometry accessbile." << endl;
-    return RESOURCE_UNAVAILABLE;
-  }
-  
+  const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
+
   //const DFCALGeometry& fcalGeom = geomVec[0];
 
   vector< const DFCALDigiHit*  > digiHits;
-  eventLoop->Get( digiHits );
+  event->Get( digiHits );
    
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   
   for( vector< const DFCALDigiHit* >::const_iterator dHitItr = digiHits.begin();
        dHitItr != digiHits.end(); ++dHitItr ){
@@ -163,30 +147,26 @@ jerror_t JEventProcessor_FCALpedestals::evnt(JEventLoop *eventLoop,
     }
   }
 
- 	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-  return NOERROR;
+ 	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FCALpedestals::erun(void)
+void JEventProcessor_FCALpedestals::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FCALpedestals::fini(void)
+void JEventProcessor_FCALpedestals::Finish()
 {
 
   // Called before program exit after event processing is finished.   
-  return NOERROR;
 }
 
 

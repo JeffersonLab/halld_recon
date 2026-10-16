@@ -11,14 +11,14 @@ if ( ! $?BMS_OSNAME ) then
 
 	# Look for osrelease.pl relative to script dir
 	set osrelease='none'
-	if ( -x $scriptdir/src/BMS/osrelease.pl ) then
-		set osrelease=$scriptdir/src/BMS/osrelease.pl
+	if ( -x $scriptdir/src/SBMS/osrelease.pl ) then
+		set osrelease=$scriptdir/src/SBMS/osrelease.pl
 		
 	# Look relative to current directory
-	else if ( -x src/BMS/osrelease.pl ) then
-		set osrelease=src/BMS/osrelease.pl
-	else if ( -x BMS/osrelease.pl ) then
-		set osrelease=BMS/osrelease.pl
+	else if ( -x src/SBMS/osrelease.pl ) then
+		set osrelease=src/SBMS/osrelease.pl
+	else if ( -x SBMS/osrelease.pl ) then
+		set osrelease=SBMS/osrelease.pl
 	else if ( -x ./osrelease.pl ) then
 		set osrelease=./osrelease.pl
 	endif

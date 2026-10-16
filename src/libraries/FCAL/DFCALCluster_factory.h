@@ -8,35 +8,35 @@
 #ifndef _DFCALCluster_factory_
 #define _DFCALCluster_factory_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
 
 #include "DFCALCluster.h"
 
-using namespace jana;
 
-class DFCALCluster_factory:public JFactory<DFCALCluster>{
+class DFCALCluster_factory:public JFactoryT<DFCALCluster>{
 
 	public:
-		DFCALCluster_factory();
+		DFCALCluster_factory(){};
 		~DFCALCluster_factory(){};
 			
 	private:
-
-		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);	
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	
-		//< Invoked via JEventProcessor virtual method
+		void Init();
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;	
+		void Process(const std::shared_ptr<const JEvent>& event) override;	
 
 		unsigned int MIN_CLUSTER_BLOCK_COUNT;
 		float MIN_CLUSTER_SEED_ENERGY;
 		float TIME_CUT;
 		uint32_t MAX_HITS_FOR_CLUSTERING;
-
+                int REMOVE_BAD_BLOCK;
+                vector <int> bad_blocks_list;
+  
 		// this is the location of the front 
 		// of the FCAL in a coordinate system 
 		// where z = 0 is the center of the target
 
 		double fcalFaceZ_TargetIsZeq0;
+                double CORRECT_SIMU_HIT_ENERGY;
 };
 
 #endif // _DFCALCluster_factory_

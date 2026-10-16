@@ -9,21 +9,20 @@
 #include "DReaction_factory_p4pi_hists.h"
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DReaction_factory_p4pi_hists::brun(JEventLoop* locEventLoop, int32_t locRunNumber)
+void DReaction_factory_p4pi_hists::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	auto calibration = GetJCalibration(locEvent);
+	calibration->Get("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DReaction_factory_p4pi_hists::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DReaction_factory_p4pi_hists::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// Make as many DReaction objects as desired
 	DReactionStep* locReactionStep = NULL;
@@ -133,18 +132,15 @@ jerror_t DReaction_factory_p4pi_hists::evnt(JEventLoop* locEventLoop, uint64_t l
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, Zp, false, 500, 1.0, 3.0, "ProtonPip"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, Zm, false, 500, 1.0, 3.0, "ProtonPim"));
 		
-	_data.push_back(locReaction); //Register the DReaction with the factory
-
-	return NOERROR;
+	Insert(locReaction); //Register the DReaction with the factory
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_p4pi_hists::fini(void)
+void DReaction_factory_p4pi_hists::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
 }
 

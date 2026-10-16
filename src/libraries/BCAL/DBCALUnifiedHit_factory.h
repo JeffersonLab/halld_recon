@@ -1,10 +1,7 @@
 #ifndef _DBCALUnifiedHit_factory_
 #define _DBCALUnifiedHit_factory_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
-
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
 #include "BCAL/DBCALUnifiedHit.h"
 #include "BCAL/DBCALTDCHit.h"
@@ -13,18 +10,13 @@ using namespace jana;
 
 #include <TTree.h>
 
-class DBCALUnifiedHit_factory : public JFactory<DBCALUnifiedHit> {
+class DBCALUnifiedHit_factory : public JFactoryT<DBCALUnifiedHit> {
 
  public:
 
   int VERBOSE;
-  DBCALUnifiedHit_factory() {
-    VERBOSE = 0;
-    if(gPARMS){
-      gPARMS->SetDefaultParameter("BCALUNIFIEDHIT:VERBOSE", VERBOSE, "Set level of verbosity.");
-    }
-  }
-  ~DBCALUnifiedHit_factory() {}
+  DBCALUnifiedHit_factory() = default;
+  ~DBCALUnifiedHit_factory() override = default;
 
   TTree *bcal_points_tree;
 
@@ -36,9 +28,9 @@ class DBCALUnifiedHit_factory : public JFactory<DBCALUnifiedHit> {
     vector<const DBCALTDCHit*> tdc_hits;
   };
  
-  jerror_t init(void);
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber); ///< Called everytime a new run number is detected.
-  jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& aEvent) override;
 
   // Use TDC Times"
   bool USE_TDC;

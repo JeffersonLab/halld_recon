@@ -6,10 +6,10 @@
 #ifndef _DDIRCLut_factory_
 #define _DDIRCLut_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DDIRCLut.h"
 
-class DDIRCLut_factory:public JFactory<DDIRCLut> {
+class DDIRCLut_factory:public JFactoryT<DDIRCLut> {
 
 public:
 	
@@ -18,38 +18,26 @@ public:
 
 	DDIRCLut *dirclut=nullptr;
 
-	jerror_t init(void){ 
-		return NOERROR;
-	}
-	
-	jerror_t brun(JEventLoop *loop, int32_t runnumber){
+	void BeginRun(const std::shared_ptr<const JEvent>& event) override {
 		
-		assert( _data.size() == 0 );
+		assert( mData.size() == 0 );
 
 		SetFactoryFlag(NOT_OBJECT_OWNER);
-                ClearFactoryFlag(WRITE_TO_OUTPUT);
+		ClearFactoryFlag(WRITE_TO_OUTPUT);
 
-                if( dirclut ) delete dirclut;
-                dirclut = new DDIRCLut();
-		dirclut->brun(loop);
-
-        	return NOERROR;
+		delete dirclut;
+		dirclut = new DDIRCLut();
+		dirclut->Init(event);
 	}
 
-        jerror_t erun(void){
-		
-		if( dirclut ) delete dirclut;
-                dirclut = NULL;
-		
-		return NOERROR;
+	void EndRun() override {
+		delete dirclut;
+		dirclut = nullptr;
 	}
 
-	jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
-
+	void Process(const std::shared_ptr<const JEvent>& event) override {
 		// Reuse existing DDIRCLut object
-		if( dirclut ) _data.push_back( dirclut );	
-	
-		return NOERROR;
+		if( dirclut ) Insert( dirclut );
 	}
 };
 

@@ -8,7 +8,6 @@
 #include "JEventProcessor_OmegaSkim.h"
 #include "DFactoryGenerator_OmegaSkim.h"
 
-using namespace jana;
 
 #include "evio_writer/DEventWriterEVIO.h"
 
@@ -17,12 +16,12 @@ using namespace jana;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_OmegaSkim());
-    app->AddFactoryGenerator( new DFactoryGenerator_OmegaSkim() );
+    app->Add(new JEventProcessor_OmegaSkim());
+    app->Add( new DFactoryGenerator_OmegaSkim() );
   }
 } // "C"
 
@@ -32,12 +31,8 @@ extern "C"{
 //------------------
 JEventProcessor_OmegaSkim::JEventProcessor_OmegaSkim()
 {
+  SetTypeName("JEventProcessor_OmegaSkim");
 
-  WRITE_EVIO_FILE = 1;
-  gPARMS->SetDefaultParameter( "WRITE_EVIO_FILE", WRITE_EVIO_FILE );
-
-  WRITE_ROOT_TREE = 0;
-  gPARMS->SetDefaultParameter( "WRITE_ROOT_TREE", WRITE_ROOT_TREE );
 }
 
 //------------------
@@ -49,43 +44,47 @@ JEventProcessor_OmegaSkim::~JEventProcessor_OmegaSkim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_OmegaSkim::init(void)
+void JEventProcessor_OmegaSkim::Init()
 {
-  // This is called once at program startup. 
+  // This is called once at program startup.
+  auto app = GetApplication();
 
-  return NOERROR;
+  WRITE_EVIO_FILE = 1;
+  app->SetDefaultParameter( "WRITE_EVIO_FILE", WRITE_EVIO_FILE );
+
+  WRITE_ROOT_TREE = 0;
+  app->SetDefaultParameter( "WRITE_ROOT_TREE", WRITE_ROOT_TREE );
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_OmegaSkim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_OmegaSkim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_OmegaSkim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_OmegaSkim::Process(const std::shared_ptr<const JEvent>& event)
 {
 
   vector<const DAnalysisResults*> locAnalysisResultsVector;
-  loop->Get( locAnalysisResultsVector );
+  event->Get( locAnalysisResultsVector );
 
     const DEventWriterEVIO* eventWriterEVIO = NULL;
   if( WRITE_EVIO_FILE ){
     
 
-    loop->GetSingle(eventWriterEVIO);
+    event->GetSingle(eventWriterEVIO);
 
     // write out BOR events
-    if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
-      eventWriterEVIO->Write_EVIOEvent(loop, "omega");
-      return NOERROR;
+    if(GetStatusBit(event, kSTATUS_BOR_EVENT)) {
+      eventWriterEVIO->Write_EVIOEvent(event, "omega");
+      return;
     }
   }
 
@@ -103,10 +102,10 @@ jerror_t JEventProcessor_OmegaSkim::evnt(JEventLoop *loop, uint64_t eventnumber)
 		break;
 	}
 	if(!locSuccessFlag)
-		return NOERROR;
+		return;
 
   if( WRITE_EVIO_FILE ){
-   eventWriterEVIO->Write_EVIOEvent(loop, "omega");
+   eventWriterEVIO->Write_EVIOEvent(event, "omega");
 
   }
 
@@ -118,30 +117,26 @@ jerror_t JEventProcessor_OmegaSkim::evnt(JEventLoop *loop, uint64_t eventnumber)
     // string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
 
     const DEventWriterROOT* eventWriterROOT = NULL;
-    loop->GetSingle(eventWriterROOT);
-    eventWriterROOT->Fill_DataTrees(loop, "OmegaSkim");
+    event->GetSingle(eventWriterROOT);
+    eventWriterROOT->Fill_DataTrees(event, "OmegaSkim");
   }
-  
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_OmegaSkim::erun(void)
+void JEventProcessor_OmegaSkim::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_OmegaSkim::fini(void)
+void JEventProcessor_OmegaSkim::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 

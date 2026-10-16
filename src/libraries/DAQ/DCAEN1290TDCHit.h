@@ -28,13 +28,13 @@ class DCAEN1290TDCHit:public DDAQAddress{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "edge", "%d", edge);
-			AddString(items, "tdc_num", "%d", tdc_num);
-			AddString(items, "event_id", "%d", event_id);
-			AddString(items, "bunch_id", "%d", bunch_id);
-			AddString(items, "time", "%d", time);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(edge, NAME_OF(edge), "%d");
+			summary.add(tdc_num, NAME_OF(tdc_num), "%d");
+			summary.add(event_id, NAME_OF(event_id), "%d");
+			summary.add(bunch_id, NAME_OF(bunch_id), "%d");
+			summary.add(time, NAME_OF(time), "%d");
 		}
 };
 

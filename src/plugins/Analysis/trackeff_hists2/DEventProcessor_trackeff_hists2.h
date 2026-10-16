@@ -22,12 +22,11 @@ using std::map;
 #include <TH1.h>
 #include <TH2.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
-#include <DANA/DApplication.h>
+#include <JANA/JEvent.h>
 
 #include <PID/DKinematicData.h>
 #include <PID/DParticleID.h>
@@ -62,19 +61,19 @@ class DEventProcessor_trackeff_hists2:public JEventProcessor{
 		track2 trk;
 		track2 *trk_ptr;
 
-		bool Search_ChargedTrackHypotheses(JEventLoop *loop, uint64_t eventnumber, const DMCThrown *mcthrown);
-		bool Search_WireBasedTracks(JEventLoop *loop, uint64_t eventnumber, const DMCThrown *mcthrown);
-		bool Search_TrackCandidates(JEventLoop *loop, uint64_t eventnumber, const DMCThrown *mcthrown);
+		bool Search_ChargedTrackHypotheses(const std::shared_ptr<const JEvent>& loop, uint64_t eventnumber, const DMCThrown *mcthrown);
+		bool Search_WireBasedTracks(const std::shared_ptr<const JEvent>& loop, uint64_t eventnumber, const DMCThrown *mcthrown);
+		bool Search_TrackCandidates(const std::shared_ptr<const JEvent>& loop, uint64_t eventnumber, const DMCThrown *mcthrown);
 
 
 	private:
 		bool use_rt_thrown;
 
-		jerror_t init(void);	///< Invoked via DEventProcessor virtual method
-		jerror_t brun(JEventLoop *loop, int32_t runnumber);
-		jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via DEventProcessor virtual method
-		jerror_t erun(void);					///< Invoked via DEventProcessor virtual method
-		jerror_t fini(void);					///< Invoked via DEventProcessor virtual method
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		bool isReconstructable(const DMCThrown *mcthrown, vector<const DMCTrajectoryPoint*> &mctrajpoints);
 

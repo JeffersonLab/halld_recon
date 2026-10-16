@@ -1,12 +1,13 @@
 
 #include "JEventProcessor_FCAL_TimingOffsets_Primex.h"
-
+#include "DANA/DEvent.h"
+#include <TDirectoryFile.h>
 #include <map>
 
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-    	app->AddProcessor(new JEventProcessor_FCAL_TimingOffsets_Primex());
+    	app->Add(new JEventProcessor_FCAL_TimingOffsets_Primex());
 }
 } // "C"
 
@@ -14,10 +15,12 @@ void InitPlugin(JApplication *app){
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FCAL_TimingOffsets_Primex::init(void)
+void JEventProcessor_FCAL_TimingOffsets_Primex::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
   	
 	TDirectory *dir_FCAL = new TDirectoryFile( "FCAL_TimingOffsets", "FCAL_TimingOffsets" );
   	dir_FCAL->cd();
@@ -67,62 +70,53 @@ jerror_t JEventProcessor_FCAL_TimingOffsets_Primex::init(void)
 	
 	dir_FCAL->cd( "../" );
 	
-	
-	
-  	return NOERROR;
 }
 
 
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FCAL_TimingOffsets_Primex::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_FCAL_TimingOffsets_Primex::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	
-	DGeometry*   dgeom = NULL;
-  	DApplication* dapp = dynamic_cast< DApplication* >( eventLoop->GetJApplication() );
-  	if( dapp )   dgeom = dapp->GetDGeometry( runnumber );
-   
+	DGeometry*   dgeom = GetDGeometry(event);
+
   	if( dgeom ){
     	  	dgeom->GetTargetZ( targetZ );
 		dgeom->GetFCALPosition( fcalX, fcalY, fcalZ );
   	} else{
     	  	cerr << "No geometry accessible to FCAL_TimingOffsets_Primex plugin." << endl;
-    	  	return RESOURCE_UNAVAILABLE;
+    	  	throw JException("No geometry accessible to FCAL_TimingOffsets_Primex plugin.");
   	}
 	
 	
-	jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+	JCalibration *jcalib = GetJCalibration(event);
   	std::map<string, float> beam_spot;
 	jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   	beamX = beam_spot.at("x");
   	beamY = beam_spot.at("y");
-	
-	
-	
-  	return NOERROR;
 }
 
 
 
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FCAL_TimingOffsets_Primex::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void JEventProcessor_FCAL_TimingOffsets_Primex::Process(const std::shared_ptr<const JEvent>& event)
 {
 	
 	
 	const DL1Trigger *trig = NULL;
   	try {
-      	  	eventLoop->GetSingle(trig);
+      	  	event->GetSingle(trig);
   	} catch (...) {}
-	if (trig == NULL) { return NOERROR; }
+	if (trig == NULL) { return; }
 	
 	uint32_t fp_trigmask = trig->fp_trig_mask;
-	if( fp_trigmask ) return NOERROR;
+	if( fp_trigmask ) return;
 	
 	
 	
@@ -134,24 +128,24 @@ jerror_t JEventProcessor_FCAL_TimingOffsets_Primex::evnt(JEventLoop *eventLoop, 
 	
 	const DEventRFBunch *locRFBunch = NULL;
 	try { 
-	  	eventLoop->GetSingle( locRFBunch, "CalorimeterOnly" );
-	} catch (...) { return NOERROR; }
+	  	event->GetSingle( locRFBunch, "CalorimeterOnly" );
+	} catch (...) { return; }
 	double rfTime = locRFBunch->dTime;
-	if( locRFBunch->dNumParticleVotes < 2 ) return NOERROR;
+	if( locRFBunch->dNumParticleVotes < 2 ) return;
 	
 	
 	
 	vector< const DFCALHit*    > fcal_hits;
-	eventLoop->Get( fcal_hits    );
+	event->Get( fcal_hits    );
 	
 	vector< const DFCALShower* > fcal_showers;
-	eventLoop->Get( fcal_showers );
+	event->Get( fcal_showers );
 	
 	vector< const DTOFPoint*   > tof_points;
-	eventLoop->Get( tof_points );
+	event->Get( tof_points );
 	
 	vector< const DBeamPhoton* > beam_photons;
-	eventLoop->Get( beam_photons );
+	event->Get( beam_photons );
 	
 	int n_fcal_hits = (int)fcal_hits.size();
 	
@@ -169,8 +163,8 @@ jerror_t JEventProcessor_FCAL_TimingOffsets_Primex::evnt(JEventLoop *eventLoop, 
     }
     
 	
-	japp->RootFillLock(this);  // Acquire root lock
-	
+	lockService->RootFillLock(this);  // Acquire root lock
+
 	int isGoodEvent = 0;
 	
 	for( vector< const DFCALShower* >::const_iterator show = fcal_showers.begin(); 
@@ -309,38 +303,31 @@ jerror_t JEventProcessor_FCAL_TimingOffsets_Primex::evnt(JEventLoop *eventLoop, 
 	if( isGoodEvent ) h_nfcal->Fill( n_fcal_hits );
 	
 	
-	japp->RootFillUnLock(this);  // Release root lock
+	lockService->RootFillUnLock(this);  // Release root lock
 	
 	
 	
 	
-
-
-  	return NOERROR;
 }
 
 
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FCAL_TimingOffsets_Primex::erun(void)
+void JEventProcessor_FCAL_TimingOffsets_Primex::EndRun()
 {
-  	
-  	return NOERROR;
 }
 
 
 
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FCAL_TimingOffsets_Primex::fini(void)
+void JEventProcessor_FCAL_TimingOffsets_Primex::Finish()
 {
-	
-  	return NOERROR;
 }
 
 

@@ -7,14 +7,12 @@
 #include <iostream>
 #include <set>
 
-#include "JANA/JObject.h"
-#include "JANA/JEventLoop.h"
-#include "JANA/JFactory.h"
+#include <JANA/JObject.h>
+#include <JANA/JEvent.h>
 #include "particleType.h"
 #include "ANALYSIS/DReactionStep.h"
 
 using namespace std;
-using namespace jana;
 using namespace DAnalysis;
 
 namespace DAnalysis
@@ -144,7 +142,7 @@ int Get_DecayStepIndex(const DReaction* locReaction, size_t locStepIndex, size_t
 pair<int, int> Get_InitialParticleDecayFromIndices(const DReaction* locReaction, int locStepIndex);
 vector<Particle_t> Get_ChainPIDs(const DReaction* locReaction, size_t locStepIndex, int locUpToStepIndex, vector<Particle_t> locUpThroughPIDs, bool locExpandDecayingFlag, bool locExcludeMissingFlag);
 vector<size_t> Get_DefinedParticleStepIndex(const DReaction* locReaction);
-vector<const DReaction*> Get_Reactions(JEventLoop* locEventLoop);
+vector<const DReaction*> Get_Reactions(const std::shared_ptr<const JEvent>& locEvent);
 size_t Get_ParticleInstanceIndex(const DReactionStep* locStep, size_t locParticleIndex);
 
 /****************************************************** CONSTRUCTORS AND DESTRUCTORS *******************************************************/
@@ -180,7 +178,7 @@ inline bool Get_IsFirstStepBeam(const DReaction* locReaction)
 {
 	//impossible for first step to be rescattering: makes no sense: if has target, treat as beam. else treat as decaying & don't care about production mechanism
 	auto locFirstStep = locReaction->Get_ReactionStep(0);
-	return ((locFirstStep->Get_TargetPID() != Unknown) || (locFirstStep->Get_SecondBeamPID() != Unknown));
+	return ((locFirstStep->Get_TargetPID() != UnknownParticle) || (locFirstStep->Get_SecondBeamPID() != UnknownParticle));
 }
 
 inline bool Check_ChannelEquality(const DReaction* lhs, const DReaction* rhs, bool locSameOrderFlag = true, bool locRightSubsetOfLeftFlag = false)
@@ -243,7 +241,7 @@ inline vector<pair<int, int>> Get_MissingDecayProductIndices(const DReaction* lo
 	auto locReactionStep = locReaction->Get_ReactionStep(locStepIndex);
 	if(locReactionStep->Get_IsInclusiveFlag())
 		locMissingDecayProductIndices.emplace_back(locStepIndex, DReactionStep::Get_ParticleIndex_Inclusive());
-	if(locReactionStep->Get_MissingPID() != Unknown)
+	if(locReactionStep->Get_MissingPID() != UnknownParticle)
 		locMissingDecayProductIndices.emplace_back(locStepIndex, locReactionStep->Get_MissingParticleIndex());
 
 	for(size_t loc_i = 0; loc_i < locReactionStep->Get_NumFinalPIDs(); ++loc_i)

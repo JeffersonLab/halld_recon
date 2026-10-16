@@ -10,11 +10,12 @@
 #define _DEPICSvalue_
 
 #include <string>
+#include <sstream>
 #include <time.h>
 #include <stdint.h>
 using std::string;
+using std::stringstream;
 
-#include <JANA/jerror.h>
 #include <JANA/JObject.h>
 
 /// A DEPICSvalue object holds information for a single
@@ -34,7 +35,7 @@ using std::string;
 ///  https://halldsvn.jlab.org/repos/trunk/online/packages/etUtils/src/epics2et
 
 
-class DEPICSvalue:public jana::JObject{
+class DEPICSvalue:public JObject{
 	public:
 		JOBJECT_PUBLIC(DEPICSvalue);
 		DEPICSvalue(time_t timestamp, string &nameval){
@@ -69,15 +70,15 @@ class DEPICSvalue:public jana::JObject{
 
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
+		void Summarize(JObjectSummary& summary) const override {
 			string timestr = ctime(&timestamp);
 			timestr[timestr.length()-1] = 0;
-			AddString(items, "timestamp", "%d", timestamp);
-			AddString(items, "name", "%s", name.c_str());
-			AddString(items, "sval", "%s", sval.substr(0, 255).c_str());
-			AddString(items, "ival", "%d", ival);
-			AddString(items, "fval", "%f", (float)fval);
-			AddString(items, "t", "%s", timestr.c_str());
+			summary.add(timestamp, NAME_OF(timestamp), "%d");
+			summary.add(name.c_str(), "name", "%s");
+			summary.add(sval.substr(0, 255).c_str(), "sval", "%s");
+			summary.add(ival, NAME_OF(ival), "%d");
+			summary.add((float)fval, NAME_OF(fval), "%f");
+			summary.add(timestr.c_str(), "t", "%s");
 		}
 };
 

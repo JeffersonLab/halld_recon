@@ -22,14 +22,15 @@ using namespace std;
 // store constants indexed by layer/wire number
 typedef  vector< vector<double> >  fmwpc_digi_constants_t;
 
-class DFMWPCHit_factory:public jana::JFactory<DFMWPCHit>{
+class DFMWPCHit_factory:public JFactoryT<DFMWPCHit>{
  public:
   DFMWPCHit_factory(){};
   ~DFMWPCHit_factory(){};
 //  const char* Tag(void){return "";}
 
   // hit threshold
-  double hit_threshold;
+  double hit_amp_threshold;
+  double hit_int_threshold;
 
   // timing cut limits
   double t_raw_min;
@@ -53,14 +54,16 @@ class DFMWPCHit_factory:public jana::JFactory<DFMWPCHit>{
 			   const DFMWPCHit *the_hit) const;
   
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
-  
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
+
   //void FillCalibTable(vector< vector<double> > &table, vector<double> &raw_table);
   
+  bool INSTALLED;
+
   // Geometry information
   unsigned int maxChannels;
   unsigned int Nlayers; // number of layers

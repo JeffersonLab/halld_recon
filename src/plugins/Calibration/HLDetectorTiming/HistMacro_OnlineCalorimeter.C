@@ -27,8 +27,7 @@
 // hnamepath: /HLDetectorTiming/Physics Triggers/BCAL/BCALHit Downstream Per Channel TDC-ADC Hit Time
 // hnamepath: /HLDetectorTiming/Physics Triggers/BCAL/BCALHit Upstream Per Channel TDC-ADC Hit Time
 // hnamepath: /HLDetectorTiming/Physics Triggers/FCAL/FCALHit time
-// hnamepath: /HLDetectorTiming/Physics Triggers/FCAL/FCALHit Local Time
-// hnamepath: /HLDetectorTiming/Physics Triggers/FCAL/FCALHit Occupancy
+// hnamepath: /HLDetectorTiming/Physics Triggers/ECAL/ECALHit time
 //
 // e-mail: aaustreg@jlab.org
 // e-mail: dalton@jlab.org
@@ -45,9 +44,9 @@
 	locDirectory->cd();
 
 	//Setpoints
-	double nominalFCALTime = 27.;
-	double nominalBCALADCTime = 22.;
-	double nominalBCALTDCTime = 22.;
+	double nominalFCALTime = 25.;
+	double nominalBCALADCTime = 24.;
+	double nominalBCALTDCTime = 24.;
 
 	//Get Histograms
  	TH1I* BCAL_ADC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit ADC time");
@@ -55,8 +54,7 @@
  	TH1I* BCAL_TDC_ADC_DS_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit Downstream Per Channel TDC-ADC Hit Time");
  	TH1I* BCAL_TDC_ADC_US_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit Upstream Per Channel TDC-ADC Hit Time");
  	TH1I* FCAL_ADC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/FCAL/FCALHit time");
- 	TH1I* FCAL_Local_Timing = (TH1I*)gDirectory->Get("Physics Triggers/FCAL/FCALHit Local Time");
- 	TH1I* FCAL_Occupancy = (TH1I*)gDirectory->Get("Physics Triggers/FCAL/FCALHit Occupancy");
+ 	TH1I* ECAL_ADC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/ECAL/ECALHit time");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -131,32 +129,21 @@
 	locCanvas->cd(4);
 	gPad->SetTicks();
 	gPad->SetGrid();
-	if(FCAL_Local_Timing != NULL && FCAL_Occupancy != NULL)
+	if(ECAL_ADC_Timing != NULL)
 	{
-	    TH2F* FCAL_Avg_Timing = (TH2F*)FCAL_Local_Timing->Clone( "FCALHit Local Time" );
-	    FCAL_Avg_Timing->Divide( FCAL_Occupancy );
+	    ECAL_ADC_Timing->Rebin(4);
+	    ECAL_ADC_Timing->GetXaxis()->SetRangeUser(-200,200);
+	    ECAL_ADC_Timing->Draw();
+	    ECAL_ADC_Timing->SetFillColor(kGray);
+	    locCanvas->Update();
 
-	    for( int x = 1; x <= FCAL_Avg_Timing->GetNbinsX(); ++x ){
-	      for( int y = 1; y <= FCAL_Avg_Timing->GetNbinsY(); ++y ){
-
-		if( FCAL_Occupancy->GetBinContent( x, y ) == 0 ){
-
-		  // set this off scale low so unused blocks
-		  // appear white in the plot
-		  FCAL_Avg_Timing->SetBinContent( x, y, -1E3 );
-		}
-	      }
-	    }
-
-	    FCAL_Avg_Timing->SetMinimum(-10 );
-	    FCAL_Avg_Timing->SetMaximum( 10 );
-	    FCAL_Avg_Timing->SetStats( 0 );
-	    FCAL_Avg_Timing->Draw( "colz" );
-	  
+	    TLine *ln = new TLine(nominalFCALTime, gPad->GetUymin(), nominalFCALTime, gPad->GetUymax());
+	    ln->SetLineColor(2);
+	    ln->Draw();
 	}
 	else{
 	  TPaveText *text = new TPaveText(0.1, 0.4, 0.9, 0.6);
-	  text->AddText("No FCAL ADC hits!");
+	  text->AddText("No ECAL ADC hits!");
 	  text->Draw();
 	}
 

@@ -23,10 +23,10 @@ class DCAEN1290TDCConfig:public DDAQConfig{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQConfig::toStrings(items);
-			AddString(items, "WINWIDTH"  , "%d", WINWIDTH);
-			AddString(items, "WINOFFSET" , "%d", WINOFFSET);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQConfig::Summarize(summary);
+			summary.add(WINWIDTH, NAME_OF(WINWIDTH), "%d");
+			summary.add(WINOFFSET, NAME_OF(WINOFFSET), "%d");
 		}
 		
 };

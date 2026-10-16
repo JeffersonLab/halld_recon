@@ -14,8 +14,7 @@ using namespace std;
 
 #include "TDirectory.h"
 
-#include <JANA/JFactory.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
 #include "DTrackCandidate.h"
 #include "DHelicalFit.h"
@@ -24,12 +23,13 @@ using namespace jana;
 #include <HDGEOMETRY/DGeometry.h>
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 
-class DTrackCandidate_factory_CDC : public JFactory<DTrackCandidate>
+class DTrackCandidate_factory_CDC : public JFactoryT<DTrackCandidate>
 {
 	public:
-		DTrackCandidate_factory_CDC(){};
+		DTrackCandidate_factory_CDC(){
+			SetTag("CDC");
+		};
 		~DTrackCandidate_factory_CDC();
-		const char* Tag(void){return "CDC";}
 
 		enum trk_flags_t
 		{
@@ -179,11 +179,11 @@ class DTrackCandidate_factory_CDC : public JFactory<DTrackCandidate>
 		typedef vector<vector<DCDCRingSeed> >::iterator ringiter;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		// Utility Functions
 		void Reset_Pools(void);
@@ -193,7 +193,7 @@ class DTrackCandidate_factory_CDC : public JFactory<DTrackCandidate>
 		DCDCTrackCircle* Get_Resource_CDCTrackCircle(void);
 
 		// Make Super Layer Seeds
-		jerror_t Get_CDCHits(JEventLoop* loop);
+		jerror_t Get_CDCHits(const std::shared_ptr<const JEvent>& loop);
 		void Find_SuperLayerSeeds(vector<DCDCTrkHit*>& locSuperLayerHits, unsigned int locSuperLayer);
 		void Link_RingSeeds(vector<DCDCRingSeed*>& parent, ringiter ring, ringiter ringend, unsigned int locSuperLayer, unsigned int locNumPreviousRingsWithoutHit);
 		double MinDist2(const DCDCRingSeed& locInnerRingSeed, const DCDCRingSeed& locOuterRingSeed);

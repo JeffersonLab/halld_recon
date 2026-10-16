@@ -11,62 +11,58 @@
 using namespace std;
 
 #include "DChargedTrack_factory.h"
-using namespace jana;
+
+#include "DANA/DObjectID.h"
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DChargedTrack_factory::init(void)
+void DChargedTrack_factory::Init()
 {
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DChargedTrack_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DChargedTrack_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DChargedTrack_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DChargedTrack_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DChargedTrackHypothesis*> locChargedTrackHypotheses;
-	locEventLoop->Get(locChargedTrackHypotheses);
+	event->Get(locChargedTrackHypotheses);
 
-	map<JObject::oid_t, vector<const DChargedTrackHypothesis*> > locHypothesesByTrackID;
+	map<oid_t, vector<const DChargedTrackHypothesis*> > locHypothesesByTrackID;
 	for(size_t loc_i = 0; loc_i < locChargedTrackHypotheses.size(); loc_i++)
 		locHypothesesByTrackID[locChargedTrackHypotheses[loc_i]->Get_TrackTimeBased()->candidateid].push_back(locChargedTrackHypotheses[loc_i]);
 
-	map<JObject::oid_t, vector<const DChargedTrackHypothesis*> >::iterator locIterator = locHypothesesByTrackID.begin();
+	map<oid_t, vector<const DChargedTrackHypothesis*> >::iterator locIterator = locHypothesesByTrackID.begin();
 	for(; locIterator != locHypothesesByTrackID.end(); ++locIterator)
 	{
 		DChargedTrack* locChargedTrack = new DChargedTrack();
 		locChargedTrack->candidateid = locIterator->first;
 		locChargedTrack->dChargedTrackHypotheses = locIterator->second;
-		_data.push_back(locChargedTrack);
+		Insert(locChargedTrack);
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DChargedTrack_factory::erun(void)
+void DChargedTrack_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DChargedTrack_factory::fini(void)
+void DChargedTrack_factory::Finish()
 {
-	return NOERROR;
 }
 
 

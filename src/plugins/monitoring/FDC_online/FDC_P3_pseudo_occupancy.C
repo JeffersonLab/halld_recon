@@ -50,7 +50,7 @@
 	pad1->SetRightMargin(0.15);
 	if(fdc_occ_cell_1){
 		fdc_occ_cell_1->SetStats(0);
-        fdc_occ_cell_1->Scale(1./Nevents);
+                //fdc_occ_cell_1->Scale(1./Nevents);
 		fdc_occ_cell_1->Draw("colz");
 	}
 
@@ -61,7 +61,7 @@
     pad2->SetRightMargin(0.15);
     if(fdc_occ_cell_2){
         fdc_occ_cell_2->SetStats(0);
-        fdc_occ_cell_2->Scale(1./Nevents);
+        //fdc_occ_cell_2->Scale(1./Nevents);
         fdc_occ_cell_2->Draw("colz");
     }
 
@@ -72,7 +72,7 @@
     pad3->SetRightMargin(0.15);
     if(fdc_occ_cell_3){
         fdc_occ_cell_3->SetStats(0);
-        fdc_occ_cell_3->Scale(1./Nevents);
+        //fdc_occ_cell_3->Scale(1./Nevents);
         fdc_occ_cell_3->Draw("colz");
     }
 
@@ -83,7 +83,7 @@
     pad4->SetRightMargin(0.15);
     if(fdc_occ_cell_4){
         fdc_occ_cell_4->SetStats(0);
-        fdc_occ_cell_4->Scale(1./Nevents);
+        //fdc_occ_cell_4->Scale(1./Nevents);
         fdc_occ_cell_4->Draw("colz");
     }
 
@@ -94,7 +94,7 @@
     pad5->SetRightMargin(0.15);
     if(fdc_occ_cell_5){
         fdc_occ_cell_5->SetStats(0);
-        fdc_occ_cell_5->Scale(1./Nevents);
+        //fdc_occ_cell_5->Scale(1./Nevents);
         fdc_occ_cell_5->Draw("colz");
     }
 
@@ -105,10 +105,22 @@
     pad6->SetRightMargin(0.15);
     if(fdc_occ_cell_6){
         fdc_occ_cell_6->SetStats(0);
-        fdc_occ_cell_6->Scale(1./Nevents);
+        //fdc_occ_cell_6->Scale(1./Nevents);
         fdc_occ_cell_6->Draw("colz");
     }
 
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E5;
+		if( Nevents >= min_events ) {
+			cout << "FDC P3 Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("FDC_P3_pseudo_occupancy", 0);
+			rs_ResetAllMacroHistos("//FDC_P3_pseudo_occupancy");
+		}
+	}
+#endif
 }
 
 

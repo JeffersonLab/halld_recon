@@ -5,7 +5,7 @@
  *      Author: Hovanes Egiyan
  */
 
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
 
 #include <TAC/DRebuildFromRawFADC_factory.h>
 #include <TAC/DTACHit_factory.h>
@@ -15,19 +15,17 @@
 using namespace std;
 
 template<>
-jerror_t DRebuildFromRawFADC_factory<DTACHit_factory,
-		HitRebuilderByFit<WaveformErfcFunctor>>::init(void) {
-	DTACHit_factory::init();
+void DRebuildFromRawFADC_factory<DTACHit_factory,
+		HitRebuilderByFit<WaveformErfcFunctor>>::Init() {
+	DTACHit_factory::Init();
 	this->setTimeScaleADC(this->getTimeScaleADC() * 64);          // Time scale for a single FADC hit
-
-	return NOERROR;
 }
 
 //template<>
 //jerror_t DRebuildFromRawFADC_factory<DTACHit_factory,
 //		HitRebuilderByFit<WaveformErfcFunctor>>::brun(
-//		jana::JEventLoop *eventLoop, int32_t runnumber) {
-//	DTACHit_factory::brun(eventLoop, runnumber);
+//		const std::shared_ptr<const JEvent>& event, int32_t runnumber) {
+//	DTACHit_factory::brun(event, runnumber);
 //
 ////	// load scale factors
 ////	map<string, double> shapeParameters;
@@ -35,8 +33,8 @@ jerror_t DRebuildFromRawFADC_factory<DTACHit_factory,
 ////	double riseTime = 0.8;
 ////	double decayTime = 2.6;
 ////
-////	if (eventLoop->GetCalib("/TAC/pulse_shape", shapeParameters))
-////		jout << "Error loading /TAC/pulse_shape !" << endl;
+////	if (calibration->Get("/TAC/pulse_shape", shapeParameters))
+////		jout << "Error loading /TAC/pulse_shape !" << jendl;
 ////
 ////	if (shapeParameters.find("riseTime") != shapeParameters.end())
 ////		riseTime = shapeParameters["riseTime"];
@@ -51,8 +49,8 @@ jerror_t DRebuildFromRawFADC_factory<DTACHit_factory,
 ////	hitBuilder = new HitRebuilderByFit<WaveformErfcFunctor>(
 ////			this->getTimeScaleADC(), this->getADCTimeOffset(),
 ////			this->getTimeBaseADC(), riseTime, decayTime);
-//	hitBuilder = new HitRebuilderByFit<WaveformErfcFunctor>(eventLoop);
+//	hitBuilder = new HitRebuilderByFit<WaveformErfcFunctor>(event);
 //
-//	return NOERROR;
+//	return;
 //}
 

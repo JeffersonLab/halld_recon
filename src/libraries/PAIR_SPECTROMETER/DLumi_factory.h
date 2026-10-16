@@ -2,12 +2,12 @@
 #ifndef _DLumi_factory_
 #define _DLumi_factory_
 
-#include <JANA/JFactory.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
+
 
 #include "DLumi.h"
 
-class DLumi_factory:public JFactory<DLumi> {
+class DLumi_factory:public JFactoryT<DLumi> {
 	public:
 		DLumi_factory(){};
 		~DLumi_factory(){};
@@ -15,9 +15,9 @@ class DLumi_factory:public JFactory<DLumi> {
 		DLumi *lumi = nullptr;
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& loop)
 		{
 			// (See DTAGHGeometry_factory.h)
 			SetFactoryFlag(NOT_OBJECT_OWNER);
@@ -26,30 +26,24 @@ class DLumi_factory:public JFactory<DLumi> {
 			if( lumi ) delete lumi;
 
 			lumi = new DLumi(loop);
-
-			return NOERROR;
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 void Process(const std::shared_ptr<const JEvent>& event)
 		 {
 			// Reuse existing DBCALGeometry object.
-			if( lumi ) _data.push_back( lumi );
-			 
-			 return NOERROR;
+			if( lumi ) Insert( lumi );
 		 }
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun()
 		{
 			if( lumi ) delete lumi;
 			lumi = NULL;
-			
-			return NOERROR;
 		}
 };
 

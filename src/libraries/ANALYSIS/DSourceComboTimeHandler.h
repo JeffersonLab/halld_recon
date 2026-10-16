@@ -24,7 +24,6 @@
 #include "ANALYSIS/DAnalysisUtilities.h"
 
 using namespace std;
-using namespace jana;
 
 namespace DAnalysis
 {
@@ -38,9 +37,9 @@ class DSourceComboTimeHandler
 {
 	public:
 		DSourceComboTimeHandler(void) = delete;
-		DSourceComboTimeHandler(JEventLoop* locEventLoop, DSourceComboer* locSourceComboer, const DSourceComboVertexer* locSourceComboVertexer);
+		DSourceComboTimeHandler(const std::shared_ptr<const JEvent>& locEvent, DSourceComboer* locSourceComboer, const DSourceComboVertexer* locSourceComboVertexer);
 		~DSourceComboTimeHandler(void){Fill_Histograms();}
-		void Set_RunDependent_Data(JEventLoop *locEventLoop);
+		void Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent);
 
 		//SETUP
 		void Reset(void);
@@ -123,6 +122,7 @@ class DSourceComboTimeHandler
 		const DAnalysisUtilities* dAnalysisUtilities;
 		int dDebugLevel = 0;
 		bool dPrintCutFlag = false;
+  bool dFastTrackingMode=false;
 
 		//EXPERIMENT INFORMATION
 		DVector3 dTargetCenter;

@@ -1,3 +1,4 @@
+
 // $Id$
 //
 //    File: JEventProcessor_fa125_itrig.cc
@@ -18,10 +19,8 @@
 #include "JEventProcessor_fa125_itrig.h"
 
 using namespace std;
-using namespace jana;
 
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 #include <stdint.h>
 #include <vector>
@@ -47,7 +46,7 @@ static TTree *tree = NULL;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_fa125_itrig());
+	app->Add(new JEventProcessor_fa125_itrig());
 }
 } // "C"
 
@@ -57,7 +56,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_fa125_itrig::JEventProcessor_fa125_itrig()
 {
-
+	SetTypeName("JEventProcessor_fa125_itrig");
 }
 
 //------------------
@@ -71,17 +70,18 @@ JEventProcessor_fa125_itrig::~JEventProcessor_fa125_itrig()
 //------------------
 // init
 //------------------
-jerror_t JEventProcessor_fa125_itrig::init(void)
+void JEventProcessor_fa125_itrig::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling histograms in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
 
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
+  
   MAKE_TREE = 0;
-  if(gPARMS){
-    gPARMS->SetDefaultParameter("fa125_itrig:MAKE_TREE", MAKE_TREE, "Make a ROOT tree file");
-  }
+  app->SetDefaultParameter("fa125_itrig:MAKE_TREE", MAKE_TREE, "Make a ROOT tree file");
 
 
   TDirectory *main = gDirectory;
@@ -91,7 +91,7 @@ jerror_t JEventProcessor_fa125_itrig::init(void)
 
   hevents = new TH1I("num_events","Number of events", 1, 0.0, 1.0);
 
-  for (int i=0; i<70; i++) rocmap[i] = 0;  // rocmap[rocid] = bin number for roc rocid in histogram
+  for (int i=0; i<77; i++) rocmap[i] = 0;  // rocmap[rocid] = bin number for roc rocid in histogram
 
   int xlabels[70] = {0};
   int nbins;
@@ -126,6 +126,9 @@ jerror_t JEventProcessor_fa125_itrig::init(void)
   }
 
   if (MAKE_TREE) {
+
+    lockService->RootWriteLock();
+    
     tree = new TTree("T","Df125 trigger times");
   
     ULong64_t eventnum;
@@ -152,39 +155,40 @@ jerror_t JEventProcessor_fa125_itrig::init(void)
     int itrigdiff;
     tree->Branch("itrigdiff",&itrigdiff,"itrigdiff/I");
 
+    lockService->RootUnLock();    
   }
 
   main->cd();
 
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_fa125_itrig::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_fa125_itrig::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_fa125_itrig::Process(const std::shared_ptr<const JEvent> &event)
 {
-	// This is called for every event. 
+  // This is called for every event.
+  auto eventnumber = event->GetEventNumber();
 
   // Event count used by RootSpy->RSAI so it knows how many events have been seen.
+  lockService->RootFillLock(this);
   hevents->Fill(0.5);
+  lockService->RootFillUnLock(this);  
 
   ULong64_t timestamp = 0;
 
   if (MAKE_TREE) {
     vector<const DCODAEventInfo*> info;
   
-    loop->Get(info);
+    event->Get(info);
   
     if (info.size() != 0) {
       timestamp = (ULong64_t)info[0]->avg_timestamp;
@@ -193,7 +197,7 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
 
   
   vector<const Df125TriggerTime*> ttvector;
-  loop->Get(ttvector); 
+  event->Get(ttvector);
 
   int nd = (int)ttvector.size();
 
@@ -205,7 +209,7 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
     int tdiff, itrigdiff;
         
     if (MAKE_TREE) {
-
+      lockService->RootWriteLock(); 
       tree->SetBranchAddress("eventnum",&eventnum);
       tree->SetBranchAddress("timestamp",&timestamp);
       tree->SetBranchAddress("ttime",&ttime);
@@ -214,6 +218,7 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
       tree->SetBranchAddress("itrigger",&itrigger);
       tree->SetBranchAddress("tdiff",&tdiff);
       tree->SetBranchAddress("itrigdiff",&itrigdiff);
+      lockService->RootUnLock();
     }
   
     const Df125TriggerTime *tt = NULL;
@@ -311,43 +316,45 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
         posdiff = posdiff>>1;
       }
 
-      japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+
 
       // increment monitoring histo when trigger time and itrigger are both off by more than 1 bit
 
-      if ( diffcount_ttime>1 && diffcount_itrig>1 ) hdiffs->Fill(rocmap[rocid],slot,1);  
+      if ( diffcount_ttime>1 && diffcount_itrig>1 ) {
+	lockService->RootFillLock(this); 
+	hdiffs->Fill(rocmap[rocid],slot,1);
+	lockService->RootFillUnLock(this);
+      }
+      
+      if (MAKE_TREE) {
+	lockService->RootWriteLock();
+	tree->Fill();
+	lockService->RootUnLock();	
+      }
 
-      if (MAKE_TREE) tree->Fill();
-
-      japp->RootUnLock();
 
     }  // for each Df125TriggerTime
 
 
   }  // if (nd)  
 
-
-  return NOERROR;
-
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_fa125_itrig::erun(void)
+void JEventProcessor_fa125_itrig::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_fa125_itrig::fini(void)
+void JEventProcessor_fa125_itrig::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

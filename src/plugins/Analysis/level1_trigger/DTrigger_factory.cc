@@ -14,7 +14,6 @@ using namespace std;
 #include <JANA/JApplication.h>
 #include "JFactoryGenerator_DTrigger.h"
 #include "DTrigger_factory.h"
-using namespace jana;
 
 #include <BCAL/DBCALHit.h>
 #include <FCAL/DFCALHit.h>
@@ -24,7 +23,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddFactoryGenerator(new JFactoryGenerator_DTrigger);
+	app->Add(new JFactoryGenerator_DTrigger);
 
 		stringstream mess;
 		mess << "=========================================================================="<<endl;
@@ -51,39 +50,37 @@ void InitPlugin(JApplication *app){
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrigger_factory::init(void)
+void DTrigger_factory::Init()
 {
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// Get attenuation parameters
 	double L_over_2 = DBCALGeometry::BCALFIBERLENGTH/2.0;
 	double Xo = DBCALGeometry::ATTEN_LENGTH;
 	unattenuate_to_center = exp(+L_over_2/Xo);
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrigger_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// See comments in DTrigger_factory.h
 
 	vector<const DBCALHit*> bcalhits;
 	vector<const DFCALHit*> fcalhits;
 	vector<const DSCHit*> schits;
-	loop->Get(bcalhits);
-	loop->Get(fcalhits);
-	loop->Get(schits);
+	event->Get(bcalhits);
+	event->Get(fcalhits);
+	event->Get(schits);
 
 	/// In GlueX-doc-1043, it appaears the energy deposited in the BCAL
 	/// is used. In reality, only the attenuated energy will be available
@@ -150,24 +147,20 @@ jerror_t DTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	trig->Efcal = Efcal;
 	trig->Nschits = Nschits;
 	
-	_data.push_back(trig);
-
-	return NOERROR;
+	Insert(trig);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrigger_factory::erun(void)
+void DTrigger_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTrigger_factory::fini(void)
+void DTrigger_factory::Finish()
 {
-	return NOERROR;
 }
 

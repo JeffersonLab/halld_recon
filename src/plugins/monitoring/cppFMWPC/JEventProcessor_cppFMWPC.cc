@@ -7,7 +7,6 @@
 
 #include "JEventProcessor_cppFMWPC.h"
 #include <JANA/JEventProcessor.h>
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
@@ -16,7 +15,7 @@ using namespace jana;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_cppFMWPC());
+    app->Add(new JEventProcessor_cppFMWPC());
   }
 } // "C"
 
@@ -26,7 +25,7 @@ extern "C"{
 //------------------
 JEventProcessor_cppFMWPC::JEventProcessor_cppFMWPC()
 {
-  
+	SetTypeName("JEventProcessor_cppFMWPC");
 }
 
 //------------------
@@ -40,7 +39,7 @@ JEventProcessor_cppFMWPC::~JEventProcessor_cppFMWPC()
 //------------------
 // init
 //------------------
-jerror_t JEventProcessor_cppFMWPC::init(void)
+void JEventProcessor_cppFMWPC::Init()
 {
   // This is called once at program startup. 
 
@@ -80,24 +79,20 @@ jerror_t JEventProcessor_cppFMWPC::init(void)
   h2_V5_vs_V6 = new TH2D("h2_V5_vs_V6",";V6 wire;V5 wire",145,0,145,145,0,145);
   
   top->cd();
-
-
-  return NOERROR;
 }
 
 //------------------
 // brun
 //------------------
-jerror_t JEventProcessor_cppFMWPC::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_cppFMWPC::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
   // This is called whenever the run number changes
-  return NOERROR;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t JEventProcessor_cppFMWPC::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_cppFMWPC::Process(const std::shared_ptr<const JEvent> &event)
 {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
@@ -115,7 +110,7 @@ jerror_t JEventProcessor_cppFMWPC::evnt(JEventLoop *loop, uint64_t eventnumber)
   
 
   vector < const DFMWPCHit*> fmwpcHits;
-  loop->Get(fmwpcHits);
+  event->Get(fmwpcHits);
 
   for (int k=0; k<(int)fmwpcHits.size(); k++) {
     
@@ -299,7 +294,7 @@ jerror_t JEventProcessor_cppFMWPC::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 
   vector <const DFDCHit*> fdcHits;
-  loop->Get(fdcHits);
+  event->Get(fdcHits);
   
   for (int k=0; k<(int)fdcHits.size(); k++){
     const DFDCHit *h = fdcHits[k];
@@ -311,28 +306,23 @@ jerror_t JEventProcessor_cppFMWPC::evnt(JEventLoop *loop, uint64_t eventnumber)
     int w = h->element;
     FDCwiresT[l]->Fill((double)w, h->t);
   }
-
-  return NOERROR;
 }
 
 //------------------
 // erun
 //------------------
-jerror_t JEventProcessor_cppFMWPC::erun(void)
+void JEventProcessor_cppFMWPC::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t JEventProcessor_cppFMWPC::fini(void)
+void JEventProcessor_cppFMWPC::Finish()
 {
   // Called before program exit after event processing is finished.
-
-  return NOERROR;
 }
 

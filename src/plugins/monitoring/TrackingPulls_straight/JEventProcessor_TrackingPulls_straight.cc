@@ -9,26 +9,26 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DTrigger.h"
 
-using namespace jana;
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C" {
 void InitPlugin(JApplication *app) {
   InitJANAPlugin(app);
-  app->AddProcessor(new JEventProcessor_TrackingPulls_straight());
+  app->Add(new JEventProcessor_TrackingPulls_straight());
 }
 }  // "C"
 
-JEventProcessor_TrackingPulls_straight::
-    JEventProcessor_TrackingPulls_straight() {}
+JEventProcessor_TrackingPulls_straight::JEventProcessor_TrackingPulls_straight() {
+	SetTypeName("JEventProcessor_TrackingPulls_straight");
+}
 
 JEventProcessor_TrackingPulls_straight::
     ~JEventProcessor_TrackingPulls_straight() {}
 
-jerror_t JEventProcessor_TrackingPulls_straight::init(void) {
+void JEventProcessor_TrackingPulls_straight::Init() {
   // This is called once at program startup.
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 
   tree_ = new TTree("tracking_pulls", "tracking_pulls");
   tree_->SetAutoSave(1000);
@@ -74,24 +74,19 @@ jerror_t JEventProcessor_TrackingPulls_straight::init(void) {
                 Form("cdc_left_right[%d]/I", kNumCdcRings));
   tree_->Branch("cdc_phi_intersect", cdc_phi_intersect_,
                 Form("cdc_phi_intersect[%d]/D", kNumCdcRings));
-
-  return NOERROR;
 }
 
-jerror_t JEventProcessor_TrackingPulls_straight::brun(JEventLoop *eventLoop,
-                                                      int32_t runnumber) {
-  // This is called whenever the run number changes
-  return NOERROR;
+void JEventProcessor_TrackingPulls_straight::BeginRun(const std::shared_ptr<const JEvent> &event) {
 }
 
-jerror_t JEventProcessor_TrackingPulls_straight::evnt(JEventLoop *loop,
-                                                      uint64_t eventnumber) {
+void JEventProcessor_TrackingPulls_straight::Process(const std::shared_ptr<const JEvent> &event) {
+  auto eventnumber = event->GetEventNumber();
   const DTrigger *locTrigger = NULL;
-  loop->GetSingle(locTrigger);
-  if (locTrigger->Get_L1FrontPanelTriggerBits() != 0) return NOERROR;
+  event->GetSingle(locTrigger);
+  if (locTrigger->Get_L1FrontPanelTriggerBits() != 0) return;
 
   vector<const DTrackTimeBased *> trackVector;
-  loop->Get(trackVector, "StraightLine");
+  event->Get(trackVector, "StraightLine");
 
   for (size_t i = 0; i < trackVector.size(); i++) {
     const DTrackTimeBased *track = trackVector[i];
@@ -121,7 +116,7 @@ jerror_t JEventProcessor_TrackingPulls_straight::evnt(JEventLoop *loop,
       cdc_left_right_[j] = -999;
       cdc_phi_intersect_[j] = -999.9;
     }
-    eventnumber_ = (int)eventnumber;
+    eventnumber_ = (int) eventnumber;
     track_index_ = (int)i;
     chi2_ = track->chisq;
     ndf_ = track->Ndof;
@@ -140,8 +135,8 @@ jerror_t JEventProcessor_TrackingPulls_straight::evnt(JEventLoop *loop,
     // Check for NaNs
     any_nan_ = false;
     for (size_t iPull = 0; iPull < pulls.size(); iPull++) {
-      double err = pulls[iPull].err;
-      double errc = pulls[iPull].errc;
+      double err = sqrt(pulls[iPull].var);
+      double errc = sqrt(pulls[iPull].varc);
       if (err != err || errc != errc) {
         any_nan_ = true;
         break;
@@ -150,13 +145,13 @@ jerror_t JEventProcessor_TrackingPulls_straight::evnt(JEventLoop *loop,
 
     for (size_t iPull = 0; iPull < pulls.size(); iPull++) {
       double resi = pulls[iPull].resi;
-      double err = pulls[iPull].err;  // estimated error of measurement
+      double err = sqrt(pulls[iPull].var);  // estimated error of measurement
       double tdrift = pulls[iPull].tdrift;
       const DCDCTrackHit *cdc_hit = pulls[iPull].cdc_hit;
       const DFDCPseudo *fdc_hit = pulls[iPull].fdc_hit;
       double z = pulls[iPull].z;  // z position at doca
       double resic = pulls[iPull].resic;
-      double errc = pulls[iPull].errc;
+      double errc = sqrt(pulls[iPull].varc);
 
       // Fill some detector specific info
       // Fill them in order = super-hacked
@@ -197,23 +192,19 @@ jerror_t JEventProcessor_TrackingPulls_straight::evnt(JEventLoop *loop,
             TMath::RadToDeg();
       }
     }
-    japp->RootWriteLock();
+    lockService->RootWriteLock();
     tree_->Fill();
-    japp->RootUnLock();
+    lockService->RootUnLock();
   }
-
-  return NOERROR;
 }
 
-jerror_t JEventProcessor_TrackingPulls_straight::erun(void) {
+void JEventProcessor_TrackingPulls_straight::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
-jerror_t JEventProcessor_TrackingPulls_straight::fini(void) {
+void JEventProcessor_TrackingPulls_straight::Finish() {
   // Called before program exit after event processing is finished.
   tree_->Write();
-  return NOERROR;
 }

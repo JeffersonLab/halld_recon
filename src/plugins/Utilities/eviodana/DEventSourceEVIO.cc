@@ -8,7 +8,7 @@
 #include <iostream>
 using namespace std;
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 
 #include "DEventSourceEVIO.h"
 
@@ -18,6 +18,8 @@ using namespace std;
 //---------------------------------
 DEventSourceEVIO::DEventSourceEVIO(const char* source_name):JEventSource(source_name)
 {
+	EnableGetObjects(true);  // Check the source first for existing objects; only invoke the factory to create them if they aren't found in the source.
+	EnableFinishEvent(true); // Ensure ::FinishEvent gets called. By default, it is disabled (false).
 	// Open the EVIO file, catching any exceptions
 	try {
 		chan = new evioFileChannel(source_name,"r", 65536);
@@ -79,7 +81,7 @@ DEventSourceEVIO::~DEventSourceEVIO()
 //---------------------------------
 // GetEvent
 //---------------------------------
-jerror_t DEventSourceEVIO::GetEvent(JEvent &event)
+void DEventSourceEVIO::GetEvent(JEvent &event)
 {
 	if(chan==NULL)return NO_MORE_EVENTS_IN_SOURCE;
 	if(chan->read()){
@@ -96,7 +98,7 @@ jerror_t DEventSourceEVIO::GetEvent(JEvent &event)
 		return NO_MORE_EVENTS_IN_SOURCE;
 	}
 
-	return NOERROR;
+	return;
 }
 
 //---------------------------------
@@ -121,7 +123,7 @@ void DEventSourceEVIO::FreeEvent(JEvent &event)
 //---------------------------------
 // GetObjects
 //---------------------------------
-jerror_t DEventSourceEVIO::GetObjects(JEvent &event, JFactory_base *factory)
+bool DEventSourceEVIO::GetObjects(JEvent &event, JFactory *factory)
 {
 	/// This gets called through the virtual method of the
 	/// JEventSource base class. It creates the objects of the type
@@ -135,28 +137,22 @@ jerror_t DEventSourceEVIO::GetObjects(JEvent &event, JFactory_base *factory)
 	if(!evt)throw RESOURCE_UNAVAILABLE;
 
 	// Get pointer to the B-field object and Geometry object
-	JEventLoop *loop = event.GetJEventLoop();
-	if(loop){
-		DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-		if(dapp){
-			bfield = dapp->GetBfield(event.GetRunNumber());
-			geom = dapp->GetDGeometry(event.GetRunNumber());
-		}
-	}
+	bfield = GetBfield(event);
+	geom = GetDGeometry(event);
 
 	// Get name of data class we're trying to extract
 	string dataClassName = factory->GetDataClassName();
 
 	if(dataClassName =="DTrackTimeBased")
-	  return Extract_DTrackTimeBased(evt, dynamic_cast<JFactory<DTrackTimeBased>*>(factory));	
+	  return Extract_DTrackTimeBased(evt, dynamic_cast<JFactoryT<DTrackTimeBased>*>(factory));	
 
-	return OBJECT_NOT_AVAILABLE;
+	return false; //OBJECT_NOT_AVAILABLE
 }
 
 //---------------------------------
 // Extract_DTrackTimeBased
 //---------------------------------
-jerror_t DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactory<DTrackTimeBased> *factory)
+bool DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactoryT<DTrackTimeBased> *factory)
 {
 	// Note: Since this is a reconstructed factory, we want to generally return OBJECT_NOT_AVAILABLE
 	// rather than NOERROR. The reason being that the caller interprets "NOERROR" to mean "yes I
@@ -164,7 +160,7 @@ jerror_t DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactory<D
 	// skip any attempt at reconstruction. On the other hand, a value of "OBJECT_NOT_AVAILABLE" tells
 	// it "I cannot provide those type of objects for this event.
 
-  if(factory==NULL)return OBJECT_NOT_AVAILABLE;
+  if(factory==NULL)return false; //OBJECT_NOT_AVAILABLE;
 
 	vector<DTrackTimeBased*> data;
 	vector<DReferenceTrajectory*> rts;
@@ -271,11 +267,11 @@ jerror_t DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactory<D
 
 		// If the event had a s_Tracktimebased_t pointer, then report back that
 		// we read them in from the file. Otherwise, report OBJECT_NOT_AVAILABLE
-		return NOERROR;
+		return;
 	}
 
 	// If we get to here then there was not even a placeholder in the HDDM file.
 	// Return OBJECT_NOT_AVAILABLE to indicate reconstruction should be tried.
-	return OBJECT_NOT_AVAILABLE;
+	return false; //OBJECT_NOT_AVAILABLE;
 }
 		

@@ -6,9 +6,9 @@
 #define _DECALDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
-class DECALDigiHit:public jana::JObject{
+class DECALDigiHit:public JObject{
 	public:
 		JOBJECT_PUBLIC(DECALDigiHit);
 		
@@ -26,16 +26,16 @@ class DECALDigiHit:public jana::JObject{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "row", "%4d", row);
-			AddString(items, "column", "%4d", column);
-			AddString(items, "pulse_integral", "%d", pulse_integral);
-			AddString(items, "pulse_peak", "%d", pulse_peak);
-			AddString(items, "pulse_time", "%d", pulse_time);
-			AddString(items, "pedestal", "%d", pedestal);
-			AddString(items, "QF", "%d", QF);
-			AddString(items, "nsamples_integral", "%d", nsamples_integral);
-			AddString(items, "nsamples_pedestal", "%d", nsamples_pedestal);
+		void Summarize(JObjectSummary& summary) const{
+			summary.add(row, "row", "%4d");
+			summary.add(column, "column", "%4d");
+			summary.add(pulse_integral, "pulse_integral", "%d");
+			summary.add(pulse_peak, "pulse_peak", "%d");
+			summary.add(pulse_time, "pulse_time", "%d");
+			summary.add(pedestal, "pedestal", "%d");
+			summary.add(QF, "QF", "%d");
+			summary.add(nsamples_integral, "nsamples_integral", "%d");
+			summary.add(nsamples_pedestal, "nsamples_pedestal", "%d");
 		}
 		
 };

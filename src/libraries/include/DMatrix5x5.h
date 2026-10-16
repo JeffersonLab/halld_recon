@@ -6,10 +6,12 @@
 
 class DMatrix5x5{
    public:
-      DMatrix5x5(){
-         for (unsigned int i=0;i<5;i++)
+      DMatrix5x5(bool setToZero=true){
+	if (setToZero){
+	  for (unsigned int i=0;i<5;i++)
             for (unsigned int j=0;j<5;j++)
-               mA[i][j]=0.;
+	      mA[i][j]=0.;
+	}
       }
       // Copy constructor
       DMatrix5x5(const DMatrix5x5 &m2){
@@ -195,10 +197,15 @@ class DMatrix5x5{
 
          for (unsigned int j=0;j<5;j++){
             for (unsigned int i=0;i<5;i++){
-               double temp2=0.;
-               for (unsigned int k=0;k<5;k++){
-                  temp2+=mA[j][k]*m2(k,i);
-               }
+	      //double temp2=0.;
+              // for (unsigned int k=0;k<5;k++){
+	      //temp2+=mA[j][k]*m2(k,i);
+              // }
+	      double temp2=mA[j][0]*m2(0,i);
+	      temp2+=mA[j][1]*m2(1,i);
+	      temp2+=mA[j][2]*m2(2,i);
+	      temp2+=mA[j][3]*m2(3,i);
+	      temp2+=mA[j][4]*m2(4,i);
                temp(j,i)=temp2;
             }
          }
@@ -234,7 +241,7 @@ class DMatrix5x5{
       // The following code performs the matrix operation ABA^T, where B is a symmetric matrix.   The end 
       // result is also a symmetric matrix.
       DMatrix5x5 SandwichMultiply(const DMatrix5x5 &A){
-         DMatrix5x5 temp;
+	DMatrix5x5 temp(false); // Do not initialize values -- they will all be set later
          double sums[5];
          // First row/column of ACA^T
          sums[0]= mA[0][0]*A(0,0);
@@ -267,31 +274,31 @@ class DMatrix5x5{
          sums[4]+=mA[4][3]*A(0,3);
          sums[4]+=mA[4][4]*A(0,4);
 
-         temp(0,0)+=A(0,0)*sums[0];
-         temp(0,0)+=A(0,1)*sums[1];
-         temp(0,0)+=A(0,2)*sums[2];
-         temp(0,0)+=A(0,3)*sums[3];
-         temp(0,0)+=A(0,4)*sums[4];
+	 temp(0,0)=A(0,0)*sums[0];
+	 temp(0,0)+=A(0,1)*sums[1];
+	 temp(0,0)+=A(0,2)*sums[2];
+	 temp(0,0)+=A(0,3)*sums[3];
+	 temp(0,0)+=A(0,4)*sums[4];
 
-         temp(1,0)+=A(1,0)*sums[0];
+         temp(1,0)=A(1,0)*sums[0];
          temp(1,0)+=A(1,1)*sums[1];
          temp(1,0)+=A(1,2)*sums[2];
          temp(1,0)+=A(1,3)*sums[3];
          temp(1,0)+=A(1,4)*sums[4];
 
-         temp(2,0)+=A(2,0)*sums[0];
+         temp(2,0)=A(2,0)*sums[0];
          temp(2,0)+=A(2,1)*sums[1];
          temp(2,0)+=A(2,2)*sums[2];
          temp(2,0)+=A(2,3)*sums[3];
          temp(2,0)+=A(2,4)*sums[4];
 
-         temp(3,0)+=A(3,0)*sums[0];
+         temp(3,0)=A(3,0)*sums[0];
          temp(3,0)+=A(3,1)*sums[1];
          temp(3,0)+=A(3,2)*sums[2];
          temp(3,0)+=A(3,3)*sums[3];
          temp(3,0)+=A(3,4)*sums[4];
 
-         temp(4,0)+=A(4,0)*sums[0];
+         temp(4,0)=A(4,0)*sums[0];
          temp(4,0)+=A(4,1)*sums[1];
          temp(4,0)+=A(4,2)*sums[2];
          temp(4,0)+=A(4,3)*sums[3];
@@ -333,29 +340,29 @@ class DMatrix5x5{
          sums[4]+=mA[4][3]*A(1,3);
          sums[4]+=mA[4][4]*A(1,4);
 
-         temp(1,1)+=A(1,0)*sums[0];
+         temp(1,1)=A(1,0)*sums[0];
          temp(1,1)+=A(1,1)*sums[1];
          temp(1,1)+=A(1,2)*sums[2];
          temp(1,1)+=A(1,3)*sums[3];
          temp(1,1)+=A(1,4)*sums[4];
 
-         temp(2,1)+=A(2,0)*sums[0];
+         temp(2,1)=A(2,0)*sums[0];
          temp(2,1)+=A(2,1)*sums[1];
          temp(2,1)+=A(2,2)*sums[2];
          temp(2,1)+=A(2,3)*sums[3];
          temp(2,1)+=A(2,4)*sums[4];
 
-         temp(3,1)+=A(3,0)*sums[0];
+         temp(3,1)=A(3,0)*sums[0];
          temp(3,1)+=A(3,1)*sums[1];
          temp(3,1)+=A(3,2)*sums[2];
          temp(3,1)+=A(3,3)*sums[3];
          temp(3,1)+=A(3,4)*sums[4];
 
-         temp(4,1)+=A(4,0)*sums[0];
+         temp(4,1)=A(4,0)*sums[0];
          temp(4,1)+=A(4,1)*sums[1];
          temp(4,1)+=A(4,2)*sums[2];
          temp(4,1)+=A(4,3)*sums[3];
-         temp(4,1)+=A(4,4)*sums[4]; 
+         temp(4,1)+=A(4,4)*sums[4];
 
          temp(1,2)=temp(2,1);
          temp(1,3)=temp(3,1);
@@ -392,19 +399,19 @@ class DMatrix5x5{
          sums[4]+=mA[4][3]*A(2,3);
          sums[4]+=mA[4][4]*A(2,4);
 
-         temp(2,2)+=A(2,0)*sums[0]; 
+         temp(2,2)=A(2,0)*sums[0]; 
          temp(2,2)+=A(2,1)*sums[1];
          temp(2,2)+=A(2,2)*sums[2]; 
          temp(2,2)+=A(2,3)*sums[3]; 
          temp(2,2)+=A(2,4)*sums[4];
-
-         temp(3,2)+=A(3,0)*sums[0]; 
+	 
+         temp(3,2)=A(3,0)*sums[0]; 
          temp(3,2)+=A(3,1)*sums[1];
          temp(3,2)+=A(3,2)*sums[2]; 
          temp(3,2)+=A(3,3)*sums[3]; 
          temp(3,2)+=A(3,4)*sums[4];
 
-         temp(4,2)+=A(4,0)*sums[0]; 
+         temp(4,2)=A(4,0)*sums[0]; 
          temp(4,2)+=A(4,1)*sums[1];
          temp(4,2)+=A(4,2)*sums[2]; 
          temp(4,2)+=A(4,3)*sums[3]; 
@@ -444,13 +451,13 @@ class DMatrix5x5{
          sums[4]+=mA[4][3]*A(3,3);
          sums[4]+=mA[4][4]*A(3,4);
 
-         temp(3,3)+=A(3,0)*sums[0];
+         temp(3,3)=A(3,0)*sums[0];
          temp(3,3)+=A(3,1)*sums[1];
          temp(3,3)+=A(3,2)*sums[2];
          temp(3,3)+=A(3,3)*sums[3];
          temp(3,3)+=A(3,4)*sums[4];
 
-         temp(4,3)+=A(4,0)*sums[0];
+         temp(4,3)=A(4,0)*sums[0];
          temp(4,3)+=A(4,1)*sums[1];
          temp(4,3)+=A(4,2)*sums[2];
          temp(4,3)+=A(4,3)*sums[3];
@@ -489,7 +496,7 @@ class DMatrix5x5{
          sums[4]+=mA[4][3]*A(4,3);
          sums[4]+=mA[4][4]*A(4,4);
 
-         temp(4,4)+=A(4,0)*sums[0];
+         temp(4,4)=A(4,0)*sums[0];
          temp(4,4)+=A(4,1)*sums[1];
          temp(4,4)+=A(4,2)*sums[2];
          temp(4,4)+=A(4,3)*sums[3];
@@ -498,7 +505,159 @@ class DMatrix5x5{
          return temp;
       }
 
+  // The following performs the operation JCJ^T for forward tracking
+  DMatrix5x5 TransformCovariance(const DMatrix5x5 &J){
+    DMatrix5x5 NewC(false); // Do not initialize values -- they will all be set later
+    double dz=J(0,2);
+    double temp1=mA[0][0]+dz*mA[0][2];
+    double temp2=mA[0][2]+dz*mA[2][2];
+    NewC(0,0)=temp1+dz*temp2;
+    
+    double temp3=mA[0][1]+dz*mA[1][2];
+    double temp4=mA[0][3]+dz*mA[2][3];
 
+    NewC(0,1)=temp3+dz*temp4;
+    NewC(1,0)=NewC(0,1);
+    
+    temp1 =J(2,0)*mA[0][0];
+    temp1+=J(2,1)*mA[0][1];
+    temp1+=J(2,2)*mA[0][2];
+    temp1+=J(2,3)*mA[0][3];
+    temp1+=J(2,4)*mA[0][4];
+
+    temp3 =J(2,0)*mA[2][0];
+    temp3+=J(2,1)*mA[2][1];
+    temp3+=J(2,2)*mA[2][2];
+    temp3+=J(2,3)*mA[2][3];
+    temp3+=J(2,4)*mA[2][4];
+    
+    NewC(2,0)=temp1+dz*temp3;
+    NewC(0,2)=NewC(2,0);
+
+    temp2 =J(2,0)*mA[1][0];
+    temp2+=J(2,1)*mA[1][1];
+    temp2+=J(2,2)*mA[1][2];
+    temp2+=J(2,3)*mA[1][3];
+    temp2+=J(2,4)*mA[1][4];
+
+    temp4 =J(2,0)*mA[3][0];
+    temp4+=J(2,1)*mA[3][1];
+    temp4+=J(2,2)*mA[3][2];
+    temp4+=J(2,3)*mA[3][3];
+    temp4+=J(2,4)*mA[3][4];
+
+    NewC(2,1)=temp2+dz*temp4;
+    NewC(1,2)=NewC(2,1);    
+
+    double temp5 =J(2,0)*mA[4][0];
+    temp5+=J(2,1)*mA[4][1];
+    temp5+=J(2,2)*mA[4][2];
+    temp5+=J(2,3)*mA[4][3];
+    temp5+=J(2,4)*mA[4][4];
+    
+    NewC(2,2) =J(2,0)*temp1;
+    NewC(2,2)+=J(2,1)*temp2;
+    NewC(2,2)+=J(2,2)*temp3;
+    NewC(2,2)+=J(2,3)*temp4;
+    NewC(2,2)+=J(2,4)*temp5;
+
+    NewC(4,2) =J(4,2)*temp3;
+    NewC(4,2)+=J(4,3)*temp4;
+    NewC(4,2)+=J(4,4)*temp5;
+    NewC(2,4)=NewC(4,2);
+    
+    temp3=mA[1][1]+dz*mA[1][3];
+    temp4=mA[1][3]+dz*mA[3][3];
+
+    NewC(1,1)=temp3+dz*temp4;
+
+    temp1 =J(3,0)*mA[0][0];
+    temp1+=J(3,1)*mA[0][1];
+    temp1+=J(3,2)*mA[0][2];
+    temp1+=J(3,3)*mA[0][3];
+    temp1+=J(3,4)*mA[0][4];
+
+    temp3 =J(3,0)*mA[2][0];
+    temp3+=J(3,1)*mA[2][1];
+    temp3+=J(3,2)*mA[2][2];
+    temp3+=J(3,3)*mA[2][3];
+    temp3+=J(3,4)*mA[2][4];
+    
+    NewC(3,0)=temp1+dz*temp3;
+    NewC(0,3)=NewC(3,0);
+
+    temp2 =J(3,0)*mA[1][0];
+    temp2+=J(3,1)*mA[1][1];
+    temp2+=J(3,2)*mA[1][2];
+    temp2+=J(3,3)*mA[1][3];
+    temp2+=J(3,4)*mA[1][4];
+
+    temp4 =J(3,0)*mA[3][0];
+    temp4+=J(3,1)*mA[3][1];
+    temp4+=J(3,2)*mA[3][2];
+    temp4+=J(3,3)*mA[3][3];
+    temp4+=J(3,4)*mA[3][4];
+
+    NewC(3,1)=temp2+dz*temp4;
+    NewC(1,3)=NewC(3,1);
+
+    temp5 =J(3,0)*mA[4][0];
+    temp5+=J(3,1)*mA[4][1];
+    temp5+=J(3,2)*mA[4][2];
+    temp5+=J(3,3)*mA[4][3];
+    temp5+=J(3,4)*mA[4][4];
+
+    NewC(3,2) =J(2,0)*temp1;
+    NewC(3,2)+=J(2,1)*temp2;
+    NewC(3,2)+=J(2,2)*temp3;
+    NewC(3,2)+=J(2,3)*temp4;
+    NewC(3,2)+=J(2,4)*temp5;
+    NewC(2,3)=NewC(3,2);
+
+    NewC(3,3) =J(3,0)*temp1;
+    NewC(3,3)+=J(3,1)*temp2;
+    NewC(3,3)+=J(3,2)*temp3;
+    NewC(3,3)+=J(3,3)*temp4;
+    NewC(3,3)+=J(3,4)*temp5;
+    
+    NewC(4,3) =J(4,2)*temp3;
+    NewC(4,3)+=J(4,3)*temp4;
+    NewC(4,3)+=J(4,4)*temp5;
+    NewC(3,4)=NewC(4,3);
+    
+    temp1 =J(4,2)*mA[0][2];
+    temp1+=J(4,3)*mA[0][3];
+    temp1+=J(4,4)*mA[0][4];
+
+    temp3 =J(4,2)*mA[2][2];
+    temp3+=J(4,3)*mA[2][3];
+    temp3+=J(4,4)*mA[2][4];
+
+    NewC(4,0)=temp1+dz*temp3;
+    NewC(0,4)=NewC(4,0);
+
+    temp2 =J(4,2)*mA[1][2];
+    temp2+=J(4,3)*mA[1][3];
+    temp2+=J(4,4)*mA[1][4];
+
+    temp4 =J(4,2)*mA[3][2];
+    temp4+=J(4,3)*mA[3][3];
+    temp4+=J(4,4)*mA[3][4];
+
+    NewC(4,1)=temp2+dz*temp4;
+    NewC(1,4)=NewC(4,1);
+    
+    temp5 =J(4,2)*mA[4][2];
+    temp5+=J(4,3)*mA[4][3];
+    temp5+=J(4,4)*mA[4][4];
+
+    NewC(4,4) =J(4,2)*temp3;
+    NewC(4,4)+=J(4,3)*temp4;
+    NewC(4,4)+=J(4,4)*temp5;
+    
+    return NewC;
+  }
+  
 
       // The following code performs the matrix operation ABA^T, where B is a symmetric matrix.   The end 
       // result is also a symmetric matrix.
@@ -650,8 +809,8 @@ class DMatrix5x5{
          }      
       }
 
-   private:
-      double mA[5][5];
+private:
+  double mA[5][5];
 
 };
 

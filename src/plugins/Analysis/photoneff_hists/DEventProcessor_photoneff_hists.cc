@@ -16,9 +16,9 @@ using namespace std;
 #include "DEventProcessor_photoneff_hists.h"
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <DVector2.h>
 #include <particleType.h>
 #include <FCAL/DFCALHit.h>
@@ -29,7 +29,7 @@ using namespace std;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_photoneff_hists());
+	app->Add(new DEventProcessor_photoneff_hists());
 }
 } // "C"
 
@@ -55,9 +55,9 @@ DEventProcessor_photoneff_hists::~DEventProcessor_photoneff_hists()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_photoneff_hists::init(void)
+void DEventProcessor_photoneff_hists::Init()
 {
 	// Create TRACKING directory
 	TDirectory *dir = (TDirectory*)gROOT->FindObject("CALORIMETRY");
@@ -78,39 +78,33 @@ jerror_t DEventProcessor_photoneff_hists::init(void)
 	DEBUG = 1;
 	
 	parms->SetDefaultParameter("TRKEFF:DEBUG", DEBUG);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_photoneff_hists::brun(JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_photoneff_hists::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_photoneff_hists::erun(void)
+void DEventProcessor_photoneff_hists::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_photoneff_hists::fini(void)
+void DEventProcessor_photoneff_hists::Finish()
 {
-        return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_photoneff_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_photoneff_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DFCALHit*> fcalhits;
 	vector<const DBCALMCResponse*> bcalhits;
@@ -118,11 +112,11 @@ jerror_t DEventProcessor_photoneff_hists::evnt(JEventLoop *loop, uint64_t eventn
 	vector<const DMCThrown*> mcthrowns;
 	vector<const DMCTrajectoryPoint*> mctrajpoints;
 	
-	loop->Get(fcalhits);
-	loop->Get(bcalhits);
-	loop->Get(photons);
-	loop->Get(mcthrowns);
-	loop->Get(mctrajpoints);
+	event->Get(fcalhits);
+	event->Get(bcalhits);
+	event->Get(photons);
+	event->Get(mcthrowns);
+	event->Get(mctrajpoints);
 
 	// Get hit list for all throwns
 	for(unsigned int i=0; i<mcthrowns.size(); i++){
@@ -137,7 +131,7 @@ jerror_t DEventProcessor_photoneff_hists::evnt(JEventLoop *loop, uint64_t eventn
 		bool locIsRecon = isReconstructable(mcthrown, loop);
 
 		// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-		japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+		GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	
 		phtn.pthrown = pthrown;
 		// Initialize with the "not found" values
@@ -186,16 +180,14 @@ jerror_t DEventProcessor_photoneff_hists::evnt(JEventLoop *loop, uint64_t eventn
 		
 		phtneff->Fill();
 
-		japp->RootUnLock(); //RELEASE ROOT LOCK
+		GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 	}
-	
-	return NOERROR;
 }
 
 //------------------
 // isReconstructable
 //------------------
-bool DEventProcessor_photoneff_hists::isReconstructable(const DMCThrown *mcthrown, JEventLoop *loop)
+bool DEventProcessor_photoneff_hists::isReconstructable(const DMCThrown *mcthrown, const std::shared_ptr<const JEvent>& event)
 {
 	/// For photon reconstruction, we just check if the total energy
 	/// in ether the BCAL or FCAL is greater than 50% of the thrown
@@ -212,8 +204,8 @@ bool DEventProcessor_photoneff_hists::isReconstructable(const DMCThrown *mcthrow
 	vector<const DBCALMCResponse*> bcalhits;
 	vector<const DFCALHit*> fcalhits;
 	
-	loop->Get(bcalhits);
-	loop->Get(fcalhits);
+	event->Get(bcalhits);
+	event->Get(fcalhits);
 	
 	double Ebcal = 0.0;
 	for(unsigned int i=0; i<bcalhits.size(); i++)Ebcal += (bcalhits[i])->E;

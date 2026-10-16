@@ -9,12 +9,11 @@ using namespace std;
 
 #include <TThread.h>
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 #include "DEventProcessor_cdc_hists.h"
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DMCTrackHit.h>
 #include <TRACKING/DMCThrown.h>
@@ -29,7 +28,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_cdc_hists());
+	app->Add(new DEventProcessor_cdc_hists());
 }
 } // "C"
 
@@ -53,9 +52,9 @@ DEventProcessor_cdc_hists::~DEventProcessor_cdc_hists()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_cdc_hists::init(void)
+void DEventProcessor_cdc_hists::Init()
 {
 	// open ROOT file (if needed)
 	//if(ROOTfile != NULL) ROOTfile->cd();
@@ -78,56 +77,47 @@ jerror_t DEventProcessor_cdc_hists::init(void)
 
 	// Go back up to the parent directory
 	dir->cd("../");
-	
-	
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_cdc_hists::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_cdc_hists::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	DApplication *dapp = dynamic_cast<DApplication*>(app);
 	LockState();
-	bfield = dapp->GetBfield(runnumber);
+	bfield = DEvent::GetBfield(event);
 	UnlockState();
-	
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_cdc_hists::erun(void)
+void DEventProcessor_cdc_hists::EndRun()
 {
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_cdc_hists::fini(void)
+void DEventProcessor_cdc_hists::Finish()
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_cdc_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_cdc_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DMCTrackHit*> mctrackhits;
 	vector<const DCDCHit*> cdchits;
 	vector<const DCDCTrackHit*> cdctrackhits;
 	vector<const DFDCHit*> fdchits;
 	vector<const DMCThrown*> mcthrowns;
-	loop->Get(mctrackhits);
-	loop->Get(cdchits);
-	loop->Get(cdctrackhits);
-	loop->Get(fdchits);
-	loop->Get(mcthrowns);
+	event->Get(mctrackhits);
+	event->Get(cdchits);
+	event->Get(cdctrackhits);
+	event->Get(fdchits);
+	event->Get(mcthrowns);
 	
 	// Find number of wire hits in FDC
 	int Nfdc_wire_hits = 0;
@@ -141,7 +131,7 @@ jerror_t DEventProcessor_cdc_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
 	}
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	
 	// Loop over all truth hits, ignoring all but CDC hits
 	for(unsigned int i=0; i<mctrackhits.size(); i++){
@@ -212,9 +202,7 @@ jerror_t DEventProcessor_cdc_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
 		}
 	}
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
+	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 	
 	delete rt;
-
-	return NOERROR;
 }

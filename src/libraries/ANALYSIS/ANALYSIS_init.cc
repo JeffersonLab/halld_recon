@@ -1,7 +1,6 @@
 // $Id: ANALYSIS_init.cc 2433 2007-04-07 14:57:32Z pmatt $
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 //OK
 #include "DReaction_factory_Thrown.h"
@@ -22,23 +21,23 @@ using namespace jana;
 #include "DHistogramActions.h"
 #include "DCutActions.h"
 
-jerror_t ANALYSIS_init(JEventLoop *loop)
+void ANALYSIS_init(JFactorySet* factorySet)
 {
 	/// Create and register ANALYSIS data factories
-	loop->AddFactory(new DReaction_factory_Thrown);
+	factorySet->Add(new DReaction_factory_Thrown);
 
-	loop->AddFactory(new DAnalysisUtilities_factory);
-	loop->AddFactory(new DMCThrownMatching_factory);
+	factorySet->Add(new DAnalysisUtilities_factory);
+	factorySet->Add(new DMCThrownMatching_factory);
 
-	loop->AddFactory(new DAnalysisResults_factory);
-	loop->AddFactory(new DEventWriterROOT_factory);
+	factorySet->Add(new DAnalysisResults_factory);
+	factorySet->Add(new DEventWriterROOT_factory);
 
-	loop->AddFactory(new DTrackTimeBased_factory_Combo);
-	loop->AddFactory(new DDetectorMatches_factory_Combo);
-	loop->AddFactory(new DChargedTrack_factory_Combo);
-	loop->AddFactory(new DNeutralParticle_factory_Combo);
+	factorySet->Add(new DTrackTimeBased_factory_Combo);
+	factorySet->Add(new DDetectorMatches_factory_Combo);
+	factorySet->Add(new DChargedTrack_factory_Combo);
+	factorySet->Add(new DNeutralParticle_factory_Combo);
 
-	loop->AddFactory(new DReactionVertexInfo_factory);
+	factorySet->Add(new DReactionVertexInfo_factory);
 
 	//For some reason, have difficulty linking these classes without using them somewhere within the library
 	DHistogramAction_ThrownParticleKinematics();
@@ -58,7 +57,7 @@ jerror_t ANALYSIS_init(JEventLoop *loop)
 	DHistogramAction_TrackVertexComparison(NULL);
 	DHistogramAction_ParticleComboKinematics(NULL, false);
 	DHistogramAction_TruePID(NULL);
-	DHistogramAction_InvariantMass(NULL, Unknown, false, 0, 0.0, 0.0);
+	DHistogramAction_InvariantMass(NULL, UnknownParticle, false, 0, 0.0, 0.0);
 	DHistogramAction_MissingMass(NULL, false, 0, 0.0, 0.0);
 	DHistogramAction_MissingMassSquared(NULL, false, 0, 0.0, 0.0);
 	DHistogramAction_KinFitResults(NULL, 0.0);
@@ -69,19 +68,19 @@ jerror_t ANALYSIS_init(JEventLoop *loop)
 
 	DCutAction_MinTrackHits(NULL, 0);
 	DCutAction_ThrownTopology(NULL, true);
-	DCutAction_PIDFOM(NULL, Unknown, Unknown, 0.0);
+	DCutAction_PIDFOM(NULL, UnknownParticle, UnknownParticle, 0.0);
 	DCutAction_AllTracksHaveDetectorMatch(NULL);
 	DCutAction_CombinedPIDFOM(NULL, 0.0);
 	DCutAction_EachPIDFOM(NULL, 0.0);
 	DCutAction_CombinedTrackingFOM(NULL, 0.0);
 	DCutAction_MissingMass(NULL, false, 0.0, 0.0);
 	DCutAction_MissingMassSquared(NULL, false, 0.0, 0.0);
-	DCutAction_InvariantMass(NULL, Unknown, false, 0.0, 0.0);
+	DCutAction_InvariantMass(NULL, UnknownParticle, false, 0.0, 0.0);
 	DCutAction_AllVertexZ(NULL, 0.0, 0.0);
 	DCutAction_ProductionVertexZ(NULL, 0.0, 0.0);
-	DCutAction_MaxTrackDOCA(NULL, Unknown, 0.0);
+	DCutAction_MaxTrackDOCA(NULL, UnknownParticle, 0.0);
 	DCutAction_KinFitFOM(NULL, 0.0);
-	DCutAction_TruePID(NULL, Unknown, Unknown, 0.0);
+	DCutAction_TruePID(NULL, UnknownParticle, UnknownParticle, 0.0);
 	DCutAction_AllTruePID(NULL, 0.0);
 	DCutAction_GoodEventRFBunch(NULL, false);
 	DCutAction_TransverseMomentum(NULL, 0.0);
@@ -97,7 +96,5 @@ jerror_t ANALYSIS_init(JEventLoop *loop)
 	DCutAction_PIDDeltaT(NULL, false, 0.0);
 	DCutAction_PIDTimingBeta(NULL, 0.0, 0.0);
 	DCutAction_OneVertexKinFit(NULL);
-
-	return NOERROR;
 }
 

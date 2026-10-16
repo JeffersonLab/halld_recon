@@ -26,7 +26,6 @@
 
 using namespace std;
 using namespace codaObject;
-using namespace jana;
 
 
 // for testing
@@ -51,19 +50,19 @@ extern "C" {
     string theSession = "halldsession";
 
 
-    // initialize the plugin
+    // Initialize the plugin
     InitJANAPlugin(app);
 
 
     // get parameters from command line
-    gPARMS->SetDefaultParameter("CODAOBJECT:UDL",            UDL, "UDL to use for connecting to cMsg server");
-    gPARMS->SetDefaultParameter("CODAOBJECT:NAME",          name, "Name to use for connecting to cMsg server");
-    gPARMS->SetDefaultParameter("CODAOBJECT:DESCR",        descr, "Description to use for connecting to cMsg server");
-    gPARMS->SetDefaultParameter("CODAOBJECT:SESSION", theSession, "Session name to use");
+    app->SetDefaultParameter("CODAOBJECT:UDL",            UDL, "UDL to use for connecting to cMsg server");
+    app->SetDefaultParameter("CODAOBJECT:NAME",          name, "Name to use for connecting to cMsg server");
+    app->SetDefaultParameter("CODAOBJECT:DESCR",        descr, "Description to use for connecting to cMsg server");
+    app->SetDefaultParameter("CODAOBJECT:SESSION", theSession, "Session name to use");
 
 
     // create object, add to JANA event processor list
-    app->AddProcessor(new JEventProcessor_CODA_online(UDL,name,descr,theSession));
+    app->Add(new JEventProcessor_CODA_online(UDL,name,descr,theSession));
 
 
     if(debug)jout << "leaving InitPlugin" << endl;
@@ -284,9 +283,9 @@ const void JEventProcessor_CODA_online::statistics_thread(void) throw() {
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CODA_online::fini(void) {
+void JEventProcessor_CODA_online::Finish() {
   // Called before program exit after event processing is finished.
-  return NOERROR;
+  return;
 }
 
 

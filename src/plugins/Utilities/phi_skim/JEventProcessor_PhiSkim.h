@@ -10,21 +10,21 @@
 
 #include <JANA/JEventProcessor.h>
 
-class JEventProcessor_PhiSkim:public jana::JEventProcessor{
+class JEventProcessor_PhiSkim:public JEventProcessor{
 public:
 		JEventProcessor_PhiSkim();
 		~JEventProcessor_PhiSkim();
 		const char* className(void){return "JEventProcessor_PhiSkim";}
   
 private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
-  
-  int WRITE_EVIO_FILE;
-  int WRITE_ROOT_TREE;
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+
+		int WRITE_EVIO_FILE;
+		int WRITE_ROOT_TREE;
 };
 
 #endif // _JEventProcessor_PhiSkim_

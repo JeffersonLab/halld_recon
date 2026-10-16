@@ -11,7 +11,7 @@
 #include <JANA/JObject.h>
 
 
-class DTACTDCDigiHit: public jana::JObject {
+class DTACTDCDigiHit: public JObject {
 public:
 	uint32_t time = 0;
 public:
@@ -21,10 +21,9 @@ public:
 	}
 	virtual ~DTACTDCDigiHit() {
 	}
-	// This method is used primarily for pretty printing
-	// the second argument to AddString is printf style format
-	void toStrings(vector<pair<string, string> > &items) const {
-		AddString(items, "time", "%d", time);
+
+	void Summarize(JObjectSummary& summary) const override {
+		summary.add(time, NAME_OF(time), "%d");
 	}
 
 	uint32_t getTime() const {

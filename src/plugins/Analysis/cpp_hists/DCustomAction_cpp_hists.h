@@ -13,7 +13,6 @@
 
 #include "TLorentzRotation.h"
 
-#include "JANA/JEventLoop.h"
 #include "JANA/JApplication.h"
 
 #include "ANALYSIS/DAnalysisAction.h"
@@ -22,7 +21,6 @@
 #include "ANALYSIS/DAnalysisUtilities.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_cpp_hists : public DAnalysisAction
 {
@@ -30,12 +28,12 @@ class DCustomAction_cpp_hists : public DAnalysisAction
 
 		DCustomAction_cpp_hists(const DReaction* locReaction, bool locUseKinFitResultsFlag, string locActionUniqueString = "") : 
 		DAnalysisAction(locReaction, "Custom_cpp_hists", locUseKinFitResultsFlag, locActionUniqueString) {}
-
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 		
 		// Parameters for event selection to fill histograms
 		int endpoint_energy_bins;

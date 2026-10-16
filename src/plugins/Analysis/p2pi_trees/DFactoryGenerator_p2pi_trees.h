@@ -8,21 +8,19 @@
 #ifndef _DFactoryGenerator_p2pi_trees_
 #define _DFactoryGenerator_p2pi_trees_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_p2pi_trees.h"
 
-class DFactoryGenerator_p2pi_trees : public jana::JFactoryGenerator
+class DFactoryGenerator_p2pi_trees : public JFactoryGenerator
 {
 	public:
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DFactoryGenerator_p2pi_trees";}
 		
-		jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
+		void GenerateFactories(JFactorySet* fs)
 		{
-			locEventLoop->AddFactory(new DReaction_factory_p2pi_trees());
-			return NOERROR;
+			fs->Add(new DReaction_factory_p2pi_trees());
 		}
 };
 

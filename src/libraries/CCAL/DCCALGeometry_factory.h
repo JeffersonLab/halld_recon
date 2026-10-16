@@ -8,52 +8,60 @@
 #ifndef _DCCALGeometry_factory_
 #define _DCCALGeometry_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include <DANA/DEvent.h>
 #include "DCCALGeometry.h"
+#include <map>
 
-class DCCALGeometry_factory:public jana::JFactory<DCCALGeometry>{
+
+class DCCALGeometry_factory:public JFactoryT<DCCALGeometry>{
 	public:
 		DCCALGeometry_factory(){};
 		~DCCALGeometry_factory(){};
 
 		DCCALGeometry *ccalgeometry = nullptr;
+		bool INSTALLED = true;
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override
 		{
 			// (See DTAGHGeometry_factory.h)
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			
-			if( ccalgeometry ) delete ccalgeometry;
 
+			map<string,string> installed;
+			DEvent::GetCalib(event, "/CCAL/install_status", installed);
+			if(atoi(installed["status"].data()) == 0)
+				INSTALLED = false;
+			else
+				INSTALLED = true;
+				
+			if(!INSTALLED) return;
+
+			delete ccalgeometry;
 			ccalgeometry = new DCCALGeometry();
-
-			return NOERROR;
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
-		{
+		 void Process(const std::shared_ptr<const JEvent>& event) override
+		 {
+			if(!INSTALLED) return;
+
 			// Reuse existing DBCALGeometry object.
-			if( ccalgeometry ) _data.push_back( ccalgeometry );
-			 
-			return NOERROR;
-		}
+			if( ccalgeometry ) Insert( ccalgeometry );
+		 }
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun() override
 		{
-			if( ccalgeometry ) delete ccalgeometry;
-			ccalgeometry = NULL;
-			
-			return NOERROR;
+			delete ccalgeometry;
+			ccalgeometry = nullptr;
 		}
 };
 

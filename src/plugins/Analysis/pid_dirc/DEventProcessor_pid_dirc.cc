@@ -8,12 +8,14 @@
 #include "TCanvas.h"
 #include "TH1.h"
 
+#include <DANA/DEvent.h>
+
 
 // Routine used to create our DEventProcessor
 extern "C" {
   void InitPlugin(JApplication *app) {
     InitJANAPlugin(app);
-    app->AddProcessor(new DEventProcessor_pid_dirc());
+    app->Add(new DEventProcessor_pid_dirc());
   }
 }
 
@@ -24,10 +26,11 @@ DEventProcessor_pid_dirc::DEventProcessor_pid_dirc() {
 
 DEventProcessor_pid_dirc::~DEventProcessor_pid_dirc() {}
 
-jerror_t DEventProcessor_pid_dirc::init(void) {
+void DEventProcessor_pid_dirc::Init() {
   string locOutputFileName = "hd_root.root";
-  if(gPARMS->Exists("OUTPUT_FILENAME"))
-    gPARMS->GetParameter("OUTPUT_FILENAME", locOutputFileName);
+  auto app = GetApplication();
+  if(app->GetJParameterManager()->Exists("OUTPUT_FILENAME"))
+    app->GetParameter("OUTPUT_FILENAME", locOutputFileName);
 
   //go to file
   TFile* locFile = (TFile*)gROOT->FindObject(locOutputFileName.c_str());
@@ -39,14 +42,12 @@ jerror_t DEventProcessor_pid_dirc::init(void) {
   fTree = new TTree("dirc", "dirc tree");
   fcEvent = new TClonesArray("DrcEvent");
   fTree->Branch("DrcEvent",&fcEvent,256000,1);
-  return NOERROR;
 }
 
-jerror_t DEventProcessor_pid_dirc::brun(jana::JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_pid_dirc::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
    // Get the geometry
-   DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
-   DGeometry *geom = dapp->GetDGeometry(runnumber);
+   DGeometry *geom = DEvent::GetDGeometry(event);
 
    // Outer detector geometry parameters
    vector<double>tof_face;
@@ -69,13 +70,11 @@ jerror_t DEventProcessor_pid_dirc::brun(jana::JEventLoop *loop, int32_t runnumbe
    
    dDIRCz=dirc_face[2]+dirc_plane[2]+dirc_shift[2] + 0.8625; // last shift is the average center of quartz bar (585.862)
    std::cout<<"dDIRCz "<<dDIRCz<<std::endl;
-   
-   return NOERROR;
 }
 
 //TH1F *hfine = new TH1F("hfine","hfine",200,1600,1800);
 
-jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void DEventProcessor_pid_dirc::Process(const std::shared_ptr<const JEvent>& event) {
 
   vector<const DMCThrown*> mcthrowns;
   vector<const DMCTrackHit*> mctrackhits;
@@ -85,16 +84,16 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
   vector<const DDIRCPmtHit*> dataPmtHits;
   vector<const DL1Trigger*> trig;
   
-  loop->Get(mcthrowns);
-  loop->Get(mctrackhits);
-  loop->Get(dircPmtHits);
-  loop->Get(dircBarHits);
-  loop->Get(dataDigiHits);
-  loop->Get(dataPmtHits);
-  loop->Get(trig);
+  event->Get(mcthrowns);
+  event->Get(mctrackhits);
+  event->Get(dircPmtHits);
+  event->Get(dircBarHits);
+  event->Get(dataDigiHits);
+  event->Get(dataPmtHits);
+  event->Get(trig);
 
   
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+  DEvent::GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
   // check for LED triggers
   int trigger = 0;
@@ -112,7 +111,7 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
   // double locLEDRefTdcTime = 0;
   if(trigger==1) {
     vector<const DDIRCLEDRef*> dircLEDRefs;
-    loop->Get(dircLEDRefs);
+    event->Get(dircLEDRefs);
     for(uint i=0; i<dircLEDRefs.size(); i++) {
       const DDIRCLEDRef* dircLEDRef = (DDIRCLEDRef*)dircLEDRefs[i];
       // locLEDRefAdcTime = dircLEDRef->t_fADC;
@@ -214,20 +213,16 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
   }
   
   if(cevt.GetEntriesFast()>0) fTree->Fill();
-  japp->RootUnLock(); //RELEASE ROOT LOCK
-      
-  return NOERROR;
+  DEvent::GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
-jerror_t DEventProcessor_pid_dirc::erun(void) {
-  return NOERROR;
+void DEventProcessor_pid_dirc::EndRun() {
 }
 
-jerror_t DEventProcessor_pid_dirc::fini(void) {
+void DEventProcessor_pid_dirc::Finish() {
   // TCanvas *c = new TCanvas("c","c",800,500);
   // hfine->Draw();
   // c->Modified();
   // c->Update();
   // c->Print("htime.png");
-  return NOERROR;
 }

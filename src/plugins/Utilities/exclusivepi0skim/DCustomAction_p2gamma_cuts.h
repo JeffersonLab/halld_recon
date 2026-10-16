@@ -13,16 +13,12 @@
 
 #include "TH1.h"
 
-#include "JANA/JEventLoop.h"
-#include "JANA/JApplication.h"
-
 #include "ANALYSIS/DAnalysisAction.h"
 #include "ANALYSIS/DReaction.h"
 #include "ANALYSIS/DParticleCombo.h"
 #include "ANALYSIS/DAnalysisUtilities.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_p2gamma_cuts : public DAnalysisAction
 {
@@ -31,12 +27,12 @@ class DCustomAction_p2gamma_cuts : public DAnalysisAction
 		DCustomAction_p2gamma_cuts(const DReaction* locReaction, bool locUseKinFitResultsFlag, string locActionUniqueString = "") : 
 		DAnalysisAction(locReaction, "Custom_p2gamma_cuts", locUseKinFitResultsFlag, locActionUniqueString) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop) {}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) {}
  
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		// Optional: Useful utility functions.
 //		const DAnalysisUtilities* dAnalysisUtilities;

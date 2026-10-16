@@ -36,7 +36,7 @@
 
 using namespace std;
 
-class DTOFPoint_factory : public JFactory<DTOFPoint>
+class DTOFPoint_factory : public JFactoryT<DTOFPoint>
 {
  public:
   
@@ -78,10 +78,10 @@ class DTOFPoint_factory : public JFactory<DTOFPoint>
   tof_spacetimehit_t* Build_TOFSpacetimeHit_Vertical(const DTOFPaddleHit* locTOFHit);
   
  private:
-  jerror_t brun(JEventLoop *loop, int32_t runnumber);
-  jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);
-  jerror_t fini(void);
-  
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void Finish() override;
+
   tof_spacetimehit_t* Get_TOFSpacetimeHitResource(void);
   
   bool Match_Hits(tof_spacetimehit_t* locTOFSpacetimeHit_Horizontal, tof_spacetimehit_t* locTOFSpacetimeHit_Vertical, tof_spacetimehitmatch_t& locTOFSpacetimeHitMatch);

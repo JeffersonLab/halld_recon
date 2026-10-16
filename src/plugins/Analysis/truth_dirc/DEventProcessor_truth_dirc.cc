@@ -3,12 +3,13 @@
 // -----------------------------------------
 
 #include "DEventProcessor_truth_dirc.h"
+#include <DANA/DEvent.h>
 
 // Routine used to create our DEventProcessor
 extern "C" {
   void InitPlugin(JApplication *app) {
     InitJANAPlugin(app);
-    app->AddProcessor(new DEventProcessor_truth_dirc());
+    app->Add(new DEventProcessor_truth_dirc());
   }
 }
 
@@ -18,10 +19,11 @@ DEventProcessor_truth_dirc::DEventProcessor_truth_dirc() {
 DEventProcessor_truth_dirc::~DEventProcessor_truth_dirc() {
 }
 
-jerror_t DEventProcessor_truth_dirc::init(void) {
+void DEventProcessor_truth_dirc::Init() {
   string locOutputFileName = "hd_root.root";
-  if(gPARMS->Exists("OUTPUT_FILENAME"))
-    gPARMS->GetParameter("OUTPUT_FILENAME", locOutputFileName);
+  auto params = GetApplication()->GetJParameterManager();
+  if(params->Exists("OUTPUT_FILENAME"))
+    params->GetParameter("OUTPUT_FILENAME", locOutputFileName);
 
   //go to file
   TFile* locFile = (TFile*)gROOT->FindObject(locOutputFileName.c_str());
@@ -53,17 +55,17 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
   hPixelHit_South = new TH2F("hPixelHit_South", "South Box; Pixel Hit X ; Pixel Hit Y", 144, -0.5, 143.5, 48, -0.5, 47.5);
   mainDir->cd();
  
-  return NOERROR;
+  return;
 }
 
-jerror_t DEventProcessor_truth_dirc::brun(jana::JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_truth_dirc::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 
 
-  return NOERROR;
+  return;
 }
 
-jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void DEventProcessor_truth_dirc::Process(const std::shared_ptr<const JEvent>& event) {
   vector<const DBeamPhoton*> beam_photons;
   vector<const DMCThrown*> mcthrowns;
   vector<const DMCTrackHit*> mctrackhits;
@@ -71,16 +73,16 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
   vector<const DDIRCTruthPmtHit*> dircPmtHits;
   vector<const DDIRCPmtHit*> dircRecoPmtHits;
   
-  loop->Get(beam_photons);
-  loop->Get(mcthrowns);
-  loop->Get(mctrackhits);
-  loop->Get(dircPmtHits);
-  loop->Get(dircBarHits);
-  loop->Get(dircRecoPmtHits);
+  event->Get(beam_photons);
+  event->Get(mcthrowns);
+  event->Get(mctrackhits);
+  event->Get(dircPmtHits);
+  event->Get(dircBarHits);
+  event->Get(dircRecoPmtHits);
 
   // get DIRC geometry
   vector<const DDIRCGeometry*> locDIRCGeometryVec;
-  loop->Get(locDIRCGeometryVec);
+  event->Get(locDIRCGeometryVec);
   auto locDIRCGeometry = locDIRCGeometryVec[0];
 
   for (unsigned int j = 0; j < dircBarHits.size(); j++){
@@ -92,10 +94,10 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
     double y = dircBarHits[j]->y;
     int bar = dircBarHits[j]->bar;
 
-    japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+    GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
     hTruthBarHitXY->Fill(x, y);
     hTruthBarHitBar->Fill(bar);
-    japp->RootUnLock();
+    GetLockService(event)->RootUnLock();
   }
 
   for (unsigned int h = 0; h < dircPmtHits.size(); h++){
@@ -117,7 +119,7 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
      int pixel_row = locDIRCGeometry->GetPixelRow(ch);
      int pixel_col = locDIRCGeometry->GetPixelColumn(ch);
 
-     japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+     GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
      hTruthWavelength->Fill(lambda);
      hTruthPixelHitTime->Fill(ch, t-t_fixed);
      if(x < 0.) {
@@ -130,7 +132,7 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
 	hTruthPmtHit_North->Fill(pmt_column, pmt_row);
 	hTruthPixelHit_North->Fill(pixel_row, pixel_col);
      }
-     japp->RootUnLock();
+     GetLockService(event)->RootUnLock();
   }
 
   for (unsigned int h = 0; h < dircRecoPmtHits.size(); h++){
@@ -152,23 +154,19 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
 		  cout<<"found associated truth hit with large DeltaT = "<<t - dircTruthPmtHits[0]->t_fixed<<endl;
 	  */
 
-	  japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	  GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	  if(ch < 108*64) {
 		  hPixelHit_South->Fill(pixel_row, pixel_col);
 	  }
 	  else {
 		  hPixelHit_North->Fill(pixel_row, pixel_col);
 	  }
-	  japp->RootUnLock();
+	  GetLockService(event)->RootUnLock();
   }
-  
-  return NOERROR;
 }
 
-jerror_t DEventProcessor_truth_dirc::erun(void) {
-  return NOERROR;
+void DEventProcessor_truth_dirc::EndRun() {
 }
 
-jerror_t DEventProcessor_truth_dirc::fini(void) {
-  return NOERROR;
+void DEventProcessor_truth_dirc::Finish() {
 }

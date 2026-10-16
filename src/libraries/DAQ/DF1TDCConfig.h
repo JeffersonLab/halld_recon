@@ -24,17 +24,15 @@ class DF1TDCConfig:public DDAQConfig{
 		uint16_t HSDIV;
 		uint16_t BINSIZE;
 		uint16_t REFCLKDIV;
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQConfig::toStrings(items);
-			AddString(items, "REFCNT"      , "%d", REFCNT);
-			AddString(items, "TRIGWIN"     , "%d", TRIGWIN);
-			AddString(items, "TRIGLAT"     , "%d", TRIGLAT);
-			AddString(items, "HSDIV"       , "%d", HSDIV);
-			AddString(items, "BINSIZE(ps)" , "%d", BINSIZE);
-			AddString(items, "REFCLKDIV"   , "%d", REFCLKDIV);
+
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQConfig::Summarize(summary);
+			summary.add(REFCNT, NAME_OF(REFCNT), "%d");
+			summary.add(TRIGWIN, NAME_OF(TRIGWIN), "%d");
+			summary.add(TRIGLAT, NAME_OF(TRIGLAT), "%d");
+			summary.add(HSDIV, NAME_OF(HSDIV), "%d");
+			summary.add(BINSIZE, "BINSIZE(ps)", "%d");
+			summary.add(REFCLKDIV, NAME_OF(REFCLKDIV), "%d");
 		}
 		
 };

@@ -1,42 +1,61 @@
-// $Id$
-//
-//    File: JEventProcessor_epem_ml_skim.h
-// Created: Mon Jun  5 10:42:13 EDT 2023
-// Creator: acschick (on Linux ifarm1801.jlab.org 3.10.0-1160.90.1.el7.x86_64 x86_64)
-//
-
 #ifndef _JEventProcessor_epem_ml_skim_
 #define _JEventProcessor_epem_ml_skim_
 
 #include <JANA/JEventProcessor.h>
-#include "evio_writer/DEventWriterEVIO.h"
-#include "TLorentzRotation.h"
+#include <JANA/JEvent.h>
+#include <memory>
 
-#include <thread>
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <iostream>
-#include <fstream>
-#include <iomanip>
+// Forward decls keep the header light
+class TH1D;
 
+class JEventProcessor_epem_ml_skim : public JEventProcessor {
+public:
+    JEventProcessor_epem_ml_skim();
+    ~JEventProcessor_epem_ml_skim();
 
-class JEventProcessor_epem_ml_skim:public jana::JEventProcessor{
-	public:
-		JEventProcessor_epem_ml_skim();
-		~JEventProcessor_epem_ml_skim();
-		const char* className(void){return "JEventProcessor_epem_ml_skim";}
+    const char* className(void) { return "JEventProcessor_epem_ml_skim"; }
 
-	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+private:
+    // JANA2 lifecycle
+    void Init() override;
+    void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+    void Process(const std::shared_ptr<const JEvent>& event) override;
+    void EndRun() override;
+    void Finish() override;
 
-		long int events_read, events_written;
+    // Parameters / counters
+    long int events_read = 0;
+    long int ee_events_written = 0;
+    long int pi_events_written = 0;
+
+    bool epem_evio_bool = true;
+    bool pippim_evio_bool = false;
+
+    double min_EoverP_cut = 0.0;
+    double ee_threshold_MLP = 0.8;
+    double pi_threshold_MLP = 0.4;
+
+    // Histograms
+    TH1D* htrack_mom = nullptr;
+    TH1D* htrack_mom_ok = nullptr;
+    TH1D* htrack_chi2 = nullptr;
+    TH1D* htrack_chi2_ok = nullptr;
+    TH1D* htrack_theta = nullptr;
+    TH1D* htrack_theta_ok = nullptr;
+    TH1D* htrack_phi = nullptr;
+    TH1D* htrack_phi_ok = nullptr;
+
+    TH1D* hpimem_ML_classifier = nullptr;
+    TH1D* hpipep_ML_classifier = nullptr;
+
+    // MLP only for now; PID buckets: 0=ee, 1=pi, 2=noPID
+    static constexpr int nModels = 1;   // {"MLP"}
+    static constexpr int nPID    = 3;   // {"ee","pi","noPID"}
+
+    TH1D* hJTphi[nModels][nPID] = {{nullptr}};
+    TH1D* hinvmass[nModels][nPID] = {{nullptr}};
+    TH1D* hFCALElasticity[nModels][nPID] = {{nullptr}};
+    TH1D* hq2_varWidth[nModels][nPID] = {{nullptr}};
 };
 
 #endif // _JEventProcessor_epem_ml_skim_
-

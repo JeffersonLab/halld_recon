@@ -12,11 +12,11 @@ using namespace std;
 #include <TThread.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 #include "DEventProcessor_mcthrown_hists.h"
 #include "TRACKING/DMCThrown.h"
+#include "DANA/DEvent.h"
 
 // The executable should define the ROOTfile global variable. It will
 // be automatically linked when dlopen is called.
@@ -26,7 +26,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_mcthrown_hists());
+	app->Add(new DEventProcessor_mcthrown_hists());
 }
 }
 
@@ -45,9 +45,9 @@ DEventProcessor_mcthrown_hists::~DEventProcessor_mcthrown_hists()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_mcthrown_hists::init(void)
+void DEventProcessor_mcthrown_hists::Init()
 {
 	// open ROOT file (if needed)
 	//if(ROOTfile != NULL) ROOTfile->cd();
@@ -77,21 +77,19 @@ jerror_t DEventProcessor_mcthrown_hists::init(void)
 	
 	// Go back up to the parent directory
 	dir->cd("../");
-	
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_mcthrown_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_mcthrown_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DMCThrown*> mcthrowns;
-	loop->Get(mcthrowns);
+	event->Get(mcthrowns);
 	
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	// Loop over thrown tracks
 	Nparticles_per_event->Fill(mcthrowns.size());
@@ -132,24 +130,19 @@ jerror_t DEventProcessor_mcthrown_hists::evnt(JEventLoop *loop, uint64_t eventnu
 		}
 	}
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_mcthrown_hists::erun(void)
+void DEventProcessor_mcthrown_hists::EndRun()
 {
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_mcthrown_hists::fini(void)
+void DEventProcessor_mcthrown_hists::Finish()
 {
-	return NOERROR;
 }

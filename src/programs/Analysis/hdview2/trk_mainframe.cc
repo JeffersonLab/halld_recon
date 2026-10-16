@@ -10,8 +10,7 @@ using namespace std;
 
 #include "trk_mainframe.h"
 #include "hdv_mainframe.h"
-#include "hdview2.h"
-#include "MyProcessor.h"
+#include "EventViewer.h"
 #include "DReferenceTrajectoryHDV.h"
 
 #include <CDC/DCDCWire.h>
@@ -165,14 +164,14 @@ trk_mainframe::trk_mainframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt_t w, 
 				TGGroupFrame *prevnextframe = new TGGroupFrame(eventinfoframe, "Event", kHorizontalFrame);
 				eventinfoframe->AddFrame(prevnextframe, thints);
 					TGTextButton *prev	= new TGTextButton(prevnextframe,	"<-- Prev");
-					TGTextButton *next	= new TGTextButton(prevnextframe,	"Next -->");
+					next = new TGTextButton(prevnextframe,	"Next -->");
 					prevnextframe->AddFrame(prev, lhints);
 					prevnextframe->AddFrame(next, lhints);
 				
 					next->Connect("Clicked()","hdv_mainframe", hdvmf, "DoNext()");
 					prev->Connect("Clicked()","hdv_mainframe", hdvmf, "DoPrev()");
-					next->Connect("Clicked()","trk_mainframe", this, "DoNewEvent()");
-					prev->Connect("Clicked()","trk_mainframe", this, "DoNewEvent()");
+                    prev->SetEnabled(false);
+
 					
 			//-------- Info
 				TGGroupFrame *infoframe = new TGGroupFrame(eventinfoframe, "Info", kVerticalFrame);
@@ -278,6 +277,7 @@ void trk_mainframe::DoNewEvent(void)
 {
 	DoUpdateMenus();
 	DoMyRedraw();
+    next->SetEnabled(true);
 }
 
 //---------------------------------
@@ -423,16 +423,15 @@ void trk_mainframe::FillFactoryTagComboBox(TGComboBox* cb, TGComboBox* datanamec
 	string dataname = datanamecb->GetTextEntry()->GetText();
 
 	// Get list of all factories
-	vector<JFactory_base*> factories;
-	gMYPROC->GetFactories(factories);
+	vector<JFactory*> factories = gMYPROC->GetCurrentEvent().GetFactorySet()->GetAllFactories();
 	
 	// Loop over all factories, looking for ones with the desired
 	// data name. Add thier tags to the list
 	vector<string> tags;
 	tags.push_back("<default>");
 	for(unsigned int i=0; i<factories.size(); i++){
-		if(dataname == factories[i]->GetDataClassName()){
-			string tag = factories[i]->Tag();
+		if(dataname == factories[i]->GetObjectName()){
+			string tag = factories[i]->GetTag();
 			if(tag!="")tags.push_back(tag);
 		}
 	}
@@ -640,6 +639,8 @@ void trk_mainframe::DrawHitsForOneTrack(
 	int index,
 	vector<const DCDCTrackHit*> &cdctrackhits)
 {
+    const auto& event = gMYPROC->GetCurrentEvent();
+
 	// Clear current hits list
 	if(index==0){
 		TRACKHITS.clear();
@@ -652,7 +653,7 @@ void trk_mainframe::DrawHitsForOneTrack(
 
     // Get fdc drift time - distance function
     vector<const DTrackFitter*> fitters;
-    eventloop->Get(fitters, "KalmanSIMD");
+    event.Get(fitters, "KalmanSIMD");
     const DTrackFitterKalmanSIMD *fitter=0;
     if (fitters.size() > 0) {
         fitter = dynamic_cast<const DTrackFitterKalmanSIMD *>(fitters[0]);
@@ -808,3 +809,11 @@ bool trk_mainframe::WireInList(const DCoordinateSystem *wire, vector<const DCDCT
 
 	return false;
 }
+
+void trk_mainframe::EnableControls(bool enabled) {
+    if (next != nullptr) {
+        next->SetEnabled(enabled);
+    }
+}
+
+

@@ -28,7 +28,6 @@
 #include <danaevio/DDANAEVIODOMTree.h>
 #include <danaevio/DDANAEVIO_factory.h>
 #include <danaevio/JEventProcessor_danaevio.h>
-#include <danaevio/dana_evio_dict.h>
 
 
 
@@ -65,7 +64,7 @@ static FILE *initSocket(const char *ipAddress, int port, int *sock);
 
 
 // from JApplication
-extern jana::JApplication *japp;
+extern JApplication *japp;
 
 
 
@@ -74,26 +73,28 @@ extern jana::JApplication *japp;
 
 
 JEventProcessor_danaevio::JEventProcessor_danaevio() {
-    
 
-  jout << endl << "  Default JEventProcessor_danaevio invoked" << endl << endl;
+	SetTypeName("JEventProcessor_danaevio");
+	auto app = GetApplication();
+
+	jout << endl << "  Default JEventProcessor_danaevio invoked" << endl << endl;
 
 
   // check for EVIO:FILENAME output file name parameter
   // if "socket" then output using TCP socket
-  gPARMS->SetDefaultParameter("EVIO:FILENAME",evioFileName);
+  app->SetDefaultParameter("EVIO:FILENAME",evioFileName);
   jout << endl << "  EVIO output file name is " << evioFileName << endl << endl;
 
 
   // check for socket parameters
-  gPARMS->SetDefaultParameter("EVIO:HOST",evioHost);
-  gPARMS->SetDefaultParameter("EVIO:PORT",evioPort);
-  gPARMS->SetDefaultParameter("EVIO:SOCKETTRY",evioSocketTry);
-  gPARMS->SetDefaultParameter("EVIO:SOCKETWAIT",evioSocketWait);
+  app->SetDefaultParameter("EVIO:HOST",evioHost);
+  app->SetDefaultParameter("EVIO:PORT",evioPort);
+  app->SetDefaultParameter("EVIO:SOCKETTRY",evioSocketTry);
+  app->SetDefaultParameter("EVIO:SOCKETWAIT",evioSocketWait);
 
 
   // check for EVIO:BUFSIZE internal buffer size parameter
-  gPARMS->SetDefaultParameter("EVIO:BUFSIZE",evioBufSize);
+  app->SetDefaultParameter("EVIO:BUFSIZE",evioBufSize);
   jout << endl << "  EVIO internal buf size is " << evioBufSize << endl << endl;
   if(evioFileName=="socket") {
     jout << endl << "  EVIO TCP socket host is " << evioHost<< endl << endl;
@@ -101,8 +102,8 @@ JEventProcessor_danaevio::JEventProcessor_danaevio() {
     jout << endl << "  EVIO TCP socket try is  " << evioSocketTry << endl << endl;
     jout << endl << "  EVIO TCP socket wait is " << evioSocketWait << endl << endl;
   }
-  
-  
+
+
   // open file channel or TCP socket
   if(evioFileName!="socket") {
 
@@ -110,9 +111,9 @@ JEventProcessor_danaevio::JEventProcessor_danaevio() {
     try {
       chan = new evioFileChannel(evioFileName,"w",evioBufSize);
       chan->open();
-      
+
     } catch (evioException e) {
-      jerr << endl << "  ?evioException in JEventProcessor_danaevio" << endl << endl 
+      jerr << endl << "  ?evioException in JEventProcessor_danaevio" << endl << endl
            << e.toString() << endl;
       japp->Quit();
       evioIOAbort=true;
@@ -182,14 +183,14 @@ JEventProcessor_danaevio::~JEventProcessor_danaevio() {
 //----------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_danaevio::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_danaevio::BeginRun(const std::shared_ptr<const JEvent>& event) {
 
   static bool first_time = true;
   unsigned int n;
 
 
   // has file or socket open failed?
-  if(evioIOAbort)return(UNRECOVERABLE_ERROR);
+  if(evioIOAbort) throw JException("EVIO IO Abort! Unrecoverable error.");
 
 
   // get write lock
@@ -227,7 +228,7 @@ jerror_t JEventProcessor_danaevio::brun(JEventLoop *eventLoop, int32_t runnumber
         n += fwrite(socketBuffer,sizeof(uint32_t),socketBuffer[0]+1,evioFILE);
         if(n!=(3+socketBuffer[0]+1)) {
           jerr << " ?JEventProcessor_danaevio::brun...unable to write to socket" << endl;
-          return(UNRECOVERABLE_ERROR);
+	      throw JException("Unable to write to socket! Unrecoverable error.");
         }
         fflush(evioFILE);
       }
@@ -247,26 +248,26 @@ jerror_t JEventProcessor_danaevio::brun(JEventLoop *eventLoop, int32_t runnumber
   pthread_mutex_unlock(&evioMutex);
   
 
-  return(NOERROR);
+  return;
 }
 
 
 //----------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_danaevio::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_danaevio::Process(const std::shared_ptr<const JEvent>& event) {
     
   unsigned int n;
 
 
   // has file or socket open failed?
-  if(evioIOAbort)return(UNRECOVERABLE_ERROR);
+  if(evioIOAbort) throw JException("EVIO IO Abort! Urecoverable error.");
 
 
-  // get evio trees
+	// get evio trees
   vector<const DDANAEVIODOMTree*> evioTrees; 
-  eventLoop->Get(evioTrees);
-  if(evioTrees.size()<=0)return(NOERROR);
+  event->Get(evioTrees);
+  if(evioTrees.size()<=0)return;
 
 
   // get write lock
@@ -301,7 +302,7 @@ jerror_t JEventProcessor_danaevio::evnt(JEventLoop *eventLoop, uint64_t eventnum
         n += fwrite(socketBuffer,sizeof(uint32_t),socketBuffer[0]+1,evioFILE);
         if(n!=(3+socketBuffer[0]+1)) {
           jerr << " ?JEventProcessor_danaevio::evnt...unable to write to socket" << endl;
-          return(UNRECOVERABLE_ERROR);
+          throw JException("Unable to write to socket! Unrecoverable error.");
         }
         fflush(evioFILE);
 
@@ -315,9 +316,7 @@ jerror_t JEventProcessor_danaevio::evnt(JEventLoop *eventLoop, uint64_t eventnum
   // unlock
   pthread_mutex_unlock(&evioMutex);
 
-  
   // done
-  return NOERROR;
 }
 
 

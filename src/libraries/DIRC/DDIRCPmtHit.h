@@ -6,8 +6,6 @@
 #define DDIRCPMTHIT_H_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
 class DDIRCPmtHit: public JObject {
 
@@ -21,11 +19,11 @@ public:
   inline void setTime( double time ) { t = time;}
   inline void setTOT( double timeOverThreshold ) { tot = timeOverThreshold;}
   inline void setChannel( int channel ) { ch = channel;}
- 
-  void toStrings(vector<pair<string, string> >&items) const {
-    AddString(items, "t", "%1.3f", t);
-    AddString(items, "tot", "%1.3f", tot);
-    AddString(items, "ch", "%d", ch);
+
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(t, "t", "%1.3f");
+    summary.add(tot, "tot", "%1.3f");
+    summary.add(ch, "ch", "%d");
   }
 };
 

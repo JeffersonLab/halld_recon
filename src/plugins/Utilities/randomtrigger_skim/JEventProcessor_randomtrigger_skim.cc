@@ -17,7 +17,7 @@ extern "C" {
    void InitPlugin(JApplication *app)
 	{
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_randomtrigger_skim(), true);
+		app->Add(new JEventProcessor_randomtrigger_skim());
    }
 } // "extern C"
 
@@ -27,53 +27,50 @@ static bool use_beam_fiducial = true;
 // variables to control which triggers get read out
 
 //-------------------------------
-// init
+// Init
 //-------------------------------
-jerror_t JEventProcessor_randomtrigger_skim::init(void)
+void JEventProcessor_randomtrigger_skim::Init()
 {
-
+    auto app = GetApplication()	;
     int use_beam_fiducial_toggle = 1;
 
-    gPARMS->SetDefaultParameter("RANDSKIM:USEBEAM",use_beam_fiducial , "Use beam fiducials");
+    app->SetDefaultParameter("RANDSKIM:USEBEAM",use_beam_fiducial , "Use beam fiducials");
 
     if(use_beam_fiducial_toggle == 0)
       use_beam_fiducial = false;
-
-
-    return NOERROR;
 }
 
 //-------------------------------
-// brun
+// BeginRun
 //-------------------------------
-jerror_t JEventProcessor_randomtrigger_skim::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void JEventProcessor_randomtrigger_skim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     dBeamCurrentFactory = new DBeamCurrent_factory();
-    dBeamCurrentFactory->init();
-    dBeamCurrentFactory->brun(locEventLoop, runnumber);
-   
-    return NOERROR;
+    dBeamCurrentFactory->SetApplication(event->GetJApplication());
+    dBeamCurrentFactory->Init();
+    dBeamCurrentFactory->BeginRun(event);
+    // TODO: NWB: This thing again.
 }
 
 //-------------------------------
-// evnt
+// Process
 //-------------------------------
-jerror_t JEventProcessor_randomtrigger_skim::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void JEventProcessor_randomtrigger_skim::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
     // Get HDDM writer
     vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
-    locEventLoop->Get(locEventWriterHDDMVector);
+    locEvent->Get(locEventWriterHDDMVector);
 
     // beam current and fiducial definition
     vector<const DBeamCurrent*> beamCurrent;
-    locEventLoop->Get(beamCurrent);
+    locEvent->Get(beamCurrent);
 
     //bool is_cosmic_trigger = false;
     bool is_random_trigger = false;
 
 	const DL1Trigger *trig = NULL;
 	try {
-		locEventLoop->GetSingle(trig);
+		locEvent->GetSingle(trig);
 	} catch (...) {}
 
     // parse the triggers we want to save
@@ -88,39 +85,34 @@ jerror_t JEventProcessor_randomtrigger_skim::evnt(JEventLoop *locEventLoop, uint
 
     // make sure this is a random trigger event
     if(!is_random_trigger)
-        return NOERROR;
+        return;
     
     if(use_beam_fiducial){
       // make sure we can perform a fiducial beam current cut
       if(beamCurrent.empty())
-        return NOERROR;
+        return;
       
       // make sure the beam is on
       if(!beamCurrent[0]->is_fiducial)
-        return NOERROR;
+        return;
     }
         
 
-
     // Save events to skim file
-    locEventWriterHDDMVector[0]->Write_HDDMEvent(locEventLoop, "random"); 
-
-    return NOERROR;
+    locEventWriterHDDMVector[0]->Write_HDDMEvent(locEvent, "random"); 
 }
 
 //-------------------------------
-// erun
+// EndRun
 //-------------------------------
-jerror_t JEventProcessor_randomtrigger_skim::erun(void)
+void JEventProcessor_randomtrigger_skim::EndRun()
 {
-   return NOERROR;
 }
 
 //-------------------------------
-// fini
+// Finish
 //-------------------------------
-jerror_t JEventProcessor_randomtrigger_skim::fini(void)
+void JEventProcessor_randomtrigger_skim::Finish()
 {
-   return NOERROR;
 }
 

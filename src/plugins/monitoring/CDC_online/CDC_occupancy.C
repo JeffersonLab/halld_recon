@@ -1,67 +1,3 @@
-
-// The following are special comments used by RootSpy to know
-// which histograms to fetch for the macro.
-//
-// hnamepath: /CDC/cdc_num_events
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[1]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[2]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[3]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[4]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[5]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[6]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[7]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[8]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[9]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[10]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[11]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[12]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[13]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[14]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[15]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[16]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[17]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[18]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[19]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[20]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[21]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[22]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[23]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[24]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[25]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[26]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[27]
-// hnamepath: /CDC/rings_occupancy/cdc_occ_ring[28]
-
-// e-mail: zihlmann@jlab.org
-// e-mail: njarvis@jlab.org
-//
-// Guidance: --------------------------------------------
-//
-//  During regular runs with beam the CDC occupancies should show a smooth trend
-//  from high (bright yellow) in the innermost ring to low (dark blue) in the outermost ring.
-//  During cosmics runs, the whole detector is a uniform low occupancy.
-// 
-//  Hot channels can be caused by faulty electronics, baseline shift or noise.
-//  Cold channels can be caused by poor connections, baseline shift or faulty electronics.
-//
-//  The channels are connected to the HV boards in clusters of 20 to 24.
-//  
-//  There are 2 known dead channels (wire disconnected) and a small number (4-6) 
-// of channels with persistent problems. These channels are not neighbouring.
-//
-//  If you see single hot (bright yellow) or new dead (white or dark blue) channels, 
-//  please make a logentry in HDCDC and notify the experts in the logentry.
-//
-//  If you see a cluster of hot or dead channels, please make the log entry  
-//  and also contact the experts as below.
-//
-//  Daytime - contact the expert by phone using the drift chamber on call number
-//  Overnight - contact the expert by phone if the cluster includes more than 24 channels.
-//
-//
-// End Guidance: ----------------------------------------
-
-
 {
 	// Get number of events
 	double Nevents = 1.0;
@@ -89,32 +25,24 @@
 	TCanvas *c1 = gPad->GetCanvas();
 
 	// Draw axes
-	TH2D *axes = (TH2D *)dir->Get("axes");
-	if(!axes) axes = new TH2D("axes", "CDC Occupancy", 100, -65.0, 65.0, 100, -65.0, 65.0);
+	TH2D *axes = new TH2D("cdc_axes", "CDC Occupancy", 100, -57.0*4.0/3.0, 57.0*4.0/3.0, 100, -57.0, 57.0);
 
-	double minScale = 0.08, maxScale = 0.15;
+	double minScale = 0.0, maxScale = 0.1;
 	axes->SetStats(0);
 	axes->Fill(100,100); // without this, the color ramp is not drawn
 	axes->GetZaxis()->SetRangeUser(minScale, maxScale);
+	axes->GetXaxis()->SetNdivisions(0);
+	axes->GetYaxis()->SetNdivisions(0);	
 	axes->Draw("colz");
 
-	double TheMax = 0.;
-	double TheMin = 99999999;;
-	for(unsigned int iring=1; iring<=28; iring++){
-		char hname[256];
-		sprintf(hname, "cdc_occ_ring[%d]", iring);
-		TH1 *h = (TH1*)(dir->Get(hname));
-		if(h){
-		  double min = h->GetMinimum();
-		  if (min<TheMin){
-		    TheMin = min;
-		  }
-		  double max = h->GetMaximum();
-		  if (max>TheMax){
-		    TheMax = max;
-		  }
-		}
-	}
+	// Draw inner and outer circles so we can see if outer ring is missing
+	TEllipse *e = new TEllipse(0.0, 0.0, 56.0, 56.0);
+	e->SetLineWidth(3);
+	e->Draw();
+	e = new TEllipse(0.0, 0.0, 9.55, 9.55);
+	e->SetLineWidth(2);
+	e->Draw();
+	
 	for(unsigned int iring=1; iring<=28; iring++){
 		char hname[256];
 		sprintf(hname, "cdc_occ_ring[%d]", iring);
@@ -123,11 +51,9 @@
 			sprintf(hname, "cdc_occ_ring_norm[%d]", iring);
 			TH1 *hh = (TH1*)h->Clone(hname);
 			hh->Scale(1.0/Nevents);
-			//hh->GetZaxis()->SetRangeUser(minScale, maxScale);
-			hh->GetZaxis()->SetRangeUser(TheMin*0.95, TheMax*1.05);
+			hh->GetZaxis()->SetRangeUser(minScale, maxScale);
 			hh->SetStats(0);
 			hh->Draw("same col pol");  // draw remaining histos without overwriting color palette
 		}
-		gPad->SetGrid();
 	}
 }

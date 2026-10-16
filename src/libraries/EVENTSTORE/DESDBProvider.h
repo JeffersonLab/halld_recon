@@ -13,10 +13,6 @@
 #include <string>
 #include <vector>
 
-#include <JANA/jerror.h>
-#include <JANA/JException.h>
-
-using namespace jana;
 using namespace std;
 
 

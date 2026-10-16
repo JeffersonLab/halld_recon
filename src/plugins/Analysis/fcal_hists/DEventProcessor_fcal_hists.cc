@@ -12,7 +12,7 @@ using namespace std;
 
 #include <TLorentzVector.h>
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <FCAL/DFCALCluster.h>
 #include <TRACKING/DMCThrown.h>
 #include <FCAL/DFCALHit.h>
@@ -23,7 +23,7 @@ using namespace std;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_fcal_hists());
+	app->Add(new DEventProcessor_fcal_hists());
 }
 } // "C"
 
@@ -33,39 +33,36 @@ void InitPlugin(JApplication *app){
 #define PI_ZERO_MASS 0.13497
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_fcal_hists::init(void)
+void DEventProcessor_fcal_hists::Init()
 {
 	
 	dE_over_E_vs_E = new TH2D("dE_over_E_vs_E","Smeared-unsmeared energy diff for single FCAL blocks", 50, 0.0, 1.0, 50, -0.1, 0.1);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_fcal_hists::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_fcal_hists::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_fcal_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_fcal_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// extract the FCAL Geometry (for isBlockActive() and positionOnFace())
 	vector<const DFCALGeometry*> fcalGeomVect;
 	vector<const DFCALHit*> hits;
 	vector<const DFCALHit*> truthhits;
-	loop->Get(fcalGeomVect);
-	loop->Get(hits);
-	loop->Get(truthhits,"TRUTH");
+	event->Get(fcalGeomVect);
+	event->Get(hits);
+	event->Get(truthhits,"TRUTH");
 
 	const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
-	if(fcalGeomVect.size()<1)return OBJECT_NOT_AVAILABLE;
+	if(fcalGeomVect.size()<1) throw JException("FCAL geometry not available!");
 		
 	// Create STL map of "real" hits that can be used below to match 
 	// with MC hits.
@@ -78,7 +75,7 @@ jerror_t DEventProcessor_fcal_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 	}
 	
 	// Since we are modifying histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	// Loop over "truth" hits and match them to real hits by using assuming
 	// one hit per channel
@@ -92,26 +89,22 @@ jerror_t DEventProcessor_fcal_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 		dE_over_E_vs_E->Fill(truthhit->E, deltaE/truthhit->E);
 	}
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_fcal_hists::erun(void)
+void DEventProcessor_fcal_hists::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_fcal_hists::fini(void)
+void DEventProcessor_fcal_hists::Finish()
 {
-	return NOERROR;
 }
 

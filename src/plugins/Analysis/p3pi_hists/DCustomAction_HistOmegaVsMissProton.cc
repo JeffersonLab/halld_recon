@@ -7,7 +7,7 @@
 
 #include "DCustomAction_HistOmegaVsMissProton.h"
 
-void DCustomAction_HistOmegaVsMissProton::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_HistOmegaVsMissProton::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Optional: Create histograms and/or modify member variables.
 	//Create any histograms/trees/etc. within a ROOT lock. 
@@ -15,10 +15,10 @@ void DCustomAction_HistOmegaVsMissProton::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		// Optional: Useful utility functions.
-		Run_Update(locEventLoop);
+		Run_Update(locEvent);
 
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
@@ -34,10 +34,10 @@ void DCustomAction_HistOmegaVsMissProton::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_HistOmegaVsMissProton::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_HistOmegaVsMissProton::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//no duplicate entries: missing p4 is unique for each combo
 	DLorentzVector locMissingP4 = dAnalysisUtilities->Calc_MissingP4(Get_Reaction(), locParticleCombo, false);

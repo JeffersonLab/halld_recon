@@ -8,18 +8,38 @@
 
 #include <CDC/DCDCHit_factory_Calib.h>
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <DANA/DGeometryManager.h>
+#include <HDGEOMETRY/DGeometry.h>
 
 //#define ENABLE_UPSAMPLING
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DCDCHit_factory_Calib::init(void)
+void DCDCHit_factory_Calib::Init()
 {
-  
   CDC_HIT_THRESHOLD = 0;
-  gPARMS->SetDefaultParameter("CDC:CDC_HIT_THRESHOLD", CDC_HIT_THRESHOLD,
+  auto app = GetApplication();
+  app->SetDefaultParameter("CDC:CDC_HIT_THRESHOLD", CDC_HIT_THRESHOLD,
                               "Remove CDC Hits with peak amplitudes smaller than CDC_HIT_THRESHOLD");
+
+  // After a saturated pulse, small afterpulses can occur on other channels in the same preamp
+  // Single-peak afterpulses occur after 3-7 samples
+  // If ECHO_OPT=1, likely afterpulses are removed
+
+  ECHO_OPT = 1;
+  app->SetDefaultParameter("CDC:ECHO_OPT", ECHO_OPT,
+                              "0:do not suppress afterpulses, 1:suppress afterpulses");
+  
+  ECHO_MAX_A = 350;
+  app->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
+                              "Max height (adc units 0-4095) for afterpulses, if ECHO_OPT=1");
+
+  ECHO_MAX_T = 7;
+  app->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
+                              "End of time range (number of samples) to search for afterpulses");
   
   // default values
   Nrings = 0;
@@ -35,15 +55,17 @@ jerror_t DCDCHit_factory_Calib::init(void)
   amp_a_scale = a_scale*28.8;
   t_scale = 8.0/10.0;    // 8 ns/count and integer time is in 1/10th of sample
   t_base  = 0.;       // ns
-  
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DCDCHit_factory_Calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
   // Only print messages for one thread whenever run number change
   static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
   static set<int> runs_announced;
@@ -56,7 +78,7 @@ jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnum
   pthread_mutex_unlock(&print_mutex);
   
   // calculate the number of straws in each ring
-  CalcNstraws(eventLoop, runnumber, Nstraws);
+  CalcNstraws(event, runnumber, Nstraws);
   Nrings = Nstraws.size();
   
   vector<double> raw_gains;
@@ -67,7 +89,7 @@ jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnum
   
   // load scale factors
   map<string,double> scale_factors;
-  if (eventLoop->GetCalib("/CDC/digi_scales", scale_factors))
+  if (calibration->Get("/CDC/digi_scales", scale_factors))
     jout << "Error loading /CDC/digi_scales !" << endl;
   if (scale_factors.find("CDC_ADC_ASCALE") != scale_factors.end())
     a_scale = scale_factors["CDC_ADC_ASCALE"];
@@ -86,7 +108,7 @@ jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnum
   
   // load base time offset
   map<string,double> base_time_offset;
-  if (eventLoop->GetCalib("/CDC/base_time_offset",base_time_offset))
+  if (calibration->Get("/CDC/base_time_offset",base_time_offset))
     jout << "Error loading /CDC/base_time_offset !" << endl;
   if (base_time_offset.find("CDC_BASE_TIME_OFFSET") != base_time_offset.end())
     t_base = base_time_offset["CDC_BASE_TIME_OFFSET"];
@@ -94,11 +116,11 @@ jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnum
     jerr << "Unable to get CDC_BASE_TIME_OFFSET from /CDC/base_time_offset !" << endl;
   
   // load constant tables
-  if (eventLoop->GetCalib("/CDC/wire_gains", raw_gains))
+  if (calibration->Get("/CDC/wire_gains", raw_gains))
     jout << "Error loading /CDC/wire_gains !" << endl;
-  if (eventLoop->GetCalib("/CDC/pedestals", raw_pedestals))
+  if (calibration->Get("/CDC/pedestals", raw_pedestals))
     jout << "Error loading /CDC/pedestals !" << endl;
-  if (eventLoop->GetCalib("/CDC/timing_offsets", raw_time_offsets))
+  if (calibration->Get("/CDC/timing_offsets", raw_time_offsets))
     jout << "Error loading /CDC/timing_offsets !" << endl;
   
   // fill the tables
@@ -150,13 +172,13 @@ jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnum
     }
   }
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DCDCHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 {
   /// Generate DCDCHit object for each DCDCDigiHit object.
   /// This is where the first set of calibration constants
@@ -170,13 +192,33 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   /// In order to use the new Flash125 data types and maintain compatibility with the old code, what is below is a bit of a mess
   
   vector<const DCDCDigiHit*> digihits;
-  loop->Get(digihits);
+  event->Get(digihits);
   char str[256];
+
+
+  // flag the small nuisance hits that follow a saturated hit on the same board.
+
+  vector <unsigned int> RogueHits;
+  RogueHits.clear();
+
+  if (ECHO_OPT > 0) FindRogueHits(event,RogueHits);
+
+  
   for (unsigned int i=0; i < digihits.size(); i++) {
     const DCDCDigiHit *digihit = digihits[i];
     
     //if ( (digihit->QF & 0x1) != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
     
+    bool skip = 0;
+    if (RogueHits.size()>0) {
+      if (i==RogueHits[0]) {
+	skip = 1;
+        RogueHits.erase(RogueHits.begin());
+      }
+    }
+
+    if (skip) continue;
+
     const int &ring  = digihit->ring;
     const int &straw = digihit->straw;
     
@@ -232,6 +274,7 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
       // this amplitude is not set in the translation table for this old data format, so make a (reasonable?) guess
       maxamp = digihit->pulse_integral / 28.8;
     } else {
+
       // Use the modern (2017+) data versions
       // Configuration data needed to interpret the hits is stored in the data stream
       vector<const Df125Config*> configs;
@@ -258,7 +301,9 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
       //of the window
       // Only true after about run 4100
       nsamples_integral = (NW - (digihit->pulse_time / 10));      
+
     }
+
     
     // Complete the pedestal subtraction here since we should know the correct number of samples.
     int scaled_ped = raw_ped << PBIT;
@@ -301,41 +346,38 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     hit->AddAssociatedObject(digihit);
     
-    _data.push_back(hit);
+    Insert(hit);
   }
-  
-  return NOERROR;
 }
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DCDCHit_factory_Calib::erun(void)
+void DCDCHit_factory_Calib::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DCDCHit_factory_Calib::fini(void)
+void DCDCHit_factory_Calib::Finish()
 {
-  return NOERROR;
 }
 
 //------------------
 // CalcNstraws
 //------------------
-void DCDCHit_factory_Calib::CalcNstraws(jana::JEventLoop *eventLoop, int32_t runnumber, vector<unsigned int> &Nstraws)
+void DCDCHit_factory_Calib::CalcNstraws(const std::shared_ptr<const JEvent>& event, int32_t runnumber, vector<unsigned int> &Nstraws)
 {
   DGeometry *dgeom;
   vector<vector<DCDCWire *> >cdcwires;
   
   // Get pointer to DGeometry object
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  dgeom  = dapp->GetDGeometry(runnumber);
-  
+  auto app = event->GetJApplication();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  dgeom = geo_manager->GetDGeometry(runnumber);
+
   // Get the CDC wire table from the XML
   dgeom->GetCDCWires(cdcwires);
   
@@ -463,3 +505,177 @@ const double DCDCHit_factory_Calib::GetConstant(const cdc_digi_constants_t &the_
   return the_table[in_hit->ring-1][in_hit->straw-1];
 }
 
+//------------------
+// Identify rogue hits
+//------------------
+void DCDCHit_factory_Calib::FindRogueHits(const std::shared_ptr<const JEvent>& event, vector<unsigned int> &RogueHits)
+{
+
+  /* // Beni's trick for getting the DAQ channel info for simulated data 
+     // Keeping it here in case this code is moved into Hit_factory.cc 
+  // iterate over hits and find roc/slot/con numbers
+  for (unsigned int k=0 ;k<hits.size(); k++){
+    const DCDCHit *hit = hits[k];
+    vector <const Df125CDCPulse*> pulse;
+    hit->Get(pulse);
+    
+    if(pulse.size()==0) {
+      // for hits without lower-level hit info, e.g. HDDM data, we have to use the translation table
+      // to figure out which DAQ channels his hit corresponds to
+      try {
+	DTranslationTable::DChannelInfo channel_info;
+	channel_info.det_sys = DTranslationTable::CDC;
+	channel_info.cdc.ring = hit->ring;
+	channel_info.cdc.straw = hit->straw;
+	DTranslationTable::csc_t daq_index = ttab[0]->GetDAQIndex(channel_info);
+	
+	hit_info.rocid = daq_index.rocid;
+	hit_info.slot = daq_index.slot;
+	hit_info.connector = daq_index.channel / 24;
+      } catch(...) { 
+	cout << "Cannot find Translation Table data for hit on ring " << hit->ring
+	     << " straw " << hit->straw << ", skipping this info ..." << endl;
+	continue;
+      }  
+    }
+    
+   */
+  
+  RogueHits.clear();
+
+  vector<const DCDCDigiHit*> digihits;
+  event->Get(digihits);
+
+  if (digihits.size() == 0) return;
+
+  uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
+  uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
+
+  const Df125Config *config = NULL;
+  digihits[0]->GetSingle(config);
+
+  if(config) { 
+      ABIT = config->ABIT;
+      PBIT = config->PBIT; 
+  } else {
+      ABIT = 3;
+      PBIT = 0;
+  }
+
+  // store list of saturated hit times and their hvb number
+
+  vector<unsigned int> sat_boards;  // code for hvb w saturated hits
+  vector<vector<unsigned int>> sat_times;  // saturated hit times, a vector of these for each board
+  
+  for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
+
+    const DCDCDigiHit *digihit = digihits[i];
+  
+      const Df125CDCPulse *cp = NULL;
+      digihit->GetSingle(cp);
+      if (!cp) continue ; 
+  
+      uint32_t rocid = cp->rocid;
+      uint32_t slot = cp->slot;
+      uint32_t channel = cp->channel;
+      uint32_t amp = cp->first_max_amp<<ABIT;
+      
+      unsigned int preamp = (unsigned int)(channel/24);
+      unsigned int rought = (unsigned int)(cp->le_time/10);
+            
+      unsigned int board = (unsigned int)rocid*100000 + (unsigned int)slot*100 + preamp;  
+      
+      //  511<<3 = 4088, so check overflows too, and ensure that the overflows are from the first pulse
+      if ( amp >= 4088 && cp->overflow_count>0 ) {    
+
+        // check to see if this board was already registered 
+
+        bool found = 0;
+        unsigned int x = 0;
+
+	while (!found && x < sat_boards.size()) {
+	    if (board == sat_boards[x]) found = 1;
+            x++;
+        }
+	  
+        if (found) {   // add the time to the list saved earlier
+
+	   sat_times[x-1].push_back(rought);
+	  
+	} else {       // new board.  register its number and start a new list of times
+	  
+	   sat_boards.push_back(board);  
+           sat_times.push_back({rought});
+
+	 }  
+      }      
+  } 
+
+    
+  if (sat_times.size() == 0) return;
+
+  
+  // check for small afterpulses
+
+  for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
+    
+      const DCDCDigiHit *digihit = digihits[i];
+  
+      const Df125CDCPulse *cp = NULL;
+      digihit->GetSingle(cp);
+      if (!cp) continue ; 
+  
+      uint32_t rocid = cp->rocid;
+      uint32_t slot = cp->slot;
+      uint32_t channel = cp->channel;
+  
+      unsigned int preamp = (unsigned int)(channel/24);
+      unsigned int rought = (unsigned int)(cp->le_time/10);
+  
+      unsigned int dt;  // time difference between saturated & later pulses
+        
+      unsigned int board = (unsigned int)rocid*100000 + (unsigned int)slot*100 + preamp;  
+      
+      // find out if there's a saturated hit on the same HVB
+  
+      bool found = 0;
+      unsigned int x = 0;
+
+      while (!found && x < sat_boards.size()) {
+          if (board == sat_boards[x]) found = 1;
+          x++;
+      }
+      
+      if (!found) continue;
+  
+      x = x-1;
+      
+      // fill RogueHits if this is a problem pulse
+      
+      unsigned int net_amp = (unsigned int)(cp->first_max_amp<<ABIT) - (unsigned int)(cp->pedestal<<PBIT);
+  
+      if (net_amp < ECHO_MAX_A) {
+  
+          // look at times of saturated pulses to see if any is a candidate for causing this hit as an afterpulse
+  
+          found = 0;
+  
+          for (unsigned int j=0; j<(unsigned int)sat_times[x].size(); j++) {
+  
+              if (rought <= sat_times[x][j] ) continue; // saturated pulse was too late 
+  
+              dt = rought - sat_times[x][j];   // time delay between saturated pulse and this one
+  
+    	      if (dt >=2 && dt <= ECHO_MAX_T) found = 1;    // afterpulses start at dt=2
+  	
+              if (found) break;
+  
+          }
+  
+          if (found) RogueHits.push_back(i);
+  
+      }
+      
+  }
+
+}

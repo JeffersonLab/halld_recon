@@ -8,10 +8,10 @@
 #ifndef _DTrackFitterStraightTrack_
 #define _DTrackFitterStraightTrack_
 
-#include <JANA/jerror.h>
 
 #include <TRACKING/DTrackFitter.h>
 
+#include <DANA/jerror.h>
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h> 
 #include <DMatrixSIMD.h>
@@ -22,7 +22,7 @@
 
 class DTrackFitterStraightTrack: public DTrackFitter { 
 public:
-  DTrackFitterStraightTrack(JEventLoop *loop);
+  DTrackFitterStraightTrack(const std::shared_ptr<const JEvent>& event);
   ~DTrackFitterStraightTrack();  
   
   enum state_vector{

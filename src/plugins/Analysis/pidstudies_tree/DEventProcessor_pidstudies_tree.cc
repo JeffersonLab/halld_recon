@@ -16,7 +16,7 @@ extern TFile *ROOTfile;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_pidstudies_tree());
+	app->Add(new DEventProcessor_pidstudies_tree());
 }
 } // "C"
 
@@ -25,30 +25,27 @@ bool Compare_TrackMatches(DEventProcessor_pidstudies_tree::plugin_trackmatch_t *
 };
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_pidstudies_tree::init(void)
+void DEventProcessor_pidstudies_tree::Init()
 {
 
 	dMCReconstructionStatuses = new MCReconstructionStatuses();
 	dPluginTree_MCReconstructionStatuses = new TTree("dPluginTree_MCReconstructionStatuses", "MC Reconstruction Statuses");
 	dPluginTree_MCReconstructionStatuses->Branch("dPluginBranch_MCReconstructionStatuses", "MCReconstructionStatuses", &dMCReconstructionStatuses);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_pidstudies_tree::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_pidstudies_tree::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_pidstudies_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_pidstudies_tree::Process(const std::shared_ptr<const JEvent>& event)
 {
 	unsigned int loc_i, loc_j;
 	DLorentzVector locThrownFourMomentum, locThrownSpacetimeVertex;
@@ -61,11 +58,11 @@ jerror_t DEventProcessor_pidstudies_tree::evnt(JEventLoop *loop, uint64_t eventn
 
 	vector<const DMCThrown*> locMCThrownVector;
 	const DMCThrown *locMCThrown;
-	loop->Get(locMCThrownVector);
+	event->Get(locMCThrownVector);
 
 	vector<const DChargedTrack*> locChargedTrackVector;
 	const DChargedTrack *locChargedTrack;
-	loop->Get(locChargedTrackVector);
+	event->Get(locChargedTrackVector);
 
 	// Find track matches
 	//Assume reconstructed track p/theta not much different between hypotheses: just choose the first hypothesis
@@ -108,7 +105,7 @@ jerror_t DEventProcessor_pidstudies_tree::evnt(JEventLoop *loop, uint64_t eventn
 
 	//fill information into trees
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	dMCReconstructionStatuses->dMCReconstructionStatusVector.resize(0);
 	for(loc_i = 0; loc_i < locMCThrownVector.size(); loc_i++){
@@ -175,27 +172,23 @@ jerror_t DEventProcessor_pidstudies_tree::evnt(JEventLoop *loop, uint64_t eventn
 	}
 	dPluginTree_MCReconstructionStatuses->Fill();
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_pidstudies_tree::erun(void)
+void DEventProcessor_pidstudies_tree::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_pidstudies_tree::fini(void)
+void DEventProcessor_pidstudies_tree::Finish()
 {
-	return NOERROR;
 }
 
 //Copied from DEventProcessor_phys_tree.cc

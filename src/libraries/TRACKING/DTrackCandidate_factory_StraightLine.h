@@ -8,7 +8,7 @@
 #ifndef _DTrackCandidate_factory_StraightLine_
 #define _DTrackCandidate_factory_StraightLine_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DTrackCandidate.h"
 #include "TRACKING/DTrackFinder.h"
 #include <TRACKING/DTrackFitter.h>
@@ -23,11 +23,12 @@
 
 class DParticleID;
 
-class DTrackCandidate_factory_StraightLine:public jana::JFactory<DTrackCandidate>{
+class DTrackCandidate_factory_StraightLine:public JFactoryT<DTrackCandidate>{
    public:
-      DTrackCandidate_factory_StraightLine(){};
+      DTrackCandidate_factory_StraightLine(){
+      	SetTag("StraightLine");
+      };
       ~DTrackCandidate_factory_StraightLine(){};
-      const char* Tag(void){return "StraightLine";}
 
       enum state_vector{
          state_x,
@@ -75,11 +76,11 @@ class DTrackCandidate_factory_StraightLine:public jana::JFactory<DTrackCandidate
 
 
    private:
-      jerror_t init(void);						///< Called once at program start.
-      jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-      jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-      jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-      jerror_t fini(void);						///< Called after last event of last event source has been processed.
+      void Init() override;
+      void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+      void Process(const std::shared_ptr<const JEvent>& event) override;
+      void EndRun() override;
+      void Finish() override;
 
       bool COSMICS,DEBUG_HISTS,USE_FDC_DRIFT_TIMES,SKIP_CDC,SKIP_FDC;
       float CHI2CUT;

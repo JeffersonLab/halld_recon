@@ -7,15 +7,13 @@
 
 #include "JEventProcessor_ST_Propagation_Time.h"
 #include "TRIGGER/DTrigger.h"
-using namespace jana;
+#include "DANA/DEvent.h"
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_ST_Propagation_Time());
+	app->Add(new JEventProcessor_ST_Propagation_Time());
 }
 } // "C"
 
@@ -24,7 +22,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_ST_Propagation_Time::JEventProcessor_ST_Propagation_Time()
 {
-
+	SetTypeName("JEventProcessor_ST_Propagation_Time");
 }
 
 //------------------
@@ -36,19 +34,23 @@ JEventProcessor_ST_Propagation_Time::~JEventProcessor_ST_Propagation_Time()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_ST_Propagation_Time::init(void)
+void JEventProcessor_ST_Propagation_Time::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	//
-  //****** Define Some Constants*********************************
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
+	//****** Define Some Constants*********************************
   int NoBins_time = 200;
   int NoBins_z = 60;
   double time_lower_limit = -10.0;      
@@ -87,49 +89,47 @@ jerror_t JEventProcessor_ST_Propagation_Time::init(void)
     }
   // cd back to main directory
   main->cd();
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_ST_Propagation_Time::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_ST_Propagation_Time::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
   // Get the particleID object for each run
   vector<const DParticleID *> dParticleID_algos;
-  eventLoop->Get(dParticleID_algos);
+  event->Get(dParticleID_algos);
   if(dParticleID_algos.size() < 1)
     {
       _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      return;
     }
   dParticleID = dParticleID_algos[0];
   // We want to be use some of the tools available in the RFTime factory 
   // Specifically steping the RF back to a chosen time
-  dRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
+  dRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime", ""));
   // Be sure that DRFTime_factory::init() and brun() are called
   vector<const DRFTime*> locRFTimes;
-  eventLoop->Get(locRFTimes);
+  event->Get(locRFTimes);
+
+  auto calibration = GetJCalibration(event);
+
  //RF Period
   vector<double> locRFPeriodVector;
-  eventLoop->GetCalib("PHOTON_BEAM/RF/rf_period", locRFPeriodVector);
+  calibration->Get("PHOTON_BEAM/RF/rf_period", locRFPeriodVector);
   dRFBunchPeriod = locRFPeriodVector[0];
   
   // Obtain the target center along z;
   map<string,double> target_params;
-  if (eventLoop->GetCalib("/TARGET/target_parms", target_params))
+  if (calibration->Get("/TARGET/target_parms", target_params))
     jout << "Error loading /TARGET/target_parms/ !" << endl;
   if (target_params.find("TARGET_Z_POSITION") != target_params.end())
     z_target_center = target_params["TARGET_Z_POSITION"];
   else
     jerr << "Unable to get TARGET_Z_POSITION from /TARGET/target_parms !" << endl;
   // Obtain the Start Counter geometry
-  DApplication* dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  if(!dapp)
-    _DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl; 
-  DGeometry* locGeometry = dapp->GetDGeometry(eventLoop->GetJEvent().GetRunNumber());
+  DGeometry *locGeometry = GetDGeometry(event);
   sc_angle_corr = 1.;
   if(locGeometry->GetStartCounterGeom(sc_pos, sc_norm)) {
       double theta = sc_norm[0][sc_norm[0].size()-2].Theta(); 
@@ -137,67 +137,64 @@ jerror_t JEventProcessor_ST_Propagation_Time::brun(JEventLoop *eventLoop, int32_
   }  
 
   // Propagation Time constant
-  if(eventLoop->GetCalib("START_COUNTER/propagation_time_corr", propagation_time_corr))
+  if(calibration->Get("START_COUNTER/propagation_time_corr", propagation_time_corr))
     jout << "Error loading /START_COUNTER/propagation_time_corr !" << endl;
   // Propagation Time fit Boundaries
-  if(eventLoop->GetCalib("START_COUNTER/PTC_Boundary", PTC_Boundary))
+  if(calibration->Get("START_COUNTER/PTC_Boundary", PTC_Boundary))
     jout << "Error loading /START_COUNTER/PTC_Boundary !" << endl;
 
   // configure parameters
   trackingFOMCut = 0.0027;  // 3 sigma cut
-
-  return NOERROR;
-
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_ST_Propagation_Time::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_ST_Propagation_Time::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 
   
         // select events with physics events, i.e., not LED and other front panel triggers
         const DTrigger* locTrigger = NULL; 
-	loop->GetSingle(locTrigger); 
+	event->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
-	  return NOERROR;
+	  return;
 
   // SC hits
   vector<const DSCHit *> scHitVector;
-  loop->Get(scHitVector);
+  event->Get(scHitVector);
   
   // RF time object
   const DRFTime* thisRFTime = NULL;
   vector <const DRFTime*> RFTimeVector;
-  loop->Get(RFTimeVector);
+  event->Get(RFTimeVector);
   if (RFTimeVector.size() != 0)
     thisRFTime = RFTimeVector[0];
 
   // Grab charged tracks
   vector<const DChargedTrack *> chargedTrackVector;
-  loop->Get(chargedTrackVector);
+  event->Get(chargedTrackVector);
   
   // Grab the associated detector matches object
   const DDetectorMatches* locDetectorMatches = NULL;
-  loop->GetSingle(locDetectorMatches);
+  event->GetSingle(locDetectorMatches);
   
   // Grab the associated RF bunch object
   const DEventRFBunch *thisRFBunch = NULL;
-  loop->GetSingle(thisRFBunch);
+  event->GetSingle(thisRFBunch);
 
   double locTOFRFShiftedTime = 9.9E+9;
   // Loop over the charged tracks
@@ -317,7 +314,7 @@ jerror_t JEventProcessor_ST_Propagation_Time::evnt(JEventLoop *loop, uint64_t ev
           ////////////////////////////////////////////
           // FILL HISTOGRAMS
           // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-          japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+          lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
           
           // Straight Sections
           if (locSCzIntersection > sc_pos_soss && locSCzIntersection <= sc_pos_eoss)
@@ -392,31 +389,26 @@ jerror_t JEventProcessor_ST_Propagation_Time::evnt(JEventLoop *loop, uint64_t ev
 		h2_CorrectedTime_z[sc_index]->Fill(path_ns,Corr_Time_ns);
 	      }
           }
-          japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+          lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
       } // sc charged tracks
     }// TOF reference time
-
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_ST_Propagation_Time::erun(void)
+void JEventProcessor_ST_Propagation_Time::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_ST_Propagation_Time::fini(void)
+void JEventProcessor_ST_Propagation_Time::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

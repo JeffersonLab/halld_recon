@@ -12,30 +12,32 @@
 #include "TRACKING/DMCThrown.h"
 #include "ANALYSIS/DAnalysisUtilities.h"
 
-using namespace jana;
 using namespace std;
 using namespace DAnalysis;
 
 class DAnalysisUtilities;
 
-class DReaction_factory_Thrown:public jana::JFactory<DReaction>
+class DReaction_factory_Thrown:public JFactoryT<DReaction>
 {
 	public:
-		DReaction_factory_Thrown(){use_factory = 1;}; //prevents JANA from searching the input file for these objects
+		DReaction_factory_Thrown(){
+			SetObjectName("DReaction"); // As opposed to "DAnalysis::DReaction"
+			SetTag("Thrown");
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
+		}
 		~DReaction_factory_Thrown(){};
-		const char* Tag(void){return "Thrown";}
 
-		DReaction* Build_ThrownReaction(JEventLoop* locEventLoop, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps);
+		DReaction* Build_ThrownReaction(const std::shared_ptr<const JEvent>& locEvent, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps);
 
 		void Recycle_Reaction(DReaction* locReaction); //deletes reaction, but recycles steps
 
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		const DAnalysisUtilities* dAnalysisUtilities = nullptr;
 

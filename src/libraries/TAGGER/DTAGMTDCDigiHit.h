@@ -9,26 +9,20 @@
 #define _DTAGMTDCDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DTAGMTDCDigiHit: public jana::JObject {
+class DTAGMTDCDigiHit: public JObject {
    public:
       JOBJECT_PUBLIC(DTAGMTDCDigiHit);
       
-      // Add data members here. For example:
       int row;         ///< row number 1-5
       int column;      ///< column number 1-102
+      uint32_t time;
 
-	  uint32_t time;
-      
-      // This method is used primarily for pretty printing
-      // the second argument to AddString is printf style format
-      void toStrings(vector<pair<string,string> > &items)const{
-         AddString(items, "row", "%d", row);
-         AddString(items, "column", "%d", column);
-         AddString(items, "time", "%d", time);
+      void Summarize(JObjectSummary& summary) const override {
+         summary.add(row, NAME_OF(row), "%d");
+         summary.add(column, NAME_OF(column), "%d");
+         summary.add(time, NAME_OF(time), "%d");
       }
-      
 };
 
 #endif // _DTAGMTDCDigiHit_

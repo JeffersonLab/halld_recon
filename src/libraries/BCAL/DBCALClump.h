@@ -13,11 +13,9 @@
 #include "BCAL/DBCALHit.h"
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
 #include <vector>
 
-using namespace jana;
 using namespace std;
 
 class DBCALClump : public JObject {

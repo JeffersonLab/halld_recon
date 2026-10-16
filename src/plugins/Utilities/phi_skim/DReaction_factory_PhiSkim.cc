@@ -6,6 +6,8 @@
 //
 
 #include "DReaction_factory_PhiSkim.h"
+#include <DANA/DEvent.h>
+
 
 void DReaction_factory_PhiSkim::PIDCuts(DReaction* locReaction)
 {
@@ -30,21 +32,20 @@ void DReaction_factory_PhiSkim::PIDCuts(DReaction* locReaction)
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DReaction_factory_PhiSkim::brun(JEventLoop* locEventLoop, int32_t locRunNumber)
-{
+void DReaction_factory_PhiSkim::BeginRun(const std::shared_ptr<const JEvent>& event){
   vector<double> locBeamPeriodVector;
-  locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+  DEvent::GetCalib(event, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
   dBeamBunchPeriod = locBeamPeriodVector[0];
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// init
+// Process
 //------------------
-jerror_t DReaction_factory_PhiSkim::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DReaction_factory_PhiSkim::Process(const std::shared_ptr<const JEvent>& event)
 {
   // Make as many DReaction objects as desired
   DReactionStep* locReactionStep = NULL;
@@ -113,7 +114,7 @@ jerror_t DReaction_factory_PhiSkim::evnt(JEventLoop* locEventLoop, uint64_t locE
    string locTreeFileName = "phi_excl_skim.root";
    locReaction->Enable_TTreeOutput(locTreeFileName, true); //true/false: do/don't save unused hypotheses
   
-  _data.push_back(locReaction); //Register the DReaction with the factory
+  Insert(locReaction); //Register the DReaction with the factory
 
   /**************************************************** kk_skim_incl Reaction Steps ****************************************************/
 
@@ -174,17 +175,17 @@ jerror_t DReaction_factory_PhiSkim::evnt(JEventLoop* locEventLoop, uint64_t locE
   locTreeFileName = "phi_incl_skim.root";
    locReaction->Enable_TTreeOutput(locTreeFileName, true); //true/false: do/don't save unused hypotheses
   
-  _data.push_back(locReaction); //Register the DReaction with the factory
+  Insert(locReaction); //Register the DReaction with the factory
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_PhiSkim::fini(void)
+void DReaction_factory_PhiSkim::Finish()
 {
   for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
     delete dReactionStepPool[loc_i]; //cleanup memory
-  return NOERROR;
+  return;
 }

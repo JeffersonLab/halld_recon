@@ -14,12 +14,16 @@ class DKinFitConstraint : public DResettable //purely virtual: cannot directly i
 	public:
 		virtual set<shared_ptr<DKinFitParticle>> Get_AllParticles(void) const = 0;
 		virtual void Print_ConstraintInfo(void) const = 0;
-
+		// ACQUIRE DEREFENCED OUTPUT STREAM
+		ostream& Get_DebugStream(void) const { return *dDebugStream; }
+		// SET OUTPUT STREAM
+		void Set_DebugStream(ostream* out_stream) { dDebugStream = out_stream; }
 	protected:
 		virtual ~DKinFitConstraint(void) = 0; //forces abstractness
+	private:
+	    ostream* dDebugStream = &cout;
 };
 
 inline DKinFitConstraint::~DKinFitConstraint(void){}
 
 #endif // _DKinFitConstraint_
-

@@ -8,51 +8,44 @@
 #ifndef _DAnalysisUtilities_factory_
 #define _DAnalysisUtilities_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DAnalysisUtilities.h"
 
-class DAnalysisUtilities_factory : public jana::JFactory<DAnalysisUtilities>
+class DAnalysisUtilities_factory : public JFactoryT<DAnalysisUtilities>
 {
 	public:
 		DAnalysisUtilities_factory(){analysisutilities=NULL;};
 		~DAnalysisUtilities_factory(){};
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override
 		{
 			// See note in DTAGMGeometry_factory
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 
-			if( analysisutilities ) delete analysisutilities;
-
-			analysisutilities = new DAnalysisUtilities(loop);
-
-			return NOERROR;
+			delete analysisutilities;
+			analysisutilities = new DAnalysisUtilities(event);
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		void Process(const std::shared_ptr<const JEvent>& event) override
 		{
  			// Reuse existing DAnalysisUtilities object.
-   		if( analysisutilities ) _data.push_back( analysisutilities );
-
-			return NOERROR;
+			if( analysisutilities ) Insert( analysisutilities );
 		}
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun() override
 		{
 			if( analysisutilities ) delete analysisutilities;
 			analysisutilities = NULL;
-
-   		return NOERROR;
 		}
 	
 		DAnalysisUtilities *analysisutilities;

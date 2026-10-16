@@ -26,10 +26,10 @@ class Df250WindowSum:public DDAQAddress{
 	
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "sum", "%d", sum);
-			AddString(items, "overflow", "%d", overflow);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(sum, NAME_OF(sum), "%d");
+			summary.add(overflow, NAME_OF(overflow), "%d");
 		}
 
 };

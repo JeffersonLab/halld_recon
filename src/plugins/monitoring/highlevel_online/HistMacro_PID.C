@@ -9,7 +9,7 @@
 // e-mail: davidl@jlab.org
 // e-mail: staylor@jlab.org
 // e-mail: sdobbs@jlab.org
-// e-mail: tbritton@jlab.org
+// e-mail: dalton@jlab.org
 //
 
 #include <time.h>
@@ -546,11 +546,10 @@ class FitWrapper{
 	double Nps_rho         = PIDNorms->GetBinContent(NORM_rho_ps);
 	double Nps_phi         = PIDNorms->GetBinContent(NORM_phi_ps);
 	double Nps_omega       = PIDNorms->GetBinContent(NORM_omega_ps);
-
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
 	if(TVirtualPad::Pad() == NULL)
-		locCanvas = new TCanvas("PID", "PID", 1200, 600); //for testing
+		locCanvas = new TCanvas("PID", "PID", 1200, 800); //for testing, 1200x800 is default canvas in monitoring
 	else
 		locCanvas = gPad->GetCanvas();
 	locCanvas->Divide(2, 2);
@@ -585,20 +584,25 @@ class FitWrapper{
 	}
 
 	TLatex latex;
-
+	float TextSizeLarge = 0.06;
+	float TextSizeMed = 0.05;
+	float TextSizeSmall = 0.035;
 
 	//----------- Pi0 --------------
 	locCanvas->cd(1);
 	gPad->SetTicks();
 	gPad->SetGrid();
+	gPad->SetBottomMargin(0.1);
+	gPad->SetRightMargin(0.05);
 	if(TwoGammaMass != NULL)
 	{
 
-		TwoGammaMass->GetXaxis()->SetTitleSize(0.05);
-		TwoGammaMass->GetYaxis()->SetTitleSize(0.05);
-		TwoGammaMass->GetXaxis()->SetLabelSize(0.05);
-		TwoGammaMass->GetYaxis()->SetLabelSize(0.035);
+		TwoGammaMass->GetXaxis()->SetTitleSize(TextSizeMed);
+		TwoGammaMass->GetYaxis()->SetTitleSize(TextSizeMed);
+		TwoGammaMass->GetXaxis()->SetLabelSize(TextSizeMed);
+		TwoGammaMass->GetYaxis()->SetLabelSize(TextSizeSmall);
 		TwoGammaMass->SetStats(0);
+		TwoGammaMass->GetXaxis()->SetRangeUser(0.0, 0.8);
 
 		// Fit to pi0 peak
 		TF1 *fun = (TF1*)gDirectory->FindObjectAny("fun_pi0_fit");
@@ -644,22 +648,22 @@ class FitWrapper{
 
 
 		char str[256];
-		sprintf(str, "num. #pi^{o} : %g", I);
+		sprintf(str, "num. #pi^{o} : %.3g", I);
 
 		double max = 1.05*TwoGammaMass->GetMaximum();
 		latex.SetTextColor(kBlack);
 		latex.SetTextAngle(0.0);
 		latex.SetTextAlign(11);
-		latex.SetTextSize(0.075);
-		latex.DrawLatex(0.175, max*3.0/4.0, str);
+		latex.SetTextSize(TextSizeLarge);
+		latex.DrawLatexNDC(0.58, 0.87, str);
 
 		// Print rate per trigger
 		double Ntrig = Ntrig_tot - Ntrig_tot_pi0;
 		double rate_per_1ktrig = I/Ntrig*1000.0;
 		if(Ntrig>0.0){
-			sprintf(str, "%3.1f per 1k triggers (bits 1,2)", rate_per_1ktrig);
-			latex.SetTextSize(0.06);
-			latex.DrawLatex(0.3, max*0.65, str);
+			sprintf(str, "%3.1f per 1k trigs (bits 1,2)", rate_per_1ktrig);
+			latex.SetTextSize(TextSizeMed);
+			latex.DrawLatexNDC(0.55, 0.79, str);
 		}
 
 		// Print rate per PS (integral of reconstructed energy hist)
@@ -667,8 +671,8 @@ class FitWrapper{
 		double rate_per_ps = I/Nmy_ps*1000.0;
 		if(Nmy_ps>0.0){
 			sprintf(str, "%3.1f per 1k PS coin", rate_per_ps);
-			latex.SetTextSize(0.06);
-			latex.DrawLatex(0.3, max*0.565, str);
+			latex.SetTextSize(TextSizeMed);
+			latex.DrawLatexNDC(0.55, 0.735, str);
 		}
 
 		// Only try adding to time series if we have more than 2000 particles in peak
@@ -705,7 +709,7 @@ class FitWrapper{
 		lin.DrawLine(0.135, 0.0, 0.135, max);
 		
 		latex.SetTextAngle(90.0);
-		latex.SetTextSize(0.035);
+		latex.SetTextSize(TextSizeSmall);
 		latex.SetTextAlign(21);
 		latex.SetTextColor(kMagenta);
 		latex.DrawLatex(0.131, max/2.0, "135 MeV");
@@ -713,15 +717,15 @@ class FitWrapper{
 		// Print number of L1 triggers
 		latex.SetTextColor(kBlack);
 		latex.SetTextAngle(0.0);
-		latex.SetTextSize(0.05);
+		latex.SetTextSize(TextSizeSmall);
 		latex.SetTextAlign(12);
 		if(L1bits_gtp){
 			sprintf(str, "trig bit 1 (FCAL/BCAL): %g", (double)L1bits_gtp->GetBinContent(1));
-			latex.DrawLatex(0.4, max*0.45, str);
+			latex.DrawLatex(0.3, max*0.55, str);
 			sprintf(str, "trig bit 3 (BCAL): %g", (double)L1bits_gtp->GetBinContent(3));
-			latex.DrawLatex(0.4, max*0.35, str);
+			latex.DrawLatex(0.3, max*0.45, str);
 			sprintf(str, "trig bit 4 (PS): %g", (double)L1bits_gtp->GetBinContent(4));
-			latex.DrawLatex(0.4, max*0.25, str);
+			latex.DrawLatex(0.3, max*0.35, str);
 		}	
 	}
 
@@ -729,12 +733,14 @@ class FitWrapper{
 	locCanvas->cd(2);
 	gPad->SetTicks();
 	gPad->SetGrid();
+	gPad->SetBottomMargin(0.1);
+	gPad->SetRightMargin(0.05);
 	if(KPlusKMinus != NULL)
 	{
-		KPlusKMinus->GetXaxis()->SetTitleSize(0.05);
-		KPlusKMinus->GetYaxis()->SetTitleSize(0.05);
-		KPlusKMinus->GetXaxis()->SetLabelSize(0.05);
-		KPlusKMinus->GetYaxis()->SetLabelSize(0.035);
+		KPlusKMinus->GetXaxis()->SetTitleSize(TextSizeMed);
+		KPlusKMinus->GetYaxis()->SetTitleSize(TextSizeMed);
+		KPlusKMinus->GetXaxis()->SetLabelSize(TextSizeMed);
+		KPlusKMinus->GetYaxis()->SetLabelSize(TextSizeSmall);
 		KPlusKMinus->SetStats(0);
 		KPlusKMinus->GetXaxis()->SetRangeUser(0.8, 2.0);
 		
@@ -744,22 +750,22 @@ class FitWrapper{
 
 		if(I>0.0){
 			char str[256];
-			sprintf(str, "num. #phi : %g", I);
+			sprintf(str, "num. #phi : %.3g", I);
 
 			double max = 1.05*KPlusKMinus->GetMaximum();
 			latex.SetTextColor(kBlack);
 			latex.SetTextAngle(0.0);
 			latex.SetTextAlign(11);
-			latex.SetTextSize(0.075);
-			latex.DrawLatex(1.4, max*3.0/4.0, str);
+			latex.SetTextSize(TextSizeLarge);
+			latex.DrawLatexNDC(0.58, 0.87, str);
 
 			// Print rate per trigger
 			double Ntrig = Ntrig_tot - Ntrig_tot_phi;
 			double rate_per_1ktrig = I/Ntrig*1000.0;
 			if(Ntrig_tot>0.0){
-				sprintf(str, "%3.3f per 1k triggers (bits 1,2)", rate_per_1ktrig);
-				latex.SetTextSize(0.06);
-				latex.DrawLatex(1.4, max*0.65, str);
+				sprintf(str, "%3.3f per 1k trigs (bits 1,2)", rate_per_1ktrig);
+				latex.SetTextSize(TextSizeMed);
+				latex.DrawLatexNDC(0.55, 0.79, str);
 			}
 
 			// Print rate per PS (integral of reconstructed energy hist)
@@ -767,8 +773,8 @@ class FitWrapper{
 			double rate_per_ps = I/Nmy_ps*1000.0;
 			if(Nmy_ps>0.0){
 				sprintf(str, "%3.3f per 1k PS coin", rate_per_ps);
-				latex.SetTextSize(0.06);
-				latex.DrawLatex(1.4, max*0.565, str);
+				latex.SetTextSize(TextSizeMed);
+				latex.DrawLatexNDC(0.55, 0.735, str);
 			}
 
 			// Only try adding to time series if we have more than 200 particles in peak
@@ -801,17 +807,18 @@ class FitWrapper{
 			}
 		}
 	}
-
 	//----------- Rho --------------
 	locCanvas->cd(3);
 	gPad->SetTicks();
 	gPad->SetGrid();
+	gPad->SetBottomMargin(0.1);
+	gPad->SetRightMargin(0.05);
 	if(PiPlusPiMinus != NULL)
 	{
-		PiPlusPiMinus->GetXaxis()->SetTitleSize(0.05);
-		PiPlusPiMinus->GetYaxis()->SetTitleSize(0.05);
-		PiPlusPiMinus->GetXaxis()->SetLabelSize(0.05);
-		PiPlusPiMinus->GetYaxis()->SetLabelSize(0.035);
+		PiPlusPiMinus->GetXaxis()->SetTitleSize(TextSizeMed);
+		PiPlusPiMinus->GetYaxis()->SetTitleSize(TextSizeMed);
+		PiPlusPiMinus->GetXaxis()->SetLabelSize(TextSizeMed);
+		PiPlusPiMinus->GetYaxis()->SetLabelSize(TextSizeSmall);
 		PiPlusPiMinus->SetStats(0);
 
 		Double_t pars_out[3*2];
@@ -821,22 +828,22 @@ class FitWrapper{
 		
 		if(I>0.0){
 			char str[256];
-			sprintf(str, "num. #rho : %g", I);
+			sprintf(str, "num. #rho : %.4g", I);
 
 			double max = 1.05*PiPlusPiMinus->GetMaximum();
 			latex.SetTextColor(kBlack);
 			latex.SetTextAngle(0.0);
 			latex.SetTextAlign(11);
-			latex.SetTextSize(0.075);
-			latex.DrawLatex(1.005, max*3.0/4.0, str);
+			latex.SetTextSize(TextSizeLarge);
+			latex.DrawLatexNDC(0.58, 0.87, str);
 
 			// Print rate per trigger
 			double Ntrig = Ntrig_tot - Ntrig_tot_rho;
 			double rate_per_1ktrig = I/Ntrig*1000.0;
 			if(Ntrig_tot>0.0){
-				sprintf(str, "%3.3f per 1k triggers (bits 1,2)", rate_per_1ktrig);
-				latex.SetTextSize(0.06);
-				latex.DrawLatex(1.010, max*0.65, str);
+				sprintf(str, "%3.3f per 1k trigs (bits 1,2)", rate_per_1ktrig);
+				latex.SetTextSize(TextSizeMed);
+				latex.DrawLatexNDC(0.55, 0.79, str);
 			}
 
 			// Print rate per PS (integral of reconstructed energy hist)
@@ -844,8 +851,8 @@ class FitWrapper{
 			double rate_per_ps = I/Nmy_ps*1000.0;
 			if(Nmy_ps>0.0){
 				sprintf(str, "%3.3f per 1k PS coin", rate_per_ps);
-				latex.SetTextSize(0.06);
-				latex.DrawLatex(1.010, max*0.565, str);
+				latex.SetTextSize(TextSizeMed);
+				latex.DrawLatexNDC(0.55, 0.735, str);
 			}
 
 			// Only try adding to time series if we have more than 1000 particles in peak
@@ -882,37 +889,41 @@ class FitWrapper{
 	locCanvas->cd(4);
 	gPad->SetTicks();
 	gPad->SetGrid();
+	gPad->SetBottomMargin(0.1);
+	gPad->SetRightMargin(0.05);
 	if(PiPlusPiMinusPiZero != NULL)
 	{
-		PiPlusPiMinusPiZero->GetXaxis()->SetTitleSize(0.05);
-		PiPlusPiMinusPiZero->GetYaxis()->SetTitleSize(0.05);
-		PiPlusPiMinusPiZero->GetXaxis()->SetLabelSize(0.05);
-		PiPlusPiMinusPiZero->GetYaxis()->SetLabelSize(0.035);
+		PiPlusPiMinusPiZero->GetXaxis()->SetTitleSize(TextSizeMed);
+		PiPlusPiMinusPiZero->GetYaxis()->SetTitleSize(TextSizeMed);
+		PiPlusPiMinusPiZero->GetXaxis()->SetLabelSize(TextSizeMed);
+		PiPlusPiMinusPiZero->GetYaxis()->SetLabelSize(TextSizeSmall);
 		PiPlusPiMinusPiZero->SetStats(0);
+		PiPlusPiMinusPiZero->GetXaxis()->SetRangeUser(0.4, 2.0);
+
 	
 		Double_t pars_out[3*2];
 		Double_t errs_out[3*2];
 		//Double_t I = FitWrapper::FitWithBackground(PiPlusPiMinusPiZero, 0.782, 0.03, 0.42, 1.6);
-		Double_t I = FitWrapper::FitPeaksWithBackgr(PiPlusPiMinusPiZero, 0.139*2+0.135, 1.3, "G", 0.782, 0.009, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, pars_out, errs_out);
-		
+		Double_t I = FitWrapper::FitPeaksWithBackgr(PiPlusPiMinusPiZero, 0.139*2+0.135, 1.2, "G", 0.782, 0.009, 0.547, 0.01, 0.0, 0.0, 0.0, 0.0, pars_out, errs_out);
+
 		if(I>0.0){
 			char str[256];
-			sprintf(str, "num. #omega : %g", I);
+			sprintf(str, "num. #omega : %.4g", I);
 
 			double max = 1.05*PiPlusPiMinusPiZero->GetMaximum();
 			latex.SetTextColor(kBlack);
 			latex.SetTextAngle(0.0);
 			latex.SetTextAlign(11);
-			latex.SetTextSize(0.075);
-			latex.DrawLatex(1.005, max*0.8, str);
+			latex.SetTextSize(TextSizeLarge);
+			latex.DrawLatexNDC(0.58, 0.87, str);
 
 			// Print rate per trigger
 			double Ntrig = Ntrig_tot - Ntrig_tot_omega;
 			double rate_per_1ktrig = I/Ntrig*1000.0;
 			if(Ntrig_tot>0.0){
-				sprintf(str, "%3.3f per 1k triggers (bits 1,2)", rate_per_1ktrig);
-				latex.SetTextSize(0.06);
-				latex.DrawLatex(1.010, max*0.65, str);
+				sprintf(str, "%3.3f per 1k trigs (bits 1,2)", rate_per_1ktrig);
+				latex.SetTextSize(TextSizeMed);
+				latex.DrawLatexNDC(0.55, 0.79, str);
 			}
 
 			// Print rate per PS (integral of reconstructed energy hist)
@@ -920,8 +931,8 @@ class FitWrapper{
 			double rate_per_ps = I/Nmy_ps*1000.0;
 			if(Nmy_ps>0.0){
 				sprintf(str, "%3.3f per 1k PS coin", rate_per_ps);
-				latex.SetTextSize(0.06);
-				latex.DrawLatex(1.010, max*0.565, str);
+				latex.SetTextSize(TextSizeMed);
+				latex.DrawLatexNDC(0.55, 0.735, str);
 			}
 
 			// Only try adding to time series if we have more than 200 particles in peak
@@ -954,3 +965,4 @@ class FitWrapper{
 		}
 	}
 }
+

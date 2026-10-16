@@ -7,8 +7,8 @@
 
 #include "JEventProcessor_PhiSkim.h"
 #include "DFactoryGenerator_PhiSkim.h"
+#include "DANA/DStatusBits.h"
 
-using namespace jana;
 
 #include "evio_writer/DEventWriterEVIO.h"
 
@@ -21,8 +21,8 @@ using namespace jana;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_PhiSkim());
-    app->AddFactoryGenerator( new DFactoryGenerator_PhiSkim() );
+    app->Add(new JEventProcessor_PhiSkim());
+    app->Add(new DFactoryGenerator_PhiSkim());
   }
 } // "C"
 
@@ -32,12 +32,12 @@ extern "C"{
 //------------------
 JEventProcessor_PhiSkim::JEventProcessor_PhiSkim()
 {
-
+  auto app = GetApplication();
   WRITE_EVIO_FILE = 1;
-  gPARMS->SetDefaultParameter( "WRITE_EVIO_FILE", WRITE_EVIO_FILE );
+  app->SetDefaultParameter( "WRITE_EVIO_FILE", WRITE_EVIO_FILE );
 
   WRITE_ROOT_TREE = 0;
-  gPARMS->SetDefaultParameter( "WRITE_ROOT_TREE", WRITE_ROOT_TREE );
+  app->SetDefaultParameter( "WRITE_ROOT_TREE", WRITE_ROOT_TREE );
 }
 
 //------------------
@@ -49,43 +49,43 @@ JEventProcessor_PhiSkim::~JEventProcessor_PhiSkim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_PhiSkim::init(void)
+void JEventProcessor_PhiSkim::Init()
 {
   // This is called once at program startup. 
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_PhiSkim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_PhiSkim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
-  return NOERROR;
+  return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_PhiSkim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_PhiSkim::Process(const std::shared_ptr<const JEvent>& event)
 {
 
   vector<const DAnalysisResults*> locAnalysisResultsVector;
-  loop->Get( locAnalysisResultsVector );
+  event->Get( locAnalysisResultsVector );
 
     const DEventWriterEVIO* eventWriterEVIO = NULL;
   if( WRITE_EVIO_FILE ){
     
 
-    loop->GetSingle(eventWriterEVIO);
+    event->GetSingle(eventWriterEVIO);
 
     // write out BOR events
-    if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
-      eventWriterEVIO->Write_EVIOEvent(loop, "phi");
-      return NOERROR;
+    if(event->GetSingle<DStatusBits>()->GetStatusBit(kSTATUS_BOR_EVENT)) {
+      eventWriterEVIO->Write_EVIOEvent(event, "phi");
+      return;
     }
   }
 
@@ -103,10 +103,10 @@ jerror_t JEventProcessor_PhiSkim::evnt(JEventLoop *loop, uint64_t eventnumber)
 		break;
 	}
 	if(!locSuccessFlag)
-		return NOERROR;
+		return;
 
   if( WRITE_EVIO_FILE ){
-   eventWriterEVIO->Write_EVIOEvent(loop, "phi");
+   eventWriterEVIO->Write_EVIOEvent(event, "phi");
 
   }
 
@@ -118,30 +118,30 @@ jerror_t JEventProcessor_PhiSkim::evnt(JEventLoop *loop, uint64_t eventnumber)
     // string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
 
     const DEventWriterROOT* eventWriterROOT = NULL;
-    loop->GetSingle(eventWriterROOT);
-    eventWriterROOT->Fill_DataTrees(loop, "PhiSkim");
+    event->GetSingle(eventWriterROOT);
+    eventWriterROOT->Fill_DataTrees(event, "PhiSkim");
   }
   
-  return NOERROR;
+  return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_PhiSkim::erun(void)
+void JEventProcessor_PhiSkim::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
+  return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_PhiSkim::fini(void)
+void JEventProcessor_PhiSkim::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
+  return;
 }
 

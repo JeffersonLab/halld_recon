@@ -10,9 +10,9 @@
 #include "DCustomAction_CutNoDetectorHit.h"
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DReaction_factory_trackeff_missing::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DReaction_factory_trackeff_missing::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	//INIT
 	dSourceComboP4Handler = new DSourceComboP4Handler(nullptr, false);
@@ -131,20 +131,20 @@ jerror_t DReaction_factory_trackeff_missing::evnt(JEventLoop* locEventLoop, uint
 		// Tracking Efficiency
 		locReaction->Add_AnalysisAction(new DCustomAction_TrackingEfficiency(locReaction, true));
 
-		_data.push_back(locReaction); //Register the DReaction with the factory
+		Insert(locReaction); //Register the DReaction with the factory
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_trackeff_missing::fini(void)
+void DReaction_factory_trackeff_missing::Finish()
 {
+	for(auto obj : mData)
+		delete obj;
+	mData.clear();
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
 }
 
 /************************************************************** ACTIONS AND CUTS **************************************************************/
@@ -242,7 +242,7 @@ void DReaction_factory_trackeff_missing::Add_MassHistograms(DReaction* locReacti
 
 	//if nothing missing, overall missing mass squared
 	if((locNumMissingParticles == 0) && (locNumInclusiveSteps == 0) && (!locUseKinFitResultsFlag || !locP4Fit))
-		Create_MissingMassSquaredHistogram(locReaction, Unknown, locUseKinFitResultsFlag, locBaseUniqueName, 0, {});
+		Create_MissingMassSquaredHistogram(locReaction, UnknownParticle, locUseKinFitResultsFlag, locBaseUniqueName, 0, {});
 }
 
 void DReaction_factory_trackeff_missing::Add_PostKinfitTimingCuts(DReaction* locReaction)
@@ -297,11 +297,11 @@ void DReaction_factory_trackeff_missing::Create_MissingMassSquaredHistogram(DRea
 
 	//build name string
 	ostringstream locActionUniqueNameStream;
-	if((locPID == Unknown) && (locMissingMassOffOfStepIndex == 0))
+	if((locPID == UnknownParticle) && (locMissingMassOffOfStepIndex == 0))
 		locActionUniqueNameStream << locBaseUniqueName;
 	else if(locMissingMassOffOfStepIndex == 0)
 		locActionUniqueNameStream << ParticleType(locPID) << "_" << locBaseUniqueName;
-	else if(locPID == Unknown)
+	else if(locPID == UnknownParticle)
 		locActionUniqueNameStream << "Step" << locMissingMassOffOfStepIndex << "_" << locBaseUniqueName;
 	else
 		locActionUniqueNameStream << ParticleType(locPID) << "_Step" << locMissingMassOffOfStepIndex << "_" << locBaseUniqueName;

@@ -6,27 +6,21 @@
 //
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
-
 
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALHit.h"
 #include "ANALYSIS/DAnalysisUtilities.h"
 
-
-// using namespace jana;
 using namespace std;
-
 
 // Routine used to create our JEventProcessor
 #include "JEventProcessor_fcal_charged.h"
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_fcal_charged());   // register this plugin
+    app->Add(new JEventProcessor_fcal_charged());   // register this plugin
   }
 } // "C"
 
@@ -36,7 +30,7 @@ extern "C"{
 //------------------
 JEventProcessor_fcal_charged::JEventProcessor_fcal_charged()
 {
-  
+    SetTypeName("JEventProcessor_fcal_charged");
 }
 
 //------------------
@@ -50,7 +44,7 @@ JEventProcessor_fcal_charged::~JEventProcessor_fcal_charged()
 //------------------
 // init
 //------------------
-jerror_t JEventProcessor_fcal_charged::init(void)
+void JEventProcessor_fcal_charged::Init()
 {
   // This is called once at program startup. 
 
@@ -62,24 +56,20 @@ jerror_t JEventProcessor_fcal_charged::init(void)
   h1_events = new TH1D("h1_events",";Events",10,0,10);
   
   top->cd();
-
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_fcal_charged::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_fcal_charged::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
   // This is called whenever the run number changes
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_fcal_charged::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void JEventProcessor_fcal_charged::Process(const std::shared_ptr<const JEvent> &event)
 {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
@@ -95,6 +85,7 @@ jerror_t JEventProcessor_fcal_charged::evnt(JEventLoop *locEventLoop, uint64_t e
   //  ... fill historgrams or trees ...
   // japp->RootFillUnLock(this);
 
+  auto eventnumber = event->GetEventNumber();
   h1_events->Fill(eventnumber%10);
   
   vector<const DFCALShower*> locFCALShowers;
@@ -108,7 +99,7 @@ jerror_t JEventProcessor_fcal_charged::evnt(JEventLoop *locEventLoop, uint64_t e
   // print out generated parameters
 
   Double_t pthrown=0;
-  locEventLoop->Get(mcthrowns);
+  event->Get(mcthrowns);
   // unsigned int kmax= mcthrowns.size() <=1? mcthrowns.size(): 1 ;    // assumes that the original particle is first in list
   unsigned int kmax= mcthrowns.size();    // assumes that the original particle is first in list
 
@@ -126,12 +117,12 @@ jerror_t JEventProcessor_fcal_charged::evnt(JEventLoop *locEventLoop, uint64_t e
   }
 
 
-  locEventLoop->Get(fmwpcHits);
-  locEventLoop->Get(locFCALHits);
-  locEventLoop->Get(locFCALClusters);
-  locEventLoop->Get(locFCALShowers);
+  event->Get(fmwpcHits);
+  event->Get(locFCALHits);
+  event->Get(locFCALClusters);
+  event->Get(locFCALShowers);
   // locEventLoop->Get(kinfitVertex);
-  locEventLoop->Get(locChargedTrack);
+  event->Get(locChargedTrack);
 
 
   DVector3 trkpos_fcal;
@@ -210,28 +201,23 @@ jerror_t JEventProcessor_fcal_charged::evnt(JEventLoop *locEventLoop, uint64_t e
   // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
   //  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_fcal_charged::erun(void)
+void JEventProcessor_fcal_charged::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_fcal_charged::fini(void)
+void JEventProcessor_fcal_charged::Finish()
 {
   // Called before program exit after event processing is finished.
-
-  return NOERROR;
 }
 

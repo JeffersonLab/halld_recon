@@ -8,21 +8,20 @@
 #ifndef _DFactoryGenerator_PhiSkim_
 #define _DFactoryGenerator_PhiSkim_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_PhiSkim.h"
 
-class DFactoryGenerator_PhiSkim : public jana::JFactoryGenerator
+class DFactoryGenerator_PhiSkim : public JFactoryGenerator
 {
  public:
   virtual const char* className(void){return static_className();}
   static const char* static_className(void){return "DFactoryGenerator_PhiSkim";}
 		
-  jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
+  void GenerateFactories(JFactorySet* factorySet)
   {
-    locEventLoop->AddFactory(new DReaction_factory_PhiSkim());
-    return NOERROR;
+    factorySet->Add(new DReaction_factory_PhiSkim());
+    return;
   }
 };
 

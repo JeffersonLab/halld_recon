@@ -8,54 +8,48 @@
 #ifndef _DTrackHitSelector_factory_ALT1_
 #define _DTrackHitSelector_factory_ALT1_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DTrackHitSelector.h"
 #include "DTrackHitSelectorALT1.h"
 
-class DTrackHitSelector_factory_ALT1:public jana::JFactory<DTrackHitSelector>{
+class DTrackHitSelector_factory_ALT1:public JFactoryT<DTrackHitSelector>{
 	public:
-		DTrackHitSelector_factory_ALT1(){};
-		~DTrackHitSelector_factory_ALT1(){};
-		const char* Tag(void){return "ALT1";}
+		DTrackHitSelector_factory_ALT1(){
+			SetTag("ALT1");
+		};
+		~DTrackHitSelector_factory_ALT1() override = default;
 
-		DTrackHitSelector *selector=NULL;
+		DTrackHitSelector *selector=nullptr;
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override
 		{
 			// (See DTAGHGeometry_factory.h)
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			
-			if( selector ) delete selector;
-
-			selector = new DTrackHitSelectorALT1(loop);
-
-			return NOERROR;
+			delete selector;
+			selector = new DTrackHitSelectorALT1(event);
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 void Process(const std::shared_ptr<const JEvent>& loop) override
 		 {
 			// Reuse existing DTrackHitSelectorALT1 object.
-			if( selector ) _data.push_back( selector );
-			 
-			 return NOERROR;
+			if( selector ) Insert( selector );
 		 }
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun() override
 		{
-			if( selector ) delete selector;
-			selector = NULL;
-			
-			return NOERROR;
+			delete selector;
+			selector = nullptr;
 		}
 };
 

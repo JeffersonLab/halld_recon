@@ -8,7 +8,7 @@
 #ifndef _DCDCTrackHit_factory_
 #define _DCDCTrackHit_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DCDCTrackHit.h"
 #include "DCDCWire.h"
 #include "HDGEOMETRY/DGeometry.h"
@@ -21,16 +21,16 @@
 /// uncalibrated hit objects and apply calibrations to generate
 /// the DCDCHit objects.
 
-class DCDCTrackHit_factory:public JFactory<DCDCTrackHit>{
+class DCDCTrackHit_factory:public JFactoryT<DCDCTrackHit>{
 	public:
-		DCDCTrackHit_factory(){};
-		~DCDCTrackHit_factory();
+		DCDCTrackHit_factory() = default;
+		~DCDCTrackHit_factory() override;
 		
 	private:
-		jerror_t init(void);
-		jerror_t brun(JEventLoop *loop, int32_t runnumber);
-		jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via JEventProcessor virtual method
-		jerror_t erun(void);
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
 
 		unsigned int locate(vector<double>&xx,double x);
 

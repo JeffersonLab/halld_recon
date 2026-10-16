@@ -18,6 +18,9 @@
 #include <cmath>
 using namespace std;
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <DANA/DEvent.h>
 #include "DTOFPoint_factory.h"
 #include <DANA/DApplication.h>
 #include <HDGEOMETRY/DGeometry.h>
@@ -34,12 +37,11 @@ bool Compare_TOFPoint_Time(const DTOFPoint *locTOFPoint1, const DTOFPoint *locTO
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
+void DTOFPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  const DGeometry *geom = DEvent::GetDGeometry(event);
 
   // load values from geometry 
   vector<double> YWIDTH;  ///> y (perpendicular) bar width per bar number	
@@ -67,7 +69,7 @@ jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 
   map<string, double> tofparms;
   string locTOFParmsTable = ccdb_directory_name + "/tof_parms";
-  if( !loop->GetCalib(locTOFParmsTable.c_str(), tofparms))
+  if( !DEvent::GetCalib(event, locTOFParmsTable.c_str(), tofparms))
     {
       //cout<<"DTOFPoint_factory: loading values from TOF data base"<<endl;
       //HALFPADDLE = tofparms["TOF_HALFPADDLE"];
@@ -83,23 +85,21 @@ jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
     }
   
   string locTOFPropSpeedTable = ccdb_directory_name + "/propagation_speed";
-  if(eventLoop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
+  if(DEvent::GetCalib(event, locTOFPropSpeedTable.c_str(), propagation_speed))
     jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
   string locTOFPaddleResolTable = ccdb_directory_name + "/paddle_resolutions";
-  if(eventLoop->GetCalib(locTOFPaddleResolTable.c_str(), paddle_resolutions))
+  if(DEvent::GetCalib(event, locTOFPaddleResolTable.c_str(), paddle_resolutions))
     jout << "Error loading " << locTOFPaddleResolTable << " !" << endl;
  
   // for applying attentuation to half lenfgth paddles
   string locTOFAttenLengthTable = ccdb_directory_name + "/attenuation_lengths";
-  if(eventLoop->GetCalib(locTOFAttenLengthTable.c_str(), AttenuationLengths))
+  if(DEvent::GetCalib(event, locTOFAttenLengthTable.c_str(), AttenuationLengths))
     jout << "Error loading " << locTOFAttenLengthTable << " !" << endl;
     
   dPositionMatchCut_DoubleEnded = 9.0; //1.5*BARWIDTH
   //	dTimeMatchCut_PositionWellDefined = 1.0;
   dTimeMatchCut_PositionWellDefined = 10.0;
   dTimeMatchCut_PositionNotWellDefined = 10.0;
-  
-  return NOERROR;
 }
 
 DTOFPoint_factory::tof_spacetimehit_t* DTOFPoint_factory::Get_TOFSpacetimeHitResource(void)
@@ -119,9 +119,9 @@ DTOFPoint_factory::tof_spacetimehit_t* DTOFPoint_factory::Get_TOFSpacetimeHitRes
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTOFPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTOFPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 {	
   // delete pool size if too large, preventing memory-leakage-like behavor.
   if(dTOFSpacetimeHitPool_All.size() > MAX_TOFSpacetimeHitPoolSize)
@@ -133,7 +133,7 @@ jerror_t DTOFPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   dTOFSpacetimeHitPool_Available = dTOFSpacetimeHitPool_All;
   
   vector<const DTOFPaddleHit*> locTOFHitVector;
-  loop->Get(locTOFHitVector);
+  event->Get(locTOFHitVector);
   
   // create the hit spacetime information
   deque<tof_spacetimehit_t*> locTOFSpacetimeHits_Horizontal, locTOFSpacetimeHits_Vertical;
@@ -203,10 +203,7 @@ jerror_t DTOFPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   
   // make sure all the hits are sorted by time (why not?)
   // this helps with reproducibiliy problems...
-  std::sort(_data.begin(), _data.end(), Compare_TOFPoint_Time);
-  
-  
-  return NOERROR;
+  std::sort(mData.begin(), mData.end(), Compare_TOFPoint_Time);
 }
 
 DTOFPoint_factory::tof_spacetimehit_t* DTOFPoint_factory::Build_TOFSpacetimeHit_Horizontal(const DTOFPaddleHit* locTOFHit)
@@ -530,7 +527,7 @@ void DTOFPoint_factory::Create_MatchedTOFPoint(const tof_spacetimehit_t* locTOFS
   locTOFPoint->dHorizontalBarStatus = int(locTOFHit_Horizontal->E_north > E_THRESHOLD) + 2*int(locTOFHit_Horizontal->E_south > E_THRESHOLD);
   locTOFPoint->dVerticalBarStatus = int(locTOFHit_Vertical->E_north > E_THRESHOLD) + 2*int(locTOFHit_Vertical->E_south > E_THRESHOLD);
   
-  _data.push_back(locTOFPoint);
+  mData.push_back(locTOFPoint);
 }
 
 void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTOFSpacetimeHit)
@@ -572,7 +569,7 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
 	locTOFPoint->dE1 = locPaddleHit->dE;
       }
       
-      _data.push_back(locTOFPoint);
+      mData.push_back(locTOFPoint);
     }
   else
     {
@@ -614,9 +611,8 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
     }
 }
 
-jerror_t DTOFPoint_factory::fini(void)
+void DTOFPoint_factory::Finish()
 {
   for(size_t loc_i = 0; loc_i < dTOFSpacetimeHitPool_All.size(); ++loc_i)
     delete dTOFSpacetimeHitPool_All[loc_i];
-  return NOERROR;
 }

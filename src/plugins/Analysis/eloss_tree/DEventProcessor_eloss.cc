@@ -9,7 +9,6 @@
 #include <PID/DChargedTrack.h>
 
 #include "DEventProcessor_eloss.h"
-using namespace jana;
 
 
 // Routine used to create our DEventProcessor
@@ -17,7 +16,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_eloss());
+	app->Add(new DEventProcessor_eloss());
 }
 } // "C"
 
@@ -27,7 +26,7 @@ void InitPlugin(JApplication *app){
 //------------------
 DEventProcessor_eloss::DEventProcessor_eloss()
 {
-
+	SetTypeName("DEventProcessor_eloss");
 }
 
 //------------------
@@ -39,9 +38,9 @@ DEventProcessor_eloss::~DEventProcessor_eloss()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_eloss::init(void)
+void DEventProcessor_eloss::Init()
 {
 	geant = new TTree("geant", "GEANT swimmer");
 	dana = new TTree("dana", "DANA swimmer");
@@ -55,36 +54,35 @@ jerror_t DEventProcessor_eloss::init(void)
 	dana->SetMarkerStyle(8);
 	dana->SetMarkerSize(0.5);
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_eloss::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_eloss::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_eloss::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_eloss::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DMCTrajectoryPoint*> mctrajs;
 	vector<const DChargedTrack*> tracks;
-	loop->Get(mctrajs);
-	loop->Get(tracks);
+	event->Get(mctrajs);
+	event->Get(tracks);
 	
 	if(tracks.size()!=1 || tracks[0]->hypotheses.size()<1){
 		_DBG_<<"tracks.size()="<<tracks.size();
 		if(tracks.size()>0)cerr<<" tracks[0]->hypotheses.size()="<<tracks[0]->hypotheses.size();
 		cerr<<endl;
-		return NOERROR;
+		return;
 	}
 	
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	// Fill dana tree
 	const DReferenceTrajectory::swim_step_t *step = tracks[0]->hypotheses[0]->rt->swim_steps;
@@ -119,28 +117,23 @@ jerror_t DEventProcessor_eloss::evnt(JEventLoop *loop, uint64_t eventnumber)
 		geant->Fill();
 	}
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_eloss::erun(void)
+void DEventProcessor_eloss::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_eloss::fini(void)
+void DEventProcessor_eloss::Finish()
 {
 	// Called at very end. This will be called only once
-
-	return NOERROR;
 }
 

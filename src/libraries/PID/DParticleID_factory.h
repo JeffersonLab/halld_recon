@@ -8,33 +8,29 @@
 #ifndef _DParticleID_factory_
 #define _DParticleID_factory_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
-
 #include "DParticleID.h"
 
-class DParticleID_factory:public jana::JFactory<DParticleID>{
+#include <JANA/JFactoryT.h>
+#include <JANA/JEvent.h>
+
+class DParticleID_factory:public JFactoryT<DParticleID>{
  public:
   DParticleID_factory(){};
   ~DParticleID_factory(){};
   
-  
  private:
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber){
+  void Process(const std::shared_ptr<const JEvent>& event) override {
     // This is a trivial class that simply implements a default
     // factory. It is here so that the default can be changed 
     // easily by simply changing the tag here or on the command 
     // line.
     vector<const DParticleID*> pid_algorithms;
-    eventLoop->Get(pid_algorithms,"PID1");
+    event->Get(pid_algorithms,"PID1");
     for(unsigned int i=0; i< pid_algorithms.size(); i++){
-      _data.push_back(const_cast<DParticleID*>(pid_algorithms[i]));
+      Insert(const_cast<DParticleID*>(pid_algorithms[i]));
     }
     SetFactoryFlag(NOT_OBJECT_OWNER);
-    
-    return NOERROR;
-      
-  };	///< Called every event.
+  }
 };
 
 #endif // _DParticleID_factory_

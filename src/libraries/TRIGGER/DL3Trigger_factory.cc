@@ -11,7 +11,8 @@
 using namespace std;
 
 #include "DL3Trigger_factory.h"
-using namespace jana;
+
+#include <JANA/JEvent.h>
 
 #include <START_COUNTER/DSCDigiHit.h>
 #include <TOF/DTOFDigiHit.h>
@@ -25,9 +26,9 @@ using namespace jana;
 #include <TRIGGER/DL1Trigger.h>
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DL3Trigger_factory::init(void)
+void DL3Trigger_factory::Init()
 {
 	FRACTION_TO_KEEP = 1.0;
 	DO_WIRE_BASED_TRACKING = false;
@@ -37,13 +38,14 @@ jerror_t DL3Trigger_factory::init(void)
 	MVA_WEIGHTS = "";
 	MVA_CUT = -0.2;
 
-	gPARMS->SetDefaultParameter("L3:FRACTION_TO_KEEP", FRACTION_TO_KEEP ,"Random Fraction of event L3 should keep. (Only used for debugging).");
-	gPARMS->SetDefaultParameter("L3:DO_WIRE_BASED_TRACKING", DO_WIRE_BASED_TRACKING ,"Activate wire-based tracking for every event");
-	gPARMS->SetDefaultParameter("L3:DO_BCAL_CLUSTER", DO_BCAL_CLUSTER ,"Activate BCAL clusters for every event");
-	gPARMS->SetDefaultParameter("L3:L1_TRIG_MASK", L1_TRIG_MASK ,"Discard events that don't have one of these bits set in DL1Trigger::trig_mask (or in L1_FP_TRIG_MASK)");
-	gPARMS->SetDefaultParameter("L3:L1_FP_TRIG_MASK", L1_FP_TRIG_MASK ,"Discard events that don't have one of these bits set in DL1Trigger::fp_trig_mask (or in L1_TRIG_MASK)");
-	gPARMS->SetDefaultParameter("L3:MVA_WEIGHTS", MVA_WEIGHTS ,"TMVA weights file");
-	gPARMS->SetDefaultParameter("L3:MVA_CUT", MVA_CUT ,"Cut on MVA response function. Event with values less than this are discarded.");
+	auto app = GetApplication();
+	app->SetDefaultParameter("L3:FRACTION_TO_KEEP", FRACTION_TO_KEEP ,"Random Fraction of event L3 should keep. (Only used for debugging).");
+	app->SetDefaultParameter("L3:DO_WIRE_BASED_TRACKING", DO_WIRE_BASED_TRACKING ,"Activate wire-based tracking for every event");
+	app->SetDefaultParameter("L3:DO_BCAL_CLUSTER", DO_BCAL_CLUSTER ,"Activate BCAL clusters for every event");
+	app->SetDefaultParameter("L3:L1_TRIG_MASK", L1_TRIG_MASK ,"Discard events that don't have one of these bits set in DL1Trigger::trig_mask (or in L1_FP_TRIG_MASK)");
+	app->SetDefaultParameter("L3:L1_FP_TRIG_MASK", L1_FP_TRIG_MASK ,"Discard events that don't have one of these bits set in DL1Trigger::fp_trig_mask (or in L1_TRIG_MASK)");
+	app->SetDefaultParameter("L3:MVA_WEIGHTS", MVA_WEIGHTS ,"TMVA weights file");
+	app->SetDefaultParameter("L3:MVA_CUT", MVA_CUT ,"Cut on MVA response function. Event with values less than this are discarded.");
 
 	if(MVA_WEIGHTS != ""){
 #ifdef HAVE_TMVA
@@ -62,30 +64,25 @@ jerror_t DL3Trigger_factory::init(void)
 		mvareader->BookMVA("MVA", MVA_WEIGHTS);
 #endif
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DL3Trigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DL3Trigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DL3Trigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DL3Trigger_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Simple pass-through L3 trigger
 	// algorithm = 0x1
 	
-	
-
 	DL3Trigger *l3trig = new DL3Trigger(DL3Trigger::kKEEP_EVENT, 0x0L, 0x1);
-	_data.push_back(l3trig);
+	Insert(l3trig);
 
 	if(FRACTION_TO_KEEP!=1.0){
 		double r = (double)random()/(double)RAND_MAX;
@@ -96,7 +93,7 @@ jerror_t DL3Trigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	if( (L1_TRIG_MASK!=0xffffffff) || (L1_FP_TRIG_MASK!=0xffffffff) ){
 
 		vector<const DL1Trigger*> l1triggers;
-		loop->Get(l1triggers);
+		event->Get(l1triggers);
 		bool trig_bit_is_set = false;
 		for(auto t : l1triggers){
 			if( t->trig_mask&L1_TRIG_MASK       ) trig_bit_is_set = true;
@@ -113,12 +110,12 @@ jerror_t DL3Trigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		vector<const DBCALCluster*> bcalclusters;
 		vector<const DFCALCluster*> fcalclusters;
 		vector<const DTrackCandidate*> trackcandidates;
-		loop->Get(scdigihits);
-		loop->Get(tofdigihits);
-		loop->Get(bcalpoints);
-		loop->Get(bcalclusters);
-		loop->Get(fcalclusters);
-		loop->Get(trackcandidates);
+		event->Get(scdigihits);
+		event->Get(tofdigihits);
+		event->Get(bcalpoints);
+		event->Get(bcalclusters);
+		event->Get(fcalclusters);
+		event->Get(trackcandidates);
 
 		// Calorimeter energies
 		double Ebcal_points   = 0.0;
@@ -130,7 +127,7 @@ jerror_t DL3Trigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 		// Ptot for candidates
 		double Ptot_candidates = 0.0;
-		for(auto tc : trackcandidates) Ptot_candidates += tc->momentum().Mag();
+		for(auto tc : trackcandidates) Ptot_candidates += tc->dMomentum.Mag();
 
 		Nstart_counter    = scdigihits.size();
 		Ntof              = tofdigihits.size();
@@ -151,30 +148,26 @@ jerror_t DL3Trigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
 	if(DO_WIRE_BASED_TRACKING){
 		vector<const DTrackWireBased*> wbt;
-		loop->Get(wbt);
+		event->Get(wbt);
 	}
 
 	if(DO_BCAL_CLUSTER){
 		vector<const DBCALCluster*> bcalclusters;
-		loop->Get(bcalclusters);
+		event->Get(bcalclusters);
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DL3Trigger_factory::erun(void)
+void DL3Trigger_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DL3Trigger_factory::fini(void)
+void DL3Trigger_factory::Finish()
 {
-	return NOERROR;
 }
 

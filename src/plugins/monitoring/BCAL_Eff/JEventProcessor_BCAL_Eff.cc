@@ -10,7 +10,6 @@
 #include <TLorentzVector.h>
 #include "TMath.h"
 
-#include "DANA/DApplication.h"
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALTruthShower.h"
 //#include "BCAL/DBCALCluster.h"
@@ -98,15 +97,18 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new JEventProcessor_BCAL_Eff()); //register this plugin
+		locApplication->Add(new JEventProcessor_BCAL_Eff()); //register this plugin
 	}
 } // "C"
    
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_Eff::init(void)
+void JEventProcessor_BCAL_Eff::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	//  ... create historgrams or trees ...
 
 	 //	TDirectory *dir = new TDirectoryFile("BCAL","BCAL");
@@ -278,37 +280,35 @@ jerror_t JEventProcessor_BCAL_Eff::init(void)
 	
 	// back to main dir
 	main->cd();
-
-	return NOERROR;
 }
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_Eff::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void JEventProcessor_BCAL_Eff::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	Run_Number = locRunNumber;
+	Run_Number = event->GetRunNumber();
 	//BCAL_Neutrals->Fill();
 	//cout << " run number = " << RunNumber << endl;
 	/*
 	//Optional: Retrieve REST writer for writing out skims
-	locEventLoop->GetSingle(dEventWriterREST);
+	locEvent->GetSingle(dEventWriterREST);
 	*/
 
 	//vector<const DTrackFinder *> finders;
-	//locEventLoop->Get(finders);
+	//locEvent->Get(finders);
 	//finder = const_cast<DTrackFinder*>(finders[0]);
 
 	/*
 	//Recommeded: Create output ROOT TTrees (nothing is done if already created)
-	locEventLoop->GetSingle(dEventWriterROOT);
-	dEventWriterROOT->Create_DataTrees(locEventLoop);
+	locEvent->GetSingle(dEventWriterROOT);
+	dEventWriterROOT->Create_DataTrees(locEvent);
 	*/
 	/*
 	vector<const DTrackFitter *> fitters;
-	locEventLoop->Get(fitters);
+	locEvent->Get(fitters);
 
 	if(fitters.size()<1){
 	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
@@ -317,48 +317,45 @@ jerror_t JEventProcessor_BCAL_Eff::brun(jana::JEventLoop* locEventLoop, int locR
 
 	fitter = fitters[0];
 	*/
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
 
-
-jerror_t JEventProcessor_BCAL_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void JEventProcessor_BCAL_Eff::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
 
         // select events with physics events, i.e., not LED and other front panel triggers
         const DTrigger* locTrigger = NULL; 
-	locEventLoop->GetSingle(locTrigger); 
+	locEvent->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-	  return NOERROR;
+	  return;
 
 	vector<const DTrackFitter *> fitters;
-	locEventLoop->Get(fitters);
+	locEvent->Get(fitters);
 
 	if(fitters.size()<1){
 	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
+	  throw JException("Unable to get a DTrackFinder object!");
 	}
 
 	const DTrackFitter *fitter = fitters[0];
@@ -368,14 +365,14 @@ jerror_t JEventProcessor_BCAL_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t
 	vector<const DBCALPoint*> locBCALPoints;
 	vector<const DVertex*> kinfitVertex;
 	//const DDetectorMatches* locDetectorMatches = NULL;
-	//locEventLoop->GetSingle(locDetectorMatches);
-	locEventLoop->Get(locBCALShowers);
-	locEventLoop->Get(bcalhits);
-	locEventLoop->Get(locBCALPoints);
-	locEventLoop->Get(kinfitVertex);
+	//locEvent->GetSingle(locDetectorMatches);
+	locEvent->Get(locBCALShowers);
+	locEvent->Get(bcalhits);
+	locEvent->Get(locBCALPoints);
+	locEvent->Get(kinfitVertex);
 
 	vector<const DTrackTimeBased*> locTrackTimeBased;
-	locEventLoop->Get(locTrackTimeBased);
+	locEvent->Get(locTrackTimeBased);
 
 	vector <const DBCALShower *> matchedShowers;
 	vector < const DBCALShower *> matchedShowersneg;
@@ -421,7 +418,7 @@ jerror_t JEventProcessor_BCAL_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	event_count++;
 //	if (event_count%100 == 0) printf ("Event count=%d, EventNumber=%d\n",event_count,locEventNumber);
@@ -508,7 +505,7 @@ jerror_t JEventProcessor_BCAL_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t
 	    Int_t numpoints_per_shower = points.size();
 	    h1pt_Num_points->Fill(numpoints_per_shower);
 
-	    // initialize hit variables
+	    // Initialize hit variables
 	    Int_t pointlayer1=0;
 	    Int_t pointlayer2=0;
 	    Int_t pointlayer3=0;
@@ -657,20 +654,18 @@ jerror_t JEventProcessor_BCAL_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t
 
 	}   // end loop over matched showers
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 	/*
 	//Optional: Save event to output REST file. Use this to create skims.
-	dEventWriterREST->Write_RESTEvent(locEventLoop, "BCAL_Shower"); //string is part of output file name
+	dEventWriterREST->Write_RESTEvent(locEvent, "BCAL_Shower"); //string is part of output file name
 	*/
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_Eff::erun(void)
+void JEventProcessor_BCAL_Eff::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
@@ -678,30 +673,22 @@ jerror_t JEventProcessor_BCAL_Eff::erun(void)
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	//japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-  // h1eff_eff->Divide(h1eff_layer,h1eff_layertot);
-	//japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	//lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
+    // h1eff_eff->Divide(h1eff_layer,h1eff_layertot);
+	//lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_Eff::fini(void)
+void JEventProcessor_BCAL_Eff::Finish()
 {
   // Called before program exit after event processing is finished.  
-
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   h1eff_eff->Divide(h1eff_layer,h1eff_layertot,1,1,"B");
   h1eff2_eff2->Divide(h1eff2_layer,h1eff2_layertot,1,1,"B");
 
   h1eff_cellideff->Divide(h1eff_cellid,h1eff_cellidtot,1,1,"B");
   h1eff2_cellideff2->Divide(h1eff2_cellid,h1eff2_cellidtot,1,1,"B");
-
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-  return NOERROR;
 }
 

@@ -3,4 +3,5 @@
 Import('*')
 
 subdirs = ['hd_ana', 'hd_root', 'hd_dump', 'hd_eventfilter', 'hdview2']
+
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)

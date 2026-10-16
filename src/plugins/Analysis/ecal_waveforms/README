@@ -1,0 +1,5 @@
+Use the "COL" and "ROW" parameters to plot waveforms for individual
+ECAL modules.
+
+If PLOT:REF is set to 1, the waveforms for the reference PMTs will
+be displayed.

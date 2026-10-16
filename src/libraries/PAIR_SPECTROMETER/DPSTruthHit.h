@@ -4,9 +4,8 @@
 #define _DPSTruthHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DPSTruthHit:public JObject{
+class DPSTruthHit: public JObject{
  public:
   JOBJECT_PUBLIC(DPSTruthHit);
   
@@ -21,17 +20,17 @@ class DPSTruthHit:public JObject{
   float t;
   int column;
 		
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "track", "%d", track);
-    AddString(items, "itrack", "%d", itrack);
-    AddString(items, "primary", "%d", primary);
-    AddString(items, "ptype", "%d", ptype);
-    AddString(items, "dEdx(MeV/cm)", "%1.3f", dEdx*1.0E3);
-    AddString(items, "t", "%3.2f", t);
-    AddString(items, "x", "%3.1f", x);
-    AddString(items, "y", "%3.1f", y);
-    AddString(items, "z", "%3.1f", z);
-    AddString(items, "column", "%d", column);
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(track, "track", "%d");
+    summary.add(itrack, "itrack", "%d");
+    summary.add(primary, "primary", "%d");
+    summary.add(ptype, "ptype", "%d");
+    summary.add(dEdx*1.0E3, "dEdx(MeV/cm)", "%1.3f");
+    summary.add(t, "t", "%3.2f");
+    summary.add(x, "x", "%3.1f");
+    summary.add(y, "y", "%3.1f");
+    summary.add(z, "z", "%3.1f");
+    summary.add(column, "column", "%d");
   }
 };
 

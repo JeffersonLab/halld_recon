@@ -2,7 +2,7 @@
 #define _DReaction_factory_b1pi_hists_
 
 #include "JANA/JFactory.h"
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 
 #include "particleType.h"
 
@@ -12,21 +12,24 @@
 #include "ANALYSIS/DCutActions.h"
 
 using namespace std;
-using namespace jana;
 
-class DReaction_factory_b1pi_hists : public jana::JFactory<DReaction>
+class DReaction_factory_b1pi_hists : public JFactoryT<DReaction>
 {
 	public:
-		DReaction_factory_b1pi_hists(){SetFactoryFlag(PERSISTANT);}; // Setting the PERSISTANT prevents JANA from deleting the objects every event so we only create them once.
+		DReaction_factory_b1pi_hists(){
+            SetFactoryName("DReaction_factory_b1pi_hists");
+            SetObjectName("DReaction");
+            SetTag("b1pi_hists");
+            SetFactoryFlag(PERSISTENT);
+		};
 		~DReaction_factory_b1pi_hists(){};
-		const char* Tag(void){return "b1pi_hists";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		deque<DReactionStep*> dReactionStepPool; //to prevent memory leaks!
 };

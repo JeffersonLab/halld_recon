@@ -14,13 +14,9 @@
 #include <iostream>
 #include <sstream>
 
-#include <JANA/jerror.h>
-#include <JANA/JException.h>
-#include <JANA/JStreamLog.h>
 #include <mysql.h>
 
 
-using namespace jana;
 using namespace std;
 
 

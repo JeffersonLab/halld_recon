@@ -11,6 +11,11 @@
 using namespace std;
 
 #include "DTrackTimeBased_factory_StraightLine.h"
+
+#include <JANA/JEvent.h>
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
+
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h>
 #include <BCAL/DBCALShower.h>
@@ -18,7 +23,6 @@ using namespace std;
 #include <TOF/DTOFPoint.h>
 #include <START_COUNTER/DSCHit.h>
 
-using namespace jana;
 
 
 bool DTrackTimeBased_straightline_cmp(DTrackTimeBased *a,DTrackTimeBased *b){
@@ -44,28 +48,28 @@ static unsigned int count_common_members(vector<T> &a, vector<T> &b)
 //------------------
 // init
 //------------------
-jerror_t DTrackTimeBased_factory_StraightLine::init(void)
+void DTrackTimeBased_factory_StraightLine::Init()
 {
+  auto app = GetApplication();
   CDC_MATCH_CUT=2.;
-  gPARMS->SetDefaultParameter("TRKFIT:CDC_MATCH_CUT",CDC_MATCH_CUT); 
+  app->SetDefaultParameter("TRKFIT:CDC_MATCH_CUT",CDC_MATCH_CUT); 
   FDC_MATCH_CUT=1.25;
-  gPARMS->SetDefaultParameter("TRKFIT:FDC_MATCH_CUT",FDC_MATCH_CUT); 
-
-
-  return NOERROR;
+  app->SetDefaultParameter("TRKFIT:FDC_MATCH_CUT",FDC_MATCH_CUT); 
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackTimeBased_factory_StraightLine::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTrackTimeBased_factory_StraightLine::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // Get the geometry
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto geom = geo_manager->GetDGeometry(runnumber);
 
   // Get the particle ID algorithms
-  eventLoop->GetSingle(dPIDAlgorithm);
+  event->GetSingle(dPIDAlgorithm);
   
   // Outer detector geometry parameters
   if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
@@ -100,11 +104,11 @@ jerror_t DTrackTimeBased_factory_StraightLine::brun(jana::JEventLoop *eventLoop,
 
   // Get pointer to TrackFinder object 
   vector<const DTrackFinder *> finders;
-  eventLoop->Get(finders);
+  event->Get(finders);
   
   if(finders.size()<1){
     _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-    return RESOURCE_UNAVAILABLE;
+    return; // RESOURCE_UNAVAILABLE;
   }
   
    // Drop the const qualifier from the DTrackFinder pointer
@@ -112,47 +116,45 @@ jerror_t DTrackTimeBased_factory_StraightLine::brun(jana::JEventLoop *eventLoop,
 
   // Get pointer to DTrackFitter object that actually fits a track
   vector<const DTrackFitter *> fitters;
-  eventLoop->Get(fitters,"StraightTrack");
+  event->Get(fitters,"StraightTrack");
   if(fitters.size()<1){
     _DBG_<<"Unable to get a DTrackFitter object!"<<endl;
-    return RESOURCE_UNAVAILABLE;
+    return; // RESOURCE_UNAVAILABLE;
   }
   
   // Drop the const qualifier from the DTrackFitter pointer
   fitter = const_cast<DTrackFitter*>(fitters[0]);
-  
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackTimeBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrackTimeBased_factory_StraightLine::Process(const std::shared_ptr<const JEvent>& event)
 {
   // Get wire-based tracks
   vector<const DTrackWireBased*> tracks;
-  loop->Get(tracks);
+  event->Get(tracks);
 
   // Get hits
   vector<const DCDCTrackHit *>cdchits;
-  loop->Get(cdchits);
+  event->Get(cdchits);
   vector<const DFDCPseudo *>fdchits;
-  loop->Get(fdchits);
+  event->Get(fdchits);
   
   // get start counter hits
   vector<const DSCHit*>sc_hits;
-  loop->Get(sc_hits);
+  event->Get(sc_hits);
   
   // Get TOF points
   vector<const DTOFPoint*> tof_points;
-  loop->Get(tof_points);
+  event->Get(tof_points);
 
   // Get BCAL and FCAL showers
   vector<const DBCALShower*>bcal_showers;
-  loop->Get(bcal_showers);
+  event->Get(bcal_showers);
 
   vector<const DFCALShower*>fcal_showers;
-  loop->Get(fcal_showers);
+  event->Get(fcal_showers);
 
   // Start with wire-based results, refit with drift times 
   for (unsigned int i=0;i<tracks.size();i++){
@@ -219,31 +221,27 @@ jerror_t DTrackTimeBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
       timebased_track->potential_cdc_hits_on_track = 0;
       timebased_track->potential_fdc_hits_on_track = 0;
       
-      _data.push_back(timebased_track);
+      Insert(timebased_track);
       
     }
   }
 
   // Filter out duplicate tracks
   FilterDuplicates();
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrackTimeBased_factory_StraightLine::erun(void)
+void DTrackTimeBased_factory_StraightLine::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTrackTimeBased_factory_StraightLine::fini(void)
+void DTrackTimeBased_factory_StraightLine::Finish()
 {
-  return NOERROR;
 }
 
 // Get an estimate for the start time for this track
@@ -275,7 +273,7 @@ DTrackTimeBased_factory_StraightLine::GetStartTime(const DTrackWireBased *track,
   }
 
   // Get start time estimate from FCAL
-  locStartTime = track_t0;  // initial guess from tracking
+  locStartTime = track_t0;  // Initial guess from tracking
   if (dPIDAlgorithm->Get_StartTime(track->extrapolations.at(SYS_FCAL),fcal_showers,locStartTime)){
     t0=locStartTime;
     t0_detector=SYS_FCAL;
@@ -299,14 +297,14 @@ void DTrackTimeBased_factory_StraightLine::FilterDuplicates(void)
   /// Look through all current DTrackTimeBased objects and remove any
   /// that have most of their hits in common with another track
 	
-  if(_data.size()==0)return;
+  if(mData.size()==0)return;
   
   if(DEBUG_LEVEL>2) _DBG_<<"Looking for clones of time-based tracks ..."<<endl;
     
   vector<unsigned int> candidates_to_keep;
   vector<unsigned int> candidates_to_delete;
-  for(unsigned int i=0; i<_data.size()-1; i++){
-    DTrackTimeBased *dtrack1 = _data[i];
+  for(unsigned int i=0; i<mData.size()-1; i++){
+    DTrackTimeBased *dtrack1 = mData[i];
     
     vector<const DCDCTrackHit*> cdchits1;
     vector<const DFDCPseudo*> fdchits1;
@@ -317,9 +315,9 @@ void DTrackTimeBased_factory_StraightLine::FilterDuplicates(void)
     unsigned int num_fdc1=fdchits1.size();
     unsigned int total1 = num_cdc1+num_fdc1;
     
-    JObject::oid_t cand1=dtrack1->candidateid;
-    for(unsigned int j=i+1; j<_data.size(); j++){
-      DTrackTimeBased *dtrack2 = _data[j];
+    oid_t cand1=dtrack1->candidateid;
+    for(unsigned int j=i+1; j<mData.size(); j++){
+      DTrackTimeBased *dtrack2 = mData[j];
       
       vector<const DCDCTrackHit*> cdchits2;
       vector<const DFDCPseudo*> fdchits2;
@@ -387,11 +385,11 @@ void DTrackTimeBased_factory_StraightLine::FilterDuplicates(void)
   // Copy pointers that we want to keep to a new container and delete
   // the clone objects
   vector<DTrackTimeBased*> new_data;
-  sort(_data.begin(),_data.end(),DTrackTimeBased_straightline_cmp);
-  for (unsigned int i=0;i<_data.size();i++){
+  sort(mData.begin(),mData.end(),DTrackTimeBased_straightline_cmp);
+  for (unsigned int i=0;i<mData.size();i++){
     bool keep_track=true;
     for (unsigned int j=0;j<candidates_to_delete.size();j++){
-      if (_data[i]->candidateid==candidates_to_delete[j]){
+      if (mData[i]->candidateid==candidates_to_delete[j]){
 	keep_track=false;
 	if(DEBUG_LEVEL>1)
 	  {
@@ -401,10 +399,10 @@ void DTrackTimeBased_factory_StraightLine::FilterDuplicates(void)
       }
     }
     if (keep_track){
-      new_data.push_back(_data[i]);
+      new_data.push_back(mData[i]);
     }
-    else delete _data[i];
+    else delete mData[i];
   }
-  _data = new_data;
+  mData = new_data;
 }
 

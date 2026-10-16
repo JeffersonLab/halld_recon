@@ -10,7 +10,6 @@
 #define _DDAQConfig_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
 /// This class is a base class used for classes that hold
 /// DAQ module configuration parameters. A subclass for each
@@ -22,7 +21,7 @@
 /// configuration objects for all module types to be stored
 /// in a single container used internally by the DAQ plugin.
 
-class DDAQConfig:public jana::JObject{
+class DDAQConfig : public JObject{
 	public:
 		JOBJECT_PUBLIC(DDAQConfig);
 		
@@ -33,11 +32,10 @@ class DDAQConfig:public jana::JObject{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "rocid"     , "%d", rocid);
-			AddString(items, "slot_mask" , "0x%06x", slot_mask);
-		}
-		
+        void Summarize(JObjectSummary& summary) const override {
+            summary.add(rocid, NAME_OF(rocid), "%d");
+            summary.add(slot_mask, NAME_OF(slot_mask), "0x%06x");
+        }
 };
 
 #endif // _DDAQConfig_

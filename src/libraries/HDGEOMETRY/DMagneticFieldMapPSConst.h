@@ -6,7 +6,6 @@
 #ifndef _DMagneticFieldMapPSConst_
 #define _DMagneticFieldMapPSConst_
 
-#include <JANA/jerror.h>
 
 #include "DMagneticFieldMapPS.h"
 
@@ -16,8 +15,7 @@ using std::vector;
 using std::string;
 
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-using namespace jana;
+#include <JANA/Calibrations/JCalibration.h>
 
 class DMagneticFieldMapPSConst:public DMagneticFieldMapPS{
 	public:

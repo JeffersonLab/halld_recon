@@ -6,10 +6,8 @@
 #include <math.h>
 
 #include "JEventProcessor_merge_rawevents.h"
-using namespace jana;
 
 // Routine used to create our JEventProcessor
-#include "JANA/JApplication.h"
 #include "GlueX.h"
 #include <vector>
 #include <deque>
@@ -23,7 +21,7 @@ using namespace jana;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_merge_rawevents());
+    app->Add(new JEventProcessor_merge_rawevents());
   }
 } // "C"
 
@@ -34,7 +32,7 @@ static bool WRITE_RAW_EVENTS = false;
 //------------------
 JEventProcessor_merge_rawevents::JEventProcessor_merge_rawevents() : dEventWriterEVIO(NULL)
 {
-    gPARMS->SetDefaultParameter( "MERGERAWEVENTS:WRITE_RAW_EVENTS", WRITE_RAW_EVENTS );
+	SetTypeName("JEventProcessor_merge_rawevents");
 }
 
 //------------------
@@ -45,71 +43,65 @@ JEventProcessor_merge_rawevents::~JEventProcessor_merge_rawevents()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_merge_rawevents::init(void)
+void JEventProcessor_merge_rawevents::Init()
 {
-    return NOERROR;
+	auto app = GetApplication();
+	app->SetDefaultParameter( "MERGERAWEVENTS:WRITE_RAW_EVENTS", WRITE_RAW_EVENTS );
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_merge_rawevents::brun(JEventLoop *loop, int32_t runnumber)
+void JEventProcessor_merge_rawevents::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // create a new EVIO writer if it doesn't exist
     if(dEventWriterEVIO == NULL) {
-        dEventWriterEVIO = new DEventWriterEVIO(loop);
+        dEventWriterEVIO = new DEventWriterEVIO(event);
         dEventWriterEVIO->Set_MergeFiles(true);
     }
-
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_merge_rawevents::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_merge_rawevents::Process(const std::shared_ptr<const JEvent>& event)
 {
 
     if(WRITE_RAW_EVENTS) {
         // get EVIO information associated with the event
-        JEvent& the_event = loop->GetJEvent();
-        void* the_event_ref = the_event.GetRef();
+        void* the_event_ref = (void*) event->GetSingle<JEventSource_EVIO::ObjList>();
         uint32_t* output_buffer = JEventSource_EVIO::GetEVIOBufferFromRef(the_event_ref);
         uint32_t  output_buffer_size = JEventSource_EVIO::GetEVIOBufferSizeFromRef(the_event_ref);
         
-        cout << "Writing out event " << eventnumber << " buffer size = " << (output_buffer_size/4) << " words"  << endl;
+        cout << "Writing out event " << event->GetEventNumber() << " buffer size = " << (output_buffer_size/4) << " words"  << endl;
     
         // write the buffer out
         // WARNING: this will work for non-entangled events, but hasn't been tested for entagled EVIO events
-        dEventWriterEVIO->Write_EVIOBuffer( loop, output_buffer, output_buffer_size, "merged" );
+        dEventWriterEVIO->Write_EVIOBuffer( event, output_buffer, output_buffer_size, "merged" );
     } else {
-        dEventWriterEVIO->Write_EVIOEvent( loop, "merged" );
+        dEventWriterEVIO->Write_EVIOEvent( event, "merged" );
     }
-    
-    return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_merge_rawevents::erun(void)
+void JEventProcessor_merge_rawevents::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
 // Fin
 //------------------
-jerror_t JEventProcessor_merge_rawevents::fini(void)
+void JEventProcessor_merge_rawevents::Finish()
 {
     // Called before program exit after event processing is finished.
     delete dEventWriterEVIO;
-    return NOERROR;
 }
 
 

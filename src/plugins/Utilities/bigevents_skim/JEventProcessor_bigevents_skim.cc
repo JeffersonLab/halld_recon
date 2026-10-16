@@ -6,16 +6,14 @@
 //
 
 #include "JEventProcessor_bigevents_skim.h"
-using namespace jana;
+#include "DANA/DEvent.h"
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_bigevents_skim());
+    app->Add(new JEventProcessor_bigevents_skim());
   }
 } // "C"
 
@@ -25,7 +23,7 @@ extern "C"{
 //------------------
 JEventProcessor_bigevents_skim::JEventProcessor_bigevents_skim()
 {
-
+	SetTypeName("JEventProcessor_bigevents_skim");
 }
 
 //------------------
@@ -37,61 +35,58 @@ JEventProcessor_bigevents_skim::~JEventProcessor_bigevents_skim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_bigevents_skim::init(void)
+void JEventProcessor_bigevents_skim::Init()
 {
   // This is called once at program startup. If you are creating
   // and filling historgrams in this plugin, you should lock the
   // ROOT mutex like this:
   //
-  // japp->RootWriteLock();
+  // lockService->RootWriteLock();
   //  ... fill historgrams or trees ...
-  // japp->RootUnLock();
+  // lockService->RootUnLock();
   //
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_bigevents_skim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_bigevents_skim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_bigevents_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_bigevents_skim::Process(const std::shared_ptr<const JEvent>& event)
 {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
-  // loop->Get(...) to get reconstructed objects (and thereby activating the
+  // event->Get(...) to get reconstructed objects (and thereby activating the
   // reconstruction algorithm) should be done outside of any mutex lock
   // since multiple threads may call this method at the same time.
   // Here's an example:
   //
   // vector<const MyDataClass*> mydataclasses;
-  // loop->Get(mydataclasses);
+  // event->Get(mydataclasses);
   //
-  // japp->RootWriteLock();
+  // lockService->RootWriteLock();
   //  ... fill historgrams or trees ...
-  // japp->RootUnLock();
+  // lockService->RootUnLock();
 
   const DEventWriterEVIO* locEventWriterEVIO = NULL;
-  loop->GetSingle(locEventWriterEVIO);
+  event->GetSingle(locEventWriterEVIO);
   // write out BOR events
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
-    locEventWriterEVIO->Write_EVIOEvent(loop, "bigevents");
-    return NOERROR;
+  if(GetStatusBit(event, kSTATUS_BOR_EVENT)) {
+    locEventWriterEVIO->Write_EVIOEvent(event, "bigevents");
+    return;
   }
   // write out EPICS events
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT)) {
-    locEventWriterEVIO->Write_EVIOEvent(loop, "bigevents");
-    return NOERROR;
+  if(GetStatusBit(event, kSTATUS_EPICS_EVENT)) {
+    locEventWriterEVIO->Write_EVIOEvent(event, "bigevents");
+    return;
   }
 
   // get trigger types
@@ -99,7 +94,7 @@ jerror_t JEventProcessor_bigevents_skim::evnt(JEventLoop *loop, uint64_t eventnu
   uint32_t trig_mask;
   //uint32_t fp_trig_mask;
   try {
-    loop->GetSingle(trig_words);
+    event->GetSingle(trig_words);
   } catch(...) {};
   if (trig_words) {
     trig_mask = trig_words->trig_mask;
@@ -111,39 +106,34 @@ jerror_t JEventProcessor_bigevents_skim::evnt(JEventLoop *loop, uint64_t eventnu
   }
 
   if (!(trig_mask & 0x4)){
-    return NOERROR;
+    return;
   }
 
   vector <const DCDCDigiHit*> CDCHits;
-  loop->Get(CDCHits);
+  event->Get(CDCHits);
 
   if (CDCHits.size() > 2000) { // huge event lets keep it!
 
-    locEventWriterEVIO->Write_EVIOEvent(loop, "bigevents");
+    locEventWriterEVIO->Write_EVIOEvent(event, "bigevents");
 
   }
 
-
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_bigevents_skim::erun(void)
+void JEventProcessor_bigevents_skim::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_bigevents_skim::fini(void)
+void JEventProcessor_bigevents_skim::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }

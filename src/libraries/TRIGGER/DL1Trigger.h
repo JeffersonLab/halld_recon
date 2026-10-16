@@ -2,9 +2,10 @@
 #define _DL1Trigger_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DL1Trigger:public jana::JObject{
+using std::vector;
+
+class DL1Trigger:public JObject{
  public:
   JOBJECT_PUBLIC(DL1Trigger);
   
@@ -47,23 +48,23 @@ class DL1Trigger:public jana::JObject{
   
 
   // the second argument to AddString is printf style format
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items,  "timestamp",     "%ld",  timestamp );     
-    AddString(items,  "event_type",    "%d",   event_type );
-    AddString(items,  "trig_mask",     "0x%08x",   trig_mask );
-    AddString(items,  "fp_trig_mask",  "0x%08x",   fp_trig_mask );    
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(timestamp , "timestamp", "%ld");     
+    summary.add(event_type , "event_type", "%d");
+    summary.add(trig_mask , "trig_mask", "0x%08x");
+    summary.add(fp_trig_mask , "fp_trig_mask", "0x%08x");    
 
-    AddString(items,  "nsync"       , "%d" , nsync); 
-    AddString(items,  "trig_number" , "%d" , trig_number); 
-    AddString(items,  "live"        , "%d" , live); 
-    AddString(items,  "busy"        , "%d" , busy); 
-    AddString(items,  "live_inst"   , "%d" , live_inst); 
-    AddString(items,  "unix_time"   , "%d" , unix_time); 
+    summary.add(nsync, "nsync", "%d");
+    summary.add(trig_number, "trig_number", "%d");
+    summary.add(live, "live", "%d");
+    summary.add(busy, "busy", "%d");
+    summary.add(live_inst, "live_inst", "%d");
+    summary.add(unix_time, "unix_time", "%d");
 		  
-    AddString(items, "gtp_sc"    ,   "%d" ,   gtp_sc.size());
-    AddString(items, "fp_sc"     ,   "%d" ,   fp_sc.size());    
-    AddString(items, "gtp_rate"   ,  "%d" ,   gtp_rate.size());	    
-    AddString(items, "fp_rate"    ,  "%d" ,   fp_rate.size());
+    summary.add(gtp_sc.size(), "gtp_sc", "%d");
+    summary.add(fp_sc.size(), "fp_sc", "%d");
+    summary.add(gtp_rate.size(), "gtp_rate", "%d");
+    summary.add(fp_rate.size(), "fp_rate", "%d");
 
   }
   

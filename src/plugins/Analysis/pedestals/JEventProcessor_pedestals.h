@@ -13,11 +13,10 @@
 #include <JANA/JEventProcessor.h>
 #include <DAQ/DDAQAddress.h>
 
-class JEventProcessor_pedestals:public jana::JEventProcessor{
+class JEventProcessor_pedestals:public JEventProcessor{
 	public:
 		JEventProcessor_pedestals();
 		~JEventProcessor_pedestals();
-		const char* className(void){return "JEventProcessor_pedestals";}
 
 		class csc_t{
 			public:
@@ -29,15 +28,15 @@ class JEventProcessor_pedestals:public jana::JEventProcessor{
 		
 		TH2D* GetHist(const DDAQAddress *hit);
 		
-		map<csc_t, TH2D*> all_hists;
+		std::map<csc_t, TH2D*> all_hists;
 		//pthread_mutex_t mutex;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 };
 
