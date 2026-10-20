@@ -325,8 +325,20 @@ DParticleID_PID1::DParticleID_PID1(const std::shared_ptr<const JEvent>& jevent):
     dEOverPMeanParams_BCAL.push_back(row["m1"]);
     dEOverPMeanParams_BCAL.push_back(row["m2"]);
   }
-
-
+  
+  if (jcalib->Get("ECAL/EOverPSigma",vals)==false){  
+    map<string,double> &row = vals[0];
+    dEOverPSigmaParams_ECAL.push_back(row["s0"]);
+    dEOverPSigmaParams_ECAL.push_back(row["s1"]);
+    dEOverPSigmaParams_ECAL.push_back(row["s2"]);
+  }
+  if (jcalib->Get("ECAL/EOverPMean",vals)==false){
+    map<string,double> &row = vals[0];
+    dEOverPMeanParams_ECAL.push_back(row["m0"]);
+    dEOverPMeanParams_ECAL.push_back(row["m1"]);
+    dEOverPMeanParams_ECAL.push_back(row["m2"]);
+  }
+  
   if (jcalib->Get("FCAL/EOverPSigma",vals)==false){  
     map<string,double> &row = vals[0];
     dEOverPSigmaParams_FCAL.push_back(row["s0"]);
@@ -422,6 +434,10 @@ double DParticleID_PID1::GetEOverPMean(DetectorSystem_t detector,
 				       double p) const{
   double mean=0;
   switch(detector){
+  case SYS_ECAL:
+    mean=dEOverPMeanParams_ECAL[0]/p+dEOverPMeanParams_ECAL[1]
+      +dEOverPMeanParams_ECAL[2]*p;
+    break;
   case SYS_FCAL:
     mean=dEOverPMeanParams_FCAL[0]/p+dEOverPMeanParams_FCAL[1]
       +dEOverPMeanParams_FCAL[2]*p;
@@ -440,6 +456,10 @@ double DParticleID_PID1::GetEOverPSigma(DetectorSystem_t detector,
 				       double p) const{
   double mean=0;
   switch(detector){
+  case SYS_ECAL:
+    mean=dEOverPSigmaParams_ECAL[0]/p+dEOverPSigmaParams_ECAL[1]
+      +dEOverPSigmaParams_ECAL[2]*p;
+    break;
   case SYS_FCAL:
     mean=dEOverPSigmaParams_FCAL[0]/p+dEOverPSigmaParams_FCAL[1]
       +dEOverPSigmaParams_FCAL[2]*p;

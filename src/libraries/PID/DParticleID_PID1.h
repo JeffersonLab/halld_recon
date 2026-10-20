@@ -47,6 +47,7 @@ class DParticleID_PID1:public DParticleID{
 
 	vector<float> dEOverPMeanParams_BCAL;
 	vector<float> dEOverPMeanParams_FCAL;
+  	vector<float> dEOverPMeanParams_ECAL;
 
 	vector<float> ddEdxSigmaParams_FDC_N_dependence;
 	vector<float> ddEdxSigmaParams_FDC_Proton;
@@ -85,6 +86,8 @@ class DParticleID_PID1:public DParticleID{
 	vector<float> dTimeMeanParams_FCAL_PiPlus;
 	vector<float> dTimeMeanParams_FCAL_Positron;
 	vector<float> dEOverPSigmaParams_FCAL;
+
+  	vector<float> dEOverPSigmaParams_ECAL;
 
  private:
   int DEBUG_LEVEL;

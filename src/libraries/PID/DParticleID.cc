@@ -3965,6 +3965,7 @@ void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHyp
 	    || locChargedTrackHypothesis->PID()==Positron){
 	  shared_ptr<const DBCALShowerMatchParams>bcalparms=locChargedTrackHypothesis->Get_BCALShowerMatchParams(); 
 	  shared_ptr<const DFCALShowerMatchParams>fcalparms=locChargedTrackHypothesis->Get_FCALShowerMatchParams();
+	  shared_ptr<const DECALShowerMatchParams>ecalparms=locChargedTrackHypothesis->Get_ECALShowerMatchParams();
 	  if (bcalparms!=NULL){
 	    double E_over_p_mean=GetEOverPMean(SYS_BCAL,p);
 	    double diff=bcalparms->dBCALShower->E/p-E_over_p_mean;
@@ -3981,6 +3982,16 @@ void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHyp
 	    double sigma=GetEOverPSigma(SYS_FCAL,p);
 	    double chisq=diff*diff/(sigma*sigma);
 	    locChargedTrackHypothesis->Set_ChiSq_EOverP(SYS_FCAL,chisq,1);
+
+	    locChiSq_Total+=chisq;
+	    locNDF_Total+=1;
+	  }
+	  if (ecalparms!=NULL){
+	    double E_over_p_mean=GetEOverPMean(SYS_ECAL,p);
+	    double diff=ecalparms->dECALShower->E/p-E_over_p_mean;
+	    double sigma=GetEOverPSigma(SYS_ECAL,p);
+	    double chisq=diff*diff/(sigma*sigma);
+	    locChargedTrackHypothesis->Set_ChiSq_EOverP(SYS_ECAL,chisq,1);
 
 	    locChiSq_Total+=chisq;
 	    locNDF_Total+=1;
