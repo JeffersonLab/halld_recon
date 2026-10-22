@@ -2050,7 +2050,7 @@ inline static double ParticleMass(Particle_t p)
   case Sigma_1385_0:		return 1.3837;
   case Sigma_1385_Plus:	return 1.38280;
   case DeltaPlusPlus:   return 1.232;
-  case Jpsi:            return 3.069916;
+  case Jpsi:            return 3.0969;
   case Eta_c:           return 2.9836;
   case Chi_c0:          return 3.41475;
   case Chi_c1:          return 3.51066;
