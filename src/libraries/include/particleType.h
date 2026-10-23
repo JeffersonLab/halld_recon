@@ -2039,7 +2039,7 @@ inline static double ParticleMass(Particle_t p)
   case Sm152:       return 141.51236;
   case Dy164:       return 152.69909;
   case Yb174:       return 162.02245;
-  case Ta181:       return 180.94788;
+  case Ta181:       return 168.43;
   case W184:        return 171.34924;
   case Pt194:       return 180.67513;
   case Au197:       return 183.47324;
