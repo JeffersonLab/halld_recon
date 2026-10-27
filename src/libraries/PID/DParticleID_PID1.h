@@ -87,6 +87,14 @@ class DParticleID_PID1:public DParticleID{
 	vector<float> dTimeMeanParams_FCAL_Positron;
 	vector<float> dEOverPSigmaParams_FCAL;
 
+  	vector<float> dTimeSigmaParams_ECAL_Proton;
+	vector<float> dTimeSigmaParams_ECAL_KPlus;
+	vector<float> dTimeSigmaParams_ECAL_PiPlus;
+	vector<float> dTimeSigmaParams_ECAL_Positron;
+	vector<float> dTimeMeanParams_ECAL_Proton;
+	vector<float> dTimeMeanParams_ECAL_KPlus;
+	vector<float> dTimeMeanParams_ECAL_PiPlus;
+	vector<float> dTimeMeanParams_ECAL_Positron;
   	vector<float> dEOverPSigmaParams_ECAL;
 
  private:

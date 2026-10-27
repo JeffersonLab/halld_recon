@@ -326,7 +326,7 @@ DParticleID_PID1::DParticleID_PID1(const std::shared_ptr<const JEvent>& jevent):
     dEOverPMeanParams_BCAL.push_back(row["m2"]);
   }
   
-  if (jcalib->Get("ECAL/EOverPSigma",vals)==false){  
+  if (jcalib->Get("ECAL/EOverPSigma",vals)==false){
     map<string,double> &row = vals[0];
     dEOverPSigmaParams_ECAL.push_back(row["s0"]);
     dEOverPSigmaParams_ECAL.push_back(row["s1"]);
@@ -337,6 +337,74 @@ DParticleID_PID1::DParticleID_PID1(const std::shared_ptr<const JEvent>& jevent):
     dEOverPMeanParams_ECAL.push_back(row["m0"]);
     dEOverPMeanParams_ECAL.push_back(row["m1"]);
     dEOverPMeanParams_ECAL.push_back(row["m2"]);
+  }
+  
+  if (jcalib->Get("ECAL/TimeSigmas",vals)==false){
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      switch(int(row["PID"])){
+      case 2:
+	dTimeSigmaParams_ECAL_Positron.push_back(row["s1"]);
+	dTimeSigmaParams_ECAL_Positron.push_back(row["s2"]);
+	dTimeSigmaParams_ECAL_Positron.push_back(row["s3"]);
+	dTimeSigmaParams_ECAL_Positron.push_back(row["s4"]);
+	break;
+      case 8:
+	dTimeSigmaParams_ECAL_PiPlus.push_back(row["s1"]);
+	dTimeSigmaParams_ECAL_PiPlus.push_back(row["s2"]);
+	dTimeSigmaParams_ECAL_PiPlus.push_back(row["s3"]);
+	dTimeSigmaParams_ECAL_PiPlus.push_back(row["s4"]);
+	break;
+      case 11:
+	dTimeSigmaParams_ECAL_KPlus.push_back(row["s1"]);
+	dTimeSigmaParams_ECAL_KPlus.push_back(row["s2"]);
+	dTimeSigmaParams_ECAL_KPlus.push_back(row["s3"]);
+	dTimeSigmaParams_ECAL_KPlus.push_back(row["s4"]);
+	break;
+      case 14:
+	dTimeSigmaParams_ECAL_Proton.push_back(row["s1"]);
+	dTimeSigmaParams_ECAL_Proton.push_back(row["s2"]);
+	dTimeSigmaParams_ECAL_Proton.push_back(row["s3"]);
+	dTimeSigmaParams_ECAL_Proton.push_back(row["s4"]);
+	break;
+      default:
+	break;
+      }
+    }
+  }
+  
+  if (jcalib->Get("ECAL/TimeMeans",vals)==false){
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      switch(int(row["PID"])){
+      case 2:
+	dTimeMeanParams_ECAL_Positron.push_back(row["m1"]);
+	dTimeMeanParams_ECAL_Positron.push_back(row["m2"]);
+	dTimeMeanParams_ECAL_Positron.push_back(row["m3"]);
+	dTimeMeanParams_ECAL_Positron.push_back(row["m4"]);
+	break;
+      case 8:
+	dTimeMeanParams_ECAL_PiPlus.push_back(row["m1"]);
+	dTimeMeanParams_ECAL_PiPlus.push_back(row["m2"]);
+	dTimeMeanParams_ECAL_PiPlus.push_back(row["m3"]);
+	dTimeMeanParams_ECAL_PiPlus.push_back(row["m4"]);
+	break;
+      case 11:
+	dTimeMeanParams_ECAL_KPlus.push_back(row["m1"]);
+	dTimeMeanParams_ECAL_KPlus.push_back(row["m2"]);
+	dTimeMeanParams_ECAL_KPlus.push_back(row["m3"]);
+	dTimeMeanParams_ECAL_KPlus.push_back(row["m4"]);
+	break;
+      case 14:
+	dTimeMeanParams_ECAL_Proton.push_back(row["m1"]);
+	dTimeMeanParams_ECAL_Proton.push_back(row["m2"]);
+	dTimeMeanParams_ECAL_Proton.push_back(row["m3"]);
+	dTimeMeanParams_ECAL_Proton.push_back(row["m4"]);
+	break;
+      default:
+	break;
+      }
+    }
   }
   
   if (jcalib->Get("FCAL/EOverPSigma",vals)==false){  
@@ -668,6 +736,12 @@ double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t pa
 	+ dTimeSigmaParams_FCAL_Proton[2]
 	+ dTimeSigmaParams_FCAL_Proton[3]*p;
       break;
+    case SYS_ECAL:
+      locSigma=dTimeSigmaParams_ECAL_Proton[0]/(p*p) 
+	+ dTimeSigmaParams_ECAL_Proton[1]/p
+	+ dTimeSigmaParams_ECAL_Proton[2]
+	+ dTimeSigmaParams_ECAL_Proton[3]*p;
+      break;
     default:
       break;    
     }
@@ -691,6 +765,12 @@ double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t pa
 	+ dTimeSigmaParams_FCAL_KPlus[1]/p
 	+ dTimeSigmaParams_FCAL_KPlus[2]
 	+ dTimeSigmaParams_FCAL_KPlus[3]*p;
+      break;
+    case SYS_ECAL:
+      locSigma=dTimeSigmaParams_ECAL_KPlus[0]/(p*p) 
+	+ dTimeSigmaParams_ECAL_KPlus[1]/p
+	+ dTimeSigmaParams_ECAL_KPlus[2]
+	+ dTimeSigmaParams_ECAL_KPlus[3]*p;
       break;
     default:
       break;    
@@ -716,6 +796,12 @@ double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t pa
 	+ dTimeSigmaParams_FCAL_PiPlus[2]
 	+ dTimeSigmaParams_FCAL_PiPlus[3]*p;
       break;
+    case SYS_ECAL:
+      locSigma=dTimeSigmaParams_ECAL_PiPlus[0]/(p*p) 
+	+ dTimeSigmaParams_ECAL_PiPlus[1]/p
+	+ dTimeSigmaParams_ECAL_PiPlus[2]
+	+ dTimeSigmaParams_ECAL_PiPlus[3]*p;
+      break;
     default:
       break;    
     }
@@ -739,6 +825,12 @@ double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t pa
 	+ dTimeSigmaParams_FCAL_Positron[1]/p
 	+ dTimeSigmaParams_FCAL_Positron[2]
 	+ dTimeSigmaParams_FCAL_Positron[3]*p;
+      break;
+    case SYS_ECAL:
+      locSigma=dTimeSigmaParams_ECAL_Positron[0]/(p*p) 
+	+ dTimeSigmaParams_ECAL_Positron[1]/p
+	+ dTimeSigmaParams_ECAL_Positron[2]
+	+ dTimeSigmaParams_ECAL_Positron[3]*p;
       break;
     default:
       break;    
@@ -765,6 +857,12 @@ double DParticleID_PID1::GetTimeMean(DetectorSystem_t detector,Particle_t partic
 	+ dTimeMeanParams_FCAL_Positron[2]
 	+ dTimeMeanParams_FCAL_Positron[3]*p;
       break;
+    case SYS_ECAL:
+      locMean=dTimeMeanParams_ECAL_Positron[0]/(p*p) 
+	+ dTimeMeanParams_ECAL_Positron[1]/p
+	+ dTimeMeanParams_ECAL_Positron[2]
+	+ dTimeMeanParams_ECAL_Positron[3]*p;
+      break;
     default:
       break;    
     }
@@ -776,13 +874,19 @@ double DParticleID_PID1::GetTimeMean(DetectorSystem_t detector,Particle_t partic
 	+ dTimeMeanParams_BCAL_PiPlus[1]/p
 	+ dTimeMeanParams_BCAL_PiPlus[2]
 	+ dTimeMeanParams_BCAL_PiPlus[3]*p;
-      break;  
+      break;
     case SYS_FCAL:
       locMean=dTimeMeanParams_FCAL_PiPlus[0]/(p*p) 
 	+ dTimeMeanParams_FCAL_PiPlus[1]/p
 	+ dTimeMeanParams_FCAL_PiPlus[2]
 	+ dTimeMeanParams_FCAL_PiPlus[3]*p;
-      break;
+      break;  
+    case SYS_ECAL:
+      locMean=dTimeMeanParams_ECAL_PiPlus[0]/(p*p) 
+	+ dTimeMeanParams_ECAL_PiPlus[1]/p
+	+ dTimeMeanParams_ECAL_PiPlus[2]
+	+ dTimeMeanParams_ECAL_PiPlus[3]*p;
+      break;     
     default:
       break;    
     }
@@ -801,6 +905,12 @@ double DParticleID_PID1::GetTimeMean(DetectorSystem_t detector,Particle_t partic
 	+ dTimeMeanParams_FCAL_KPlus[2]
 	+ dTimeMeanParams_FCAL_KPlus[3]*p;
       break;
+    case SYS_ECAL:
+      locMean=dTimeMeanParams_ECAL_KPlus[0]/(p*p) 
+	+ dTimeMeanParams_ECAL_KPlus[1]/p
+	+ dTimeMeanParams_ECAL_KPlus[2]
+	+ dTimeMeanParams_ECAL_KPlus[3]*p;
+      break;
     default:
       break;    
     }
@@ -818,6 +928,12 @@ double DParticleID_PID1::GetTimeMean(DetectorSystem_t detector,Particle_t partic
 	+ dTimeMeanParams_FCAL_Proton[1]/p
 	+ dTimeMeanParams_FCAL_Proton[2]
 	+ dTimeMeanParams_FCAL_Proton[3]*p;
+      break;
+    case SYS_ECAL:
+      locMean=dTimeMeanParams_ECAL_Proton[0]/(p*p) 
+	+ dTimeMeanParams_ECAL_Proton[1]/p
+	+ dTimeMeanParams_ECAL_Proton[2]
+	+ dTimeMeanParams_ECAL_Proton[3]*p;
       break;
     default:
       break;    
