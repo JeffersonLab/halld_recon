@@ -23,7 +23,8 @@ typedef struct {
    double pos;
    double q;
    double q_from_pulse_height;
-   int numstrips;
+  int numstrips;
+  bool status; // 1: Newton-Raphson succeeded, 0 otherwise
    double t; // mean time of strips in peak
    unsigned int cluster; // index for cluster from which this centroid was generated
    DMatrix3x1 X,N,NRaw,index;
