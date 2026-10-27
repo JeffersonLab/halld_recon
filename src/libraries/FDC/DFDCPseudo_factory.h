@@ -33,78 +33,70 @@
 /// For now, it is purely geometry-based.
 /// 
 class DFDCPseudo_factory : public JFactoryT<DFDCPseudo> {
-	public:
-		
-		///
-		/// DFDCPseudo_factory::DFDCPseudo_factory():
-		/// default constructor -- initializes log file
-		///
-		DFDCPseudo_factory();
-		
-		///
-		/// DFDCPseudo_factory::~DFDCPseudo_factory():
-		/// default destructor -- closes log file
-		///
-		~DFDCPseudo_factory();	
-							
-
-	protected:
-		///
-		/// DFDCPseudo_factory::evnt():
-		/// this is the place that anode hits and DFDCCathodeClusters 
-		/// are organized into pseudopoints.
-		/// For now, this is done purely by geometry, with no drift
-		/// information. See also
-		/// DFDCPseudo_factory::makePseudo().
-		///
-		void Init() override;
-		void Process(const std::shared_ptr<const JEvent>& event) override;
-		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
-		void EndRun() override;
-
-		/// 
-		/// DFDCPseudo_factory::makePseudo():
-		/// performs UV+X matching to create pseudopoints
-		///
-		void makePseudo( vector<const DFDCHit*>& x,
-				 vector<const DFDCCathodeCluster*>& u,
-				 vector<const DFDCCathodeCluster*>& v,
-				 int layer,
-				 vector<const DMCTrackHit*> &mctrackhits);
-		
-		///
-		/// DFDCPseudo_factory::CalcMeanTime()
-		/// Calculates mean and RMS time for a cluster of cathode hits
-		///
-		void CalcMeanTime(const vector<const DFDCHit*>& H, double &t, double &t_rms);
-		void CalcMeanTime(vector<const DFDCHit *>::const_iterator peak, double &t, double &t_rms);
-		
-		///
-		/// DFDCPseudo_factory::FindCentroid()
-		/// Calculates the centroids of groups of three adjacent strips
-		/// containing a peak.
-		///
-		jerror_t FindCentroid(const vector<const DFDCHit*>& H, 
-				      vector<const DFDCHit *>::const_iterator peak,
-				      vector<centroid_t> &centroids);
-		///
-		/// DFDCPseudo_factory::TwoStripCluster()
-		/// Calculates the center-of-gravity of two adjacent strips
-		///
-		jerror_t TwoStripCluster(const vector<const DFDCHit*>& H,
-					 vector<const DFDCHit *>::const_iterator peak,
-					 vector<centroid_t> &centroids);
-		
-		///
-		/// DFDCPseudo_factory::ThreeStripCluster()
-		/// Calculates the center-of-gravity of Three adjacent strips
-		///
-		jerror_t ThreeStripCluster(const vector<const DFDCHit*>& H,
-					 vector<const DFDCHit *>::const_iterator peak,
-					 vector<centroid_t> &centroids);
-		
- 		
-	private:		
+public:
+  DFDCPseudo_factory();
+  ~DFDCPseudo_factory();	
+protected:
+  ///
+  /// DFDCPseudo_factory::Process():
+  /// this is the place that anode hits and DFDCCathodeClusters 
+  /// are organized into pseudopoints.
+  /// For now, this is done purely by geometry, with no drift
+  /// information. See also
+  /// DFDCPseudo_factory::makePseudo().
+  ///
+  void Init() override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  
+  /// 
+  /// DFDCPseudo_factory::makePseudo():
+  /// performs UV+X matching to create pseudopoints
+  ///
+  void makePseudo( vector<const DFDCHit*>& x,
+		   vector<const DFDCCathodeCluster*>& u,
+		   vector<const DFDCCathodeCluster*>& v,
+		   int layer,
+		   vector<const DMCTrackHit*> &mctrackhits);
+  
+  ///
+  /// DFDCPseudo_factory::CalcMeanTime()
+  /// Calculates mean and RMS time for a cluster of cathode hits
+  ///
+  void CalcMeanTime(const vector<const DFDCHit*>& H, double &t, double &t_rms);
+  void CalcMeanTime(vector<const DFDCHit *>::const_iterator peak, double &t, double &t_rms);
+  
+  ///
+  /// DFDCPseudo_factory::FindCentroid()
+  /// Calculates the centroids of groups of three adjacent strips
+  /// containing a peak.
+  ///
+  jerror_t FindCentroid(vector<const DFDCHit *>::const_iterator peak,
+			vector<centroid_t> &centroids);
+  void FillCentroidData(int clusterNum,const DFDCCathodeCluster *cluster,
+			vector<centroid_t>&peaks);
+  ///
+  /// DFDCPsuedo_factory::FillAlignmentParameters()
+  /// Optional routine for filling paremeters needed for allignment
+  ///
+  void FillAlignmentParameters(vector<const DFDCHit*>::const_iterator strip,vector<centroid_t>&peaks) const;
+  ///
+  /// DFDCPseudo_factory::TwoStripCluster()
+  /// Calculates the center-of-gravity of two adjacent strips
+  ///
+  jerror_t TwoStripCluster(vector<const DFDCHit *>::const_iterator peak,
+			   vector<centroid_t> &centroids);
+  
+  ///
+  /// DFDCPseudo_factory::ThreeStripCluster()
+  /// Calculates the center-of-gravity of Three adjacent strips
+  ///
+  jerror_t ThreeStripCluster(vector<const DFDCHit *>::const_iterator peak,
+			     vector<centroid_t> &centroids);
+  
+  
+private:		
 		vector<vector<DFDCWire*> >fdcwires;
 		vector<vector<DFDCCathode*> >fdccathodes;
 		vector<double>xshifts;
@@ -120,7 +112,7 @@ class DFDCPseudo_factory : public JFactoryT<DFDCPseudo> {
 		double MIDDLE_STRIP_THRESHOLD;
 		double FDC_RES_PAR1,FDC_RES_PAR2;
 		double CHARGE_THRESHOLD;
-      double DELTA_X_CUT;
+  double DELTA_X_CUT,CRUDE_POS_ERR;
 
 		TH2F *qv_vs_qu, *dtv_vs_dtu;
 		TH2F *uv_dt_vs_u,*uv_dt_vs_v,*v_wire_dt_vs_wire;

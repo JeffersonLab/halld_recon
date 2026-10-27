@@ -115,6 +115,9 @@ void DFDCPseudo_factory::Init()
   // Flag to enable storage of variables needed for alignment derivatives
   ALIGNMENT=false;
   app->SetDefaultParameter("TRKFIT:ALIGNMENT",ALIGNMENT);
+
+  CRUDE_POS_ERR=0.04;
+  app->SetDefaultParameter("FDC:CRUDE_POS_ERR",CRUDE_POS_ERR);
 }
 
 
@@ -350,273 +353,179 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
   for (unsigned int i=0;i<u.size();i++){
     //printf("Cluster %d\n",i);
     if (DEBUG_HISTS) u_cl_size->Fill(u[i]->members.size());
-    if (u[i]->members.size()>2){
-      for (vector<const DFDCHit*>::const_iterator strip=u[i]->members.begin()+1;strip+1!=u[i]->members.end();strip++){  
-	      //printf("  %d %f %f\n",(*strip)->element,(*strip)->pulse_height,(*strip)->t);
-	if (FindCentroid(u[i]->members,strip,upeaks)==NOERROR){
-	  if (ALIGNMENT){
-            // Some values needed for cathode alignment
-            unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
-            DMatrix3x1 XTemp,NTemp,NTempRaw,indexTemp; 
-            XTemp(0) = fdccathodes[index][(*(strip-1))->element-1]->u;
-            XTemp(1) = fdccathodes[index][(*(strip))->element-1]->u;
-            XTemp(2) = fdccathodes[index][(*(strip+1))->element-1]->u;
-            NTemp(0) = double ((*(strip-1))->pulse_height);
-            NTemp(1) = double ((*(strip))->pulse_height);
-            NTemp(2) = double ((*(strip+1))->pulse_height);
-            NTempRaw(0) = double ((*(strip-1))->pulse_height_raw);
-            NTempRaw(1) = double ((*(strip))->pulse_height_raw);
-            NTempRaw(2) = double ((*(strip+1))->pulse_height_raw);
-            indexTemp(0) = (*(strip-1))->element;
-            indexTemp(1) = (*(strip))->element;
-            indexTemp(2) = (*(strip+1))->element;
-            upeaks[upeaks.size()-1].X = XTemp;
-            upeaks[upeaks.size()-1].N = NTemp;
-            upeaks[upeaks.size()-1].NRaw = NTempRaw;
-            upeaks[upeaks.size()-1].index = indexTemp;
-	  }
-	  upeaks[upeaks.size()-1].cluster=i;
-	}
-	else if (u[i]->members.size()==3){
-	  if (ThreeStripCluster(u[i]->members,strip,upeaks)==NOERROR){
-               upeaks[upeaks.size()-1].cluster=i;
-            }
-         }
-      }
-    }
-    else if (u[i]->members.size()==2){
-       for (vector<const DFDCHit*>::const_iterator strip=u[i]->members.begin();strip+1!=u[i]->members.end();strip++){  
-          if (TwoStripCluster(u[i]->members,strip,upeaks)==NOERROR){
-             upeaks[upeaks.size()-1].cluster=i;
-          }
-       }
-    }
+    FillCentroidData(i,u[i],upeaks);
   }  
   //printf("---------v cluster --------\n");	
   for (unsigned int i=0;i<v.size();i++){
     //printf("Cluster %d\n",i);
-     if (DEBUG_HISTS) v_cl_size->Fill(v[i]->members.size());
-     if (v[i]->members.size()>2){
-        for (vector<const DFDCHit*>::const_iterator strip=v[i]->members.begin()+1;strip+1!=v[i]->members.end();strip++){		
-           //printf("  %d %f %f\n",(*strip)->element,(*strip)->pulse_height,(*strip)->t);
-           if (FindCentroid(v[i]->members,strip,vpeaks)==NOERROR){
-	     if (ALIGNMENT){
-	       // Some values needed for cathode alignment
-	       unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
-	       DMatrix3x1 XTemp,NTemp,NTempRaw,indexTemp;
-	       XTemp(0) = fdccathodes[index][(*(strip-1))->element-1]->u;
-	       XTemp(1) = fdccathodes[index][(*(strip))->element-1]->u;
-	       XTemp(2) = fdccathodes[index][(*(strip+1))->element-1]->u;
-	       NTemp(0) = double ((*(strip-1))->pulse_height);
-	       NTemp(1) = double ((*(strip))->pulse_height);
-	       NTemp(2) = double ((*(strip+1))->pulse_height);
-	       NTempRaw(0) = double ((*(strip-1))->pulse_height_raw);
-	       NTempRaw(1) = double ((*(strip))->pulse_height_raw);
-	       NTempRaw(2) = double ((*(strip+1))->pulse_height_raw);
-	       indexTemp(0) = (*(strip-1))->element;
-	       indexTemp(1) = (*(strip))->element;
-	       indexTemp(2) = (*(strip+1))->element;
-	       vpeaks[vpeaks.size()-1].X = XTemp;
-	       vpeaks[vpeaks.size()-1].N = NTemp;
-	       vpeaks[vpeaks.size()-1].NRaw = NTempRaw;
-	       vpeaks[vpeaks.size()-1].index = indexTemp;
-	     }
-	     vpeaks[vpeaks.size()-1].cluster=i;
-	   }
-	   else if (v[i]->members.size()==3){
-	     if (ThreeStripCluster(v[i]->members,strip,vpeaks)==NOERROR){
-                 vpeaks[vpeaks.size()-1].cluster=i;
-              }
-           }
-        }
-     }
-     else if (v[i]->members.size()==2){
-        for (vector<const DFDCHit*>::const_iterator strip=v[i]->members.begin();strip+1!=v[i]->members.end();strip++){  
-           if (TwoStripCluster(v[i]->members,strip,vpeaks)==NOERROR){
-              vpeaks[vpeaks.size()-1].cluster=i;
-           }
-        }
-     }
+    if (DEBUG_HISTS) v_cl_size->Fill(v[i]->members.size());
+    FillCentroidData(i,v[i],vpeaks);
   }
+  
   if (upeaks.size()*vpeaks.size()>0){
-     // Rotation angles for strips
-     unsigned int ilay=layer-1;
-     unsigned int ind=2*ilay;
-     float phi_u=fdccathodes[ind][0]->angle;
-     float phi_v=fdccathodes[ind+1][0]->angle;
+    // Rotation angles for strips
+    unsigned int ilay=layer-1;
+    unsigned int ind=2*ilay;
+    float phi_u=fdccathodes[ind][0]->angle;
+    float phi_v=fdccathodes[ind+1][0]->angle;
 
-     //Loop over all u and v centroids looking for matches with wires
-     for (unsigned int i=0;i<upeaks.size();i++){  
-        for (unsigned int j=0;j<vpeaks.size();j++){
-           // In the layer local coordinate system, wires are quantized 
-           // in the x-direction and y is along the wire.
-           double x_from_strips=DFDCGeometry::getXLocalStrips(upeaks[i].pos,phi_u,
-                 vpeaks[j].pos,phi_v);
-           double y_from_strips=DFDCGeometry::getYLocalStrips(upeaks[i].pos,phi_u,
-                 vpeaks[j].pos,phi_v);
-           int old_wire_num=-1;
-           for(xIt=x.begin();xIt!=x.end();xIt++){
-              if ((*xIt)->element<=WIRES_PER_PLANE && (*xIt)->element>0){
-                 const DFDCWire *wire=fdcwires[layer-1][(*xIt)->element-1];
-                 //double x_from_wire=wire->u;
+    //Loop over all u and v centroids looking for matches with wires
+    for (unsigned int i=0;i<upeaks.size();i++){
+      for (unsigned int j=0;j<vpeaks.size();j++){
+	// In the layer local coordinate system, wires are quantized 
+	// in the x-direction and y is along the wire.
+	double x_from_strips=DFDCGeometry::getXLocalStrips(upeaks[i].pos,phi_u,
+							   vpeaks[j].pos,phi_v);
+	double y_from_strips=DFDCGeometry::getYLocalStrips(upeaks[i].pos,phi_u,
+							   vpeaks[j].pos,phi_v);
+	int old_wire_num=-1;
+	for(xIt=x.begin();xIt!=x.end();xIt++){
+	  if ((*xIt)->element<=WIRES_PER_PLANE && (*xIt)->element>0){
+	    // Match between this wire and cathodes below, skip all other hits
+	    if (old_wire_num==(*xIt)->element) continue;
+		 
+	    const DFDCWire *wire=fdcwires[layer-1][(*xIt)->element-1];
+	    // Test radial value for checking whether or not the hit is within
+	    // the fiducial region of the detector
+	    double r2test=wire->u*wire->u+y_from_strips*y_from_strips;
+	    double delta_x=wire->u-x_from_strips;
 
-                 //printf("xs %f xw %f\n",x_from_strips,x_from_wire);
+	    if (DEBUG_HISTS){
+	      if (upeaks[i].numstrips == 3 && vpeaks[j].numstrips == 3) x_dist_3->Fill(delta_x);
+	      if (upeaks[i].numstrips == 2 && vpeaks[j].numstrips == 2) x_dist_2->Fill(delta_x);
+	      if (upeaks[i].numstrips == 2 && vpeaks[j].numstrips == 3) x_dist_23->Fill(delta_x);
+	      else if (upeaks[i].numstrips == 3 && vpeaks[j].numstrips == 2) x_dist_23->Fill(delta_x);
+	      
+	      if (upeaks[i].numstrips == 3 && vpeaks[j].numstrips == 10) x_dist_33->Fill(delta_x);
+	      else if (upeaks[i].numstrips == 10 && vpeaks[j].numstrips == 3) x_dist_33->Fill(delta_x);
+	    }
+    
+	    if (fabs(delta_x)<DELTA_X_CUT && r2test<r2_out
+		&& r2test>r2_in){
+	      double dt1 = (*xIt)->t - upeaks[i].t;
+	      double dt2 = (*xIt)->t - vpeaks[j].t;
+	      
+	      if (DEBUG_HISTS){
+		//if (layer==1){
+		dtv_vs_dtu->Fill(dt1,dt2);
+		tv_vs_tu->Fill(upeaks[i].t, vpeaks[j].t);
+		u_wire_dt_vs_wire->Fill((*xIt)->element,(*xIt)->t-upeaks[i].t);
+		v_wire_dt_vs_wire->Fill((*xIt)->element,(*xIt)->t-vpeaks[j].t);
+		
+		int uid=u[upeaks[i].cluster]->members[1]->element;
+		int vid=v[vpeaks[j].cluster]->members[1]->element;
 
-                 // Test radial value for checking whether or not the hit is within
-                 // the fiducial region of the detector
-                 double r2test=wire->u*wire->u+y_from_strips*y_from_strips;
-                 double delta_x=wire->u-x_from_strips;
+		const DFDCCathodeDigiHit *vdigihit;
+		v[vpeaks[j].cluster]->members[1]->GetSingle(vdigihit);
+		const DFDCCathodeDigiHit *udigihit;
+		u[upeaks[i].cluster]->members[1]->GetSingle(udigihit);
+		if (vdigihit!=NULL && udigihit!=NULL){
+		  int dt=int(udigihit->pulse_time)-int(vdigihit->pulse_time);
+		  // printf("%d %d\n",udigihit->pulse_time,vdigihit->pulse_time);
+		  uv_dt_vs_u->Fill(uid,dt);
+		  uv_dt_vs_v->Fill(vid,dt);
+		  v_vs_u->Fill(uid,vid);
+		  ut_vs_u->Fill(uid,udigihit->pulse_time);
+		  vt_vs_v->Fill(vid,udigihit->pulse_time);
+		}
+		d_uv->Fill(sqrt(dt1*dt1+dt2*dt2));
+	      }
 
-                 if (DEBUG_HISTS){
-                    if (upeaks[i].numstrips == 3 && vpeaks[j].numstrips == 3) x_dist_3->Fill(delta_x);
-                    if (upeaks[i].numstrips == 2 && vpeaks[j].numstrips == 2) x_dist_2->Fill(delta_x);
-                    if (upeaks[i].numstrips == 2 && vpeaks[j].numstrips == 3) x_dist_23->Fill(delta_x);
-                    else if (upeaks[i].numstrips == 3 && vpeaks[j].numstrips == 2) x_dist_23->Fill(delta_x);
+	      if (sqrt(dt1*dt1+dt2*dt2)>STRIP_ANODE_TIME_CUT) continue;
 
-                    if (upeaks[i].numstrips == 3 && vpeaks[j].numstrips == 10) x_dist_33->Fill(delta_x);
-                    else if (upeaks[i].numstrips == 10 && vpeaks[j].numstrips == 3) x_dist_33->Fill(delta_x);
-                 }
+	      if (DEBUG_HISTS){
+		// number of clusters of each type
+		u_cl_n->Fill(upeaks[i].numstrips);
+		v_cl_n->Fill(vpeaks[j].numstrips);
+	      }
 
-                 // Match between this wire and cathodes below, skip all other hits
-                 if (old_wire_num==(*xIt)->element) continue;
+	      // Charge and energy loss
+	      double q_from_pulse_height=5.0e-4*(upeaks[i].q_from_pulse_height
+						 +vpeaks[j].q_from_pulse_height);
+	      if (q_from_pulse_height<CHARGE_THRESHOLD) continue;
+	      double q_cathodes=0.5*(upeaks[i].q+vpeaks[j].q);
+	      double charge_to_energy=W_EFF/(GAS_GAIN*ELECTRON_CHARGE);
+	      double dE=charge_to_energy*q_cathodes;
+	      double dE_amp=charge_to_energy*q_from_pulse_height;
 
-                 if (fabs(delta_x)<DELTA_X_CUT && r2test<r2_out
-                       && r2test>r2_in){
-                    double dt1 = (*xIt)->t - upeaks[i].t;
-                    double dt2 = (*xIt)->t - vpeaks[j].t;
+	      if (DEBUG_HISTS){
+		qv_vs_qu->Fill(upeaks[i].q,vpeaks[j].q);
+	      }
 
-                    //printf("dt1 %f dt2 %f\n",dt1,dt2);
+	      // Match between this wire and cathodes, used to skip all other hits above
+	      old_wire_num=(*xIt)->element;
 
-                    if (DEBUG_HISTS){
-                       //if (layer==1){
-                       dtv_vs_dtu->Fill(dt1,dt2);
-                       tv_vs_tu->Fill(upeaks[i].t, vpeaks[j].t);
-                       u_wire_dt_vs_wire->Fill((*xIt)->element,(*xIt)->t-upeaks[i].t);
-                       v_wire_dt_vs_wire->Fill((*xIt)->element,(*xIt)->t-vpeaks[j].t);
+	      int status=upeaks[i].numstrips+vpeaks[j].numstrips;
+	      //double xres=WIRE_SPACING/2./sqrt(12.);
+	      
+	      DFDCPseudo* newPseu = new DFDCPseudo;
+	      newPseu->phi_u=phi_u;
+	      newPseu->phi_v=phi_v;
+	      newPseu->u = upeaks[i].pos;
+	      newPseu->v = vpeaks[j].pos;
+	      newPseu->t_u = upeaks[i].t;
+	      newPseu->t_v = vpeaks[j].t;
+	      newPseu->cluster_u = upeaks[i];
+	      newPseu->cluster_v = vpeaks[j];
+	      newPseu->w      = wire->u;
+	      newPseu->w_c    = x_from_strips+xshifts[ilay];
+	      newPseu->s      = y_from_strips+yshifts[ilay];
+	      if (upeaks[i].status==false && vpeaks[j].status==false){
+		newPseu->ds=CRUDE_POS_ERR;
+	      }
+	      else{
+		newPseu->ds = FDC_RES_PAR1/q_from_pulse_height+FDC_RES_PAR2;
+	      }
+	      newPseu->wire   = wire;
+	      newPseu->time   = (*xIt)->t;
+	      newPseu->status = status;
+	      newPseu->itrack = (*xIt)->itrack;
+	      
+	      newPseu->AddAssociatedObject(v[vpeaks[j].cluster]);
+	      newPseu->AddAssociatedObject(u[upeaks[i].cluster]);
+	      
+	      newPseu->dE = dE;
+	      newPseu->dE_amp = dE_amp;
+	      newPseu->q = q_from_pulse_height;
+	      
+	      // It can occur (although rarely) that newPseu->wire is NULL
+	      // which causes us to crash below. In these cases, we can't really
+	      // make a psuedo point so we delete the current object
+	      // and just go on to the next one.
+	      if(newPseu->wire==NULL){
+		_DBG_<<"newPseu->wire=NULL! This shouldn't happen. Complain to staylor@jlab.org"<<endl;
+		delete newPseu;
+		continue;
+	      }
+	      double sinangle=newPseu->wire->udir(0);
+	      double cosangle=newPseu->wire->udir(1);
+	      newPseu->xy.Set((newPseu->w)*cosangle+(newPseu->s)*sinangle,
+			      -(newPseu->w)*sinangle+(newPseu->s)*cosangle);
+	      
+	      double sigx2=HALF_CELL*HALF_CELL/3.;
+	      double sigy2=MAX_DEFLECTION*MAX_DEFLECTION/3.;
+	      newPseu->covxx=sigx2*cosangle*cosangle+sigy2*sinangle*sinangle;
+	      newPseu->covyy=sigx2*sinangle*sinangle+sigy2*cosangle*cosangle;
+	      newPseu->covxy=(sigy2-sigx2)*sinangle*cosangle;
+	      
+	      // Try matching truth hit with this "real" hit.
+	      if (MATCH_TRUTH_HITS){
+		const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
+		if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
+	      }
 
-
-                       int uid=u[upeaks[i].cluster]->members[1]->element;
-                       int vid=v[vpeaks[j].cluster]->members[1]->element;
-
-                       const DFDCCathodeDigiHit *vdigihit;
-                       v[vpeaks[j].cluster]->members[1]->GetSingle(vdigihit);
-                       const DFDCCathodeDigiHit *udigihit;
-                       u[upeaks[i].cluster]->members[1]->GetSingle(udigihit);
-                       if (vdigihit!=NULL && udigihit!=NULL){
-                          int dt=int(udigihit->pulse_time)-int(vdigihit->pulse_time);
-                          // printf("%d %d\n",udigihit->pulse_time,vdigihit->pulse_time);
-                          uv_dt_vs_u->Fill(uid,dt);
-                          uv_dt_vs_v->Fill(vid,dt);
-                          v_vs_u->Fill(uid,vid);
-                          ut_vs_u->Fill(uid,udigihit->pulse_time);
-                          vt_vs_v->Fill(vid,udigihit->pulse_time);
-                       }
-                       //  Hxy->Fill(x_from_strips,y_from_strips);
-                       //}
-                    }
-
-                    if (DEBUG_HISTS){
-                       d_uv->Fill(sqrt(dt1*dt1+dt2*dt2));
-                    }
-
-                    if (sqrt(dt1*dt1+dt2*dt2)>STRIP_ANODE_TIME_CUT) continue;
-
-                    // Temporary cut until TDC timing is worked out
-                    //if (fabs(vpeaks[j].t-upeaks[i].t)>STRIP_ANODE_TIME_CUT) continue;
-
-                    if (DEBUG_HISTS){
-                       // number of clusters of each type
-                       u_cl_n->Fill(upeaks[i].numstrips);
-                       v_cl_n->Fill(vpeaks[j].numstrips);
-                    }
-
-                    // Charge and energy loss
-                    double q_cathodes=0.5*(upeaks[i].q+vpeaks[j].q);
-                    double charge_to_energy=W_EFF/(GAS_GAIN*ELECTRON_CHARGE);
-                    double dE=charge_to_energy*q_cathodes;
-                    double q_from_pulse_height=5.0e-4*(upeaks[i].q_from_pulse_height
-                          +vpeaks[j].q_from_pulse_height);
-                    if (q_from_pulse_height<CHARGE_THRESHOLD) continue;
-		    double dE_amp=charge_to_energy*q_from_pulse_height;
-
-                    if (DEBUG_HISTS){
-                       qv_vs_qu->Fill(upeaks[i].q,vpeaks[j].q);
-                    }
-
-                    // Match between this wire and cathodes, used to skip all other hits above
-                    old_wire_num=(*xIt)->element;
-
-                    int status=upeaks[i].numstrips+vpeaks[j].numstrips;
-                    //double xres=WIRE_SPACING/2./sqrt(12.);
-
-                    DFDCPseudo* newPseu = new DFDCPseudo;     
-                    newPseu->phi_u=phi_u;
-                    newPseu->phi_v=phi_v;
-                    newPseu->u = upeaks[i].pos;
-                    newPseu->v = vpeaks[j].pos;
-                    newPseu->t_u = upeaks[i].t;
-                    newPseu->t_v = vpeaks[j].t;
-                    newPseu->cluster_u = upeaks[i];
-                    newPseu->cluster_v = vpeaks[j];
-                    newPseu->w      = wire->u;
-		    newPseu->w_c    = x_from_strips+xshifts[ilay];
-;
-                    newPseu->s      = y_from_strips+yshifts[ilay];
-;
-                    newPseu->ds = FDC_RES_PAR1/q_from_pulse_height+FDC_RES_PAR2;
-                    //newPseu->ds=0.011/q_from_pulse_height+5e-3+2.14e-10*pow(q_from_pulse_height,6);
-                    newPseu->wire   = wire;
-                    newPseu->time   = (*xIt)->t;
-                    //newPseu->time=0.5*(upeaks[i].t+vpeaks[j].t);
-                    newPseu->status = status;
-                    newPseu->itrack = (*xIt)->itrack;
-
-                    newPseu->AddAssociatedObject(v[vpeaks[j].cluster]);
-                    newPseu->AddAssociatedObject(u[upeaks[i].cluster]);
-
-                    newPseu->dE = dE;
-		    newPseu->dE_amp = dE_amp;
-                    newPseu->q = q_from_pulse_height;
-
-                    // It can occur (although rarely) that newPseu->wire is NULL
-                    // which causes us to crash below. In these cases, we can't really
-                    // make a psuedo point so we delete the current object
-                    // and just go on to the next one.
-                    if(newPseu->wire==NULL){
-                       _DBG_<<"newPseu->wire=NULL! This shouldn't happen. Complain to staylor@jlab.org"<<endl;
-                       delete newPseu;
-                       continue;
-                    }
-                    double sinangle=newPseu->wire->udir(0);
-                    double cosangle=newPseu->wire->udir(1);
-                    newPseu->xy.Set((newPseu->w)*cosangle+(newPseu->s)*sinangle,
-                          -(newPseu->w)*sinangle+(newPseu->s)*cosangle);
-
-                    double sigx2=HALF_CELL*HALF_CELL/3.;
-                    double sigy2=MAX_DEFLECTION*MAX_DEFLECTION/3.;
-                    newPseu->covxx=sigx2*cosangle*cosangle+sigy2*sinangle*sinangle;
-                    newPseu->covyy=sigx2*sinangle*sinangle+sigy2*cosangle*cosangle;
-                    newPseu->covxy=(sigy2-sigx2)*sinangle*cosangle;
-
-                    // Try matching truth hit with this "real" hit.
-		    if (MATCH_TRUTH_HITS){
-		      const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
-		      if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
-		    }
-
-                    Insert(newPseu);
-
-                    if (DEBUG_HISTS){
-                       if (ilay==6) dx_vs_dE->Fill(q_from_pulse_height,0.2588*delta_x);
-                    }
-
-                 } // match in x
-              } else _DBG_ << "Bad wire " << (*xIt)->element <<endl;
-           } // xIt loop
-        } // vpeaks loop
-     } // upeaks loop
+	      Insert(newPseu);
+	      
+	      if (DEBUG_HISTS){
+		if (ilay==6) dx_vs_dE->Fill(q_from_pulse_height,0.2588*delta_x);
+	      }
+	      
+	    } // match in x
+	  } else _DBG_ << "Bad wire " << (*xIt)->element <<endl;
+	} // xIt loop
+      } // vpeaks loop
+    } // upeaks loop
   } // if we have peaks in both u and v views
-
 }			
 
 //
@@ -664,11 +573,8 @@ void DFDCPseudo_factory::CalcMeanTime(vector<const DFDCHit *>::const_iterator pe
 /// Attempt to recover them with simple center-of-gravity
 /// Updates list of centroids. 
 ///
-jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
-      vector<const DFDCHit *>::const_iterator peak,
+jerror_t DFDCPseudo_factory::TwoStripCluster(vector<const DFDCHit *>::const_iterator peak,
       vector<centroid_t>&centroids){
-   centroid_t temp;
-
    if ((*peak)->pulse_height<MIDDLE_STRIP_THRESHOLD && (*(peak+1))->pulse_height<MIDDLE_STRIP_THRESHOLD) {
       return VALUE_OUT_OF_RANGE;
    }
@@ -678,6 +584,7 @@ jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
 
    // this should never happen
    if (index1 != index2) return VALUE_OUT_OF_RANGE;
+   centroid_t temp;
 
    double pos1=fdccathodes[index1][(*peak)->element-1]->u;
    double pos2=fdccathodes[index2][(*(peak+1))->element-1]->u;
@@ -704,6 +611,7 @@ jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
 
    // time from greater amplitude
    (amp2 > amp1) ? temp.t=t2 : temp.t=t1;
+   temp.status=false;
    temp.cluster=0; // will be filled in later
 
    //CalcMeanTime(peak,temp.t,temp.t_rms);
@@ -718,11 +626,8 @@ jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
 /// Attempt to recover them with simple center-of-gravity
 /// Updates list of centroids. 
 ///
-jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
-      vector<const DFDCHit *>::const_iterator peak,
+jerror_t DFDCPseudo_factory::ThreeStripCluster(vector<const DFDCHit *>::const_iterator peak,
       vector<centroid_t>&centroids){
-   centroid_t temp;
-
    if ((*(peak-1))->pulse_height<MIDDLE_STRIP_THRESHOLD &&
          (*peak)->pulse_height<MIDDLE_STRIP_THRESHOLD &&
          (*(peak+1))->pulse_height<MIDDLE_STRIP_THRESHOLD) {
@@ -758,7 +663,8 @@ jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
    //largest amp on the right: +
    //minimum in the centre: 0
    double pos_corr = 0.1;
-
+   centroid_t temp;
+   
    // weighted sum
    temp.pos=wsum/sum + i_corr*pos_corr;
 
@@ -766,6 +672,7 @@ jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
    temp.q_from_pulse_height = q_from_pulse_height;
    temp.numstrips=3;
    temp.t=t;
+   temp.status=false;
    temp.cluster=0; // will be filled in later
 
    //CalcMeanTime(peak,temp.t,temp.t_rms);
@@ -779,29 +686,15 @@ jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
 /// position x0, the anode charge qa, and the "width" parameter k2.  
 /// Updates list of centroids. 
 ///
-jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
-					  vector<const DFDCHit *>::const_iterator peak,
+jerror_t DFDCPseudo_factory::FindCentroid(vector<const DFDCHit *>::const_iterator peak,
 					  vector<centroid_t>&centroids){
-  centroid_t temp;
-  double err_diff1=0.,err_diff2=0.;
-
-  // Fill in time info in temp  1/2/2008 D.L.
-  //CalcMeanTime(H, temp.t, temp.t_rms);
-  
-  // Some code for checking for significance of fluctuations.
-  // Currently disabled.
-  //double dq1=(*(peak-1))->dq;
-  //double dq2=(*peak)->dq;
-  //double dq3=(*(peak+1))->dq;
-  //err_diff1=sqrt(dq1*dq1+dq2*dq2);
-  //err_diff2=sqrt(dq2*dq2+dq3*dq3);
   if ((*peak)->pulse_height<MIDDLE_STRIP_THRESHOLD) {
     return VALUE_OUT_OF_RANGE;
   }
 
   // Check for a peak in three adjacent strips
-  if ((*peak)->pulse_height-(*(peak-1))->pulse_height > err_diff1
-      && (*peak)->pulse_height-(*(peak+1))->pulse_height > err_diff2){
+  if ((*peak)->pulse_height>(*(peak-1))->pulse_height
+      && (*peak)->pulse_height>(*(peak+1))->pulse_height){
     // Define some matrices for use in the Newton-Raphson iteration
     DMatrix3x1 N,X;
     int i=0;
@@ -813,14 +706,16 @@ jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
       N(i)=double((*j)->pulse_height);
       i++;
     }
-
+    
     double pos=0.,sum_f=0.,q_ph=0.;
-    DFDCPseudo tempPseudo; // instatiate class so we can use its methods
+    DFDCPseudo tempPseudo; // instantiate class so we can use its methods
     if (tempPseudo.FindCentroid(N,X,pos,&sum_f,&q_ph)==NOERROR){
+      centroid_t temp;
       temp.pos=pos;
       temp.numstrips=3;
       temp.q_from_pulse_height=q_ph;
       temp.t=(*peak)->t;
+      temp.status=true;
       temp.cluster=0; // will be filled in later
       
       // Find estimate for anode charge
@@ -837,5 +732,57 @@ jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
 
   return RESOURCE_UNAVAILABLE; // error placeholder
 }
-    
+
+// Find the centroids for a specific cathode cluster
+void DFDCPseudo_factory::FillCentroidData(int clusterNum,
+					  const DFDCCathodeCluster *cluster,
+					  vector<centroid_t>&peaks){
+  vector<const DFDCHit *>hits=cluster->members;
+  if (hits.size()>2){
+    for (vector<const DFDCHit*>::const_iterator strip=hits.begin()+1;strip+1!=hits.end();strip++){
+      if (FindCentroid(strip,peaks)==NOERROR){
+	if (ALIGNMENT) FillAlignmentParameters(strip,peaks);
+	
+	size_t index=peaks.size()-1;
+	peaks[index].cluster=clusterNum;
+      }
+      else if (hits.size()==3){
+	if (ThreeStripCluster(strip,peaks)==NOERROR){
+	  size_t index=peaks.size()-1;
+	  peaks[index].cluster=clusterNum;
+	}
+      }
+    }
+  }
+  else if (hits.size()==2){
+    vector<const DFDCHit*>::const_iterator strip=hits.begin();
+    if (TwoStripCluster(strip,peaks)==NOERROR){
+      size_t index=peaks.size()-1;
+      peaks[index].cluster=clusterNum;
+    }
+  }
+}
  
+// Add some parameters needed for alignment
+void DFDCPseudo_factory::FillAlignmentParameters(vector<const DFDCHit*>::const_iterator strip,vector<centroid_t>&peaks) const {
+  unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
+  DMatrix3x1 XTemp,NTemp,NTempRaw,indexTemp;
+  XTemp(0) = fdccathodes[index][(*(strip-1))->element-1]->u;
+  XTemp(1) = fdccathodes[index][(*(strip))->element-1]->u;
+  XTemp(2) = fdccathodes[index][(*(strip+1))->element-1]->u;
+  NTemp(0) = double ((*(strip-1))->pulse_height);
+  NTemp(1) = double ((*(strip))->pulse_height);
+  NTemp(2) = double ((*(strip+1))->pulse_height);
+  NTempRaw(0) = double ((*(strip-1))->pulse_height_raw);
+  NTempRaw(1) = double ((*(strip))->pulse_height_raw);
+  NTempRaw(2) = double ((*(strip+1))->pulse_height_raw);
+  indexTemp(0) = (*(strip-1))->element;
+  indexTemp(1) = (*(strip))->element;
+  indexTemp(2) = (*(strip+1))->element;
+
+  size_t peakIndex=peaks.size()-1;
+  peaks[peakIndex].X = XTemp;
+  peaks[peakIndex].N = NTemp;
+  peaks[peakIndex].NRaw = NTempRaw;
+  peaks[peakIndex].index = indexTemp;
+}
