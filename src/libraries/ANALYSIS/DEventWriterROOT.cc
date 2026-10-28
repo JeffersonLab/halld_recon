@@ -1182,16 +1182,16 @@ void DEventWriterROOT::Fill_ThrownTree(const std::shared_ptr<const JEvent>& locE
 	map<const DMCThrown*, unsigned int> locThrownIndexMap;
 	Group_ThrownParticles(locMCThrowns_FinalState, locMCThrowns_Decaying, locMCThrownsToSave, locThrownIndexMap);
 
-	vector<const DBeamPhoton*> locTaggedMCGenBeams;  // CHANGE
+	vector<const DBeamParticle*> locTaggedMCGenBeams; 
 	locEvent->Get(locTaggedMCGenBeams, "TAGGEDMCGEN");
 
-	vector<const DBeamPhoton*> locMCGenBeams;  // CHANGE
+	vector<const DBeamParticle*> locMCGenBeams;  
 	locEvent->Get(locMCGenBeams, "MCGEN");
 
 	vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints;
 	locEvent->Get(locDMCTrajectoryPoints);
 
-	const DBeamPhoton* locTaggedMCGenBeam = locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]; //if empty: will have to do. 
+	const DBeamParticle* locTaggedMCGenBeam = locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]; //if empty: will have to do. 
 
 	DEvent::GetLockService(locEvent)->RootWriteLock();
 
@@ -1283,16 +1283,16 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 	locEvent->Get(locMCReactions);
 	const DMCReaction* locMCReaction = locMCReactions.empty() ? NULL : locMCReactions[0];
 
-	vector<const DBeamPhoton*> locTaggedMCGenBeams;   // CHANGE
+	vector<const DBeamParticle*> locTaggedMCGenBeams;  
 	locEvent->Get(locTaggedMCGenBeams, "TAGGEDMCGEN");
 
-	vector<const DBeamPhoton*> locMCGenBeams;  // CHANGE
+	vector<const DBeamParticle*> locMCGenBeams;  
 	locEvent->Get(locMCGenBeams, "MCGEN");
 
 	vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints;
 	locEvent->Get(locDMCTrajectoryPoints);
 
-	const DBeamPhoton* locTaggedMCGenBeam = nullptr;
+	const DBeamParticle* locTaggedMCGenBeam = nullptr;
 
 	if (locTaggedMCGenBeams.empty()){
       if ( !locMCGenBeams.empty() ) locTaggedMCGenBeam = locMCGenBeams[0];
@@ -1690,7 +1690,7 @@ void DEventWriterROOT::Group_ThrownParticles(const vector<const DMCThrown*>& loc
 		locThrownIndexMap[locMCThrownsToSave[loc_i]] = loc_i;
 }
 
-void DEventWriterROOT::Fill_ThrownInfo(DTreeFillData* locTreeFillData, const DMCReaction* locMCReaction, const DBeamPhoton* locTaggedMCGenBeam, const vector<const DMCThrown*>& locMCThrowns, const map<const DMCThrown*, unsigned int>& locThrownIndexMap,  ULong64_t locNumPIDThrown_FinalState, ULong64_t locPIDThrown_Decaying,  const vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints, const DMCThrownMatching* locMCThrownMatching) const
+void DEventWriterROOT::Fill_ThrownInfo(DTreeFillData* locTreeFillData, const DMCReaction* locMCReaction, const DBeamParticle* locTaggedMCGenBeam, const vector<const DMCThrown*>& locMCThrowns, const map<const DMCThrown*, unsigned int>& locThrownIndexMap,  ULong64_t locNumPIDThrown_FinalState, ULong64_t locPIDThrown_Decaying,  const vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints, const DMCThrownMatching* locMCThrownMatching) const
 {
 	//THIS MUST BE CALLED FROM WITHIN A LOCK, SO DO NOT PASS IN JEVENTLOOP! //TOO TEMPTING TO DO SOMETHING BAD
 
@@ -1814,7 +1814,7 @@ void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned in
 		Bool_t locIsGeneratorFlag = kFALSE;
 	//	if (locBeamPhotonTaggedMCGEN != NULL)
 	//	  locIsGeneratorFlag = (locBeamPhotonTaggedMCGEN->energy() == locBeamPhoton->energy() && locBeamPhotonTaggedMCGEN->dCounter == locBeamPhoton->dCounter && locBeamPhotonTaggedMCGEN->time() == locBeamPhoton->time()) ? kTRUE : kFALSE;
-		locTreeFillData->Fill_Array<Bool_t>(Build_BranchName(locParticleBranchName, "IsGenerator"), locIsGeneratorFlag, locArrayIndex);
+		locTreeFillData->Fill_Array<Bool_t>(Build_BranchName(locParticleBranchName, "IsGenerator"), locIsGeneratorFlag, locArrayIndex);  // UPDATE FOR KLF
 	}
 
 	//KINEMATICS: MEASURED

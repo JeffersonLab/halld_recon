@@ -1191,10 +1191,10 @@ bool DEventSourceHDDM::Extract_DMCReaction(hddm_s::HDDM *record,
          }
          mcreaction->beam.setPosition(locPosition);
          mcreaction->beam.setMomentum(mom);
-         mcreaction->beam.setPID(Gamma);
+         mcreaction->beam.setPID(beam.getType());
          mcreaction->target.setPID(IDTrack(mcreaction->beam.charge(),
                                            mcreaction->beam.mass()));
-         mcreaction->beam.setTime(torig - (zorig - locTargetCenterZ)/29.9792458);
+         mcreaction->beam.setTime(torig - (zorig - locTargetCenterZ)/29.9792458);  // ??
       }
       else {
          // fake values for DMCReaction
@@ -1221,7 +1221,7 @@ bool DEventSourceHDDM::Extract_DMCReaction(hddm_s::HDDM *record,
             mcreaction->target.setPID(IDTrack(properties(0).getCharge(),
         		                              properties(0).getMass()));
          }
-         mcreaction->target.setTime(torig - (zorig - locTargetCenterZ)/29.9792458);
+         mcreaction->target.setTime(torig - (zorig - locTargetCenterZ)/29.9792458);  // ??
       }
       else {
          // fake values for DMCReaction

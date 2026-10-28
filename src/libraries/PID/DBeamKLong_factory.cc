@@ -68,7 +68,8 @@ void DBeamKLong_factory::Process(const std::shared_ptr<const JEvent>& event)
 // cout << locVertex->dSpacetimeVertex.Z() << " " <<  dTargetCenterZ
 //      << KL_distance << " " << KL_propagation_time << " " << beta << endl;
     
-    if(beta > 1.)
+    // get rid of particles that are "obviously" too fast
+    if(beta > 1.2)
     	return;
     
     // should make some cut based on the beam period... but for now, cut out events that are obviously too slow

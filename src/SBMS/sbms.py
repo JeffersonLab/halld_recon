@@ -640,7 +640,7 @@ def AddDANA(env):
 	AddRCDB(env)
 	AddHDDS(env)
 	AddXERCES(env)
-	AddEVIO(env)
+	#AddEVIO(env)
 	AddET(env)
 	AddMySQL(env)   # needed for EventStore
 	AddTensorflowLite(env) # optional. Used for CPP pi/mu classification

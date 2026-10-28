@@ -44,10 +44,6 @@ void DBeamParticle_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 //------------------
 void DBeamParticle_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
-// 	dResourcePool_BeamPhotons->Recycle(dCreated);
-// 	dCreated.clear();
-// 	_data.clear();
-
 	// load beam photons
 	if(!dSkipTaggedPhotons) {
 		vector <const DBeamPhoton*> locBeamPhotons;

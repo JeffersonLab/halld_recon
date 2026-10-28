@@ -141,9 +141,9 @@ sbms.AddDANA(env)
 sbms.library(env)
 
 # Add dependencies for the python modules as well
-sbms.python_so_module(env, 'hddm_s')
-sbms.python_so_module(env, 'hddm_mc_s')
-sbms.python_so_module(env, 'hddm_r')
+#sbms.python_so_module(env, 'hddm_s')
+#sbms.python_so_module(env, 'hddm_mc_s')
+#sbms.python_so_module(env, 'hddm_r')
 
 
 #========================================================================

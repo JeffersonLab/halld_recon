@@ -34,6 +34,8 @@
 #include "DBeamKLong_factory_MCGEN.h"
 #include "DEventRFBunch_factory_KLong.h"
 #include "DVertex_KLong_factory.h"
+#include "DBeamParticle_factory_MCGEN.h"
+#include "DBeamParticle_factory_TAGGEDMCGEN.h"
 
 #include <JANA/JFactorySet.h>
 #include <JANA/JFactoryT.h>
@@ -50,6 +52,8 @@ void PID_init(JFactorySet *factorySet)
 	factorySet->Add(new DBeamPhoton_factory_TAGGEDMCGEN);
 	factorySet->Add(new DBeamPhoton_factory_MCGEN);
 	factorySet->Add(new DBeamParticle_factory);
+	factorySet->Add(new DBeamParticle_factory_MCGEN);
+	factorySet->Add(new DBeamParticle_factory_TAGGEDMCGEN);
 	factorySet->Add(new DParticleID_factory);
 	factorySet->Add(new DParticleID_factory_PID1);
 	factorySet->Add(new DChargedTrack_factory);
