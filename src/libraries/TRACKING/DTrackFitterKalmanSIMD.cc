@@ -8900,12 +8900,31 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
 
   // Deal with points within fiducial volume of chambers
   unsigned int fdc_plane=0;
+  mT0MinimumDriftTime=1e6;
   for (int k=intersected_start_counter?index_beyond_start_counter:inner_index;k>=0;k--){
     double z=forward_traj[k].z;
     double t=forward_traj[k].t;
     double s=forward_traj[k].s;
     DMatrix5x1 S=forward_traj[k].S;
 
+    // Find estimate for t0 using earliest drift time
+    if (forward_traj[k].h_id>999){
+      unsigned int index=forward_traj[k].h_id-1000;
+      double dt=my_cdchits[index]->tdrift-t*TIME_UNIT_CONVERSION;
+      if (dt<mT0MinimumDriftTime){
+	mT0MinimumDriftTime=dt;
+      }
+    }
+    else if (forward_traj[k].h_id>0){
+      unsigned int index=forward_traj[k].h_id-1;
+      double dt=my_fdchits[index]->t-t*TIME_UNIT_CONVERSION;  
+      if (dt<mT0MinimumDriftTime){
+	mT0MinimumDriftTime=dt;
+      }
+    }
+
+
+    
     //multiple scattering terms
     if (k>0){
       double ds_theta_ms_sq=3.*fabs(forward_traj[k].Q(state_x,state_x));
