@@ -790,6 +790,8 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
 
 
    mT0=0.;
+   mT0MinimumDriftTime=1e6;
+
    mVarT0=25.;
 
    mCDCInternalStepSize=0.5;
@@ -955,9 +957,9 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    double charge = GetCharge();
    fit_params.setPosition(pos);
    fit_params.setMomentum(mom);
-   fit_params.setTime(mT0);
+   fit_params.setTime(mT0MinimumDriftTime);
    fit_params.setPID(IDTrack(charge, MASS));
-   fit_params.setT0(mT0,sqrt(mVarT0),input_params.t0_detector());
+   fit_params.setT0(mT0MinimumDriftTime,sqrt(mVarT0),input_params.t0_detector());
 
    if (DEBUG_LEVEL>0){
       _DBG_ << "----- Pass: " 
@@ -8898,12 +8900,31 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
 
   // Deal with points within fiducial volume of chambers
   unsigned int fdc_plane=0;
+  mT0MinimumDriftTime=1e6;
   for (int k=intersected_start_counter?index_beyond_start_counter:inner_index;k>=0;k--){
     double z=forward_traj[k].z;
     double t=forward_traj[k].t;
     double s=forward_traj[k].s;
     DMatrix5x1 S=forward_traj[k].S;
 
+    // Find estimate for t0 using earliest drift time
+    if (forward_traj[k].h_id>999){
+      unsigned int index=forward_traj[k].h_id-1000;
+      double dt=my_cdchits[index]->tdrift-t*TIME_UNIT_CONVERSION;
+      if (dt<mT0MinimumDriftTime){
+	mT0MinimumDriftTime=dt;
+      }
+    }
+    else if (forward_traj[k].h_id>0){
+      unsigned int index=forward_traj[k].h_id-1;
+      double dt=my_fdchits[index]->t-t*TIME_UNIT_CONVERSION;  
+      if (dt<mT0MinimumDriftTime){
+	mT0MinimumDriftTime=dt;
+      }
+    }
+
+
+    
     //multiple scattering terms
     if (k>0){
       double ds_theta_ms_sq=3.*fabs(forward_traj[k].Q(state_x,state_x));
@@ -9176,12 +9197,23 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
   }
   
   // Deal with points within fiducial volume of chambers
+  mT0MinimumDriftTime=1e6;
   for (int k=index_beyond_start_counter;k>=0;k--){ 
     S=central_traj[k].S;
     xy=central_traj[k].xy;
     double t=central_traj[k].t;
     double s=central_traj[k].s;
 
+    // Find estimate for t0 using earliest drift time
+    if (central_traj[k].h_id>0){
+      unsigned int index=central_traj[k].h_id-1;
+      double dt=my_cdchits[index]->tdrift-t*TIME_UNIT_CONVERSION;  
+      if (dt<mT0MinimumDriftTime){
+	mT0MinimumDriftTime=dt;
+      }
+    }
+
+    
     //multiple scattering terms
     if (k>0){
       double ds_theta_ms_sq=3.*fabs(central_traj[k].Q(state_D,state_D));

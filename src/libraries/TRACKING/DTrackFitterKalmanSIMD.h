@@ -506,6 +506,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 
   // Vertex time
   double mT0;
+  double mT0MinimumDriftTime;
   // Variance in vertex time
   double mVarT0;
 
