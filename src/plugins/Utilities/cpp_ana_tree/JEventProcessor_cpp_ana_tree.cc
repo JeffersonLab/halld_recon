@@ -48,7 +48,7 @@ void JEventProcessor_cpp_ana_tree::Init()
     // lockService should be initialized here like this
     lockService = app->GetService<JLockService>();
 
-     vector< string > varsMinus( inputVarsMinus, inputVarsMinus + sizeof( inputVarsMinus )/sizeof( char* ) );
+    vector< string > varsMinus( inputVarsMinus, inputVarsMinus + sizeof( inputVarsMinus )/sizeof( char* ) );
     dEPIClassifierMinus = new ReadMLPMinus( varsMinus );
     vector< string > varsPlus( inputVarsPlus, inputVarsPlus + sizeof( inputVarsPlus )/sizeof( char* ) );
     dEPIClassifierPlus = new ReadMLPPlus( varsPlus );
@@ -182,8 +182,11 @@ void JEventProcessor_cpp_ana_tree::Init()
     FMWPC_chamber4 = ptree->Branch("FMWPC_chamber4",&fmwpc4n,"fmwpc4n/F");
     FMWPC_chamber5 = ptree->Branch("FMWPC_chamber5",&fmwpc5n,"fmwpc5n/F");
     FMWPC_chamber6 = ptree->Branch("FMWPC_chamber6",&fmwpc6n,"fmwpc6n/F");
-    chisq_8 = ptree->Branch("CHI_squared_ndof_8",&cn8,"cn8/F");
-    chisq_9 = ptree->Branch("CHI_squared_ndof_9",&cn9,"cn9/F");
+    chisq_8 = ptree->Branch("chisq_8",&cn8,"cn8/F");
+    chisq_9 = ptree->Branch("chisq_9",&cn9,"cn9/F");
+    Track1_NDF = ptree->Branch("Track1_NDF",&t1_ndf,"t1_ndf/F");
+    Track2_NDF = ptree->Branch("Track2_NDF",&t2_ndf,"t2_ndf/F");
+
 
     InvariantMass = ptree->Branch("InvariantMass",&w_2pi,"w_2pi/F");
     Pion1_px = ptree->Branch("Pion1_px",&p1x,"p1x/F");
@@ -203,8 +206,14 @@ void JEventProcessor_cpp_ana_tree::Init()
     Pion2_y = ptree->Branch("Pion2_y",&p2y_pos,"p2y/F");
     Pion2_z = ptree->Branch("Pion2_z",&p2z_pos,"p2z/F");
 
+    VTX_X = ptree->Branch("VTX_X",&vtx_pos_x,"vtx_pos_x/F");
+    VTX_Y = ptree->Branch("VTX_Y",&vtx_pos_y,"vtx_pos_y/F");
+    VTX_Z = ptree->Branch("VTX_Z",&vtx_pos_z,"vtx_pos_z/F");
+
     EPI_MLP_Response_plus = ptree->Branch("EPI_MLP_Response_plus",&epimlp_plus,"epimlp_plus/F");
     EPI_MLP_Response_minus = ptree->Branch("EPI_MLP_Response_minus",&epimlp_minus,"epimlp_minus/F");
+
+    RFTime = ptree->Branch("RFTime",&rft,"rft/F");
 
     Beam_Energy = ptree->Branch("Beam_Energy",&bE,"be/F");
     Beam_Time = ptree->Branch("Beam_Time",&bT,"bT/F");
@@ -232,9 +241,7 @@ void JEventProcessor_cpp_ana_tree::Init()
     Pion2_pz_KF = ptree->Branch("Pion2_pz_KF",&p2z_kf,"p2z_kf/F");
     Pion2_pe_KF = ptree->Branch("Pion2_pe_KF",&p2e_kf,"p2e_kf/F");
     KinFit_NDF = ptree->Branch("KinFit_ndf",&kf_ndf,"kf_ndf/F");
-    Track1_NDF = ptree->Branch("Track1_NDF",&t1_ndf,"t1_ndf/F");
-    Track2_NDF = ptree->Branch("Track2_NDF",&t2_ndf,"t2_ndf/F");
-
+    
     Event_No = ptree->Branch("Event_No",&eventno,"eventno/F");
 
     FinalChamber8 = ptree->Branch("FinalChamber8",&pfinalChamber,"&pfinalChamber/F");
@@ -298,16 +305,6 @@ void JEventProcessor_cpp_ana_tree::Init()
 
     NoFCALShowersRefined = ptree->Branch("NoFCALShowersRefined",&nFSr,"nFSr/F");
     NoFCALHitsRefined = ptree->Branch("NoFCALHitsRefined",&nFHr,"nFHr/F");
-
-    Thrown_P4X1 = ptree->Branch("Thrown_P4X1",&thrownpx1,"thrownpx1/F");
-    Thrown_P4Y1 = ptree->Branch("Thrown_P4Y1",&thrownpy1,"thrownpy1/F");
-    Thrown_P4Z1 = ptree->Branch("Thrown_P4Z1",&thrownpz1,"thrownpz1/F");
-    Thrown_P4E1 = ptree->Branch("Thrown_P4E1",&thrownpe1,"thrownpe1/F");
-
-    Thrown_P4X2 = ptree->Branch("Thrown_P4X2",&thrownpx2,"thrownpx2/F");
-    Thrown_P4Y2 = ptree->Branch("Thrown_P4Y2",&thrownpy2,"thrownpy2/F");
-    Thrown_P4Z2 = ptree->Branch("Thrown_P4Z2",&thrownpz2,"thrownpz2/F");
-    Thrown_P4E2 = ptree->Branch("Thrown_P4E2",&thrownpe2,"thrownpe2/F");
 
     FCAL_SHOWER_COUNT8 = ptree->Branch("FCAL_SHOWER_COUNT8",&nFS8r,"nFS8r/F");
     FCAL_SHOWER_COUNT9 = ptree->Branch("FCAL_SHOWER_COUNT9",&nFS9r,"nFS9r/F");
@@ -460,8 +457,8 @@ void JEventProcessor_cpp_ana_tree::Process(const std::shared_ptr<const JEvent> &
         DVector3 piplus3_mom = rec_piplus.Vect();
         DVector3 piminus3_mom = rec_piminus.Vect();
 
-        if(piplus3_mom.Mag() > 10.0 || piplus3_mom.Mag() < 1.0) continue;
-        if(piminus3_mom.Mag() > 10.0 || piminus3_mom.Mag() < 1.0) continue;
+        //if(piplus3_mom.Mag() > 10.0 || piplus3_mom.Mag() < 1.0) continue;
+        //if(piminus3_mom.Mag() > 10.0 || piminus3_mom.Mag() < 1.0) continue;
 
         if(pimu->IS_TrackDOCAGood == false) continue;
 
@@ -476,11 +473,20 @@ void JEventProcessor_cpp_ana_tree::Process(const std::shared_ptr<const JEvent> &
 
         eventno = event->GetEventNumber();
 
+        rft = pimu->rf_time;
+
         wght = pimu->beam_weight;
         bE = pimu->beam_energy;
+        bT = pimu->beam_time;
 
         tagid = pimu->tagger_id;
-            
+        
+        cn8 = pimu->track1_chisq;
+        cn9 = pimu->track2_chisq;
+
+        t1_ndf = pimu->track1_ndf;
+        t2_ndf = pimu->track2_ndf;
+
         mm_chi = pimu->kinfit_chisq;
         kf_ndf = pimu->kinfit_ndf;
 
@@ -500,7 +506,6 @@ void JEventProcessor_cpp_ana_tree::Process(const std::shared_ptr<const JEvent> &
         
         fcale9e258 = pimu->fcal_e9e25_piplus;
         fcale9e259 = pimu->fcal_e9e25_piminus;
-
 
         fmwpc1m8 = pimu->fmwpc1n_piplus;
         fmwpc1m9 = pimu->fmwpc1n_piminus;
@@ -537,6 +542,10 @@ void JEventProcessor_cpp_ana_tree::Process(const std::shared_ptr<const JEvent> &
         p2y = rec_piminus.Y();
         p2z = rec_piminus.Z();
         p2e = rec_piminus.E();
+
+        vtx_pos_x = pimu->twoTrackVTX.X();
+        vtx_pos_y = pimu->twoTrackVTX.Y();
+        vtx_pos_z = pimu->twoTrackVTX.Z();
 
         p1x_kf = pimu->piplus3mom_kf.X();
         p1y_kf = pimu->piplus3mom_kf.Y();

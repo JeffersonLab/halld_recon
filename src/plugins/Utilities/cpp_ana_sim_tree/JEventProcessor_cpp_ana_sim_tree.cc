@@ -181,8 +181,8 @@ void JEventProcessor_cpp_ana_sim_tree::Init()
     FMWPC_chamber4 = ptree->Branch("FMWPC_chamber4",&fmwpc4n,"fmwpc4n/F");
     FMWPC_chamber5 = ptree->Branch("FMWPC_chamber5",&fmwpc5n,"fmwpc5n/F");
     FMWPC_chamber6 = ptree->Branch("FMWPC_chamber6",&fmwpc6n,"fmwpc6n/F");
-    chisq_8 = ptree->Branch("CHI_squared_ndof_8",&cn8,"cn8/F");
-    chisq_9 = ptree->Branch("CHI_squared_ndof_9",&cn9,"cn9/F");
+    chisq_8 = ptree->Branch("chisq_8",&cn8,"cn8/F");
+    chisq_9 = ptree->Branch("chisq_9",&cn9,"cn9/F");
 
     InvariantMass = ptree->Branch("InvariantMass",&w_2pi,"w_2pi/F");
     Pion1_px = ptree->Branch("Pion1_px",&p1x,"p1x/F");
@@ -194,8 +194,22 @@ void JEventProcessor_cpp_ana_sim_tree::Init()
     Pion2_pz = ptree->Branch("Pion2_pz",&p2z,"p2z/F");
     Pion2_pe = ptree->Branch("Pion2_pe",&p2e,"p2e/F");
 
+    Pion1_x = ptree->Branch("Pion1_x",&p1x_pos,"p1x/F");
+    Pion1_y = ptree->Branch("Pion1_y",&p1y_pos,"p1y/F");
+    Pion1_z = ptree->Branch("Pion1_z",&p1z_pos,"p1z/F");
+
+    Pion2_x = ptree->Branch("Pion2_x",&p2x_pos,"p2x/F");
+    Pion2_y = ptree->Branch("Pion2_y",&p2y_pos,"p2y/F");
+    Pion2_z = ptree->Branch("Pion2_z",&p2z_pos,"p2z/F");
+
+    VTX_X = ptree->Branch("VTX_X",&vtx_pos_x,"vtx_pos_x/F");
+    VTX_Y = ptree->Branch("VTX_Y",&vtx_pos_y,"vtx_pos_y/F");
+    VTX_Z = ptree->Branch("VTX_Z",&vtx_pos_z,"vtx_pos_z/F");
+
     EPI_MLP_Response_plus = ptree->Branch("EPI_MLP_Response_plus",&epimlp_plus,"epimlp_plus/F");
     EPI_MLP_Response_minus = ptree->Branch("EPI_MLP_Response_minus",&epimlp_minus,"epimlp_minus/F");
+
+    RFTime = ptree->Branch("RFTime",&rft,"rft/F");
 
     Beam_Energy = ptree->Branch("Beam_Energy",&bE,"be/F");
     Beam_Time = ptree->Branch("Beam_Time",&bT,"bT/F");
@@ -418,7 +432,6 @@ void JEventProcessor_cpp_ana_sim_tree::Process(const std::shared_ptr<const JEven
     vector<const DMCThrown*> mcThrownTracks;
     event->Get(mcThrownTracks);
 
-
     for(size_t i = 0; i < mcThrownTracks.size();i++){
         const DMCThrown *thrown = mcThrownTracks[i];
         if(thrown->PID() == 8){
@@ -451,8 +464,8 @@ void JEventProcessor_cpp_ana_sim_tree::Process(const std::shared_ptr<const JEven
         DVector3 piplus3_mom = rec_piplus.Vect();
         DVector3 piminus3_mom = rec_piminus.Vect();
 
-        if(piplus3_mom.Mag() > 10.0 || piplus3_mom.Mag() < 1.0) continue;
-        if(piminus3_mom.Mag() > 10.0 || piminus3_mom.Mag() < 1.0) continue;
+        //if(piplus3_mom.Mag() > 10.0 || piplus3_mom.Mag() < 1.0) continue;
+        //if(piminus3_mom.Mag() > 10.0 || piminus3_mom.Mag() < 1.0) continue;
 
         if(pimu->IS_TrackDOCAGood == false) continue;
 
@@ -463,11 +476,22 @@ void JEventProcessor_cpp_ana_sim_tree::Process(const std::shared_ptr<const JEven
         if(!(pimu->IS_PlusTrackInTOF && pimu->IS_MinusTrackInTOF)) continue;
 
         lockService->RootFillLock(this);
+        
+        eventno = event->GetEventNumber();
 
-         eventno = event->GetEventNumber();
+        rft = pimu->rf_time;
 
         wght = pimu->beam_weight;
         bE = pimu->beam_energy;
+        bT = pimu->beam_time;
+
+        tagid = pimu->tagger_id;
+        
+        cn8 = pimu->track1_chisq;
+        cn9 = pimu->track2_chisq;
+
+        t1_ndf = pimu->track1_ndf;
+        t2_ndf = pimu->track2_ndf;
             
         mm_chi = pimu->kinfit_chisq;
         kf_ndf = pimu->kinfit_ndf;
@@ -489,7 +513,6 @@ void JEventProcessor_cpp_ana_sim_tree::Process(const std::shared_ptr<const JEven
         fcale9e258 = pimu->fcal_e9e25_piplus;
         fcale9e259 = pimu->fcal_e9e25_piminus;
 
-
         fmwpc1m8 = pimu->fmwpc1n_piplus;
         fmwpc1m9 = pimu->fmwpc1n_piminus;
 
@@ -508,6 +531,14 @@ void JEventProcessor_cpp_ana_sim_tree::Process(const std::shared_ptr<const JEven
         fmwpc6m8 = pimu->fmwpc6n_piplus;
         fmwpc6m9 = pimu->fmwpc6n_piminus;
 
+        p1x_pos = pimu->piplus3pos.X();
+        p1y_pos = pimu->piplus3pos.Y();
+        p1z_pos = pimu->piplus3pos.Z();
+
+        p2x_pos = pimu->piplus3pos.X();
+        p2y_pos = pimu->piplus3pos.Y();
+        p2z_pos = pimu->piplus3pos.Z();
+
         p1x = rec_piplus.X();
         p1y = rec_piplus.Y();
         p1z = rec_piplus.Z();
@@ -517,6 +548,10 @@ void JEventProcessor_cpp_ana_sim_tree::Process(const std::shared_ptr<const JEven
         p2y = rec_piminus.Y();
         p2z = rec_piminus.Z();
         p2e = rec_piminus.E();
+
+        vtx_pos_x = pimu->twoTrackVTX.X();
+        vtx_pos_y = pimu->twoTrackVTX.Y();
+        vtx_pos_z = pimu->twoTrackVTX.Z();
 
         p1x_kf = pimu->piplus3mom_kf.X();
         p1y_kf = pimu->piplus3mom_kf.Y();

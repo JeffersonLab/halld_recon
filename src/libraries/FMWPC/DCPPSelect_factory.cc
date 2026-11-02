@@ -136,13 +136,14 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 		//return;
     }
 
+	DVector3 vtx;
 	if(track_doca_check){
 		double track_doca = 0.; DVector3 posp,  posn;
     	dAnalysisUtilities->Calc_DOCA(piplus, piminus, posp, posn, track_doca);
     	//Quasi-vertex constraint
     	if(track_doca>1.5) track_doca_check = false;
-		const DVector3 vtx = 0.5*(posp+posn);
-		if(fabs(vtx.Z()) > 15.) return;
+		vtx = 0.5*(posp+posn);
+		//if(fabs(vtx.Z()) > 15.) return;
 	}
 
 	vector<const DFMWPCHit*> fmwpchits;
@@ -193,11 +194,29 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 
 		tof_piplus_pos = piplusProj.tof_projection;
 		tof_piminus_pos = piminusProj.tof_projection;
+
+		bool tof_extrapolation_found_p = false, tof_extrapolation_found_n = false;
+
+		const double x1tofp  = tof_piplus_pos.x();
+        const double y1tofp  = tof_piplus_pos.y();
+		
+        const double dxtofp = x1tofp-m_TOFdX;
+        const double dytofp = y1tofp-m_TOFdY;
+        if( (fabs(dxtofp)>9. || fabs(dytofp)>9.) && fabs(dxtofp)<100. && fabs(dytofp)<100. ) tof_extrapolation_found_p = true;
+
+		const double x1tofn  = tof_piminus_pos.x();
+        const double y1tofn  = tof_piminus_pos.y();
+
+		const double dxtofn = x1tofn-m_TOFdX;
+        const double dytofn = y1tofn-m_TOFdY;
+
+        if( (fabs(dxtofp)>9. || fabs(dytofp)>9.) && fabs(dxtofp)<100. && fabs(dytofp)<100. ) tof_extrapolation_found_n = true;
+
+		if(!tof_extrapolation_found_p || !tof_extrapolation_found_n) continue;
 		
 		int tof_match_plus = 0, tof_match_minus = 0;
 		if(DCPPSelect::MatchToTOF_CPP_GEOM(locTOFPoints,tof_piplus_pos)) tof_match_plus +=1;
 		if(DCPPSelect::MatchToTOF_CPP_GEOM(locTOFPoints,tof_piminus_pos)) tof_match_minus +=1; 
-
 
 		//std::cout << "tof_match_plus= " << tof_match_plus << std::endl; 
 		//std::cout << "tof_match_minus= " << tof_match_minus << std::endl;
@@ -210,6 +229,27 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 		fcal_piminus_pos = piminusProj.fcal_projection;
 
 		int fcal_shower_piplus = 0, fcal_shower_piminus = 0, fcal_hit_piplus = 0, fcal_hit_piminus = 0;
+
+		//Check if Tracks are within acceptable FCAL range
+		bool fcal_extrapolation_found_p = false, fcal_extrapolation_found_n = false;
+
+		double x1fcalp,y1fcalp;
+        x1fcalp = fcal_piplus_pos.x();
+        y1fcalp = fcal_piplus_pos.y();
+
+        const double dxfp = x1fcalp-m_FCALdX;
+        const double dyfp = y1fcalp-m_FCALdY;
+        if( (fabs(dxfp)>10.||fabs(dyfp)>10.) && hypot(dxfp,dyfp)<102. ) fcal_extrapolation_found_p = true;
+
+		double x1fcaln,y1fcaln;
+        x1fcaln = fcal_piminus_pos.x();
+        y1fcaln = fcal_piminus_pos.y();
+
+        const double dxfn = x1fcaln-m_FCALdX;
+        const double dyfn = y1fcaln-m_FCALdY;
+        if( (fabs(dxfn)>10.||fabs(dyfn)>10.) && hypot(dxfn,dyfn)<102. ) fcal_extrapolation_found_n = true;
+
+		if(!fcal_extrapolation_found_p || !fcal_extrapolation_found_n) continue;
 
 		vector<const DFCALShower*> fcal_matched_showers_piplus;
 		if(DCPPSelect::MatchToFCALShower_CPP(locFCALShowers, fcal_matched_showers_piplus,fcal_piplus_pos)) fcal_shower_piplus += 1;
@@ -233,7 +273,6 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 			if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,fcal_piminus_pos,fcal_matched_hits_piminus,piminusFCALSingleVals)) fcal_hit_piminus += 1;
 			//if(DCPPSelect::MatchToFCALHit_CPP(locFCALHits,fcal_matched_hits_piminus,e9e25_hit_piminus,doca_hit_piminus,e1e9_hit_piminus,fcal_piminus_pos,sumu_hit_piminus,sumv_hit_piminus)) fcal_hit_piminus += 1;
 		}
-
 
 		double piplus_pmag = (piplus->momentum()).Mag();
 		double piminus_pmag = (piminus->momentum()).Mag();
@@ -383,6 +422,7 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 
 		myCPPSelect->beam_weight = weight;
 		myCPPSelect->beam_energy = beamE;
+		myCPPSelect->beam_time = beamphotons[ib]->time();
 		myCPPSelect->tagger_id = tagger_type;
 		
 		myCPPSelect->piplus3pos = piplus->position();
@@ -391,6 +431,14 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 		myCPPSelect->piminus3mom = piminus->momentum();
 		myCPPSelect->piplusTime = track_plus_time;
 		myCPPSelect->piminusTime = track_minus_time;
+
+		myCPPSelect->track1_chisq = piplus->chisq;
+		myCPPSelect->track2_chisq = piminus->chisq;
+
+		myCPPSelect->track1_ndf = piplus->Ndof;
+		myCPPSelect->track2_ndf = piminus->Ndof;
+
+		myCPPSelect->twoTrackVTX = vtx;
 
 		myCPPSelect->piplus3mom_kf = pip_p4_kinfit.Vect();
 		myCPPSelect->piminus3mom_kf = pim_p4_kinfit.Vect();

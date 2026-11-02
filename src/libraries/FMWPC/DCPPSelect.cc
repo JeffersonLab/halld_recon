@@ -168,29 +168,30 @@ bool DCPPSelect::MatchToTOF_CPP_GEOM(const vector<const DTOFPoint*>& tof_points,
 }
 
 bool DCPPSelect::MatchToFCALShower_CPP(const vector<const DFCALShower*>& fcal_showers, vector<const DFCALShower*>& fcal_matched_showers, DVector3 fcal_proj_pos){
-  double x1fcal = 0.0, y1fcal = 0.0;
 
-  x1fcal = fcal_proj_pos.x();
-  y1fcal = fcal_proj_pos.y();
-  const DFCALShower* best_fcal_shower = nullptr;
-  double best_doca = 1e9;
-  for(unsigned int ifs = 0; ifs<fcal_showers.size();++ifs){
-    const DFCALShower *fs1 = fcal_showers[ifs];
-    double xfs1 = fs1->getPosition().X();
-    double yfs1 = fs1->getPosition().Y();
+	double x1fcal = 0.0, y1fcal = 0.0;
 
-    double calculated_doca = hypot((xfs1-x1fcal-0.5),(yfs1-y1fcal));
-    if(calculated_doca < 5.0){
-      if(calculated_doca < best_doca){
-        best_doca = calculated_doca;
-        best_fcal_shower = fs1;
-      }
+	x1fcal = fcal_proj_pos.x();
+	y1fcal = fcal_proj_pos.y();
+	const DFCALShower* best_fcal_shower = nullptr;
+	double best_doca = 1e9;
+	for(unsigned int ifs = 0; ifs<fcal_showers.size();++ifs){
+		const DFCALShower *fs1 = fcal_showers[ifs];
+		double xfs1 = fs1->getPosition().X();
+		double yfs1 = fs1->getPosition().Y();
+
+		double calculated_doca = hypot((xfs1-x1fcal-0.5),(yfs1-y1fcal));
+		if(calculated_doca < 5.0){
+			if(calculated_doca < best_doca){
+				best_doca = calculated_doca;
+				best_fcal_shower = fs1;
+			}
+		}
 	}
-  }
-  if(!best_fcal_shower) return false;
-  
-  fcal_matched_showers.push_back(best_fcal_shower);
-  return true;
+	if(!best_fcal_shower) return false;
+
+	fcal_matched_showers.push_back(best_fcal_shower);
+	return true;
   
 }
 bool DCPPSelect::MatchToFCALHit_CPP(const vector<const DFCALHit*>& fcal_hits, DVector3 fcal_proj_pos, vector<const DFCALHit*>& fcal_matched_hits, FCALSingleHitVals& fcal_single_hit_vals){

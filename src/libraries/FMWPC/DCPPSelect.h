@@ -91,9 +91,13 @@ class DCPPSelect : public JObject {
         static bool MatchToPaddle(double x_track_pos, const vector<int>& allowedPaddles,int hitPaddleID);
 
         static bool MatchToCTOFHit_CPP(const vector<const DCTOFPoint*>& ctof_Hits, vector<const DCTOFPoint*>& ctof_matched_hits, DVector3 ctof_proj_pos,const vector<int>& allowedPaddles);
+        //RF
+        double rf_time;
+
         //Beam Info
         double beam_weight;
         double beam_energy;
+        double beam_time;
         bool tagger_id;
         
         //Track Info
@@ -105,6 +109,15 @@ class DCPPSelect : public JObject {
 
         double piplusTime;
         double piminusTime;
+
+        double track1_chisq; 
+        double track2_chisq;
+
+        double track1_ndf;
+        double track2_ndf;
+
+        //Two Track
+        DVector3 twoTrackVTX;
 
         //KinFit 
         DVector3 piplus3mom_kf;
