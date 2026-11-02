@@ -2039,7 +2039,7 @@ inline static double ParticleMass(Particle_t p)
   case Sm152:       return 141.51236;
   case Dy164:       return 152.69909;
   case Yb174:       return 162.02245;
-  case Ta181:       return 180.94788;
+  case Ta181:       return 168.43;
   case W184:        return 171.34924;
   case Pt194:       return 180.67513;
   case Au197:       return 183.47324;
@@ -2050,7 +2050,7 @@ inline static double ParticleMass(Particle_t p)
   case Sigma_1385_0:		return 1.3837;
   case Sigma_1385_Plus:	return 1.38280;
   case DeltaPlusPlus:   return 1.232;
-  case Jpsi:            return 3.069916;
+  case Jpsi:            return 3.0969;
   case Eta_c:           return 2.9836;
   case Chi_c0:          return 3.41475;
   case Chi_c1:          return 3.51066;
