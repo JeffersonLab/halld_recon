@@ -501,8 +501,8 @@ void DAnalysisResults_factory::Process(const std::shared_ptr<const JEvent>& locE
 						// the second entry of these histograms should be the number of events with at least one combo
 						// in MC, we also want to see how many of these events pass the physics trigger, to try to
 						// separate out the trigger efficiency from the acceptance
-						if(loc_j == 0) {
-							if(dIsMCFlag && !locIsPhysics) {
+						if(dIsMCFlag && loc_j == 0) {
+							if(!locIsPhysics) {
 								break;   // if this event does not pass a physics trigger, register that it has a combo and stop counting
 							} else {
 								// counting events that pass the physics trigger only happens for the first step, so we special case it
