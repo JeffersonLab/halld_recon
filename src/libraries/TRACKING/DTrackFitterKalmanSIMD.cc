@@ -791,7 +791,8 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
 
    mT0=0.;
    mT0MinimumDriftTime=1e6;
-
+   mT0Detector = SYS_CDC;
+   
    mVarT0=25.;
 
    mCDCInternalStepSize=0.5;
@@ -959,7 +960,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    fit_params.setMomentum(mom);
    fit_params.setTime(mT0MinimumDriftTime);
    fit_params.setPID(IDTrack(charge, MASS));
-   fit_params.setT0(mT0MinimumDriftTime,sqrt(mVarT0),input_params.t0_detector());
+   fit_params.setT0(mT0MinimumDriftTime,sqrt(mVarT0),mT0Detector);
 
    if (DEBUG_LEVEL>0){
       _DBG_ << "----- Pass: " 
@@ -8901,6 +8902,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
   // Deal with points within fiducial volume of chambers
   unsigned int fdc_plane=0;
   mT0MinimumDriftTime=1e6;
+  mT0Detector=SYS_NULL;
   for (int k=intersected_start_counter?index_beyond_start_counter:inner_index;k>=0;k--){
     double z=forward_traj[k].z;
     double t=forward_traj[k].t;
@@ -8912,7 +8914,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
       unsigned int index=forward_traj[k].h_id-1000;
       double dt=my_cdchits[index]->tdrift-t*TIME_UNIT_CONVERSION;
       if (dt<mT0MinimumDriftTime){
-	mT0MinimumDriftTime=dt;
+	mT0MinimumDriftTime=dt;	
+        mT0Detector=SYS_CDC;
       }
     }
     else if (forward_traj[k].h_id>0){
@@ -8920,6 +8923,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
       double dt=my_fdchits[index]->t-t*TIME_UNIT_CONVERSION;  
       if (dt<mT0MinimumDriftTime){
 	mT0MinimumDriftTime=dt;
+        mT0Detector=SYS_FDC;	
       }
     }
 
@@ -9198,6 +9202,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
   
   // Deal with points within fiducial volume of chambers
   mT0MinimumDriftTime=1e6;
+  mT0Detector=SYS_NULL;
   for (int k=index_beyond_start_counter;k>=0;k--){ 
     S=central_traj[k].S;
     xy=central_traj[k].xy;
@@ -9210,6 +9215,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
       double dt=my_cdchits[index]->tdrift-t*TIME_UNIT_CONVERSION;  
       if (dt<mT0MinimumDriftTime){
 	mT0MinimumDriftTime=dt;
+        mT0Detector=SYS_CDC;	
       }
     }
 
