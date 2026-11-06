@@ -93,9 +93,7 @@ public :
   double time; ///< time corresponding to this pseudopoint.
   int status; ///< status word for pseudopoint
   double covxx,covxy,covyy; ///< Covariance terms for (x,y) 
-  double dE; ///< energy deposition, from integral 
-  double dE_amp; /// < energy deposition, from pulse height
-  double q; ///< anode charge deduced from cathode strips
+  double dE; ///< energy deposition 
   int itrack;
   DVector2 xy; ///< rough x,y coordinates in lab coordinate system
   

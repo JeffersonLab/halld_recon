@@ -21,10 +21,6 @@
 
 #define HALF_CELL 0.5
 #define MAX_DEFLECTION 0.15
-#define W_EFF 30.2e-9 // GeV
-#define GAS_GAIN 8e4
-#define ELECTRON_CHARGE 1.6022e-4 // fC
-
 
 ///
 /// DFDCAnode_gLayer_cmp(): 
@@ -91,7 +87,7 @@ void DFDCPseudo_factory::Init()
   MAX_ALLOWED_FDC_HITS=20000;
   STRIP_ANODE_TIME_CUT=25.;
   MIDDLE_STRIP_THRESHOLD=0.;
-  CHARGE_THRESHOLD=0.3;
+  CHARGE_THRESHOLD=300.;
   DELTA_X_CUT=0.5;
 
   r2_out=ROUT_FIDUCIAL*ROUT_FIDUCIAL;
@@ -103,7 +99,7 @@ void DFDCPseudo_factory::Init()
   app->SetDefaultParameter("FDC:RIN_FIDUCIAL",RIN_FIDUCIAL, "Inner fiducial radius of FDC in cm");
   app->SetDefaultParameter("FDC:MAX_ALLOWED_FDC_HITS",MAX_ALLOWED_FDC_HITS, "Max. number of FDC hits (includes both cathode strips and wires hits) to allow before considering event too busy to attempt FDC tracking");
   app->SetDefaultParameter("FDC:STRIP_ANODE_TIME_CUT",STRIP_ANODE_TIME_CUT, "maximum time difference between strips and wires (in ns)"); 
-  app->SetDefaultParameter("FDC:CHARGE_THRESHOLD",CHARGE_THRESHOLD,"Minimum average charge on both cathode planes (in pC)");
+  app->SetDefaultParameter("FDC:CHARGE_THRESHOLD",CHARGE_THRESHOLD,"Minimum average charge on both cathode planes (in fC)");
   app->SetDefaultParameter("FDC:DELTA_X_CUT",DELTA_X_CUT,"Maximum distance between reconstructed wire position and wire position");
 
   DEBUG_HISTS = false;
@@ -363,6 +359,12 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
   }
   
   if (upeaks.size()*vpeaks.size()>0){
+    // Conversion factor: charge->energy
+    const double gas_gain=8e4;
+    const double w_eff=30.2e-9; // GeV
+    const double electron_charge=1.6022e-4; // fC
+    const double charge_to_energy=w_eff/(gas_gain*electron_charge);
+    
     // Rotation angles for strips
     unsigned int ilay=layer-1;
     unsigned int ind=2*ilay;
@@ -440,14 +442,10 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
 	      }
 
 	      // Charge and energy loss
-	      double q_from_pulse_height=5.0e-4*(upeaks[i].q_from_pulse_height
-						 +vpeaks[j].q_from_pulse_height);
-	      if (q_from_pulse_height<CHARGE_THRESHOLD) continue;
 	      double q_cathodes=0.5*(upeaks[i].q+vpeaks[j].q);
-	      double charge_to_energy=W_EFF/(GAS_GAIN*ELECTRON_CHARGE);
+	      if (q_cathodes<CHARGE_THRESHOLD) continue;
 	      double dE=charge_to_energy*q_cathodes;
-	      double dE_amp=charge_to_energy*q_from_pulse_height;
-
+	      
 	      if (DEBUG_HISTS){
 		qv_vs_qu->Fill(upeaks[i].q,vpeaks[j].q);
 	      }
@@ -474,6 +472,12 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
 		newPseu->ds=CRUDE_POS_ERR;
 	      }
 	      else{
+		double q_from_pulse_height
+		  =5.0e-4*(upeaks[i].q_from_pulse_height
+			   +vpeaks[j].q_from_pulse_height);
+		if (DEBUG_HISTS){
+		  if (ilay==6) dx_vs_dE->Fill(q_from_pulse_height,0.2588*delta_x);
+		}
 		newPseu->ds = FDC_RES_PAR1/q_from_pulse_height+FDC_RES_PAR2;
 	      }
 	      newPseu->wire   = wire;
@@ -485,8 +489,8 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
 	      newPseu->AddAssociatedObject(u[upeaks[i].cluster]);
 	      
 	      newPseu->dE = dE;
-	      newPseu->dE_amp = dE_amp;
-	      newPseu->q = q_from_pulse_height;
+	      //newPseu->dE_amp = dE_amp;
+	      //newPseu->q = q_from_pulse_height;
 	      
 	      // It can occur (although rarely) that newPseu->wire is NULL
 	      // which causes us to crash below. In these cases, we can't really
@@ -515,11 +519,6 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
 	      }
 
 	      Insert(newPseu);
-	      
-	      if (DEBUG_HISTS){
-		if (ilay==6) dx_vs_dE->Fill(q_from_pulse_height,0.2588*delta_x);
-	      }
-	      
 	    } // match in x
 	  } else _DBG_ << "Bad wire " << (*xIt)->element <<endl;
 	} // xIt loop
