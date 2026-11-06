@@ -451,7 +451,7 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
 	if (fabs(z-fdchits[i]->wire->origin.z())<0.5){
 	  DVector3 mom(fdc_extrapolations[j].momentum);
 	  double gas_thickness = 1.0; // cm
-	  dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE,fdchits[i]->dE_amp,
+	  dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE,0.,
 					gas_thickness/cos(mom.Theta()), 
 					mom.Mag()));
 	  break;
