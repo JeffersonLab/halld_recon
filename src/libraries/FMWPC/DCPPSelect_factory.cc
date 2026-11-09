@@ -113,6 +113,9 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 	vector<const DBCALHit*> locBCALHits;
 	event->Get(locBCALHits);
 
+	vector<const DNeutralParticle*>neutrals;
+	event->Get(neutrals);
+
 	double q1=locChargedTracks[0]->Get_Charge(),q2=locChargedTracks[1]->Get_Charge();
     if (q1*q2>0) return;
 
@@ -160,6 +163,11 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
 	double track_plus_time = piplus->time();
 	double track_minus_time = piminus->time();
 
+	double t0_rf =locChargedTracks[0]->Get_BestTrackingFOM()->t0();
+	DVector3 vertex = locChargedTracks[0]->Get_BestTrackingFOM()->position();
+
+	if(DCPPSelect::VetoNeutrals(t0_rf,vertex,neutrals)) return;
+
 	for(unsigned int ib = 0; ib < beamphotons.size();ib++){
 		double beamE=beamphotons[ib]->energy();
         double dt_rf=beamphotons[ib]->time()-locRFTime;
@@ -179,8 +187,7 @@ void DCPPSelect_factory::Process(const std::shared_ptr<const JEvent>& event)
         if(fabs(dt_rf)<2.004){
             got_beam_photon=true;
         }
-        if(got_beam_photon == false) continue;
-
+		if(got_beam_photon == false) continue;
 
 		DVector3 norm(0.0,0.0,1.0);
 		DVector3 origin(0.0,0.0,m_TOFfront);

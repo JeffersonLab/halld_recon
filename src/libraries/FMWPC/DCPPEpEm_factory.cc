@@ -412,11 +412,10 @@ bool DCPPEpEm_factory::VetoNeutrals(double t0_rf,const DVector3 &vect,
       // Get shower info corresponding to this hypothesis
       const DNeutralShower *shower=gamHyp->Get_NeutralShower();
       if (shower->dDetectorSystem==SYS_FCAL){
-	if (shower->dQuality<SPLIT_CUT) continue;
-	if (E>FCAL_THRESHOLD) return true;
-      }
-      else if (shower->dDetectorSystem==SYS_BCAL){
-	if (E>BCAL_THRESHOLD) return true;
+	      if (shower->dQuality<SPLIT_CUT) continue;
+        if (E>FCAL_THRESHOLD) return true;
+      }else if (shower->dDetectorSystem==SYS_BCAL){
+	      if (E>BCAL_THRESHOLD) return true;
       }
     }
   }

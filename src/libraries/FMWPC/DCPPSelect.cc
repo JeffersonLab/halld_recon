@@ -2,6 +2,29 @@
 
 #include "DCPPSelect.h"
 
+bool DCPPSelect::VetoNeutrals(double t0_rf,const DVector3 &vect, vector<const DNeutralParticle*>&neutrals){
+  
+	double SPLIT_CUT = 0.5, FCAL_THRESHOLD = 0.1, BCAL_THRESHOLD = 0.05,GAMMA_DT_CUT=2.;
+	for (unsigned int i=0;i<neutrals.size();i++){
+		const DNeutralParticleHypothesis *gamHyp=neutrals[i]->Get_Hypothesis(Gamma);
+		double tdiff=gamHyp->time()-t0_rf;
+		if (fabs(tdiff)<GAMMA_DT_CUT){
+			// Shower energy
+			double E=gamHyp->lorentzMomentum().E(); 
+
+			// Get shower info corresponding to this hypothesis
+			const DNeutralShower *shower=gamHyp->Get_NeutralShower();
+			if (shower->dDetectorSystem==SYS_FCAL){
+				if (shower->dQuality<SPLIT_CUT) continue;
+				if (E>FCAL_THRESHOLD) return true;
+			}else if (shower->dDetectorSystem==SYS_BCAL){
+				if (E>BCAL_THRESHOLD) return true;
+			}
+		}
+	}
+	return false;
+}
+
 void DCPPSelect::RemoveFartherDuplicateHits(std::map<int,double>& plus_map,std::map<int,double>& minus_map){
     for (auto it_plus = plus_map.begin(); it_plus != plus_map.end(); ) {
         auto it_minus = minus_map.find(it_plus->first);

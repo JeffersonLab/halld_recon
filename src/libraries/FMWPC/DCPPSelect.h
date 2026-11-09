@@ -24,6 +24,8 @@
 #include <BCAL/DBCALHit.h>
 #include <FMWPC/DFMWPCHit.h>
 #include <FMWPC/DCTOFPoint.h>
+#include <PID/DNeutralParticleHypothesis.h>
+#include <PID/DNeutralParticle.h>
 
 #include <DVector3.h>
 
@@ -91,6 +93,8 @@ class DCPPSelect : public JObject {
         static bool MatchToPaddle(double x_track_pos, const vector<int>& allowedPaddles,int hitPaddleID);
 
         static bool MatchToCTOFHit_CPP(const vector<const DCTOFPoint*>& ctof_Hits, vector<const DCTOFPoint*>& ctof_matched_hits, DVector3 ctof_proj_pos,const vector<int>& allowedPaddles);
+
+        static bool VetoNeutrals (double t0_rf,const DVector3 &vect, vector<const DNeutralParticle*>&neutrals);
         //RF
         double rf_time;
 

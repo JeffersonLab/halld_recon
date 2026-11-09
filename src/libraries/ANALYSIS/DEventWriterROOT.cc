@@ -191,7 +191,6 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, const std::
 
 	//fill maps
 	TMap* locPositionToNameMap = Create_UserInfoMaps(locBranchRegister, locEvent, locReaction);
-
 /******************************************************************** Create Branches ********************************************************************/
 
 	//create basic/misc. tree branches (run#, event#, etc.)
@@ -225,7 +224,6 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, const std::
 	Create_Branches_NeutralHypotheses(locBranchRegister, locIsMCDataFlag);
 	Create_Branches_ChargedHypotheses(locBranchRegister, locIsMCDataFlag);
 	Create_Branches_PIMU(locBranchRegister);
-	std::cout << "created branches" << std::endl;
 
 	//create branches for combos
 	locBranchRegister.Register_Single<UChar_t>("NumUnusedTracks");
@@ -1484,8 +1482,9 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 	{
 		//however, only fill with beam particles that are in the combos
 		locTreeFillData->Fill_Single<UInt_t>("NumBeam", UInt_t(locBeamPhotons.size()));
-		for(size_t loc_i = 0; loc_i < locBeamPhotons.size(); ++loc_i)
+		for(size_t loc_i = 0; loc_i < locBeamPhotons.size(); ++loc_i){
 			Fill_BeamData(locTreeFillData, loc_i, locBeamPhotons[loc_i], locVertex, locMCThrownMatching);
+		}
 	}
 
 	
