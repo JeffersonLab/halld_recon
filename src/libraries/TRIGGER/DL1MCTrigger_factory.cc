@@ -43,11 +43,14 @@ int    DL1MCTrigger_factory::ECAL_CELL_THR = 135;
 int    DL1MCTrigger_factory::ECAL_NSA = 15;
 int    DL1MCTrigger_factory::ECAL_NSB = 3;
 int    DL1MCTrigger_factory::ECAL_WINDOW = 15;
+int    DL1MCTrigger_factory::ECAL_EMIN = 200;
+int    DL1MCTrigger_factory::ECAL_EMAX = 65535;
 
 int    DL1MCTrigger_factory::BCAL_CELL_THR = 120;
 int    DL1MCTrigger_factory::BCAL_NSA = 19;
 int    DL1MCTrigger_factory::BCAL_NSB = 3;
 int    DL1MCTrigger_factory::BCAL_WINDOW = 20;
+int    DL1MCTrigger_factory::BCAL_EMAX  = 65535;
 
 //------------------
 // Init
@@ -106,6 +109,8 @@ void DL1MCTrigger_factory::Init()
   SIMU_BASELINE  = 0;
   SIMU_GAIN = 1;
   SIMU_BAD_BLOCK = 0;  
+
+  USE_ECAL_MASK  = 1;
   
   VERBOSE = 0;
 
@@ -145,6 +150,9 @@ void DL1MCTrigger_factory::Init()
 
   app->SetDefaultParameter("TRIG:SIMU_BAD_BLOCK", SIMU_BAD_BLOCK,
 			   "Enable simulation of bad modules variations");
+
+  app->SetDefaultParameter("TRIG:USE_ECAL_MASK", USE_ECAL_MASK,
+			  "ECAL load trigger masks");
   
   app->SetDefaultParameter("TRIG:USE_RCDB", use_rcdb,
 			   "Read constants from RCDB");
@@ -166,6 +174,11 @@ void DL1MCTrigger_factory::Init()
 			   "ECAL NSB");
   app->SetDefaultParameter("TRIG:ECAL_WINDOW", ECAL_WINDOW,
 			   "ECAL GTP integration window"); 
+  app->SetDefaultParameter("TRIG:ECAL_EMIN", ECAL_EMIN,
+			   "ECAL minimum energy"); 
+  app->SetDefaultParameter("TRIG:ECAL_EMAX", ECAL_EMAX,
+			   "ECAL maximum energy");
+
   
   app->SetDefaultParameter("TRIG:BCAL_CELL_THR", BCAL_CELL_THR,
 			   "BCAL energy threshold per cell");
@@ -175,6 +188,8 @@ void DL1MCTrigger_factory::Init()
 					  "BCAL NSB");
   app->SetDefaultParameter("TRIG:BCAL_WINDOW", BCAL_WINDOW,
 			   "BCAL GTP integration window");
+  app->SetDefaultParameter("TRIG:BCAL_EMAX", BCAL_EMAX,
+			   "BCAL maximum energy");
   
   app->SetDefaultParameter("TRIG:ST_CELL_THR", ST_CELL_THR,
 			   "ST energy threshold per cell");
@@ -318,11 +333,6 @@ void DL1MCTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   
   //  runnumber = 30942;
   
-  if(use_rcdb == 1){
-    status = Read_RCDB(event, runnumber, print_messages);
-  }
-  
-
 
   if(print_messages) jout << "In DL1MCTrigger_factory, loading constants..." << jendl;
   
@@ -332,8 +342,12 @@ void DL1MCTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     jout << "DL1MCTrigger_factory: Error loading /ECAL/install_status !" << jendl;
   }
   
+
+  if(use_rcdb == 1){
+    status = Read_RCDB(event, runnumber, print_messages);
+  }
   
-  
+    
   if( (use_rcdb == 0) || (status > 0) || (triggers_enabled.size() == 0)){
     
     // Simulate FCAL & BCAL main production trigger only
@@ -344,14 +358,14 @@ void DL1MCTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
       trig_tmp.gtp.fcal      =  FCAL_EN_SC;
       trig_tmp.gtp.bcal      =  BCAL_EN_SC;
       trig_tmp.gtp.en_thr    =  FCAL_BCAL_EN;
-      trig_tmp.gtp.fcal_min  =  200;
-      trig_tmp.gtp.fcal_max  =  65535;
+      trig_tmp.gtp.fcal_min  =  ECAL_EMIN;   // Default 200
+      trig_tmp.gtp.fcal_max  =  ECAL_EMAX;   // Default 65535;
       trig_tmp.gtp.bcal_min  =  0;
-      trig_tmp.gtp.bcal_max  =  65535;
+      trig_tmp.gtp.bcal_max  =  BCAL_EMAX;   // Default 65535;
       trig_tmp.type          =  3;
       triggers_enabled.push_back(trig_tmp);
-      
-      if(ecal_installed) Load_ECAL_mask_default();
+
+      if( (ecal_installed) && (USE_ECAL_MASK) ) Load_ECAL_mask_default();
     
       if(print_messages){ 
 	cout << " Do not use RCDB for the trigger simulation. Default (spring 2025) trigger settings with the ECAL are used." << endl;
@@ -773,6 +787,8 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	  cout << " ECAL NSB            = " << ECAL_NSB << endl;
 	  cout << " ECAL_ADC_PER_MEV    = " << ECAL_ADC_PER_MEV << endl;
 	  cout << " ECAL_EN_SC          = " << ECAL_EN_SC << endl;
+	  cout << " ECAL_EMIN           = " << ECAL_EMIN << endl;
+	  cout << " ECAL_EMAX           = " << ECAL_EMAX << endl;	  
 	}
 	
 
@@ -1585,14 +1601,103 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
       
   }
 
-  
-  // Load ECAL Trigger Masks. Temporarily loaded from a function. Will be updated when masks are uploaded to the RCDB
+  // Load ECAL Trigger Masks.
   if(ecal_installed){
+    
+    string comDir  = result.Sections["ECAL"].NameValues["FADC250_COM_DIR"];
+    string comVer  = result.Sections["ECAL"].NameValues["FADC250_COM_VER"];
+    string userDir = result.Sections["ECAL"].NameValues["FADC250_USER_DIR"];
+    string userVer = result.Sections["ECAL"].NameValues["FADC250_USER_VER"];
+        
+    for(int crate = 1; crate <= 7; crate++){
+
+      std::string s = std::to_string(crate);
+      
+      string comFileName   =  comDir  +  "/rocecal" +s + "_fadc250_" + comVer + ".cnf";
+      string userFileName  =  userDir + "/rocecal"  +s + "_" + userVer + ".cnf";
+      
+      auto userFile = connection.GetFile(runnumber, userFileName);
+
+      if(!userFile) {                                                         
+	//      cout<<" USER File with name: "<< userFileName
+	//	  <<" doesn't exist (not associated) with run: "<< runnumber <<endl;
+	continue;      
+      }
+      
+      auto userParseResult = rcdb::ConfigParser::ParseWithSlots(userFile->GetContent(), "FADC250_SLOTS");
+      
+      for(unsigned int slot = 3; slot <= 21; slot++){
+	
+	auto userValues = userParseResult.SectionsBySlotNumber[slot].NameVectors["FADC250_TRG_MASK"];  // Parse it and return
+	
+	if(userValues.size() > 0){
+	  for (unsigned int ch = 0; ch < userValues.size(); ++ch) {
+	    
+	    if(userValues[ch].size() == 0) continue;
+	    
+	    if(stoi(userValues[ch]) > 0){
+	      
+	      uint32_t roc_id;
+	      if(crate == 3) roc_id = 118;
+	      else roc_id = 110 + crate;
+	      
+	      DTranslationTable::csc_t daq_index = {roc_id, slot, ch };
+	      
+	      DTranslationTable::DChannelInfo channel_info;
+	      
+	      try {		
+		channel_info = ttab[0]->GetDetectorIndex(daq_index);	      
+	      }
+	      
+	      catch(...){
+		if(VERBOSE && print_messages) cout << "Exception: ECAL channel is not in the translation table  " <<
+						" Crate = " << 110 + crate << "  Slot = " << slot <<  " Channel = " << ch << endl;
+		continue;
+	      }
+	      
+	      ecal_mod tmp;
+
+	      tmp.roc     =  crate;	    
+	      tmp.slot    =  slot;
+	      tmp.ch      =  ch;
+	      
+	      int idx_col = channel_info.ecal.col;
+	      int idx_row = channel_info.ecal.row;
+	      
+	      if(idx_col < 0)
+		tmp.col = idx_col + 20;
+	      else if(idx_col > 0) 
+		tmp.col = idx_col + 19;
+	      
+	      if(idx_row < 0)
+		tmp.row = idx_row + 20;
+	      else if(idx_row > 0) 
+		tmp.row = idx_row + 19;
+	      
+	      if(VERBOSE == 1)
+	    	cout  <<  " MASKED CHANNEL = " << " Crate = " << crate << "  Slot = " << slot << " Ch = " << ch <<
+		  " Col = " << tmp.col << " Row =   " << tmp.row << endl;
+	      
+	      ecal_trig_mask.push_back(tmp);
+	    }
+	    
+	  }
+	}
+      }  // Loop over slots
+    }    // Loop over crates       
+    
+    
+    if(VERBOSE == 1) cout << "NUMBER OF MASKED ECAL CHANNELS = " << ecal_trig_mask.size() << endl;
+    
+#if 0
+    // Do not remove this code, as it can read hardcoded masks and be used as a fallback if there are problems
+    // storing ECAL  masks in the RCDB.
     Load_ECAL_mask();
 
     for(unsigned int ii = 0; ii < ecal_trig_mask.size(); ii++){
-    
-      //    cout << " ecal_trig_mask:  II = " << ii <<  " Roc = "  << ecal_trig_mask[ii].roc << "  Slot = " << ecal_trig_mask[ii].slot << " Ch = " << ecal_trig_mask[ii].ch << endl;
+      
+      //    cout << " ecal_trig_mask:  II = " << ii <<  " Roc = "  << ecal_trig_mask[ii].roc << "  Slot = " <<
+      // ecal_trig_mask[ii].slot << " Ch = " << ecal_trig_mask[ii].ch << endl;
     
       uint32_t roc_id     =   ecal_trig_mask[ii].roc;
       unsigned int slot   =   ecal_trig_mask[ii].slot;
@@ -1607,13 +1712,13 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
       }
       
       catch(...){
-	if(VERBOSE && print_messages) cout << "Exception: ECAL channel is not in the translation table  " <<  " Crate = " << roc_id << "  Slot = " << slot << 
-					" Channel = " << ch << endl;
+	if(VERBOSE && print_messages) cout << "Exception: ECAL channel is not in the translation table  " <<
+					" Crate = " << roc_id << "  Slot = " << slot << " Channel = " << ch << endl;
 	continue;
       } 
       
-      int idx_col = channel_info.fcal.col;
-      int idx_row = channel_info.fcal.row;
+      int idx_col = channel_info.ecal.col;
+      int idx_row = channel_info.ecal.row;
       
       if(idx_col < 0)
 	ecal_trig_mask[ii].col = idx_col + 20;
@@ -1630,10 +1735,12 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
     if(VERBOSE == 1){
       cout << "NUMBER OF MASKED ECAL CHANNELS = " << ecal_trig_mask.size() << endl;
       for(unsigned int ii = 0; ii < ecal_trig_mask.size(); ii++){    
-	cout << " ecal_trig_mask:  II = " << ii <<  "  ROC = "  << ecal_trig_mask[ii].roc << "  Slot = " << ecal_trig_mask[ii].slot << " Ch = " << ecal_trig_mask[ii].ch << 
-	  "  Column = " << ecal_trig_mask[ii].col <<  "  Row = " << ecal_trig_mask[ii].row << endl;
+	cout << " ecal_trig_mask:  II = " << ii <<  "  ROC = "  << ecal_trig_mask[ii].roc << "  Slot = " << ecal_trig_mask[ii].slot <<
+	  " Ch = " << ecal_trig_mask[ii].ch <<  "  Column = " << ecal_trig_mask[ii].col <<  "  Row = " << ecal_trig_mask[ii].row << endl;
       }
     }
+#endif
+    
   }  // ECAL installed
 
   
@@ -1715,8 +1822,8 @@ int  DL1MCTrigger_factory::Read_RCDB(const std::shared_ptr<const JEvent>& event,
   
   
   if(VERBOSE == 1) cout << "NUMBER OF MASKED FCAL CHANNELS = " << fcal_trig_mask.size() << endl;
+ 
   
-
   // Load BCAL Trigger Masks
 
   comDir  = result.Sections["BCAL"].NameValues["FADC250_COM_DIR"];
@@ -2836,6 +2943,7 @@ void DL1MCTrigger_factory::Load_ECAL_mask_default(){
 	  ((col == 25) && (row == 14)) || ((col == 25) && (row == 25)))
 	continue;
       // Don't exclude the beam hole
+      //      if( ((col >= 19) && (col <=20)) && ((row >= 19) && (row <=20))) continue; 
       ecal_trig_mask.push_back(ecal_mod{111,3,0,col,row});
     }
   }   
