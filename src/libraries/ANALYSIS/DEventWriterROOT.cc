@@ -209,8 +209,8 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, const std::
 	//create branches for final-state particle hypotheses
 	if(locBeamUsedFlag)
 		Create_Branches_Beam(locBranchRegister, locIsMCDataFlag);
-	Create_Branches_NeutralHypotheses(locBranchRegister, locIsMCDataFlag);
-	Create_Branches_ChargedHypotheses(locBranchRegister, locIsMCDataFlag);
+	Create_Branches_NeutralHypotheses(locBranchRegister, locIsMCDataFlag, locReaction->Get_KinFitType());
+	Create_Branches_ChargedHypotheses(locBranchRegister, locIsMCDataFlag, locReaction->Get_KinFitType());
 
 	//create branches for combos
 	locBranchRegister.Register_Single<UChar_t>("NumUnusedTracks");
@@ -699,7 +699,7 @@ void DEventWriterROOT::Create_Branches_Beam(DTreeBranchRegister& locBranchRegist
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), dInitNumThrownArraySize);
 }
 
-void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
+void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag, DKinFitType locKinFitType) const
 {
 	string locArraySizeString = "NumChargedHypos";
 	locBranchRegister.Register_Single<UInt_t>(locArraySizeString);
@@ -806,9 +806,17 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_Y_TRD"), locArraySizeString, dInitNumTrackArraySize);
 	}
 
+	//KINFIT ERROR MATRIX
+	int locNumErrMEntries = Get_NumErrMEntries_Charged(locKinFitType);
+	if(STORE_ERROR_MATRIX_INFO && (locNumErrMEntries > 0))
+	{
+		locBranchRegister.Register_Single<Int_t>("numEntries_ParticleErrM");
+		locBranchRegister.Register_Single<UInt_t>("NumChargedHypoErrM");
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ErrMatrix"), "NumChargedHypoErrM", dInitNumTrackArraySize*locNumErrMEntries);
+	}
 }
 
-void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
+void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag, DKinFitType locKinFitType) const
 {
 	string locArraySizeString = "NumNeutralHypos";
 	string locParticleBranchName = "NeutralHypo";
@@ -884,6 +892,16 @@ void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& lo
 		//Can be used to compute timing chisq //is invalid for non-photons, so computed assuming photon PID
 		//Variance of X4_Measured.T() - RFTime, regardless of which RF bunch is chosen. //RF bunch is combo-depende
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "PhotonRFDeltaTVar"), locArraySizeString, dInitNumNeutralArraySize);
+
+	//KINFIT ERROR MATRIX
+	//P4 fit writes 7x7 particle matrix, P4+vertex fit 5x5 shower matrix
+	int locNumErrMEntries = Get_NumErrMEntries_Neutral(locKinFitType);
+	if(STORE_ERROR_MATRIX_INFO && (locNumErrMEntries > 0))
+	{
+		locBranchRegister.Register_Single<Int_t>("numEntries_ShowerErrM");
+		locBranchRegister.Register_Single<UInt_t>("NumNeutralHypoErrM");
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ErrMatrix"), "NumNeutralHypoErrM", dInitNumNeutralArraySize*locNumErrMEntries);
+	}
 }
 
 void DEventWriterROOT::Create_Branches_Combo(DTreeBranchRegister& locBranchRegister, const DReaction* locReaction, bool locIsMCDataFlag, TMap* locPositionToNameMap) const
@@ -1065,7 +1083,7 @@ void DEventWriterROOT::Create_Branches_ComboNeutral(DTreeBranchRegister& locBran
 void DEventWriterROOT::Create_Branches_KinFitData(DTreeBranchRegister& locBranchRegister, const std::shared_ptr<const JEvent>& locEventLoop, const DReaction* locReaction, bool locIsMCDataFlag) const
 {
 
-	if(!STORE_PULL_INFO && !STORE_ERROR_MATRIX_INFO)
+	if(!STORE_PULL_INFO)
 		return;
     
     //Get the fit-type (P4, P4 + Vertex, and Vertex-only)
@@ -1124,19 +1142,9 @@ void DEventWriterROOT::Create_Branches_KinFitData(DTreeBranchRegister& locBranch
     //Get Pulls for the beam:
     //Particle_t beamPID = locReaction->Get_ReactionStep(0)->Get_InitialPID();
     
-    string particleCovM = "numEntries_ParticleErrM";
-    string showerCovM = "numEntries_ShowerErrM";
-    string decayCovM = "numEntries_DecayErrM";
-    if(STORE_ERROR_MATRIX_INFO){
-       locBranchRegister.Register_Single<Int_t>(particleCovM);
-       locBranchRegister.Register_Single<Int_t>(showerCovM); 
-    }
-    
     //Set the branches for the beam photon:
     if(STORE_PULL_INFO) 
     	setTreePullBranches(locBranchRegister,"ComboBeam",kfitType,dInitNumComboArraySize,true);
-    if(STORE_ERROR_MATRIX_INFO) 
-    	locBranchRegister.Register_FundamentalArray< Float_t >(Build_BranchName("ComboBeam","ErrMatrix"),particleCovM,nEntriesParticleCov);
 		
     //----------------------------------------------------------------------------------------------
     for(size_t loc_i=0;loc_i<nReactionSteps;loc_i++){
@@ -1151,7 +1159,6 @@ void DEventWriterROOT::Create_Branches_KinFitData(DTreeBranchRegister& locBranch
             assignMap[finalchargedPIDs.at(loc_j)]--;
             if(branchName != "nada"){
                   if(STORE_PULL_INFO) setTreePullBranches(locBranchRegister,branchName,kfitType,dInitNumComboArraySize,false);
-                  if(STORE_ERROR_MATRIX_INFO) locBranchRegister.Register_FundamentalArray< Float_t >(Build_BranchName(branchName,"ErrMatrix"),particleCovM,nEntriesParticleCov);
             }
         }
         //----------------------------------------------------------------------------------------------
@@ -1166,7 +1173,6 @@ void DEventWriterROOT::Create_Branches_KinFitData(DTreeBranchRegister& locBranch
             assignMap[finalneutralPIDs.at(loc_j)]--;
             if(branchName != "nada"){
                 if(STORE_PULL_INFO) setTreePullBranches(locBranchRegister,branchName,kfitType,dInitNumComboArraySize,true);
-                if(finalneutralPIDs.at(loc_j) == Gamma && STORE_ERROR_MATRIX_INFO) locBranchRegister.Register_FundamentalArray< Float_t >(Build_BranchName(branchName,"ErrMatrix"),showerCovM,nEntriesShowerCov);
             } 
          }
         //----------------------------------------------------------------------------------------------
@@ -1481,15 +1487,30 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 			Fill_BeamData(locTreeFillData, loc_i, locBeamPhotons[loc_i], locVertex, locMCThrownMatching);
 	}
 
+	//KINFIT ERROR MATRIX SIZES
+	DKinFitType locKinFitType = locReaction->Get_KinFitType();
+	int locNumErrMEntries_Charged = Get_NumErrMEntries_Charged(locKinFitType);
+	int locNumErrMEntries_Neutral = Get_NumErrMEntries_Neutral(locKinFitType);
+	if(STORE_ERROR_MATRIX_INFO && (locNumErrMEntries_Charged > 0))
+	{
+		locTreeFillData->Fill_Single<Int_t>("numEntries_ParticleErrM", locNumErrMEntries_Charged);
+		locTreeFillData->Fill_Single<UInt_t>("NumChargedHypoErrM", UInt_t(locChargedTrackHypotheses.size()*locNumErrMEntries_Charged));
+	}
+	if(STORE_ERROR_MATRIX_INFO && (locNumErrMEntries_Neutral > 0))
+	{
+		locTreeFillData->Fill_Single<Int_t>("numEntries_ShowerErrM", locNumErrMEntries_Neutral);
+		locTreeFillData->Fill_Single<UInt_t>("NumNeutralHypoErrM", UInt_t(locNeutralParticleHypotheses.size()*locNumErrMEntries_Neutral));
+	}
+
 	//INDEPENDENT CHARGED TRACKS
 	locTreeFillData->Fill_Single<UInt_t>("NumChargedHypos", UInt_t(locChargedTrackHypotheses.size()));
 	for(size_t loc_i = 0; loc_i < locChargedTrackHypotheses.size(); ++loc_i)
-		Fill_ChargedHypo(locTreeFillData, loc_i, locChargedTrackHypotheses[loc_i], locMCThrownMatching, locThrownIndexMap, locDetectorMatches);
+		Fill_ChargedHypo(locTreeFillData, loc_i, locChargedTrackHypotheses[loc_i], locMCThrownMatching, locThrownIndexMap, locDetectorMatches, locKinFitType);
 
 	//INDEPENDENT NEUTRAL PARTICLES
 	locTreeFillData->Fill_Single<UInt_t>("NumNeutralHypos", UInt_t(locNeutralParticleHypotheses.size()));
 	for(size_t loc_i = 0; loc_i < locNeutralParticleHypotheses.size(); ++loc_i)
-		Fill_NeutralHypo(locTreeFillData, loc_i, locNeutralParticleHypotheses[loc_i], locMCThrownMatching, locThrownIndexMap, locDetectorMatches);
+		Fill_NeutralHypo(locTreeFillData, loc_i, locNeutralParticleHypotheses[loc_i], locMCThrownMatching, locThrownIndexMap, locDetectorMatches, locKinFitType);
 
 	//UNUSED TRACKS
 	double locSumPMag_UnusedTracks = 0.0;
@@ -1867,7 +1888,7 @@ void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned in
 	locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), locP4_Measured, locArrayIndex);
 }
 
-void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const
+void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches, DKinFitType locKinFitType) const
 {
 	string locParticleBranchName = "ChargedHypo";
 
@@ -2165,9 +2186,13 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_X_TRD"),	locTRDExtrapolatedX, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Extrapolated_Y_TRD"), locTRDExtrapolatedY, locArrayIndex);
 	}
+
+	//KINFIT ERROR MATRIX
+	if(STORE_ERROR_MATRIX_INFO && (Get_NumErrMEntries_Charged(locKinFitType) > 0))
+		fillTreeParticleErrMBranches(locTreeFillData, locParticleBranchName, locChargedTrackHypothesis, locArrayIndex);
 }
 
-void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DNeutralParticleHypothesis* locNeutralParticleHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const
+void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DNeutralParticleHypothesis* locNeutralParticleHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches, DKinFitType locKinFitType) const
 {
 	string locParticleBranchName = "NeutralHypo";
 	const DNeutralShower* locNeutralShower = locNeutralParticleHypothesis->Get_NeutralShower();
@@ -2339,6 +2364,16 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 	if(locPID != Gamma)
 		locPhotonRFDeltaTVar = 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "PhotonRFDeltaTVar"), locPhotonRFDeltaTVar, locArrayIndex);
+
+	//KINFIT ERROR MATRIX
+	if(STORE_ERROR_MATRIX_INFO)
+	{
+		int locNumErrMEntries = Get_NumErrMEntries_Neutral(locKinFitType);
+		if(locNumErrMEntries == nEntriesParticleCov)
+			fillTreeParticleErrMBranches(locTreeFillData, locParticleBranchName, locNeutralParticleHypothesis, locArrayIndex);
+		else if(locNumErrMEntries == nEntriesShowerCov)
+			fillTreeShowerErrMBranches(locTreeFillData, locParticleBranchName, locNeutralShower, locArrayIndex);
+	}
 }
 
 void DEventWriterROOT::Fill_ComboData(DTreeFillData* locTreeFillData, const DReaction* locReaction, const DParticleCombo* locParticleCombo, unsigned int locComboIndex, const map<pair<oid_t, Particle_t>, size_t>& locObjectToArrayIndexMap) const
@@ -2624,13 +2659,9 @@ void DEventWriterROOT::Fill_KinFitData(DTreeFillData* locTreeFillData, const std
 		const vector<const DBeamPhoton*>& locBeamPhotons, const vector<const DChargedTrackHypothesis*>& locChargedHypos,
 		const vector<const DNeutralParticleHypothesis*>& locNeutralHypos, const deque<const DParticleCombo*>& locParticleCombos) const
 {
-	if(!STORE_PULL_INFO && !STORE_ERROR_MATRIX_INFO)
+	if(!STORE_PULL_INFO)
 		return;
 
-	if(STORE_ERROR_MATRIX_INFO){
-	  locTreeFillData->Fill_Single<Int_t>("numEntries_ParticleErrM", nEntriesParticleCov);
-	  locTreeFillData->Fill_Single<Int_t>("numEntries_ShowerErrM", nEntriesShowerCov);
-	}
     bool writeOutPulls = getPullFlag( locReaction );
         
     //Retreive and fill pull-information:
@@ -2702,8 +2733,6 @@ void DEventWriterROOT::Fill_KinFitData(DTreeFillData* locTreeFillData, const std
                     fillTreePullBranches(locTreeFillData,branchName,kfitType,someMap,iPC,isNeutral);
                     fillTreeTrackPullBranches(locTreeFillData,branchName,kfitType,someMap,iPC,isNeutral,part,partFit);
                 }
-                if(STORE_ERROR_MATRIX_INFO)
-                	fillTreeErrMBranches(locTreeFillData,branchName,kfitType,part,sh,isNeutral);
             }
             //-----------------------------------------------------
             if(STORE_PULL_INFO) someMap.clear();
@@ -2902,62 +2931,50 @@ bool DEventWriterROOT::getPullFlag(const DReaction* currentReaction) const
     return outFlag;
 }
 
-//Now fill the individual elements of the error matrix to the tree:
-void DEventWriterROOT::fillTreeErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName,DKinFitType yourFitType, const DKinematicData* particle, const DNeutralShower* shower, bool isNeutral) const
-{
-    if(yourFitType == d_P4Fit) {
-		fillTreeParticleErrMBranches(locTreeFillData,yourBranchName,particle);
-	} else if(yourFitType == d_P4AndVertexFit) {
-		if(isNeutral) {
-			fillTreeShowerErrMBranches(locTreeFillData,yourBranchName,shower);
-		} else {
-			fillTreeParticleErrMBranches(locTreeFillData,yourBranchName,particle);
-		}
-	} else if(yourFitType == d_VertexFit && !isNeutral) {
-		fillTreeParticleErrMBranches(locTreeFillData,yourBranchName,particle);
-	}     	
+int DEventWriterROOT::Get_NumErrMEntries_Charged(DKinFitType yourFitType) const {
+	if((yourFitType == d_P4Fit) || (yourFitType == d_P4AndVertexFit) || (yourFitType == d_VertexFit))
+		return nEntriesParticleCov;
+	return 0;
+}
+
+int DEventWriterROOT::Get_NumErrMEntries_Neutral(DKinFitType yourFitType) const {
+	if(yourFitType == d_P4Fit)
+		return nEntriesParticleCov;
+	if(yourFitType == d_P4AndVertexFit)
+		return nEntriesShowerCov;
+	return 0;
 }
 
 //Fill the 7x7 error matrix elements:
-void DEventWriterROOT::fillTreeParticleErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DKinematicData* particle) const
+void DEventWriterROOT::fillTreeParticleErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DKinematicData* particle, size_t yourArrayIndex) const
 {
-	if(particle != NULL){	
-	   const TMatrixTSym<float> errMatrix = *( particle->errorMatrix() );
-	
-	   int mIndex = 0;
-	   float matrixEl = 0.0;
-	   for(int row=0;row<7;row++){
-		   for(int col=0;col<7;col++){
-			    if(col >= row){
-					matrixEl = errMatrix[row][col];
-					locTreeFillData->Fill_Array<Float_t>(Build_BranchName(yourBranchName, "ErrMatrix"),matrixEl,mIndex);
-					mIndex++;
-				}
-		   }
-	   }
+	const TMatrixFSym* errMatrix = (particle != nullptr) ? particle->errorMatrix().get() : nullptr;
 
-    }
+	size_t mIndex = yourArrayIndex * nEntriesParticleCov;
+	float matrixEl = 0.0; // zerofill if need be to maintain alignment
+	for(int row = 0; row < 7; row++){
+		for(int col = row; col < 7; col++){
+			matrixEl = (errMatrix != nullptr) ? (*errMatrix)[row][col] : 0.0;
+			locTreeFillData->Fill_Array<Float_t>(Build_BranchName(yourBranchName, "ErrMatrix"), matrixEl, mIndex);
+			mIndex++;
+		}
+	}
 }
 
 //Fill the 5x5 error matrix elements:
-void DEventWriterROOT::fillTreeShowerErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DNeutralShower* shower) const
+void DEventWriterROOT::fillTreeShowerErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DNeutralShower* shower, size_t yourArrayIndex) const
 {
-	if(shower != NULL){
-	   const TMatrixTSym <float> errMatrix = *( shower->dCovarianceMatrix );
-	   float matrixEl = 0.0;
-	   
-	   int mIndex = 0;
-	   for(int row=0;row<5;row++){
-		   for(int col=0;col<5;col++){
-			    if(col >= row){
-				   matrixEl = errMatrix[row][col];
-			       locTreeFillData->Fill_Array<Float_t>(Build_BranchName(yourBranchName, "ErrMatrix"),matrixEl,mIndex);
-				   mIndex++;
-				}
-		   }
-	   }
+	const TMatrixFSym* errMatrix = (shower != nullptr) ? shower->dCovarianceMatrix.get() : nullptr;
 
-    }
+	size_t mIndex = yourArrayIndex * nEntriesShowerCov;
+	float matrixEl = 0.0; // zerofill if need be to maintain alignment
+	for(int row = 0; row < 5; row++){
+		for(int col = row; col < 5; col++){
+			matrixEl = (errMatrix != nullptr) ? (*errMatrix)[row][col] : 0.0;
+			locTreeFillData->Fill_Array<Float_t>(Build_BranchName(yourBranchName, "ErrMatrix"),matrixEl,mIndex);
+			mIndex++;
+		}
+	}
 }
 
 //GET THE TRACKING PULLS:
