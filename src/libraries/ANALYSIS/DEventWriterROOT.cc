@@ -209,6 +209,7 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, const std::
 	//create branches for final-state particle hypotheses
 	if(locBeamUsedFlag)
 		Create_Branches_Beam(locBranchRegister, locIsMCDataFlag);
+	Create_Branches_IsTagm(locBranchRegister, locIsMCDataFlag);
 	Create_Branches_NeutralHypotheses(locBranchRegister, locIsMCDataFlag);
 	Create_Branches_ChargedHypotheses(locBranchRegister, locIsMCDataFlag);
 
@@ -697,6 +698,15 @@ void DEventWriterROOT::Create_Branches_Beam(DTreeBranchRegister& locBranchRegist
 	//KINEMATICS: MEASURED //at the production vertex
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_Measured"), dInitNumThrownArraySize);
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), dInitNumThrownArraySize);
+}
+
+void DEventWriterROOT::Create_Branches_IsTagm(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
+{
+  string locArraySizeString = "NumBeam";
+  
+  string locParticleBranchName = "Beam";
+  locBranchRegister.Register_FundamentalArray<Bool_t>(Build_BranchName(locParticleBranchName, "IsTAGM"), locArraySizeString, dInitNumBeamArraySize);
+  locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "Counter"), locArraySizeString, dInitNumBeamArraySize);
 }
 
 void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
@@ -1477,8 +1487,10 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 	{
 		//however, only fill with beam particles that are in the combos
 		locTreeFillData->Fill_Single<UInt_t>("NumBeam", UInt_t(locBeamPhotons.size()));
-		for(size_t loc_i = 0; loc_i < locBeamPhotons.size(); ++loc_i)
+		for(size_t loc_i = 0; loc_i < locBeamPhotons.size(); ++loc_i){
 			Fill_BeamData(locTreeFillData, loc_i, locBeamPhotons[loc_i], locVertex, locMCThrownMatching);
+			Fill_IsTagm(locTreeFillData, loc_i, locBeamPhotons[loc_i], locVertex, locMCThrownMatching);
+		}
 	}
 
 	//INDEPENDENT CHARGED TRACKS
@@ -1865,6 +1877,23 @@ void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned in
 	DLorentzVector locDP4 = locBeamPhoton->lorentzMomentum();
 	TLorentzVector locP4_Measured(locDP4.Px(), locDP4.Py(), locDP4.Pz(), locDP4.E());
 	locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), locP4_Measured, locArrayIndex);
+}
+
+void DEventWriterROOT::Fill_IsTagm(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DBeamPhoton* locBeamPhoton, const DVertex* locVertex, const DMCThrownMatching* locMCThrownMatching) const
+{
+  string locParticleBranchName = "Beam";
+
+  Bool_t isTAGM;
+  if(SystemName(locBeamPhoton->dSystem) == "TAGM"){isTAGM = kTRUE;}
+  if(SystemName(locBeamPhoton->dSystem) == "TAGH"){isTAGM = kFALSE;}
+
+  Int_t Counter;
+  Counter = locBeamPhoton->dCounter;
+  
+  locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "Counter"), Counter, locArrayIndex);
+  
+  locTreeFillData->Fill_Array<Bool_t>(Build_BranchName(locParticleBranchName, "IsTAGM"), isTAGM, locArrayIndex);
+
 }
 
 void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const

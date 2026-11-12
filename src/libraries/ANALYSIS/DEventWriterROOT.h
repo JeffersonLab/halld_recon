@@ -136,7 +136,8 @@ class DEventWriterROOT : public JObject
 		//TREE CREATION: PARTICLE INFO
 		void Create_Branches_ThrownParticles(DTreeBranchRegister& locTreeBranchRegister, bool locIsOnlyThrownFlag) const;
 		void Create_Branches_Beam(DTreeBranchRegister& locTreeBranchRegister, bool locIsMCDataFlag) const;
-		void Create_Branches_NeutralHypotheses(DTreeBranchRegister& locTreeBranchRegister, bool locIsMCDataFlag) const;
+  void Create_Branches_IsTagm(DTreeBranchRegister& locTreeBranchRegister, bool locIsMCDataFlag) const;
+  void Create_Branches_NeutralHypotheses(DTreeBranchRegister& locTreeBranchRegister, bool locIsMCDataFlag) const;
 		void Create_Branches_ChargedHypotheses(DTreeBranchRegister& locTreeBranchRegister, bool locIsMCDataFlag) const;
 		void Create_Branches_KinFitData(DTreeBranchRegister& locBranchRegister, const std::shared_ptr<const JEvent>& locEventLoop, const DReaction* locReaction, bool locIsMCDataFlag) const;
 
@@ -168,7 +169,8 @@ class DEventWriterROOT : public JObject
 
 		//TREE FILLING: INDEPENDENT PARTICLES
 		void Fill_BeamData(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DBeamPhoton* locBeamPhoton, const DVertex* locVertex, const DMCThrownMatching* locMCThrownMatching) const;
-		void Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching,
+  void Fill_IsTagm(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DBeamPhoton* locBeamPhoton, const DVertex* locVertex, const DMCThrownMatching* locMCThrownMatching) const;
+  void Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching,
 				const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const;
 		void Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DNeutralParticleHypothesis* locPhotonHypothesis, const DMCThrownMatching* locMCThrownMatching,
 				const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const;
