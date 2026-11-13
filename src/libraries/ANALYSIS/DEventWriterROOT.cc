@@ -209,8 +209,9 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, const std::
 	//create branches for final-state particle hypotheses
 	if(locBeamUsedFlag)
 		Create_Branches_Beam(locBranchRegister, locIsMCDataFlag);
-	Create_Branches_NeutralHypotheses(locBranchRegister, locIsMCDataFlag, locReaction->Get_KinFitType());
-	Create_Branches_ChargedHypotheses(locBranchRegister, locIsMCDataFlag, locReaction->Get_KinFitType());
+	Create_Branches_IsTagm(locBranchRegister, locIsMCDataFlag);
+	Create_Branches_NeutralHypotheses(locBranchRegister, locIsMCDataFlag);
+	Create_Branches_ChargedHypotheses(locBranchRegister, locIsMCDataFlag);
 
 	//create branches for combos
 	locBranchRegister.Register_Single<UChar_t>("NumUnusedTracks");
@@ -699,7 +700,17 @@ void DEventWriterROOT::Create_Branches_Beam(DTreeBranchRegister& locBranchRegist
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), dInitNumThrownArraySize);
 }
 
-void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag, DKinFitType locKinFitType) const
+void DEventWriterROOT::Create_Branches_IsTagm(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
+{
+  string locArraySizeString = "NumBeam";
+  
+  string locParticleBranchName = "Beam";
+  locBranchRegister.Register_FundamentalArray<Bool_t>(Build_BranchName(locParticleBranchName, "IsTAGM"), locArraySizeString, dInitNumBeamArraySize);
+  locBranchRegister.Register_FundamentalArray<Bool_t>(Build_BranchName(locParticleBranchName, "IsOverlap"), locArraySizeString, dInitNumBeamArraySize);
+  locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "Counter"), locArraySizeString, dInitNumBeamArraySize);
+}
+
+void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
 {
 	string locArraySizeString = "NumChargedHypos";
 	locBranchRegister.Register_Single<UInt_t>(locArraySizeString);
@@ -1483,8 +1494,10 @@ void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEve
 	{
 		//however, only fill with beam particles that are in the combos
 		locTreeFillData->Fill_Single<UInt_t>("NumBeam", UInt_t(locBeamPhotons.size()));
-		for(size_t loc_i = 0; loc_i < locBeamPhotons.size(); ++loc_i)
+		for(size_t loc_i = 0; loc_i < locBeamPhotons.size(); ++loc_i){
 			Fill_BeamData(locTreeFillData, loc_i, locBeamPhotons[loc_i], locVertex, locMCThrownMatching);
+			Fill_IsTagm(locTreeFillData, loc_i, locBeamPhotons[loc_i], locVertex, locMCThrownMatching, locEvent);
+		}
 	}
 
 	//KINFIT ERROR MATRIX SIZES
@@ -1888,7 +1901,70 @@ void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned in
 	locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), locP4_Measured, locArrayIndex);
 }
 
-void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches, DKinFitType locKinFitType) const
+void DEventWriterROOT::Fill_IsTagm(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DBeamPhoton* locBeamPhoton, const DVertex* locVertex, const DMCThrownMatching* locMCThrownMatching, const std::shared_ptr<const JEvent>& locEvent) const
+{
+  string locParticleBranchName = "Beam";
+
+  Bool_t isTAGM;
+
+  int overlap_min[242*2], overlap_max[242*2];
+  
+   overlap_min[222] = 1;   overlap_max[222] = 3;
+  overlap_min[223] = 5;   overlap_max[223] = 7;
+  overlap_min[224] = 8;   overlap_max[224] = 12;
+  overlap_min[225] = 12;  overlap_max[225] = 15;
+  overlap_min[226] = 17;  overlap_max[226] = 19;
+  overlap_min[227] = 20;  overlap_max[227] = 25;
+  overlap_min[228] = 25;  overlap_max[228] = 27;
+  overlap_min[229] = 29;  overlap_max[229] = 33;
+  overlap_min[230] = 32;  overlap_max[230] = 37;
+  overlap_min[231] = 36;  overlap_max[231] = 42;
+  overlap_min[232] = 41;  overlap_max[232] = 45;
+  overlap_min[233] = 45;  overlap_max[233] = 49;
+  overlap_min[234] = 48;  overlap_max[234] = 54;
+  overlap_min[235] = 53;  overlap_max[235] = 57;
+  overlap_min[236] = 57;  overlap_max[236] = 63;
+  overlap_min[237] = 62;  overlap_max[237] = 65;
+  overlap_min[238] = 65;  overlap_max[238] = 70;
+  overlap_min[240] = 72;  overlap_max[240] = 77;
+  overlap_min[241] = 79;  overlap_max[241] = 82;
+  overlap_min[243] = 86;  overlap_max[243] = 91;
+  overlap_min[244] = 90;  overlap_max[244] = 94;
+  overlap_min[245] = 95;  overlap_max[245] = 96;
+
+  if(SystemName(locBeamPhoton->dSystem) == "TAGM"){isTAGM = kTRUE;}
+  if(SystemName(locBeamPhoton->dSystem) == "TAGH"){isTAGM = kFALSE;}
+  
+  Int_t Counter;
+  Counter = locBeamPhoton->dCounter;
+
+  vector<const DBeamPhoton*> VecDBeamPhoton;
+  locEvent->Get(VecDBeamPhoton);
+
+  Bool_t stat = kFALSE;
+  
+  if(!isTAGM && 221 < Counter && Counter < 246){
+    for(int j = 0; j < VecDBeamPhoton.size(); j++){
+      const DBeamPhoton* tagm = VecDBeamPhoton[j];
+      if(tagm->dSystem == SYS_TAGM) {
+	const int counterm = tagm->dCounter;
+	if(counterm>=overlap_min[Counter] && counterm<=overlap_max[Counter]){
+	  if(std::fabs(locBeamPhoton->time()-tagm->time())<4.0) {
+	    stat = kTRUE;
+	    break;
+	  }
+	}
+      }
+    }
+  }
+  
+  locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "Counter"), Counter, locArrayIndex);
+  locTreeFillData->Fill_Array<Bool_t>(Build_BranchName(locParticleBranchName, "IsOverlap"), stat, locArrayIndex);
+  locTreeFillData->Fill_Array<Bool_t>(Build_BranchName(locParticleBranchName, "IsTAGM"), isTAGM, locArrayIndex);
+
+}
+
+void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const
 {
 	string locParticleBranchName = "ChargedHypo";
 
