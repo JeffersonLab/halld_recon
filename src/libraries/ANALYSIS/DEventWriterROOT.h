@@ -173,7 +173,7 @@ class DEventWriterROOT : public JObject
   void Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching,
 				const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const;
 		void Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DNeutralParticleHypothesis* locPhotonHypothesis, const DMCThrownMatching* locMCThrownMatching,
-				const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const;
+				const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches, DKinFitType locKinFitType) const;
 
 		//TREE FILLING: COMBO
 		void Fill_ComboData(DTreeFillData* locTreeFillData, const DReaction* locReaction, const DParticleCombo* locParticleCombo, unsigned int locComboIndex, const map<pair<oid_t, Particle_t>, size_t>& locObjectToArrayIndexMap) const;
@@ -214,14 +214,15 @@ class DEventWriterROOT : public JObject
 		int nEntriesShowerCov = 5+4+3+2+1; //--> (5X5) Shower Matrix is symmetric, therefore no need to look at all elements
 		int nEntriesDecayCov = 11+10+9+8+7+6+5+4+3+2+1; //--> (11x11) Decaying Particle Matrix is symmetric, therefore no need to look at all elements
 
-		//Save the elements of the error matrix to the tree: 
-		void fillTreeErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName,DKinFitType yourFitType, const DKinematicData* particle, const DNeutralShower* shower, bool isNeutral) const;
+		// get number of upper triangular elements stored per matrix (0 if not stored):
+		int Get_NumErrMEntries_Charged(DKinFitType yourFitType) const;
+		int Get_NumErrMEntries_Neutral(DKinFitType yourFitType) const; // P4 fit: 7x7 particle matrix, P4+vertex fit: 5x5 shower matrix
 	
 		//Fill tree for 7x7-Matrices:
-		void fillTreeParticleErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DKinematicData* particle) const;
+		void fillTreeParticleErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DKinematicData* particle, size_t yourArrayIndex) const;
 			
 		 //Fill tree for 5x5-Matrices (showers):
-		void fillTreeShowerErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DNeutralShower* shower) const;
+		void fillTreeShowerErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DNeutralShower* shower, size_t yourArrayIndex) const;
 	
 		//GET TRACKING PULLS FROM KINEMATIC FITTER:q/pt, phi, tan(lambda), z, D
 			
