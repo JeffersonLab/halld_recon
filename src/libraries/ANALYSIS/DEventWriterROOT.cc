@@ -1920,7 +1920,7 @@ void DEventWriterROOT::Fill_IsTagm(DTreeFillData* locTreeFillData, unsigned int 
   vector<const DBeamPhoton*> VecDBeamPhoton;
   locEvent->Get(VecDBeamPhoton);
 
-  Bool_t stat = kTRUE;
+  Bool_t stat = kFALSE;
   
   if(!isTAGM && 221 < Counter && Counter < 246){
     for(int j = 0; j < VecDBeamPhoton.size(); j++){
@@ -1929,7 +1929,7 @@ void DEventWriterROOT::Fill_IsTagm(DTreeFillData* locTreeFillData, unsigned int 
 	const int counterm = tagm->dCounter;
 	if(counterm>=overlap_min[Counter] && counterm<=overlap_max[Counter]){
 	  if(std::fabs(locBeamPhoton->time()-tagm->time())<4.0) {
-	    stat = kFALSE;
+	    stat = kTRUE;
 	    break;
 	  }
 	}
