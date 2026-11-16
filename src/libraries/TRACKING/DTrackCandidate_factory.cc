@@ -423,7 +423,7 @@ void DTrackCandidate_factory::Process(const std::shared_ptr<const JEvent>& event
 	can->dDetector=SYS_FDC;
 	for (unsigned int n=0;n<cdchits.size();n++){
 	  can->cdchits.push_back(cdchits[n]);
-	  if (cdchits[n]->tdrift){
+	  if (cdchits[n]->tdrift<minDriftTime){
 	    minDriftTime=cdchits[n]->tdrift;
 	    can->dDetector=SYS_CDC;
 	  }
