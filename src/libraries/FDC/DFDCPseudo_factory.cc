@@ -91,7 +91,7 @@ void DFDCPseudo_factory::Init()
   MAX_ALLOWED_FDC_HITS=20000;
   STRIP_ANODE_TIME_CUT=25.;
   MIDDLE_STRIP_THRESHOLD=0.;
-  CHARGE_THRESHOLD=0.3;  // appropriate for uncalibrated pulse-height
+  CHARGE_THRESHOLD=0.06;
   DELTA_X_CUT=0.5;
 
   r2_out=ROUT_FIDUCIAL*ROUT_FIDUCIAL;
@@ -158,11 +158,6 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   jcalib->Get("FDC/fdc_resolution_parms",fdcparms);
   FDC_RES_PAR1=fdcparms["res_par1"];
   FDC_RES_PAR2=fdcparms["res_par2"];
-
-  // Make the charge threshold appropriate for calibrated pulse-height
-  jcalib->Get("FDC/digi_scales",fdcparms);
-  double a_scale =fdcparms["FDC_ADC_ASCALE"];
-  if (CHARGE_THRESHOLD == 0.3) CHARGE_THRESHOLD *=a_scale;
 
   
   if(DEBUG_HISTS){
