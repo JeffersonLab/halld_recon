@@ -9,11 +9,15 @@
 
 #include "JEventProcessor_dc_basics.h"
 #include "TRIGGER/DTrigger.h"
+
 #include "CDC/DCDCHit.h"
+
 #include "FDC/DFDCHit.h"
+#include "FDC/DFDCCathodeCluster.h"
+#include "FDC/DFDCPseudo.h"
 
+#include <TH1.h>
 #include <TH2.h>
-
 
 
 
@@ -22,9 +26,17 @@ static TH1F *hcdc_a = NULL;
 static TH1F *hcdc_t = NULL;
 
 
-static TH2F *hfdc_qt = NULL;
 static TH1F *hfdc_q = NULL;
+static TH1F *hfdc_pulse_height = NULL;
 static TH1F *hfdc_t = NULL;
+static TH1F *hfdc_wt = NULL;
+static TH2F *hfdc_qt = NULL;
+
+static TH1F *hfdc_cq = NULL;
+
+static TH1F *hfdc_pst = NULL;
+static TH1F *hfdc_psq = NULL;
+static TH2F *hfdc_psqt = NULL;
 
 
 
@@ -71,14 +83,19 @@ void JEventProcessor_dc_basics::Init()
     hcdc_a = new TH1F("cdc_a","CDC hit charge (from pulse height) (fC)",180, 0,18000);
     hcdc_t = new TH1F("cdc_t","CDC hit time (ns)",250,0,1000);
     
-    hfdc_qt = new TH2F("fdc_qt","FDC hit charge vs time;time (ns);charge (fC)",100,0,1000, 100,0,500);
+    hfdc_qt = new TH2F("fdc_qt","FDC hit charge vs time;time (ns);charge (fC)",100,0,400, 100,0,500);
+
+    hfdc_pulse_height = new TH1F("fdc_pulse_height","FDC pulse height", 410,0,4100);
     hfdc_q = new TH1F("fdc_q","FDC hit charge (fC)", 250,0,500);
-    hfdc_t = new TH1F("fdc_t","FDC hit time (ns)", 250,0,1000);
+    hfdc_t = new TH1F("fdc_t","FDC cathode hit time (ns)", 250,0,400);
 
+    hfdc_wt = new TH1F("fdc_wt","FDC wire hit time (ns)", 250,0,400);
 
+    hfdc_cq = new TH1F("fdc_cq","FDC cathode cluster hit charge (fC)", 1000,0,4000);
     
-
-
+    hfdc_psqt = new TH2F("fdc_psqt","FDC pseudohit charge vs time;time (ns);charge (fC)",100,0,400, 100,0,500);
+    hfdc_psq = new TH1F("fdc_psq","FDC pseudohit charge (fC)", 250,0,500);
+    hfdc_pst = new TH1F("fdc_pst","FDC pseudohit time (ns)", 250,0,400);
     
 }
 
@@ -115,6 +132,13 @@ void JEventProcessor_dc_basics::Process(const std::shared_ptr<const JEvent> &eve
     vector<const DFDCHit*> DFDCHits;
     event->Get(DFDCHits);
 
+    vector<const DFDCCathodeCluster*> DFDCClusters;
+    event->Get(DFDCClusters);
+    
+    vector<const DFDCPseudo*> DFDCPseudohits;
+    event->Get(DFDCPseudohits);
+
+    
     lockService->RootFillLock(this);   
 
     for (uint32_t i=0; i<DCDCHits.size(); i++) {
@@ -124,15 +148,31 @@ void JEventProcessor_dc_basics::Process(const std::shared_ptr<const JEvent> &eve
         hcdc_t->Fill(hit->t);
     }
    
-
     for (uint32_t i=0; i<DFDCHits.size(); i++) {
         const DFDCHit *hit = DFDCHits[i];
 	if (hit->type) {                            
   	    hfdc_qt->Fill(hit->t, hit->q);
   	    hfdc_q->Fill(hit->q);
   	    hfdc_t->Fill(hit->t);
+  	    hfdc_pulse_height->Fill(hit->pulse_height);	    
+	} else {
+            hfdc_wt->Fill(hit->t);
 	}
     }
+
+    for (uint32_t i=0; i<DFDCClusters.size(); i++) {
+        const DFDCCathodeCluster *cluster = DFDCClusters[i];
+  	hfdc_cq->Fill(cluster->q_tot);
+    }
+    
+    for (uint32_t i=0; i<DFDCPseudohits.size(); i++) {
+        const DFDCPseudo *hit = DFDCPseudohits[i];
+        hfdc_pst->Fill(hit->time);
+        hfdc_psq->Fill(hit->q);
+        hfdc_psqt->Fill(hit->time, hit->q);		
+    }
+
+    
     
     lockService->RootFillUnLock(this);
 
