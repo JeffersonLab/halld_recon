@@ -91,7 +91,7 @@ void DFDCPseudo_factory::Init()
   MAX_ALLOWED_FDC_HITS=20000;
   STRIP_ANODE_TIME_CUT=25.;
   MIDDLE_STRIP_THRESHOLD=0.;
-  CHARGE_THRESHOLD=0.06;  // previously 0.3
+  CHARGE_THRESHOLD=0.3;  // appropriate for uncalibrated pulse-height
   DELTA_X_CUT=0.5;
 
   r2_out=ROUT_FIDUCIAL*ROUT_FIDUCIAL;
@@ -151,7 +151,6 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     }
   }
 
-
   // Get FDC resolution parameters from database
   map<string, double> fdcparms;
   FDC_RES_PAR1=0.;
@@ -159,28 +158,18 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   jcalib->Get("FDC/fdc_resolution_parms",fdcparms);
   FDC_RES_PAR1=fdcparms["res_par1"];
   FDC_RES_PAR2=fdcparms["res_par2"];
+
+  // Make the charge threshold appropriate for calibrated pulse-height
+  jcalib->Get("FDC/digi_scales",fdcparms);
+  double a_scale =fdcparms["FDC_ADC_ASCALE"];
+  if (CHARGE_THRESHOLD == 0.3) CHARGE_THRESHOLD *=a_scale;
+
   
   if(DEBUG_HISTS){
     root_lock->RootWriteLock();
 
     // Histograms may already exist. (Another thread may have created them)
     // Try and get pointers to the existing ones.
-    debug=(TH1F*)gROOT->FindObject("debug");
-    if (!debug) debug=new TH1F("debug","debug code",20,0,20);
-
-    oldwirenum=(TH1F*)gROOT->FindObject("oldwirenum");
-    if (!oldwirenum) oldwirenum=new TH1F("oldwirenum","oldwirenum",101,-1,100);
-
-    qu_foundcentroid=(TH1F*)gROOT->FindObject("qu_foundcentroid");
-    if (!qu_foundcentroid) qu_foundcentroid=new TH1F("qu_foundcentroid","qu_foundcentroid",100,0,20000);
-
-    qu_2strips=(TH1F*)gROOT->FindObject("qu_2strips");
-    if (!qu_2strips) qu_2strips=new TH1F("qu_2strips","qu_2strips",100,0,20000);
-
-    qu_3strips=(TH1F*)gROOT->FindObject("qu_3strips");
-    if (!qu_3strips) qu_3strips=new TH1F("qu_3strips","qu_3strips",100,0,20000);
-    
-    
     v_vs_u=(TH2F*)gROOT->FindObject("v_vs_u");
     if (!v_vs_u) v_vs_u=new TH2F("v_vs_u","v vs u",192,0.5,192.5,192,0.5,192.5);
 
@@ -279,7 +268,6 @@ void DFDCPseudo_factory::Process(const std::shared_ptr<const JEvent>& event) {
 	// Get all FDC hits (anode and cathode)	
 	vector<const DFDCHit*> fdcHits;
 	event->Get(fdcHits);
-	if (fdcHits.size()==0 && DEBUG_HISTS) debug->Fill(0);
 	if (fdcHits.size()==0) return;
 
 	// For events with a very large number of hits, assume
@@ -287,14 +275,12 @@ void DFDCPseudo_factory::Process(const std::shared_ptr<const JEvent>& event) {
 	// Feb. 8, 2008  D.L. (updated to config param. Nov. 18, 2010 D.L.)
 	if(fdcHits.size()>MAX_ALLOWED_FDC_HITS){
  		_DBG_<<"Too many hits in FDC ("<<fdcHits.size()<<", max="<<MAX_ALLOWED_FDC_HITS<<")! Pseudopoint reconstruction in FDC bypassed for event "<<event->GetEventNumber()<<endl;
-		if (DEBUG_HISTS) debug->Fill(1);
 		return;
 	}
 
 	// Get cathode clusters
 	vector<const DFDCCathodeCluster*> cathClus;
 	event->Get(cathClus);
-        if (DEBUG_HISTS) debug->Fill(2);
 	if (cathClus.size()==0) return;
 
 	// Sift through hits and select out anode hits.
@@ -376,8 +362,6 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
           for (vector<const DFDCHit*>::const_iterator strip=u[i]->members.begin()+1;strip+1!=u[i]->members.end();strip++){  
     	      //printf("  %d %f %f\n",(*strip)->element,(*strip)->pulse_height,(*strip)->t);
     	        if (FindCentroid(u[i]->members,strip,upeaks)==NOERROR){
-                    if (DEBUG_HISTS) debug->Fill(3);
-		    if (DEBUG_HISTS) qu_foundcentroid->Fill(upeaks[i].q_from_pulse_height);
  		    if (ALIGNMENT){
                         // Some values needed for cathode alignment
                         unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
@@ -404,25 +388,15 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
     	        else if (u[i]->members.size()==3){
 
                       if (ThreeStripCluster(u[i]->members,strip,upeaks)==NOERROR){
-                        if (DEBUG_HISTS) debug->Fill(4);		  
 			upeaks[upeaks.size()-1].cluster=i;
-    		        if (DEBUG_HISTS) qu_3strips->Fill(upeaks[i].q_from_pulse_height);
-                      } else if (DEBUG_HISTS) {
-			debug->Fill(18);
 		      }
-    	        } else {
-		       if (DEBUG_HISTS) debug->Fill(5);
 		}
           }
     }
     else if (u[i]->members.size()==2){
        for (vector<const DFDCHit*>::const_iterator strip=u[i]->members.begin();strip+1!=u[i]->members.end();strip++){  
           if (TwoStripCluster(u[i]->members,strip,upeaks)==NOERROR){
-	                        if (DEBUG_HISTS) debug->Fill(6);
              upeaks[upeaks.size()-1].cluster=i;
-  		        if (DEBUG_HISTS) qu_3strips->Fill(upeaks[i].q_from_pulse_height);
-          } else {
-	    if (DEBUG_HISTS) debug->Fill(19);
 	  }
        }
     }
@@ -435,7 +409,6 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
         for (vector<const DFDCHit*>::const_iterator strip=v[i]->members.begin()+1;strip+1!=v[i]->members.end();strip++){		
            //printf("  %d %f %f\n",(*strip)->element,(*strip)->pulse_height,(*strip)->t);
                 if (FindCentroid(v[i]->members,strip,vpeaks)==NOERROR){
-    	                         if (DEBUG_HISTS) debug->Fill(7);
                	     if (ALIGNMENT){
                	       // Some values needed for cathode alignment
                	       unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
@@ -461,29 +434,21 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
     	        }
                 else if (v[i]->members.size()==3){
             	     if (ThreeStripCluster(v[i]->members,strip,vpeaks)==NOERROR){
-            	                           if (DEBUG_HISTS) debug->Fill(8);
                              vpeaks[vpeaks.size()-1].cluster=i;
-              	      } else {
-            		       if (DEBUG_HISTS) debug->Fill(9);
             	      }
                             
                  }
-	         else {
-	              if (DEBUG_HISTS) debug->Fill(10);
-                 } 
             }
      }
      else if (v[i]->members.size()==2){
         for (vector<const DFDCHit*>::const_iterator strip=v[i]->members.begin();strip+1!=v[i]->members.end();strip++){  
            if (TwoStripCluster(v[i]->members,strip,vpeaks)==NOERROR){
- 		       if (DEBUG_HISTS) debug->Fill(11);
               vpeaks[vpeaks.size()-1].cluster=i;
            }
         }
      }
   }
 
-  if (upeaks.size()*vpeaks.size()==0 && DEBUG_HISTS) debug->Fill(12);
   
   if (upeaks.size()*vpeaks.size()>0){
      // Rotation angles for strips
@@ -525,8 +490,6 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                  }
 
                  // Match between this wire and cathodes below, skip all other hits
-		 if (old_wire_num==(*xIt)->element && DEBUG_HISTS) debug->Fill(13);
-		 if (old_wire_num==(*xIt)->element && DEBUG_HISTS) oldwirenum->Fill(old_wire_num);
                  if (old_wire_num==(*xIt)->element) continue;
 
                  if (fabs(delta_x)<DELTA_X_CUT && r2test<r2_out
@@ -538,13 +501,11 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     //printf("dt1 %f dt2 %f\n",dt1,dt2);
 
                     if (DEBUG_HISTS){
-		      debug->Fill(14);
 		      //if (layer==1){
                        dtv_vs_dtu->Fill(dt1,dt2);
                        tv_vs_tu->Fill(upeaks[i].t, vpeaks[j].t);
                        u_wire_dt_vs_wire->Fill((*xIt)->element,(*xIt)->t-upeaks[i].t);
                        v_wire_dt_vs_wire->Fill((*xIt)->element,(*xIt)->t-vpeaks[j].t);
-
 
                        int uid=u[upeaks[i].cluster]->members[1]->element;
                        int vid=v[vpeaks[j].cluster]->members[1]->element;
@@ -570,7 +531,6 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                        d_uv->Fill(sqrt(dt1*dt1+dt2*dt2));
                     }
 
-                    if (sqrt(dt1*dt1+dt2*dt2)>STRIP_ANODE_TIME_CUT && DEBUG_HISTS) debug->Fill(15);
                     if (sqrt(dt1*dt1+dt2*dt2)>STRIP_ANODE_TIME_CUT) continue;
 
                     // Temporary cut until TDC timing is worked out
@@ -857,7 +817,6 @@ jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
   //err_diff1=sqrt(dq1*dq1+dq2*dq2);
   //err_diff2=sqrt(dq2*dq2+dq3*dq3);
   if ((*peak)->q<MIDDLE_STRIP_THRESHOLD) {
-    if (DEBUG_HISTS) debug->Fill(16);
     return VALUE_OUT_OF_RANGE;
   }
 
@@ -897,7 +856,6 @@ jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
     }
   }
 
-  if (DEBUG_HISTS) debug->Fill(17);
   return RESOURCE_UNAVAILABLE; // error placeholder
 }
     
