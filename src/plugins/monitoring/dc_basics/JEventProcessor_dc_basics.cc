@@ -93,8 +93,8 @@ void JEventProcessor_dc_basics::Init()
 
     hfdc_cq = new TH1F("fdc_cq","FDC cathode cluster hit charge (fC)", 1000,0,4000);
     
-    hfdc_psqt = new TH2F("fdc_psqt","FDC pseudohit charge vs time;time (ns);charge (fC)",100,0,400, 100,0,500);
-    hfdc_psq = new TH1F("fdc_psq","FDC pseudohit charge (fC)", 250,0,500);
+    hfdc_psqt = new TH2F("fdc_psqt","FDC pseudohit charge vs time;time (ns);charge (DFDCPseudo::q, the scale of FDC:CHARGE_THRESHOLD)",100,0,400, 100,0,50);
+    hfdc_psq = new TH1F("fdc_psq","FDC pseudohit charge (DFDCPseudo::q, the scale of FDC:CHARGE_THRESHOLD)", 250,0,50);
     hfdc_pst = new TH1F("fdc_pst","FDC pseudohit time (ns)", 250,0,400);
     
 }
