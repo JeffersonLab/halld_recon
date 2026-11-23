@@ -91,7 +91,7 @@ void DFDCPseudo_factory::Init()
   MAX_ALLOWED_FDC_HITS=20000;
   STRIP_ANODE_TIME_CUT=25.;
   MIDDLE_STRIP_THRESHOLD=0.;
-  CHARGE_THRESHOLD=0.06;
+  CHARGE_THRESHOLD=0.3;
   DELTA_X_CUT=0.5;
 
   r2_out=ROUT_FIDUCIAL*ROUT_FIDUCIAL;
@@ -158,6 +158,20 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   jcalib->Get("FDC/fdc_resolution_parms",fdcparms);
   FDC_RES_PAR1=fdcparms["res_par1"];
   FDC_RES_PAR2=fdcparms["res_par2"];
+
+  // Strip amplitude scale: the factory works with q/A_SCALE, where A_SCALE is the FDC_ADC_ASCALE of the run, the
+  // same constant DFDCHit_factory uses for q = A_SCALE*pulse_height in real data. In real data q/A_SCALE is the
+  // pulse height, so the cuts, the assumed cathode errors and dE_amp are unchanged; in MC (DFDCHit made from hddm_s
+  // with pulse_height = q) the amplitudes follow the gain calibration of the run.
+  map<string, double> scale_factors;
+  A_SCALE=1.;
+  if (jcalib->Get("FDC/digi_scales",scale_factors)==false
+      && scale_factors.find("FDC_ADC_ASCALE")!=scale_factors.end()){
+    A_SCALE=scale_factors["FDC_ADC_ASCALE"];
+  }
+  else {
+    jerr << "DFDCPseudo_factory: unable to get FDC_ADC_ASCALE from FDC/digi_scales, using 1" << endl;
+  }
 
   
   if(DEBUG_HISTS){
@@ -681,7 +695,7 @@ jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
       vector<centroid_t>&centroids){
    centroid_t temp;
 
-   if ((*peak)->q<MIDDLE_STRIP_THRESHOLD && (*(peak+1))->q<MIDDLE_STRIP_THRESHOLD) {
+   if (amp(*peak)<MIDDLE_STRIP_THRESHOLD && amp(*(peak+1))<MIDDLE_STRIP_THRESHOLD) {
       return VALUE_OUT_OF_RANGE;
    }
 
@@ -694,8 +708,8 @@ jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
    double pos1=fdccathodes[index1][(*peak)->element-1]->u;
    double pos2=fdccathodes[index2][(*(peak+1))->element-1]->u;
 
-   double amp1=double((*peak)->q);
-   double amp2=double((*(peak+1))->q);
+   double amp1=amp(*peak);
+   double amp2=amp(*(peak+1));
    double sum=amp1+amp2;
 
    double t1=double((*peak)->t);
@@ -755,7 +769,7 @@ jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
       unsigned int index=2*((*j)->gLayer-1)+(1-(*j)->plane/2);
 
       double pos=fdccathodes[index][(*j)->element-1]->u;
-      double amp=double((*j)->q);
+      double amp=this->amp(*j);
 
       sum+=amp;
       wsum+=amp*pos;
@@ -811,13 +825,13 @@ jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
   //double dq3=(*(peak+1))->dq;
   //err_diff1=sqrt(dq1*dq1+dq2*dq2);
   //err_diff2=sqrt(dq2*dq2+dq3*dq3);
-  if ((*peak)->q<MIDDLE_STRIP_THRESHOLD) {
+  if (amp(*peak)<MIDDLE_STRIP_THRESHOLD) {
     return VALUE_OUT_OF_RANGE;
   }
 
   // Check for a peak in three adjacent strips
-  if ((*peak)->q-(*(peak-1))->q > err_diff1
-      && (*peak)->q-(*(peak+1))->q > err_diff2){
+  if (amp(*peak)-amp(*(peak-1)) > err_diff1
+      && amp(*peak)-amp(*(peak+1)) > err_diff2){
     // Define some matrices for use in the Newton-Raphson iteration
     DMatrix3x1 N,X;
     int i=0;
@@ -826,7 +840,7 @@ jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
     unsigned int index=2*((*peak)->gLayer-1)+(1-(*peak)->plane/2);
     for (vector<const DFDCHit*>::const_iterator j=peak-1;j<=peak+1;j++){
       X(i)=fdccathodes[index][(*j)->element-1]->u;
-      N(i)=double((*j)->q);
+      N(i)=amp(*j);
       i++;
     }
 

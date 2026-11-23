@@ -119,6 +119,9 @@ class DFDCPseudo_factory : public JFactoryT<DFDCPseudo> {
   bool DEBUG_HISTS,USE_FDC, MATCH_TRUTH_HITS,ALIGNMENT;
 		double MIDDLE_STRIP_THRESHOLD;
 		double FDC_RES_PAR1,FDC_RES_PAR2;
+		double A_SCALE; // FDC_ADC_ASCALE of the run (FDC/digi_scales)
+		// strip amplitude on the pulse-height scale of real data
+		double amp(const DFDCHit *h) const { return h->q/A_SCALE; }
 		double CHARGE_THRESHOLD;
       double DELTA_X_CUT;
 
