@@ -36,6 +36,9 @@
                 lunit="cm" tunit="ns" Eunit="GeV">
       <ecalShowerProperties minOccurs="0" maxOccurs="1"
                             E1E9="float" E9E25="float"/>
+      <ecalShowerMoreProperties minOccurs="0" maxOccurs="1"
+				docaTrack="float" timeTrack="float"
+				sumU="float" sumV="float"/>
     </ecalShower>  
     <fcalShower minOccurs="0" maxOccurs="unbounded" jtag="string"
                 x="float" y="float" z="float" t="float" E="float"
@@ -196,6 +199,9 @@
       <dircMatchHit maxOccurs="unbounded" minOccurs="0" track="int" hit="int"/>
       <bcalDOCAtoTrack maxOccurs="unbounded" minOccurs="0"
                 shower="int" deltaphi="float" deltaz="float"
+                lunit="cm"/>
+      <ecalDOCAtoTrack maxOccurs="unbounded" minOccurs="0"
+                shower="int" doca="float"
                 lunit="cm"/>
       <fcalDOCAtoTrack maxOccurs="unbounded" minOccurs="0"
                 shower="int" doca="float"

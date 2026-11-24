@@ -30,11 +30,13 @@ class JEventProcessor_lumi_mon:public JEventProcessor{
 		void Init() override;
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
 		void Process(const std::shared_ptr<const JEvent>& event) override;
-		void EndRun() override;
+                void EndRun() override;
 		void Finish() override;
 
 		std::shared_ptr<JLockService> lockService;
-
+  
+  		std::string RFsrc = "PSC";
+  
 };
 
 #endif // _JEventProcessor_lumi_mon_

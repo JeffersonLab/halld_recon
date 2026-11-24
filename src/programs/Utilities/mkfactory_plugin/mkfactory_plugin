@@ -305,7 +305,7 @@ sub Usage()
 	print "then see \"mkplugin\".\n";
 	print "\n";
 	print "This will create a directory and generate a few files in it, including\n";
-	print "a default Makefile so that one can use to immediately compile the new plugin.\n";
+	print "a default SConstruct so that one can use to immediately compile the new plugin.\n";
 	print "\n";
 	print "The C++ files generated will define classes based on JFactory,\n";
 	print "JFactoryGenerator, and JObject. The \"plugin_name\" parameter specifies\n";

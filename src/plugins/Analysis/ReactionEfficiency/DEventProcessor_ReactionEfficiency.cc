@@ -68,7 +68,7 @@ void DEventProcessor_ReactionEfficiency::Process(const std::shared_ptr<const JEv
 		//If no cuts are performed by the analysis actions added to a DReaction, then this saves all of its particle combinations. 
 		//The event writer gets the DAnalysisResults objects from JANA, performing the analysis. 
 	// string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
-	const DEventWriterROOT_ReactionEfficiency* locEventWriterROOT = NULL;
+	const DEventWriterROOT* locEventWriterROOT = NULL;
 	locEvent->GetSingle(locEventWriterROOT, "ReactionEfficiency");
 	locEventWriterROOT->Fill_DataTrees(locEvent, "ReactionEfficiency");
 

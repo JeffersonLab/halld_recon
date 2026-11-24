@@ -232,7 +232,9 @@ class DL1MCTrigger_factory:public JFactoryT<DL1MCTrigger>{
 		static int    ECAL_NSA;
 		static int    ECAL_NSB;
 		static int    ECAL_WINDOW;
-
+                static int    ECAL_EMIN;
+                static int    ECAL_EMAX;
+                               
   
 		float  BCAL_ADC_PER_MEV;
 		static int    BCAL_CELL_THR;
@@ -240,7 +242,8 @@ class DL1MCTrigger_factory:public JFactoryT<DL1MCTrigger>{
 		static int    BCAL_NSA;
 		static int    BCAL_NSB;
 		static int    BCAL_WINDOW;
-
+		static int    BCAL_EMAX;
+  
 		int    FCAL_BCAL_EN;
 		
 		float  ST_ADC_PER_MEV;
@@ -264,6 +267,8 @@ class DL1MCTrigger_factory:public JFactoryT<DL1MCTrigger>{
   
 		int VERBOSE;
 
+                int USE_ECAL_MASK;
+  
 
 		double time_shift;
 		double time_min;

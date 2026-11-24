@@ -15,6 +15,7 @@
 #include <DANA/DGeometryManager.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
 #include <HDGEOMETRY/DGeometry.h>
+#include <TRACKING/DTrackWireBased.h>
 #include <units.h>
 
 //------------------
@@ -40,6 +41,10 @@ void DECALShower_factory::Init()
 
   ENABLE_ENERGY_CORRECTION=true;
   app->SetDefaultParameter("ECAL:ENABLE_ENERGY_CORRECTION",ENABLE_ENERGY_CORRECTION);
+
+  ENERGY_CORRECTION_TYPE = 1;
+  app->SetDefaultParameter("ECAL:ENERGY_CORRECTION_TYPE",ENERGY_CORRECTION_TYPE);
+  
 }
 
 //------------------
@@ -53,6 +58,10 @@ void DECALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   auto geom = geo_manager->GetDGeometry(runnumber);
   geom->GetECALZ(mECALz);
   mECALzBack=mECALz+20.;
+  if (geom->HaveInsert()){
+    event->GetSingle(dECALGeom);
+  }
+  geom->GetTargetZ(mVertexZ);
 
   // Get calibration constant
   auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
@@ -67,6 +76,12 @@ void DECALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   E_CORRECTION_PAR1=ecal_E_correction_parms["p1"];
   E_CORRECTION_PAR2=ecal_E_correction_parms["p2"];
   E_CORRECTION_PAR3=ecal_E_correction_parms["p3"];
+  
+  jcalib->Get("ECAL/E_correction_parms1",ecal_E_correction_parms);
+  E_CORRECTION1_PAR1=ecal_E_correction_parms["p1"];
+  E_CORRECTION1_PAR2=ecal_E_correction_parms["p2"];
+  E_CORRECTION1_PAR3=ecal_E_correction_parms["p3"];
+  
 }
 
 //------------------
@@ -76,14 +91,20 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   vector<const DECALCluster*>clusters;
   event->Get(clusters);
+  auto wbtracks=event->Get<DTrackWireBased>();
 
   for (size_t i=0;i<clusters.size();i++){
     const DECALCluster *cluster=clusters[i];
 
     double E=cluster->E;
+
     if (ENABLE_ENERGY_CORRECTION){
-      E=GetCorrectedEnergy(cluster->E);
+      if(ENERGY_CORRECTION_TYPE == 1)
+	E=GetCorrectedEnergy(cluster->E);
+      else if(ENERGY_CORRECTION_TYPE == 2)
+	E=GetCorrectedEnergy1(cluster->E);
     }
+    
     if (E>SHOWER_ENERGY_THRESHOLD){
       DECALShower *shower=new DECALShower;
       shower->nBlocks=cluster->nBlocks;
@@ -109,7 +130,28 @@ void DECALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       cov(3,0)=cov(0,3)=X0_over_E*cov(0,0);
       shower->ExyztCovariance.ResizeTo(5,5);
       shower->ExyztCovariance=cov;
-      
+
+      // Find position of closest track to the shower
+      double min_distance=1e6,timeTrack=1e6;
+      DVector3 proj_pos_for_shower_shape(0,0,shower->pos.z());
+      for (const auto& wbtrack:wbtracks){
+	DVector3 proj_pos,proj_mom;
+	double flight_time=0.;
+	if (!wbtrack->GetProjection(SYS_ECAL,proj_pos,&proj_mom,&flight_time)) continue;
+	proj_pos+=((shower->pos.z()-proj_pos.z())/proj_mom.z())*proj_mom;
+	DVector3 diff=shower->pos-proj_pos;
+	double d=diff.Perp();
+	if (d<min_distance){
+	  min_distance=d;
+	  proj_pos_for_shower_shape=proj_pos;
+	  timeTrack=(wbtrack->position().z()-mVertexZ)/SPEED_OF_LIGHT+flight_time;
+	}
+      }
+      // Compute a couple of shower shaper parameters
+      GetUV(cluster,shower->pos,proj_pos_for_shower_shape,shower->sumU,
+	    shower->sumV);
+      shower->docaTrack=min_distance;
+      shower->timeTrack=timeTrack;
       shower->AddAssociatedObject(cluster);
 	
       Insert(shower);
@@ -138,6 +180,15 @@ double DECALShower_factory::GetCorrectedEnergy(double Ecluster) const {
     +E_CORRECTION_PAR3/Ecluster;
 }
 
+// New energy-correction parameterization using the MC shape
+// for a 6-count flash-ADC amplitude threshold. (AS, 9/24/26)
+double DECALShower_factory::GetCorrectedEnergy1(double Ecluster) const {
+  return E_CORRECTION1_PAR1*Ecluster + E_CORRECTION1_PAR2*sqrt(Ecluster) +
+    E_CORRECTION1_PAR3/Ecluster;
+
+}
+
+
 // Correct the z-position of the shower to account for the shower depth
 double DECALShower_factory::GetCorrectedZ(double E) const {
   // Crystal material properties
@@ -147,4 +198,30 @@ double DECALShower_factory::GetCorrectedZ(double E) const {
   double dZmax=radiation_length*(0.5+log(E/critical_energy));
 
   return mECALz+dZmax;
+}
+
+// Compute the energy-weighted second moment of the shower along and
+// perpendicular to an axis formed by  pointing from the shower to nearest
+// track. This code mimics similar code in DFCALShower_factory.
+void DECALShower_factory::GetUV(const DECALCluster *cluster,
+				const DVector3 &showerPos,
+				const DVector3 &trackPos,double &sumU,
+				double &sumV) const{
+  DVector3 u = ( showerPos-trackPos).Unit();
+  DVector3 zhat(0,0,1 );
+  DVector3 v = u.Cross(zhat);
+  sumU=0.;
+  sumV=0.;
+  double sumE=0.;
+  
+  auto hits=cluster->Get<DECALHit>();
+  for (const auto& hit:hits){
+    DVector2 blockPos=dECALGeom->positionOnFace(hit->row,hit->column);
+    DVector3 diff(blockPos.X()-showerPos.x(),blockPos.Y()-showerPos.y(),0.);
+    sumU+=hit->E*pow(u.Dot(diff),2);
+    sumV+=hit->E*pow(v.Dot(diff),2);
+    sumE+=hit->E;
+  }
+  sumU/=sumE;
+  sumV/=sumE;
 }

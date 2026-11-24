@@ -22,7 +22,6 @@
   
   TF1 *f1=new TF1("f1","gaus(0)+expo(3)",0.09,0.17);
   f1->SetParNames("height","mean","sigma");
-  f1->SetParameters(100,0.125,0.004,2,-10,0);
  
   TH1F *h1=(TH1F*)gDirectory->FindObjectAny("h_2gamma_ECAL_ECAL");
   if (h1){
@@ -30,9 +29,13 @@
     h1->GetXaxis()->SetRangeUser(0.08,0.18);
     h1->SetStats(0);
     f1->SetParameter(0,h1->GetMaximum());
-    f1->SetParameter(1,h1->GetBinCenter(h1->GetMaximumBin()));
-    f1->SetParameter(2,h1->GetRMS());
-    h1->Fit("f1");
+    f1->SetParameter(1,h1->GetBinCenter(h1->GetMaximumBin()));    
+    f1->SetParameter(2,4e-3);
+    f1->SetParameter(3,2);
+    f1->SetParameter(4,5);
+    f1->SetParameter(5,-20);
+
+    h1->Fit("f1","R");
     h1->Draw();
 
     TLine *line=new TLine(0.135,0,0.135,1.05*h1->GetMaximum());
@@ -53,14 +56,14 @@
     c1->cd(2);
     h2->GetXaxis()->SetRangeUser(0.08,0.18);
     h2->SetStats(0);
-    f1->SetParameter(3,2);
-    f1->SetParameter(4,-10);
-    f1->SetParameter(2,0.008);
-    f1->SetParameter(1,0.135);
     f1->SetParameter(0,h2->GetMaximum());
     f1->SetParameter(1,h2->GetBinCenter(h2->GetMaximumBin()));
-    f1->SetParameter(2,h2->GetRMS());
-    h2->Fit("f1");
+    f1->SetParameter(2,6e-3);
+    f1->SetParameter(3,2);
+    f1->SetParameter(4,2);    
+    f1->SetParameter(5,-5);
+
+    h2->Fit("f1","R");
     h2->Draw();
 
     TLine *line=new TLine(0.135,0,0.135,1.05*h2->GetMaximum());
@@ -79,16 +82,16 @@
   TH1F *h3=(TH1F*)gDirectory->FindObjectAny("h_2gamma_BCAL_BCAL");
   if (h3){
     c1->cd(3);
-    f1->SetParameter(1,0.135);
-    f1->SetParameter(2,0.01);
-    f1->SetParameter(3,2);
-    f1->SetParameter(4,-10);
+    h3->GetXaxis()->SetRangeUser(0.08,0.18);
+    h3->SetStats(0);    
     f1->SetParameter(0,h3->GetMaximum());
     f1->SetParameter(1,h3->GetBinCenter(h3->GetMaximumBin()));
-    f1->SetParameter(2,h3->GetRMS());
-    h3->GetXaxis()->SetRangeUser(0.08,0.18);
-    h3->SetStats(0);
-    h3->Fit("f1");
+    f1->SetParameter(2,8e-3);
+    f1->SetParameter(3,2);
+    f1->SetParameter(4,2);
+    f1->SetParameter(5,5);
+
+    h3->Fit("f1","R");
     h3->Draw();
 
     TLine *line=new TLine(0.135,0,0.135,1.05*h3->GetMaximum());

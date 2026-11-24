@@ -63,6 +63,7 @@ static TH1F *hPS_Etagm;
 static TH2F *hPS_timeVsEtagm;
 // PSC,PS,TAGH coincidences
 static TH2F *hPSTAGH_tdiffVsEdiff;
+static TH2F *hPSTAGH_CounterVsTdiff;
 static TH2I *hPSTAGH_EVsEtagh;
 static TH2F *hPSTAGH_PSCIDLeftVsIDRight;
 static TH2F *hPSTAGH_PSIDLeftVsIDRight;
@@ -78,6 +79,7 @@ static TH2I *hPSTAGH_tdiffVsTAGHCounterID_L[NC_PSC];
 static TH2I *hPSTAGH_tdiffVsTAGHCounterID_R[NC_PSC];
 // PSC,PS,TAGM coincidences
 static TH2F *hPSTAGM_tdiffVsEdiff;
+static TH2F *hPSTAGM_ColVsTdiff;
 static TH2I *hPSTAGM_EVsEtagm;
 static TH2F *hPSTAGM_PSCIDLeftVsIDRight;
 static TH2F *hPSTAGM_PSIDLeftVsIDRight;
@@ -210,6 +212,7 @@ void JEventProcessor_PSPair_online::Init()
     //
     gDirectory->mkdir("PSC_PS_TAGH")->cd();
     hPSTAGH_tdiffVsEdiff = new TH2F("PSTAGH_tdiffVsEdiff","PS pair - TAGH: PS-TAGH time difference vs. PS-TAGH energy difference;E(PS) - E(TAGH) [GeV];PSC/TAGH time difference [ns]",NEdb,Edbl,Edbh,NTb_TAG,Tbl_TAG,Tbh_TAG);
+    hPSTAGH_CounterVsTdiff = new TH2F("PSTAGH_CounterVsTdiff","PS pair - TAGH: TAGH Counter vs. PS-TAGH time difference; PStime-TAGHtime [ns]; TAGH Counter Number [#]", 1000, -120., 100.,  350, 0., 350. );
     hPSTAGH_TAGHCounterID = new TH1F("PSTAGH_TAGHCounterID","PS pair - TAGH: TAGH counter ID;TAGH counter ID;events",NC_TAGH,0.5,0.5+NC_TAGH);
     hPSTAGH_Etagh = new TH1F("PSTAGH_Etagh","PS pair - TAGH: TAGH photon energy;TAGH photon energy [GeV];events",NEb_TAG,Ebl_TAG,Ebh_TAG);
     hPSTAGH_timeVsEtagh = new TH2F("PSTAGH_timeVsEtagh","PS pair - TAGH: TAGH time vs. photon energy;TAGH photon energy [GeV];time [ns]",NEb_TAG,Ebl_TAG,Ebh_TAG,NTb_TAG,Tbl_TAG,Tbh_TAG);
@@ -238,6 +241,7 @@ void JEventProcessor_PSPair_online::Init()
     //
     gDirectory->mkdir("PSC_PS_TAGM")->cd();
     hPSTAGM_tdiffVsEdiff = new TH2F("PSTAGM_tdiffVsEdiff","PS pair - TAGM: PS-TAGM time difference vs. PS-TAGM energy difference;E(PS) - E(TAGM) [GeV];PSC/TAGM time difference [ns]",NEdb,Edbl,Edbh,NTb_TAG,Tbl_TAG,Tbh_TAG);
+    hPSTAGM_ColVsTdiff = new TH2F("PSTAGM_ColVsTdiff", "PS pair - TAGM: TAGM Column Number vs. PS-TAGM time difference; PStime - TAGMtime [ns]; TAGM column number [#]", 1000, -120., 100., 120, 0., 120.);
     hPSTAGM_TAGMColumn = new TH1F("PSTAGM_TAGMColumn","PS pair - TAGM: TAGM column;TAGM column;events",NC_TAGM,0.5,0.5+NC_TAGM);
     hPSTAGM_Etagm = new TH1F("PSTAGM_Etagm","PS pair - TAGM: TAGM photon energy;TAGM photon energy [GeV];events",NEb_PS,Ebl_PS,Ebh_PS);
     hPSTAGM_timeVsEtagm = new TH2F("PSTAGM_timeVsEtagm","PS pair - TAGM: TAGM time vs. photon energy;TAGM photon energy [GeV];time [ns]",NEb_PS,Ebl_PS,Ebh_PS,NTb_TAG,Tbl_TAG,Tbh_TAG);
@@ -469,6 +473,7 @@ void JEventProcessor_PSPair_online::Process(const std::shared_ptr<const JEvent>&
                 hPS_timeVsEtagh->Fill(tag->E,tag->t);
                 double Ediff = E_pair-tag->E;
                 hPSTAGH_tdiffVsEdiff->Fill(Ediff,clhit->t-tag->t);
+		hPSTAGH_CounterVsTdiff->Fill(clhit->t-tag->t, tag->counter_id);
                 if (fabs(Ediff) > EdiffMax) continue; // loose cut on energy difference
                 hPSTAGH_TAGHCounterID->Fill(tag->counter_id);
                 hPSTAGH_Etagh->Fill(tag->E);
@@ -494,6 +499,7 @@ void JEventProcessor_PSPair_online::Process(const std::shared_ptr<const JEvent>&
                 hPS_timeVsEtagm->Fill(tag->E,tag->t);
                 double Ediff = E_pair-tag->E;
                 hPSTAGM_tdiffVsEdiff->Fill(Ediff,clhit->t-tag->t);
+		hPSTAGM_ColVsTdiff->Fill(clhit->t-tag->t, tag->column);
                 if (fabs(Ediff) > EdiffMax) continue; // loose cut on energy difference
                 hPSTAGM_TAGMColumn->Fill(tag->column);
                 hPSTAGM_Etagm->Fill(tag->E);

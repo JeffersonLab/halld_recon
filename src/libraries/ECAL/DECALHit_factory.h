@@ -29,6 +29,7 @@ public:
   ecal_constants_t  pedestals;		
   ecal_constants_t  time_offsets;
   ecal_constants_t  adc_offsets;
+  ecal_constants_t  bad_blocks;
   
   double adc_en_scale;
   double adc_time_scale;
@@ -44,26 +45,27 @@ public:
     return m_activeBlock[row][column];    
   }
 
-        private:
-			void Init() override;
-			void BeginRun(const std::shared_ptr<const JEvent>& event) override;
-			void Process(const std::shared_ptr<const JEvent>& event) override;
-			void EndRun() override;
-			void Finish() override;
+private:
 
-		void LoadECALConst( ecal_constants_t &table, 
-                                    const vector<double> &ecal_const_ch);    
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
+  
+  void LoadECALConst( ecal_constants_t &table, 
+		      const vector<double> &ecal_const_ch);    
 
   static const int kECALBlocksWide   = 40;
   static const int kECALBlocksTall   = 40;
   static const int kECALMidBlock     = 20;
   static const int kECALMaxChannels  = kECALBlocksWide * kECALBlocksTall;
-
+  
   unsigned int DB_PEDESTAL;
   unsigned int HIT_DEBUG;
   
   bool INSTALLED,APPLY_WALK_CORRECTION;
-
+  
   bool   m_activeBlock[kECALBlocksTall][kECALBlocksWide];
   int    m_channelNumber[kECALBlocksTall][kECALBlocksWide];
   int    m_row[kECALMaxChannels];

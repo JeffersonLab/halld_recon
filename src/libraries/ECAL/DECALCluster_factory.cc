@@ -448,12 +448,12 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
       // using the measured energy gives better energy resolution
       myCluster->E=peak_fractions[k]*Esum;
 
-      // Save channel with the hit containing the highest energy
-      myCluster->channel_Emax=dECALGeom->channel(min_row-1+ir_max,
-						 min_col-1+ic_max);
-      
-      // Find the channel corresponding to the block with the maximum energy
-      // in the shower
+      // Find the block (row,column) corresponding to the maximum of THIS
+      // peak's shower shape.  This must be done before it is used below,
+      // and separately for each peak -- with more than one peak in the
+      // cluster candidate (split clusters), the block with the peak's
+      // own maximum is generally NOT the same block as the single global
+      // Emax block (ir_max,ic_max) found earlier for the whole candidate.
       double fmax=0.;
       int ic_peak_max=0,ir_peak_max=0;
       for (unsigned int j=0;j<clusterHits.size();j++){
@@ -464,26 +464,46 @@ void DECALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	  ir_peak_max=clusterHits[j].row-min_row+1;
 	}
       }
- 
+
+      // Save channel with the hit containing the highest energy for THIS
+      // peak (previously this used the single global ir_max/ic_max for
+      // every peak in the candidate, which is wrong for split clusters).
+      myCluster->channel_Emax=dECALGeom->channel(min_row-1+ir_peak_max,
+						 min_col-1+ic_peak_max);
+
       // Add hits in 5x5 array centered on the crystal with the maximum
       // energy as associated objects to the cluster.  Find the energy-weighted
       // time.  Find the 3x3 and 5x5 energy sums.
+      //
+      // NOTE: for a split cluster, a given physical hit can carry energy
+      // from more than one peak/shower.  E1, E3x3 and E5x5 must therefore
+      // be built from THIS peak's fitted share of each hit's energy
+      // (peaks[k].E * shower-shape fraction), not from the hit's raw
+      // measured energy -- otherwise energy belonging to a neighboring
+      // split peak gets double-counted into this cluster's E1E9/E9E25,
+      // and the two split clusters' E1E9/E9E25 are no longer consistent
+      // with their (correctly split) myCluster->E values.
       GetRowColRanges(2,num_rows,num_cols,ir_peak_max,ic_peak_max,lo_row,hi_row,
 		      lo_col,hi_col);
       int Emax_index=clusterHits[imap[ic_peak_max][ir_peak_max]-1].id;
-      double E1=ecal_hits[Emax_index]->E;
       myCluster->t=ecal_hits[Emax_index]->t;
-      double E5x5=0.,E3x3=0.;
+      double E1=0.,E5x5=0.,E3x3=0.;
       for (int my_ir=lo_row;my_ir<=hi_row;my_ir++){
 	for (int my_ic=lo_col;my_ic<=hi_col;my_ic++){
 	  int index=imap[my_ic][my_ir];
 	  if (index>0){
-	    const DECALHit *myHit=ecal_hits[clusterHits[index-1].id];
-	    E5x5+=myHit->E;
+	    const HitInfo &myHitInfo=clusterHits[index-1];
+	    // This peak's fitted contribution to this hit's energy
+	    double hitE_thisPeak=peaks[k].E*CalcClusterEDeriv(b,myHitInfo,peaks[k]);
+
+	    E5x5+=hitE_thisPeak;
 	    if (abs(my_ic-ic_peak_max)<=1 && abs(my_ir-ir_peak_max)<=1){
-	      E3x3+=myHit->E;
+	      E3x3+=hitE_thisPeak;
+	      if (my_ic==ic_peak_max && my_ir==ir_peak_max){
+		E1=hitE_thisPeak;
+	      }
 	    }
-	    myCluster->AddAssociatedObject(ecal_hits[clusterHits[index-1].id]);
+	    myCluster->AddAssociatedObject(ecal_hits[myHitInfo.id]);
 	  }
 	}
       }
