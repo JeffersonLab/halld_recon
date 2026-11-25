@@ -91,7 +91,7 @@ void DFDCPseudo_factory::Init()
   MAX_ALLOWED_FDC_HITS=20000;
   STRIP_ANODE_TIME_CUT=25.;
   MIDDLE_STRIP_THRESHOLD=0.;
-  CHARGE_THRESHOLD=0.06;
+  CHARGE_THRESHOLD=-1;   // unless overridden, calculate the threshold as the old default 0.3 * FDC/digi_scales/FDC_ADC_ASCALE
   DELTA_X_CUT=0.5;
 
   r2_out=ROUT_FIDUCIAL*ROUT_FIDUCIAL;
@@ -151,12 +151,21 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     }
   }
 
+  double a_scale = 0.2;
+  
+  if (CHARGE_THRESHOLD < 0) {
+      // Make the charge threshold appropriate for calibrated pulse-height
+      jcalib->Get("FDC/digi_scales",fdcparms);
+      a_scale =fdcparms["FDC_ADC_ASCALE"];
+      CHARGE_THRESHOLD = 0.3*a_scale;    // previously the default threshold was 0.3, applied to cluster combined pulse height 
+  }
+  
   // Get FDC resolution parameters from database
   map<string, double> fdcparms;
   FDC_RES_PAR1=0.;
   FDC_RES_PAR2=0.;
   jcalib->Get("FDC/fdc_resolution_parms",fdcparms);
-  FDC_RES_PAR1=fdcparms["res_par1"];
+  FDC_RES_PAR1= a_scale * fdcparms["res_par1"];      // * a_scale because this is now divided by q, not pulse_height
   FDC_RES_PAR2=fdcparms["res_par2"];
 
   
@@ -172,7 +181,7 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     if (!qv_vs_qu) qv_vs_qu=new TH2F("qv_vs_qu","Anode charge from each cathode",100,0,20000,100,0,20000);
 
     qpv_vs_qpu= (TH2F*) gROOT->FindObject("qpv_vs_qpu");
-    if (!qpv_vs_qpu) qpv_vs_qpu=new TH2F("qpv_vs_qpu","Anode charge from pulse height for each cathode",100,0,20000,100,0,20000);
+    if (!qpv_vs_qpu) qpv_vs_qpu=new TH2F("qpv_vs_qpu","Anode charge from clusters from each cathode",100,0,20000,100,0,20000);
 
     tv_vs_tu= (TH2F*) gROOT->FindObject("tv_vs_tu");
     if (!tv_vs_tu) tv_vs_tu=new TH2F("tv_vs_tu","t(v) vs t(u)",100,-100,250,100,-100,250);
@@ -541,18 +550,18 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     double q_cathodes=0.5*(upeaks[i].q+vpeaks[j].q);
                     double charge_to_energy=W_EFF/(GAS_GAIN*ELECTRON_CHARGE);
                     double dE=charge_to_energy*q_cathodes;
-                    double q_from_pulse_height=5.0e-4*(upeaks[i].q_from_pulse_height
-                          +vpeaks[j].q_from_pulse_height);
+                    double q_from_clusters=5.0e-4*(upeaks[i].q_from_clusters
+                          +vpeaks[j].q_from_clusters);
 
 
 
 
-		    if (q_from_pulse_height<CHARGE_THRESHOLD) continue;
-		    double dE_amp=charge_to_energy*q_from_pulse_height;
+		    if (q_from_clusters<CHARGE_THRESHOLD) continue;
+		    double dE_amp=charge_to_energy*q_from_clusters;
 
                     if (DEBUG_HISTS){
                        qv_vs_qu->Fill(upeaks[i].q,vpeaks[j].q);
-                       qpv_vs_qpu->Fill(upeaks[i].q_from_pulse_height,vpeaks[j].q_from_pulse_height);
+                       qpv_vs_qpu->Fill(upeaks[i].q_from_clusters,vpeaks[j].q_from_clusters);
                     }
 
                     // Match between this wire and cathodes, used to skip all other hits above
@@ -572,11 +581,11 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     newPseu->cluster_v = vpeaks[j];
                     newPseu->w      = wire->u;
 		    newPseu->w_c    = x_from_strips+xshifts[ilay];
-;
+
                     newPseu->s      = y_from_strips+yshifts[ilay];
-;
-                    newPseu->ds = FDC_RES_PAR1/q_from_pulse_height+FDC_RES_PAR2;
-                    //newPseu->ds=0.011/q_from_pulse_height+5e-3+2.14e-10*pow(q_from_pulse_height,6);
+
+                    newPseu->ds = FDC_RES_PAR1/q_from_clusters+FDC_RES_PAR2;       
+                    //newPseu->ds=0.011/q_from_clusters+5e-3+2.14e-10*pow(q_from_clusters,6);
                     newPseu->wire   = wire;
                     newPseu->time   = (*xIt)->t;
                     //newPseu->time=0.5*(upeaks[i].t+vpeaks[j].t);
@@ -588,7 +597,7 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
 
                     newPseu->dE = dE;
 		    newPseu->dE_amp = dE_amp;
-                    newPseu->q = q_from_pulse_height;
+                    newPseu->q = q_from_clusters;
 
                     // It can occur (although rarely) that newPseu->wire is NULL
                     // which causes us to crash below. In these cases, we can't really
@@ -619,7 +628,7 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     Insert(newPseu);
 
                     if (DEBUG_HISTS){
-                       if (ilay==6) dx_vs_dE->Fill(q_from_pulse_height,0.2588*delta_x);
+                       if (ilay==6) dx_vs_dE->Fill(q_from_clusters,0.2588*delta_x);
                     }
 
                  } // match in x
@@ -713,7 +722,7 @@ jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
    double pos_corr = 0.05;
    (amp2 > amp1) ? temp.pos+=pos_corr : temp.pos-=pos_corr;
 
-   (amp2 > amp1) ? temp.q_from_pulse_height=amp2 : temp.q_from_pulse_height=amp1;
+   (amp2 > amp1) ? temp.q_from_clusters=amp2 : temp.q_from_clusters=amp1;
    temp.q=sum;
    temp.numstrips=2;
 
@@ -750,7 +759,7 @@ jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
    double t=0;
    double o_amp=0;
    int i_corr=-2;
-   double q_from_pulse_height = 0;
+   double q_from_clusters = 0;
    for (vector<const DFDCHit*>::const_iterator j=peak-1;j<=peak+1;j++){
       unsigned int index=2*((*j)->gLayer-1)+(1-(*j)->plane/2);
 
@@ -764,7 +773,7 @@ jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
       if (amp > o_amp){
          t=double((*j)->t);
          o_amp = amp;
-         q_from_pulse_height=amp;
+         q_from_clusters=amp;
          i_corr++;
       }
    }
@@ -779,7 +788,7 @@ jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
    temp.pos=wsum/sum + i_corr*pos_corr;
 
    temp.q=sum;
-   temp.q_from_pulse_height = q_from_pulse_height;
+   temp.q_from_clusters = q_from_clusters;
    temp.numstrips=3;
    temp.t=t;
    temp.cluster=0; // will be filled in later
@@ -835,7 +844,7 @@ jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
     if (tempPseudo.FindCentroid(N,X,pos,&sum_f,&q_ph)==NOERROR){
       temp.pos=pos;
       temp.numstrips=3;
-      temp.q_from_pulse_height=q_ph;
+      temp.q_from_clusters=q_ph;
       temp.t=(*peak)->t;
       temp.cluster=0; // will be filled in later
       
