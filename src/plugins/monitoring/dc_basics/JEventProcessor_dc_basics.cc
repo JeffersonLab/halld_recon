@@ -9,23 +9,57 @@
 
 #include "JEventProcessor_dc_basics.h"
 #include "TRIGGER/DTrigger.h"
-#include "CDC/DCDCHit.h"
-#include "FDC/DFDCHit.h"
+#include "PID/DVertex.h"
 
+#include "CDC/DCDCHit.h"
+#include "CDC/DCDCTrackHit.h"
+
+#include "FDC/DFDCHit.h"
+#include "FDC/DFDCCathodeCluster.h"
+#include "FDC/DFDCPseudo.h"
+
+
+#include "TRACKING/DTrackTimeBased.h"
+#include <PID/DChargedTrackHypothesis.h>
+#include <PID/DChargedTrack.h>
+#include <TRACKING/DTrackFitter.h>
+
+#include <TDirectory.h>
+#include <TH1.h>
 #include <TH2.h>
 
 
-
-
-static TH2F *hcdc_at = NULL;
 static TH1F *hcdc_a = NULL;
 static TH1F *hcdc_t = NULL;
+static TH2F *hcdc_at = NULL;
+
+static TH1F *hcdc_tr_a = NULL;
+static TH1F *hcdc_tr_t = NULL;
+static TH2F *hcdc_tr_at = NULL;
+
+static TH2F *hcdc_dedx_qp = NULL;
+static TH2F *hcdc_dedx_qm = NULL;
 
 
-static TH2F *hfdc_qt = NULL;
+static TH1F *hfdc_a = NULL;
 static TH1F *hfdc_q = NULL;
-static TH1F *hfdc_t = NULL;
 
+static TH1F *hfdc_t = NULL;
+static TH1F *hfdc_wt = NULL;
+static TH2F *hfdc_qt = NULL;
+
+static TH1F *hfdc_cq = NULL;
+
+static TH1F *hfdc_pst = NULL;
+static TH1F *hfdc_psq = NULL;
+static TH2F *hfdc_psqt = NULL;
+
+static TH1F *hfdc_tr_pst = NULL;
+static TH1F *hfdc_tr_psq = NULL;
+static TH2F *hfdc_tr_psqt = NULL;
+
+static TH2F *hfdc_dedx_qp = NULL;
+static TH2F *hfdc_dedx_qm = NULL;
 
 
 // Routine used to create our JEventProcessor
@@ -66,19 +100,44 @@ void JEventProcessor_dc_basics::Init()
     // lockService should be initialized here like this
     lockService = app->GetService<JLockService>();
 
-
-    hcdc_at = new TH2F("cdc_at","CDC hit charge (from pulse height) vs time; time (ns); charge (fC)",100,0,1000, 90, 0,18000);
+    TDirectory *main = gDirectory;
+    gDirectory->mkdir("dc_basics")->cd();
+    
     hcdc_a = new TH1F("cdc_a","CDC hit charge (from pulse height) (fC)",180, 0,18000);
-    hcdc_t = new TH1F("cdc_t","CDC hit time (ns)",250,0,1000);
+    hcdc_t = new TH1F("cdc_t","CDC hit time (ns)",220,-100,1000);
+    hcdc_at = new TH2F("cdc_at","CDC hit charge (from pulse height) vs time; time (ns); charge (fC)",110,-100,1000, 90, 0,18000);
+
+    hcdc_tr_a = new TH1F("cdc_tr_a","Tracks: CDC hit charge (from pulse height) (fC)",180, 0,18000);
+    hcdc_tr_t = new TH1F("cdc_tr_t","Tracks: CDC hit time (ns)",220,-100,1000);
+    hcdc_tr_at = new TH2F("cdc_tr_at","Tracks: CDC hit charge (from pulse height) vs time; time (ns); charge (fC)",110,-100,1000, 90, 0,18000);
+	
+    hcdc_dedx_qp = new TH2F("cdc_dedx_qp", "CDC dE/dx vs momentum, q+, best FOM;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
+    hcdc_dedx_qm = new TH2F("cdc_dedx_qm", "CDC dE/dx vs momentum, q-, best FOM;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
+
     
-    hfdc_qt = new TH2F("fdc_qt","FDC hit charge vs time;time (ns);charge (fC)",100,0,1000, 100,0,500);
+    hfdc_a = new TH1F("fdc_a","FDC pulse height", 410,0,4100);
     hfdc_q = new TH1F("fdc_q","FDC hit charge (fC)", 250,0,500);
-    hfdc_t = new TH1F("fdc_t","FDC hit time (ns)", 250,0,1000);
+    hfdc_t = new TH1F("fdc_t","FDC cathode hit time (ns)", 250,-100,400);
+    hfdc_qt = new TH2F("fdc_qt","FDC hit charge vs time;time (ns);charge (fC)",100,-100,400, 100,0,500);
+    
+    hfdc_wt = new TH1F("fdc_wt","FDC wire hit time (ns)", 200,-300,500);
+
+    hfdc_cq = new TH1F("fdc_cq","FDC cathode cluster hit charge (fC)", 1000,0,4000);
+    
+    hfdc_psq = new TH1F("fdc_psq","FDC pseudohit charge (fC)", 100,0,25);
+    hfdc_pst = new TH1F("fdc_pst","FDC pseudohit time (ns)", 250,-200,300);
+    hfdc_psqt = new TH2F("fdc_psqt","FDC pseudohit charge vs time;time (ns);charge (fC)",100,-200,300, 100,0,25);
+    
+    hfdc_tr_psq = new TH1F("fdc_tr_psq","Tracks: FDC pseudohit charge (fC)", 100,0,25);
+    hfdc_tr_pst = new TH1F("fdc_tr_pst","Tracks: FDC pseudohit time (ns)", 250,-100,400);
+    hfdc_tr_psqt = new TH2F("fdc_tr_psqt","Tracks: FDC pseudohit charge vs time;time (ns);charge (fC)",100,-200,300, 100,0,25);
+    
+    hfdc_dedx_qp = new TH2F("fdc_dedx_qp", "FDC dE/dx vs momentum, q+, best FOM;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
+    hfdc_dedx_qm = new TH2F("fdc_dedx_qm", "FDC dE/dx vs momentum, q-, best FOM;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
 
 
     
-
-
+    main->cd();
     
 }
 
@@ -108,33 +167,122 @@ void JEventProcessor_dc_basics::Process(const std::shared_ptr<const JEvent> &eve
     event->GetSingle(locTrigger); 
     if (locTrigger->Get_L1FrontPanelTriggerBits()) return;
     if (!locTrigger->Get_IsPhysicsEvent()) return; // ignore PS triggers
-  
+
+    const DVertex* locVertex  = NULL;
+    event->GetSingle(locVertex);
+    double vertexz = locVertex->dSpacetimeVertex.Z();
+    if ((vertexz < 52.0) || (vertexz > 78.0)) return;
+
+    
     vector<const DCDCHit*> DCDCHits;
     event->Get(DCDCHits);
 
     vector<const DFDCHit*> DFDCHits;
     event->Get(DFDCHits);
 
+    vector<const DFDCCathodeCluster*> DFDCClusters;
+    event->Get(DFDCClusters);
+    
+    vector<const DFDCPseudo*> DFDCPseudohits;
+    event->Get(DFDCPseudohits);
+
+    vector<const DChargedTrack*> ctracks;
+    event->Get(ctracks);
+    
     lockService->RootFillLock(this);   
 
     for (uint32_t i=0; i<DCDCHits.size(); i++) {
         const DCDCHit *hit = DCDCHits[i];
         hcdc_at->Fill(hit->t, hit->amp);
-        hcdc_a->Fill(hit->amp);
+        hcdc_a->Fill(hit->amp);	
         hcdc_t->Fill(hit->t);
     }
    
-
     for (uint32_t i=0; i<DFDCHits.size(); i++) {
         const DFDCHit *hit = DFDCHits[i];
 	if (hit->type) {                            
   	    hfdc_qt->Fill(hit->t, hit->q);
   	    hfdc_q->Fill(hit->q);
   	    hfdc_t->Fill(hit->t);
+  	    hfdc_a->Fill(hit->pulse_height);	    
+	} else {
+            hfdc_wt->Fill(hit->t);
 	}
     }
+
+    for (uint32_t i=0; i<DFDCClusters.size(); i++) {
+        const DFDCCathodeCluster *cluster = DFDCClusters[i];
+  	hfdc_cq->Fill(cluster->q_tot);
+    }
     
+    for (uint32_t i=0; i<DFDCPseudohits.size(); i++) {
+        const DFDCPseudo *hit = DFDCPseudohits[i];
+        hfdc_pst->Fill(hit->time);
+        hfdc_psq->Fill(hit->q);
+        hfdc_psqt->Fill(hit->time, hit->q);
+    }
+
     lockService->RootFillUnLock(this);
+
+    
+    for (uint32_t i=0; i<(uint32_t)ctracks.size(); i++) {  
+      
+        // get the best hypo
+        const DChargedTrackHypothesis *hyp=ctracks[i]->Get_BestFOM();    
+        if (hyp == NULL) continue;
+      
+        const DTrackTimeBased *track = hyp->Get_TrackTimeBased();
+
+        double charge = track->charge();
+        DVector3 mom = track->momentum();
+        double p = mom.Mag();
+	
+        int nhits_cdc = (int)track->dNumHitsUsedFordEdx_CDC;
+        int nhits_fdc = (int)track->dNumHitsUsedFordEdx_FDC; 	
+
+        lockService->RootFillLock(this); 	
+
+	if (nhits_cdc >=4) {
+
+            vector<const DCDCTrackHit*> cdctrackhits;
+	    track->Get(cdctrackhits);
+	    
+	    for (uint32_t j =0 ; j< cdctrackhits.size() ; j++) {
+	        const DCDCHit *hit = NULL;
+	        cdctrackhits[j]->GetSingle(hit);
+                hcdc_tr_at->Fill(hit->t, hit->amp);
+                hcdc_tr_a->Fill(hit->amp);	
+                hcdc_tr_t->Fill(hit->t);
+	    }
+
+            if (charge>0) hcdc_dedx_qp->Fill((float)p, (float)1.0e6*track->ddEdx_CDC_amp);
+            if (charge<0) hcdc_dedx_qm->Fill((float)p, (float)1.0e6*track->ddEdx_CDC_amp);	
+
+	}
+
+	if (nhits_fdc >=4) {
+
+            vector<const DFDCPseudo*> fdcpseudohits;
+	    track->Get(fdcpseudohits);
+	    
+	    for (uint32_t j =0 ; j< fdcpseudohits.size() ; j++) {
+	      //	        const DCDCHit *hit = NULL;
+	      //cdctrackhits[j]->GetSingle(hit);
+                hfdc_tr_psqt->Fill(fdcpseudohits[j]->time, fdcpseudohits[j]->q);
+                hfdc_tr_psq->Fill(fdcpseudohits[j]->q);	
+                hfdc_tr_pst->Fill(fdcpseudohits[j]->time);
+	    }
+
+	    if (charge>0) hfdc_dedx_qp->Fill((float)p, (float)1.0e6*track->ddEdx_FDC);
+ 	    if (charge<0) hfdc_dedx_qm->Fill((float)p, (float)1.0e6*track->ddEdx_FDC);
+
+        }	    
+        lockService->RootFillUnLock(this); 
+	
+    //for (uint32_t j=0; j<pulls.size(); j++) {
+    //          if (pulls[j].cdc_hit == NULL) continue;
+
+    }
 
 }
 
