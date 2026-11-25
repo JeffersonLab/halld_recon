@@ -57,6 +57,7 @@ class DFDCHit_factory:public JFactoryT<DFDCHit>{
 		void Finish() override;
 	
 		bool USE_FDC;
+                double CATHODE_HIT_THRESHOLD;
 		void LoadPackageCalibTables(const std::shared_ptr<const JEvent>& event, string ccdb_prefix);
 };
 

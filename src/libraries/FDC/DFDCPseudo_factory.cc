@@ -91,7 +91,7 @@ void DFDCPseudo_factory::Init()
   MAX_ALLOWED_FDC_HITS=20000;
   STRIP_ANODE_TIME_CUT=25.;
   MIDDLE_STRIP_THRESHOLD=0.;
-  CHARGE_THRESHOLD=-1;   // unless overridden, calculate the threshold as the old default 0.3 * FDC/digi_scales/FDC_ADC_ASCALE
+  CHARGE_THRESHOLD=0;   // if set < 0, calculates the threshold as the old default 0.3 * FDC/digi_scales/FDC_ADC_ASCALE
   DELTA_X_CUT=0.5;
 
   r2_out=ROUT_FIDUCIAL*ROUT_FIDUCIAL;
