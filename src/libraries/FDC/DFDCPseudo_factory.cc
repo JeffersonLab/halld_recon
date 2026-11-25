@@ -152,6 +152,7 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   }
 
   double a_scale = 0.2;
+  map<string, double> fdcparms;
   
   if (CHARGE_THRESHOLD < 0) {
       // Make the charge threshold appropriate for calibrated pulse-height
@@ -161,7 +162,6 @@ void DFDCPseudo_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   }
   
   // Get FDC resolution parameters from database
-  map<string, double> fdcparms;
   FDC_RES_PAR1=0.;
   FDC_RES_PAR2=0.;
   jcalib->Get("FDC/fdc_resolution_parms",fdcparms);
