@@ -30,6 +30,9 @@ void DFDCHit_factory::Init()
   auto app = GetApplication();
   USE_FDC=true; 
   app->SetDefaultParameter("FDC:ENABLE",USE_FDC);
+
+  CATHODE_HIT_THRESHOLD=0;
+  app->SetDefaultParameter("FDC:CATHODE_HIT_THRESHOLD",CATHODE_HIT_THRESHOLD,"Software threshold for FDC cathode strip hit pulse height");
   
    /// set the base conversion scales
    a_scale      = 2.4E4/1.3E5;  // cathodes
@@ -287,13 +290,17 @@ void DFDCHit_factory::Process(const std::shared_ptr<const JEvent>& event)
       hit->pulse_height=a_gains[plane_index][strip_index+stripOffset]
          *double(pulse_peak - scaled_ped);
       hit->pulse_height_raw = double(pulse_peak - scaled_ped);
-      hit->q=a_scale*hit->pulse_height;
 
-      //cerr << "FDC hitL  plane = " << hit->gPlane << "  element = " << hit->element << endl;
+      if (hit->pulse_height_raw > CATHODE_HIT_THRESHOLD) {
 
-      hit->AddAssociatedObject(digihit);
+	  hit->q=a_scale*hit->pulse_height;
 
-      Insert(hit);
+          //cerr << "FDC hitL  plane = " << hit->gPlane << "  element = " << hit->element << endl;
+
+          hit->AddAssociatedObject(digihit);
+
+          Insert(hit);
+      }
    }
 
    // Make hits out of all DFDCWireDigiHit hits
