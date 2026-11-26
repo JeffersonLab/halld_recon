@@ -1154,10 +1154,10 @@ int DReferenceTrajectory::InsertSteps(const swim_step_t *start_step, double delt
 		direction = -1;
 	}
 	
-	// Here I allocate the steps using an auto_ptr so I don't have to mess with
-	// deleting them at all of the possible exits. The problem with auto_ptr
-	// is it can't handle arrays so it has to be wrapped in a struct.
-	auto_ptr<StepStruct> steps_aptr(new StepStruct);
+	// Here I allocate the steps using a unique_ptr so I don't have to mess with
+	// deleting them at all of the possible exits. (std::auto_ptr, used here
+	// originally, was removed in C++17 and is absent from libc++.)
+	std::unique_ptr<StepStruct> steps_aptr(new StepStruct);
 	DReferenceTrajectory::swim_step_t *steps = steps_aptr->steps;
 	DReferenceTrajectory rt(bfield , app , my_q , steps , 256);
 	rt.SetStepSize(step_size);
